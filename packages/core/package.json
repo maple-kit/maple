@@ -1,0 +1,40 @@
+{
+  "name": "@maplekit/core",
+  "version": "0.0.0",
+  "description": "Server SDK, overlay and connector contracts for Maple",
+  "license": "Apache-2.0",
+  "type": "module",
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maple-kit/maple.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/maple-kit/maple/tree/main/packages/core",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": "./dist/index.js",
+    "./connectors": "./dist/connectors/index.js",
+    "./logger": "./dist/logger/index.js",
+    "./config": "./dist/config/index.js",
+    "./overlay": "./dist/overlay/index.js",
+    "./testing": "./dist/testing/index.js",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "clean": "rm -rf dist *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@standard-schema/spec": "1.0.0",
+    "effect": "3.19.5"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
