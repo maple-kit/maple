@@ -57,6 +57,11 @@ export interface CommentAuthor {
 /** A stored comment, as a store connector hands it back. */
 export interface Comment {
   readonly id: string;
+  /**
+   * Branch or pull request the comment belongs to. A store cannot place a
+   * comment without it, so it travels with the comment rather than beside it.
+   */
+  readonly branch: string;
   readonly body: string;
   readonly status: CommentStatus;
   /** ISO 8601, always UTC. */

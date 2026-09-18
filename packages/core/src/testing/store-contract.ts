@@ -102,7 +102,7 @@ export function runStoreContract(options: StoreContractOptions): void {
 
     it("assigns an id on append and echoes the comment back", async () => {
       await withSubject(async (connector, branch) => {
-        const input = sampleComment({ anchor: { key: branch } });
+        const input = sampleComment({ branch });
         const stored = await connector.append(input);
 
         expect(stored.id).toBeTruthy();
@@ -113,7 +113,7 @@ export function runStoreContract(options: StoreContractOptions): void {
 
     it("lists a comment it has appended", async () => {
       await withSubject(async (connector, branch) => {
-        const stored = await connector.append(sampleComment({ anchor: { key: branch } }));
+        const stored = await connector.append(sampleComment({ branch }));
         const comments = await listUntil(connector, branch, 1);
 
         expect(comments.map((comment) => comment.id)).toContain(stored.id);
@@ -123,9 +123,7 @@ export function runStoreContract(options: StoreContractOptions): void {
     it("honours the limit and keeps paging until the cursor runs out", async () => {
       await withSubject(async (connector, branch) => {
         for (let index = 0; index < 3; index += 1) {
-          await connector.append(
-            sampleComment({ body: `comment ${index}`, anchor: { key: branch } }),
-          );
+          await connector.append(sampleComment({ body: `comment ${index}`, branch }));
         }
         await listUntil(connector, branch, 3);
 
@@ -162,7 +160,7 @@ export function runStoreContract(options: StoreContractOptions): void {
           const setStatus = connector.setStatus?.bind(connector);
           if (!setStatus) return;
 
-          const stored = await connector.append(sampleComment({ anchor: { key: branch } }));
+          const stored = await connector.append(sampleComment({ branch }));
           const resolved = await setStatus(stored.id, "resolved");
           expect(resolved.status).toBe("resolved");
 

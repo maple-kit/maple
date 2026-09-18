@@ -38,7 +38,7 @@ describe("createCommentStore", () => {
 
   it("appends and lists through the connector", async () => {
     const store = createCommentStore(memoryStore());
-    const stored = await store.append(sampleComment({ anchor: { key: "main" } }));
+    const stored = await store.append(sampleComment({ branch: "main" }));
 
     const page = await store.list({ branch: "main" });
 
@@ -47,14 +47,14 @@ describe("createCommentStore", () => {
 
   it("returns null from setStatus when the connector cannot change status", async () => {
     const store = createCommentStore(memoryStore({ appendOnly: true }));
-    await store.append(sampleComment({ anchor: { key: "main" } }));
+    await store.append(sampleComment({ branch: "main" }));
 
     await expect(store.setStatus("mem_1", "resolved")).resolves.toBeNull();
   });
 
   it("changes status when the connector supports it", async () => {
     const store = createCommentStore(memoryStore());
-    const stored = await store.append(sampleComment({ anchor: { key: "main" } }));
+    const stored = await store.append(sampleComment({ branch: "main" }));
 
     await expect(store.setStatus(stored.id, "resolved")).resolves.toMatchObject({
       status: "resolved",

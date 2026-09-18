@@ -30,11 +30,6 @@ function decodeCursor(cursor: string): number {
   return offset;
 }
 
-/** The branch a comment belongs to, taken from its anchor key. */
-function branchOf(comment: Comment): string | undefined {
-  return comment.anchor.key;
-}
-
 /** Creates an in-memory store connector. */
 export function memoryStore(options: MemoryStoreOptions = {}): StoreConnector {
   const comments = new Map<string, Comment>();
@@ -47,7 +42,7 @@ export function memoryStore(options: MemoryStoreOptions = {}): StoreConnector {
 
     const matching = [...comments.values()].filter(
       (comment) =>
-        branchOf(comment) === query.branch &&
+        comment.branch === query.branch &&
         (query.statuses === undefined || query.statuses.includes(comment.status)),
     );
 

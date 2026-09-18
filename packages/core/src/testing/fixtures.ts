@@ -14,6 +14,7 @@ export const SAMPLE_CONTEXT: CommentContext = {
 /** Builds a comment ready to append, with `overrides` merged over the defaults. */
 export function sampleComment(overrides: Partial<NewComment> = {}): NewComment {
   return {
+    branch: "feature/x",
     body: "The spacing under the heading is inconsistent with the card above.",
     createdAt: new Date("2026-01-01T12:00:00.000Z").toISOString(),
     author: { id: "u_1", name: "Reviewer", provenance: "server" },
