@@ -1,0 +1,36 @@
+{
+  "name": "@maplekit/cli",
+  "version": "0.0.0",
+  "description": "Command line interface for Maple",
+  "license": "Apache-2.0",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maple-kit/maple.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/maple-kit/maple/tree/main/packages/cli",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "files": [
+    "dist"
+  ],
+  "bin": {
+    "maple": "./dist/bin.js"
+  },
+  "exports": {
+    ".": "./dist/index.js",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@maplekit/core": "workspace:*"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

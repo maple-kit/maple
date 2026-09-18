@@ -1,0 +1,16 @@
+/** The text `maple --help` prints. */
+export const HELP = `maple — visual review comments on deployed previews
+
+Usage
+  maple <command> [options]
+
+Commands
+  connectors        Show the connector kinds and the methods each one may implement
+
+Options
+  --json            Print machine-readable output where a command supports it
+  --help            Show this help
+  --version         Show the version
+
+Every command that prints a table also supports --json, so the CLI can be driven
+by an agent as easily as by a person.`;
