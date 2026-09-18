@@ -1,141 +1,127 @@
 # Status
 
-**Phase 0 complete.** Three repositories exist, the toolchain is green, and
-every decision that is expensive to change later has been made and written down.
+**US1 is most of the way there.** Every mechanism a comment passes through
+exists and is tested: it can be anchored, written, exported, stored on a pull
+request, and read and resolved by an agent. What is missing is the interface a
+reviewer touches.
 
-No product behaviour ships in this phase. What ships is the shape everything
-else has to fit.
+The loop is buildable end to end today by a caller that supplies its own UI.
+It is not yet demonstrable to a person, and that is the honest gap.
 
-## What Phase 0 delivered
+## The path a comment takes, and what is built
 
-### Repositories
+| Step                            | Where                                     | State                                          |
+| ------------------------------- | ----------------------------------------- | ---------------------------------------------- |
+| Element is tagged at build time | `core/tagger`, `core/vite`, `core/loader` | ✅ both emitters, asserted by two example apps |
+| Reviewer picks a target         | `core/overlay`                            | ✅ element, region and text picking            |
+| The pick becomes an anchor      | `core/anchor`                             | ✅ five rungs, four orphan reasons             |
+| The page's shape is recorded    | `core/overlay`                            | ✅ badge, regions, breakpoint                  |
+| A screenshot is attached        | `core/screenshot`                         | ✅ paste, drop, file, capture                  |
+| The reviewer writes it          | —                                         | ❌ **no composer, no sidebar, no pins**        |
+| It is posted as them            | `core/auth`                               | 🟡 Device Flow works; not wired to the route   |
+| It is stored                    | `core/connectors/github`                  | ✅ default store, contract-clean               |
+| It reaches the pull request     | `core/export`                             | ✅ table over a visible fence                  |
+| An agent reads and resolves it  | `@maple-kit/mcp`                          | ✅ four tools, plus the Stop hook              |
 
-| Repository     | What is in it                                                                                                                                           |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `maple`        | This monorepo: `core`, `cli`, `mcp`, docs, evals, repo skills.                                                                                          |
-| `maple-action` | GitHub Action skeleton. `action.yml` at the root, `node24`, ncc bundle. Inputs and the gate decision are implemented and tested; the API calls are not. |
-| `maple-tui`    | README only. Rust + ratatui, deliberately not started.                                                                                                  |
+## What US1 added
 
 ### `@maple-kit/core`
 
-- **The connector contract** — `StoreConnector`, `MediaConnector`,
-  `ObservabilityConnector`, `IdentityConnector`. Plain Promises, structural
-  types, no Effect anywhere near it.
-- **Capability detection by presence** — `capabilitiesOf`, `supports`,
-  `assertUsable`. One source of truth, so the docs table and the code cannot
-  disagree.
-- **`createCommentStore`** — the Promise-facing store API, with retries, a
-  timeout and one public error type.
-- **Effect v3, internal only** — `src/internal/effect/` wraps connector calls in
-  typed errors and a jittered retry schedule. It unwraps the exit itself rather
-  than letting `Effect.runPromise` reject with a `FiberFailure`, so no caller
-  ever sees an Effect type. `no-restricted-imports` is the backstop.
-- **`createLogger({ sinks })`** — console and memory sinks, child loggers, a
-  broken sink cannot take the caller down. Raw `console.*` is a lint error
-  everywhere but the console sink itself.
-- **Standard Schema v1 config validation** — `validateConfig`,
-  `validateConfigSync`. No validation library is bundled.
-- **`stableStringify`** in `src/lib/` — a ported helper rather than a
-  dependency, with its reasoning recorded in that directory's README.
-- **The shared connector contract suite** in `@maple-kit/core/testing`, plus an
-  in-memory reference connector that runs against it.
+Nine new entrypoints on top of Phase 0's four.
 
-### `@maple-kit/cli`
-
-`maple connectors` prints the capability matrix, derived from core's tables.
-`--json` everywhere. Zero runtime dependencies beyond core; argument parsing is
-about forty lines.
+- **`/tagger`, `/vite`, `/loader`** — the build-time JSX tagger and its two
+  emitters. One Babel plugin behind both, so they cannot drift. Not an SWC
+  plugin: that is a Rust crate compiled to WebAssembly, for a transform that
+  already exists in TypeScript.
+- **`/anchor`** — the cascade, `data-maple-key` → source → component → quote →
+  selector, with four orphan reasons and no silent ancestor snap. The fuzzy
+  quote matcher is ported from Hypothesis; the approximate search under it is
+  Sellers with Ukkonen's cutoff rather than a port of Myers' bit-parallel
+  algorithm, because it can be checked against a brute-force reference, and 400
+  seeded cases do that on every run.
+- **`/overlay`** — the host (shadow root, adopted stylesheets only), the three
+  pickers, the context badge and the per-branch draft store.
+- **`/export`** — the human table over a visible ` ```maple ` fence, with a
+  byte budget that sheds detail in a fixed order and never drops a comment.
+- **`/route`** — one web-standard handler, plus a Node adapter. The author of a
+  comment comes from the identity connector and never from the request body.
+- **`/auth`** — GitHub Device Flow, including `slow_down` back-off.
+- **`/screenshot`** — paste and drop first, capture second.
+- **`/connectors`** — `githubStore`, the default store, passing the shared
+  contract.
 
 ### `@maple-kit/mcp`
 
-The tool contract: `list_comments`, `wait_for_comments`, `resolve_comment`,
-`get_comment_context`, with the wait clamped to 55 seconds — under the 60-second
-ceiling every coding client enforces — and a timeout modelled as a normal
-result, never an error.
+`maple-mcp` serves the four tools over stdio; `maple-stop-hook` keeps an agent
+from finishing while comments are open, and gives up after eight attempts
+rather than hanging a session. Verified against a real MCP handshake, not only
+in unit tests.
 
-### Toolchain
+### The examples
 
-- pnpm workspaces, changesets, tsdown, publint, arethetypeswrong.
-- `.npmrc`: exact versions, engine-strict, no install scripts.
-  `pnpm-workspace.yaml` refuses anything published in the last three days.
-- ESLint flat config, errors not warnings: no console, comment budget,
-  cyclomatic ≤ 20, cognitive ≤ 15, nesting ≤ 4, params ≤ 4, 150 lines per
-  function, import ordering, unused-import removal. Suppressions are frozen and
-  CI fails on a diff from `--prune-suppressions`.
-- A local ESLint plugin implementing `max-comment-lines`.
-- vitest for logic, vitest browser mode in real Chromium for anything that
-  depends on constructed stylesheets or shadow DOM.
-- lefthook: gitleaks, eslint, prettier, conventional-commit, DCO, commit
-  identity and lockfile checks.
-- One native dependency, `better-sqlite3`, needs `pnpm rebuild better-sqlite3`
-  after install: `ignore-scripts=true` overrides `onlyBuiltDependencies`
-  entirely. CI does this in the setup action.
-- CI: lint, typecheck, format, test, browser test, build, publint, attw,
-  gitleaks, DCO.
+`examples/vite-app` and `examples/next-app` are real applications that assert
+on their own build output, and they run in CI. Between them they answered the
+question `docs/tagger.md` left open: **`reactRemoveProperties` does reach the
+server bundle.** Proving it needed a third build that tags _and_ strips — a
+production build never tags, so finding it clean proves only that nothing
+happened.
 
-**101 tests pass** — 98 in Node, 3 in Chromium. `pnpm lint && pnpm typecheck &&
-pnpm test && pnpm build` is green, and all three packages are publint-clean.
+### Numbers
 
-### Documented decisions
-
-- `docs/tagger.md` — the build-time JSX tagger, committed to, not implemented.
-- `docs/overlay-csp.md` — exactly which CSP directives Maple needs, stated as a
-  sentence that can be falsified.
-- `docs/connectors.md` — the capability matrix, with the Datadog row filled in
-  and its three caveats explained.
-- `docs/setup-owner.md` — everything a person has to do by hand.
-- `evals/README.md` — eval conventions, fixed before the first case exists.
-
-### Repo skills
-
-`contribute-connector` and `maple-review`, in `.claude/skills/`.
+**317 tests** — 242 in Node, 75 in Chromium, up from 101. Thirteen changesets.
+`lint typecheck format test test:browser build publint attw gitleaks lockfile
+dco` all green, and `main` is protected by a ruleset requiring the eight CI
+jobs, one approval and signed commits.
 
 ## What is deliberately absent
 
-Knowing what was skipped on purpose is worth as much as knowing what landed.
+- **The overlay's interface.** The composer, the pin markers and the sidebar,
+  including the orphan list. These are visual design decisions rather than
+  mechanics, and guessing at them would be the expensive kind of wrong — the
+  orphan list in particular is meant to be a first-class tab, not a footnote.
+- **Device Flow wired into the route.** The flow works and the route works;
+  joining them needs a decision about where a token lives and how the session
+  is signed, which is a security design rather than plumbing.
+- **The Next codemod.** `app/api/maple/[...maple]/route.ts` is three lines a
+  person can write today; the codemod that writes it is convenience, and the
+  example does not have one checked in yet.
+- **The CLI's comment commands.** `maple connectors` is all that exists.
+  `list|inspect|reply|resolve|open` come with the TUI decision.
+- **`resolve_comment` cannot record its commit.** The store contract has
+  nowhere to put a resolution's `sha` and `note`, so they are returned to the
+  agent and lost on write. Closing it means a field on `Comment` and a richer
+  `setStatus`, which belongs with the gate.
+- **Eval cases.** Still no AI path to score.
 
-- **The overlay.** `@maple-kit/core/overlay` is an entrypoint, two constraints
-  and one function. There is no UI.
-- **msw handlers.** The harness is wired and tested — `createTestServer` fails
-  any request nobody mocked — but `handlers.ts` is empty, because Maple makes no
-  network calls yet. The first connector fills it.
-- **Eval cases.** evalite is installed and `evals/` holds the config and the
-  conventions, but there is no AI code to score yet.
-- **The examples.** `examples/next-app` and `examples/vite-app` are READMEs
-  stating what each has to prove. Pulling a framework into the lockfile to
-  demonstrate nothing is cost without return.
+## What is now known that was not
 
-## What the first milestone needs next
+Four things cost time once and would cost it again.
 
-US1 is local-first comments on a deployed preview, copied as markdown, posted to
-a pull request as the reviewer, and picked up by an agent.
+1. **`as: "*.tsx"` on a Turbopack rule renames the module.** Turbopack's `*`
+   captures the filename including its extension, so `page.tsx` becomes
+   `page.tsx.tsx` and every relative import stops resolving. Omit `as`.
+2. **An app-router application with no `"use client"` produces a client bundle
+   containing none of its own markup.** A client-side assertion about stripping
+   passes against an empty string.
+3. **snapdom's `toBlob` defaults to SVG**, and takes `type: "png"` rather than
+   a MIME type. An SVG "screenshot" is a re-render of the page, which is the
+   failure the paste path exists to hedge against.
+4. **`localStorage` throws on _access_, not only on use**, in a private window
+   and wherever site data is blocked. Reaching it has to be guarded too.
+
+## What US2 needs next
 
 In dependency order:
 
-1. **The JSX tagger**, both emitters. Everything below anchors better with it,
-   and the design in `docs/tagger.md` is ready to implement.
-2. **The anchor cascade** — `data-maple-key`, then source, then component, then
-   text quote, then selector — with an explicit orphan state. Port the fuzzy
-   quote matcher rather than depending on it, and expect roughly a quarter of
-   anchors to orphan over time. Orphans are a first-class list, never a silent
-   ancestor snap.
-3. **The overlay**, as a bundled component: element, text and rectangle
-   comments, drafts in localStorage keyed by branch, and a context badge
-   carrying viewport, DPR, scheme, breakpoint and locale. Every style through
-   `createOverlayStyleSheet`.
-4. **The SDK route**, with the Vite plugin (auto-mounting) and the Next codemod
-   that writes `app/api/maple/[...maple]/route.ts`.
-5. **The markdown exporter** — human table above, visible ` ```maple ` fence
-   below, under 8 KB. Screenshots must be hosted URLs; `data:` images are
-   stripped from a pull request body.
-6. **GitHub Device Flow login**, so a reviewer signs in from a wildcard preview
-   host and the comment is posted as them.
-7. **Screenshots** via a client-side capture, **with the paste-a-real-screenshot
-   escape hatch on day one.** Client capture fails hardest on exactly the visual
-   details people comment about, so the escape hatch is not a later refinement.
-8. **The MCP server** behind the contract in `@maple-kit/mcp`, plus a Stop hook
-   that blocks an agent from finishing while comments are open.
-
-The first connector to write with `contribute-connector` is the GitHub PR store,
-since that is the default. Datadog is the first observability connector, and
-`docs/connectors.md` already records what it can and cannot do.
+1. **The overlay's interface** — composer, pins, sidebar, orphan tab. Everything
+   underneath it is built and tested; this is the last thing between the
+   mechanisms and a person using them.
+2. **Device Flow through the route**, with a decided session shape.
+3. **A `GateConnector` kind.** The store is vendor-agnostic and the gate is not:
+   `maple/visual-review` is a GitHub check run, GitLab uses external status
+   checks, and Bitbucket's enforcement is Premium-only. Defining the kind before
+   writing the GitHub one keeps the check-run API out of core.
+4. **The check run itself**, held at `in_progress` while comments are open, with
+   `merge_group` auto-passing and `integration_id` pinned.
+5. **A resolution record on `Comment`**, so `resolve_comment` can keep the
+   commit that addressed it.
