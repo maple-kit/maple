@@ -1,6 +1,7 @@
 # The JSX tagger
 
-**Status:** design, committed to. Not implemented in Phase 0.
+**Status:** the transform is implemented in `@maple-kit/core/tagger`. The Vite
+plugin and the Next loader that mount it are not yet.
 
 ## The problem
 
@@ -46,32 +47,67 @@ both.
 
 ## Emitting
 
-Two implementations, one behaviour.
+**One implementation, two ways of reaching it.** The transform is a Babel plugin
+in `@maple-kit/core/tagger`. Both emitters run that same plugin, so they cannot
+drift into different behaviour — which matters, because a tagged element in one
+framework and an untagged one in another is a bug nobody notices until an anchor
+orphans.
 
-### SWC (Next)
+```ts
+import { mapleTagger } from "@maple-kit/core/tagger";
+```
 
-A plugin in the compiler pipeline, enabled from `next.config.ts` when the build
-is a preview:
+### Why not an SWC plugin
+
+The design first called for `@maple-kit/swc-plugin-tagger` on the Next side. An
+SWC plugin is a Rust crate compiled to WebAssembly. That is a second toolchain,
+a second release process and a binary artefact in an npm package, to duplicate a
+transform that already exists — against a rule that says TypeScript everywhere
+unless there is a clear cross-language winner. There is not one here: the tagger
+runs on preview builds only, where a few hundred milliseconds do not matter.
+
+Next reaches the same plugin through a **loader**, which `next.config.ts`
+configures for both webpack and Turbopack. SWC still does the stripping, because
+stripping is the part that must be right in production.
+
+### Next
 
 ```ts
 const isPreview = process.env["MAPLE_PREVIEW"] === "1";
 
 export default {
-  experimental: { swcPlugins: isPreview ? [["@maple-kit/swc-plugin-tagger", {}]] : [] },
+  turbopack: {
+    rules: isPreview ? { "*.{jsx,tsx}": { loaders: ["@maple-kit/core/loader"] } } : {},
+  },
   compiler: { reactRemoveProperties: isPreview ? false : { properties: ["^data-maple-"] } },
 };
 ```
 
-### Babel / Vite
+### Vite
 
-A Babel plugin for projects on Babel, and for Vite a transform inside the Maple
-plugin so no extra configuration is needed:
+A transform inside the Maple plugin, so there is nothing extra to configure:
 
 ```ts
 import { maple } from "@maple-kit/core/vite";
 
 export default defineConfig({ plugins: [maple({ tagger: mode !== "production" })] });
 ```
+
+## What it emits
+
+Intrinsic elements only — `<h1>`, `<div>`, `<li>`. A composite element's props
+belong to the component that defines them, and writing an attribute a component
+never spreads onto the DOM changes nothing except the risk of changing
+something.
+
+`data-maple-name` is the nearest enclosing declaration whose name starts with a
+capital: a function declaration, a class, or an arrow assigned to a `const`,
+including through a `memo(…)` or `forwardRef(…)` wrapper. When nothing matches,
+the attribute is omitted. It is a syntactic guess, and a wrong name a reviewer
+does not recognise is worse than no name at all.
+
+Columns are 1-based, the way an editor addresses them. Babel counts them from
+zero, so the tagger adds one.
 
 ## Stripping
 
@@ -97,6 +133,8 @@ Both are regex-based removals over the whole property name space, so a stray
   under the tagger is a tagger bug.
 - **Never assume the tagger ran.** Every consumer treats `data-maple-src` as
   optional and falls through the anchor cascade when it is absent.
+- **Never tag twice.** An element that already carries `data-maple-src` is left
+  alone, so a file passing through two transforms comes out the same.
 
 ## Verification before implementation
 
