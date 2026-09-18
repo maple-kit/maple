@@ -12,6 +12,7 @@ import { http, HttpResponse } from "msw";
 import type { RequestHandler } from "msw";
 
 const API = "https://api.github.com";
+const LOGIN = "https://github.com";
 
 interface StoredComment {
   id: number;
@@ -120,4 +121,53 @@ function nextLink(url: URL, page: number): string {
   const next = new URL(url);
   next.searchParams.set("page", String(page + 1));
   return `<${next.toString()}>; rel="next"`;
+}
+
+/** How the fake device flow should answer the next poll. */
+export type DeviceStep = "pending" | "slow_down" | { token: string } | { error: string };
+
+/** A fake of GitHub's two Device Flow endpoints. */
+export interface DeviceFlowFake {
+  readonly handlers: RequestHandler[];
+  /** Answers given to successive polls, consumed in order. */
+  respond(...steps: DeviceStep[]): void;
+  /** How many times the token endpoint was polled. */
+  readonly polls: () => number;
+}
+
+/** Creates the fake. `respond` sets what each poll returns, in order. */
+export function createDeviceFlowFake(): DeviceFlowFake {
+  let steps: DeviceStep[] = [];
+  let polls = 0;
+
+  const handlers: RequestHandler[] = [
+    http.post(`${LOGIN}/login/device/code`, () =>
+      HttpResponse.json({
+        device_code: "dev-code-secret",
+        user_code: "WDJB-MJHT",
+        verification_uri: `${LOGIN}/login/device`,
+        expires_in: 900,
+        interval: 5,
+      }),
+    ),
+
+    http.post(`${LOGIN}/login/oauth/access_token`, () => {
+      polls += 1;
+      const step = steps.shift() ?? "pending";
+
+      if (step === "pending") return HttpResponse.json({ error: "authorization_pending" });
+      if (step === "slow_down") return HttpResponse.json({ error: "slow_down", interval: 10 });
+      if ("error" in step) return HttpResponse.json({ error: step.error });
+      return HttpResponse.json({ access_token: step.token, scope: "", token_type: "bearer" });
+    }),
+  ];
+
+  return {
+    handlers,
+    respond: (...next) => {
+      steps = [...next];
+      polls = 0;
+    },
+    polls: () => polls,
+  };
 }

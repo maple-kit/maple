@@ -20,6 +20,7 @@
   "exports": {
     ".": "./dist/index.js",
     "./anchor": "./dist/anchor/index.js",
+    "./auth": "./dist/auth/index.js",
     "./connectors": "./dist/connectors/index.js",
     "./export": "./dist/export/index.js",
     "./logger": "./dist/logger/index.js",

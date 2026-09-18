@@ -20,6 +20,7 @@
     "paths": {
       "@maple-kit/core": ["./packages/core/src/index.ts"],
       "@maple-kit/core/anchor": ["./packages/core/src/anchor/index.ts"],
+      "@maple-kit/core/auth": ["./packages/core/src/auth/index.ts"],
       "@maple-kit/core/connectors": ["./packages/core/src/connectors/index.ts"],
       "@maple-kit/core/export": ["./packages/core/src/export/index.ts"],
       "@maple-kit/core/loader": ["./packages/core/src/loader/index.ts"],
