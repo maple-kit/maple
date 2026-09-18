@@ -1,0 +1,21 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      # One pull request per toolchain area keeps the review surface small
+      # enough that the diff is actually read.
+      lint:
+        patterns: ["eslint*", "@eslint/*", "typescript-eslint", "prettier*"]
+      test:
+        patterns: ["vitest", "@vitest/*", "vitest-browser-*", "playwright", "msw"]
+      build:
+        patterns: ["tsdown", "typescript", "publint"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

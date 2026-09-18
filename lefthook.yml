@@ -1,0 +1,38 @@
+# Hooks run on what is staged, not on the whole tree, so a commit is not held up
+# by an unrelated file. Everything here also runs in CI: the hook is the fast
+# signal, CI is the gate.
+
+pre-commit:
+  parallel: true
+  jobs:
+    - name: gitleaks
+      run: gitleaks protect --staged --redact --verbose
+      # A secret reaching a commit is the one failure that cannot be undone by a
+      # later commit, so this runs on every file, not a glob.
+
+    - name: eslint
+      glob: "*.{ts,tsx,js,mjs}"
+      run: pnpm exec eslint --max-warnings 0 {staged_files}
+      stage_fixed: true
+
+    - name: prettier
+      glob: "*.{ts,tsx,js,mjs,json,md,yml,yaml}"
+      run: pnpm exec prettier --write {staged_files}
+      stage_fixed: true
+
+commit-msg:
+  jobs:
+    - name: conventional-commit
+      run: |
+        head -1 "{1}" | grep -qE '^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([a-z0-9-]+\))?!?: .{1,}' \
+          || { echo "Commit message must be conventional, e.g. 'feat(core): add media connector'."; exit 1; }
+
+    - name: sign-off
+      run: |
+        grep -qE '^Signed-off-by: .+ <.+@.+>' "{1}" \
+          || { echo "Missing DCO sign-off. Commit with 'git commit -s'."; exit 1; }
+
+pre-push:
+  jobs:
+    - name: typecheck
+      run: pnpm typecheck

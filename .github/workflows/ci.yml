@@ -1,0 +1,107 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A second push to a pull request cancels the first run; main is never cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+env:
+  # Every job installs the same way, so a cache hit in one is a cache hit in all.
+  STORE_PATH: ~/.pnpm-store
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+      - run: pnpm lint
+      - name: No new suppressions
+        # `--prune-suppressions` rewrites the file when an entry is no longer
+        # needed. A diff here means the ratchet moved and was not committed.
+        run: |
+          pnpm lint:prune
+          git diff --exit-code -- eslint-suppressions.json
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+      - run: pnpm typecheck
+
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+      - run: pnpm format:check
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+      - run: pnpm test
+      - name: Install Chromium for browser-mode tests
+        run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm test:browser
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+      - run: pnpm build
+      - name: publint
+        run: pnpm publint
+      - name: Are the types wrong?
+        # Run through dlx rather than as a dependency: it is a publish gate, not
+        # part of the development loop, and it pulls a large tree of its own.
+        run: |
+          for pkg in packages/*/; do
+            pnpm --dir "$pkg" dlx @arethetypeswrong/cli --pack . --ignore-rules cjs-resolves-to-esm
+          done
+
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # gitleaks scans history, not just the tip.
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  dco:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Every commit is signed off
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          missing=0
+          for sha in $(git rev-list "$BASE..$HEAD"); do
+            if ! git log -1 --format=%B "$sha" | grep -qE '^Signed-off-by: .+ <.+@.+>'; then
+              echo "::error::$sha is missing a DCO sign-off"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            echo "Sign your commits with 'git commit -s'. See CONTRIBUTING.md."
+            exit 1
+          fi
