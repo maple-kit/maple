@@ -1,0 +1,13 @@
+packages:
+  - "packages/*"
+  - "examples/*"
+  - "evals"
+  - "tools/*"
+
+# Refuse versions published less than three days ago. A compromised release is
+# usually caught and unpublished within hours; waiting costs nothing.
+minimumReleaseAge: 4320
+
+# .npmrc sets ignore-scripts=true. Packages that genuinely need a build step at
+# install time are allowed back one at a time, with a reason.
+onlyBuiltDependencies: []

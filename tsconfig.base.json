@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "moduleDetection": "force",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "exactOptionalPropertyTypes": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "paths": {
+      "@maplekit/core": ["./packages/core/src/index.ts"],
+      "@maplekit/core/connectors": ["./packages/core/src/connectors/index.ts"],
+      "@maplekit/core/logger": ["./packages/core/src/logger/index.ts"],
+      "@maplekit/core/config": ["./packages/core/src/config/index.ts"],
+      "@maplekit/core/overlay": ["./packages/core/src/overlay/index.ts"],
+      "@maplekit/core/testing": ["./packages/core/src/testing/index.ts"],
+      "@maplekit/cli": ["./packages/cli/src/index.ts"],
+      "@maplekit/mcp": ["./packages/mcp/src/index.ts"]
+    }
+  }
+}
