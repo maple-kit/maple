@@ -23,6 +23,7 @@
     "./logger": "./dist/logger/index.js",
     "./config": "./dist/config/index.js",
     "./overlay": "./dist/overlay/index.js",
+    "./tagger": "./dist/tagger/index.js",
     "./testing": "./dist/testing/index.js",
     "./package.json": "./package.json"
   },
@@ -36,5 +37,16 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "devDependencies": {
+    "@babel/core": "8.0.5"
+  },
+  "peerDependencies": {
+    "@babel/core": "^7.22.0 || ^8.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@babel/core": {
+      "optional": true
+    }
   }
 }
