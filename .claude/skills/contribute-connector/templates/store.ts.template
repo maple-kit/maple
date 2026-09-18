@@ -1,0 +1,46 @@
+/**
+ * <NAME> store connector.
+ *
+ * Consistency: <read-your-writes, or the window within which a write becomes
+ * visible to a read>.
+ * Retention: <how long comments survive, or "indefinite">.
+ * Credentials: <which values, and that they are server-side only>.
+ */
+
+import type { CommentPage, ListQuery, StoreConnector } from "./types.js";
+import type { Comment, CommentStatus, NewComment } from "../types.js";
+
+/** Everything the connector needs to reach the backend. */
+export interface <Name>Options {
+  /** Never a credential value; read it from the environment at the call site. */
+  readonly apiKey: string;
+}
+
+/** Creates a <NAME>-backed store connector. */
+export function <name>Store(options: <Name>Options): StoreConnector {
+  return {
+    name: "<name>",
+
+    async list(query: ListQuery): Promise<CommentPage> {
+      // Reject a non-positive limit rather than substituting a default.
+      if (query.limit !== undefined && query.limit <= 0) {
+        throw new RangeError(`limit must be positive, received ${query.limit}`);
+      }
+
+      // Omit `cursor` entirely on the last page; never return an empty string.
+      throw new Error("not implemented");
+    },
+
+    async append(comment: NewComment): Promise<Comment> {
+      // Assign the id, default status to "open", return what was stored.
+      throw new Error("not implemented");
+    },
+
+    // Delete this method if the backend cannot change a comment's status.
+    // An absent method degrades cleanly; one that throws does not.
+    async setStatus(id: string, status: CommentStatus): Promise<Comment> {
+      // Reject an unknown id. Resolving silently hides a bug.
+      throw new Error("not implemented");
+    },
+  };
+}
