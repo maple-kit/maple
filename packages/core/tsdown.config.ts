@@ -7,6 +7,7 @@ export default defineConfig({
     "src/logger/index.ts",
     "src/config/index.ts",
     "src/overlay/index.ts",
+    "src/tagger/index.ts",
     "src/testing/index.ts",
   ],
   format: ["esm"],
