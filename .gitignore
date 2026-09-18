@@ -1,0 +1,35 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build output
+dist/
+build/
+*.tsbuildinfo
+.next/
+.turbo/
+
+# secrets — never commit a credential value
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p8
+*.p12
+
+# Maple local artifacts (screenshots may contain application data)
+.maple/shots/
+
+# test and tooling output
+coverage/
+.vitest/
+playwright-report/
+test-results/
+evals/.evalite/
+
+# editor and OS
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json

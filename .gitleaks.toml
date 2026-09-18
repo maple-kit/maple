@@ -1,0 +1,24 @@
+# Extends the bundled rule set rather than replacing it, so new upstream rules
+# arrive with a gitleaks upgrade instead of needing a copy here.
+[extend]
+useDefault = true
+
+[[rules]]
+id = "maple-github-app-private-key"
+description = "GitHub App private key (PEM)"
+regex = '''-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----'''
+keywords = ["PRIVATE KEY"]
+
+[[rules]]
+id = "maple-datadog-app-key"
+description = "Datadog application key"
+regex = '''(?i)\b(dd|datadog)[_-]?app(lication)?[_-]?key\b\s*[:=]\s*['"]?([a-f0-9]{40})['"]?'''
+keywords = ["datadog", "dd_app"]
+
+[allowlist]
+description = "Documentation and fixtures that show the shape of a credential, never a value"
+paths = [
+  '''docs/setup-owner\.md''',
+  '''\.env\.example$''',
+  '''pnpm-lock\.yaml$''',
+]
