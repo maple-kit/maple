@@ -5,6 +5,7 @@ export default defineConfig({
     "src/index.ts",
     "src/anchor/index.ts",
     "src/connectors/index.ts",
+    "src/export/index.ts",
     "src/logger/index.ts",
     "src/config/index.ts",
     "src/overlay/index.ts",

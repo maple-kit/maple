@@ -21,6 +21,7 @@
       "@maple-kit/core": ["./packages/core/src/index.ts"],
       "@maple-kit/core/anchor": ["./packages/core/src/anchor/index.ts"],
       "@maple-kit/core/connectors": ["./packages/core/src/connectors/index.ts"],
+      "@maple-kit/core/export": ["./packages/core/src/export/index.ts"],
       "@maple-kit/core/logger": ["./packages/core/src/logger/index.ts"],
       "@maple-kit/core/config": ["./packages/core/src/config/index.ts"],
       "@maple-kit/core/overlay": ["./packages/core/src/overlay/index.ts"],
