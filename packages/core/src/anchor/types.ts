@@ -8,31 +8,11 @@
  * line. docs/tagger.md covers the two attributes a build can supply.
  */
 
-/** A quoted passage, recorded the way the W3C Web Annotation model records one. */
-export interface TextQuote {
-  /** The text the comment was left on. */
-  readonly exact: string;
-  /** Text immediately before it, for telling two identical passages apart. */
-  readonly prefix?: string;
-  /** Text immediately after it, for the same reason. */
-  readonly suffix?: string;
-  /** Character offset it was at, used only to break a tie. */
-  readonly offset?: number;
-}
-
-/** Everything recorded about where a comment was left. Every field is optional. */
-export interface Anchor {
-  /** `data-maple-key`, set by the application. Survives anything but deletion. */
-  readonly key?: string;
-  /** `data-maple-src`, written by the tagger as `path:line:column`. */
-  readonly source?: string;
-  /** `data-maple-name`, the component the element is written in. */
-  readonly component?: string;
-  /** The passage itself, which survives a rebuild but not a rewrite. */
-  readonly quote?: TextQuote;
-  /** A CSS path. Last resort: modern class names are hashes, so it breaks often. */
-  readonly selector?: string;
-}
+/**
+ * An anchor is the wire type. The cascade and a store connector have to mean
+ * the same thing by it, and two definitions of one concept always drift.
+ */
+export type { CommentAnchor as Anchor, TextQuote } from "../types.js";
 
 /** The rungs of the cascade, in the order they are tried. */
 export const RUNGS = ["key", "source", "component", "quote", "selector"] as const;

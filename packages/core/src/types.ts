@@ -31,6 +31,8 @@ export interface TextQuote {
   readonly exact: string;
   readonly prefix?: string;
   readonly suffix?: string;
+  /** Character offset it was at. Breaks a tie; never trusted on its own. */
+  readonly offset?: number;
 }
 
 /** Everything about the reviewer's environment that a fix might depend on. */
