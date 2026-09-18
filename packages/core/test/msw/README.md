@@ -24,9 +24,20 @@ msw/
 - Fixtures are trimmed real responses with identifiers replaced, never
   hand-written objects that drift from the API.
 
+## Fakes, where fixed responses cannot do
+
+`github.ts` is a small **fake** rather than a set of fixed responses. The
+contract suite appends a comment and then reads it back, and a handler that
+always answers with the same page cannot express read-your-writes — which is
+exactly the property the GitHub connector claims. `createGitHubFake()` keeps
+comments in a map, assigns ids, and emits GitHub's `Link` header when a page is
+not the last, so pagination is exercised rather than asserted.
+
+Each suite creates its own fake and resets it between tests. A shared one leaks
+state and turns a real failure into a flake.
+
 ## Status
 
-The harness is in place and `msw-harness.test.ts` asserts its two guarantees: a
-declared handler answers, and an unmocked request fails the test. `handlers.ts`
-is empty because Maple makes no network calls yet; the first connector adds its
-upstream there.
+`msw-harness.test.ts` asserts the harness's two guarantees: a declared handler
+answers, and an unmocked request fails the test. `github.ts` is the first
+upstream.

@@ -61,11 +61,54 @@ below the table.
 
 | Connector            | list | append | setStatus | watch | putBlob | getUrl | getReplayLink | fetchEvents | resolveUser |
 | -------------------- | ---- | ------ | --------- | ----- | ------- | ------ | ------------- | ----------- | ----------- |
+| `github` (default)   | ✓    | ✓      | ✓         | —     | —       | —      | —             | —           | —           |
 | `memory` (reference) | ✓    | ✓      | ✓         | —     | —       | —      | —             | —           | —           |
 | `datadog`            | ~    | ✓      | ~         | —     | —       | —      | ~             | ✓           | ~           |
 
 The reference connector lives in `@maple-kit/core/testing` and exists so the
 contract suite has something to run against. It is not for production.
+
+## GitHub
+
+The default store, and the reason Maple needs no infrastructure to be useful. A
+pull request is already branch identity, authentication, durability, threading,
+resolve semantics and notifications; a SQLite file in a preview pod is none of
+those and loses comments exactly when people write them.
+
+One Maple comment is one issue comment, carrying the table above its fence. That
+is what buys GitHub's own threading, reactions and notifications, and it is why
+the fence has a byte budget.
+
+### What it costs
+
+| Method      | How                                                                   | Cost                                                               |
+| ----------- | --------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| `list`      | `GET /issues/{pull}/comments`, paged by GitHub's `Link` header.       | One extra call to resolve the branch to a pull request.            |
+| `append`    | `POST` the comment, then `PATCH` it with the id GitHub just assigned. | Two writes. The id cannot be known before the comment exists.      |
+| `setStatus` | `GET` the comment, rewrite its fence, `PATCH` it back.                | Two calls, and it preserves fields a newer Maple may have written. |
+
+A comment id is `gh_<pull>_<commentId>`, so `setStatus` needs nothing it was not
+given: no index, no cache, and it works in a process that never ran `list`.
+
+### What it cannot do
+
+- **No `watch`.** GitHub has no long-poll for issue comments. The agent loop
+  polls `list` instead; US2's webhook is the eventual answer.
+- **Issue comments only.** Review comments on a diff are a different API and are
+  not read. Maple's comments are on a rendered page, not a hunk.
+- **A branch with no pull request has nowhere to go.** `list` returns an empty
+  page, which is honest — there is nothing there. `append` throws rather than
+  inventing a home for the comment.
+- **A branch with several pull requests resolves to the first.** GitHub returns
+  them newest first; Maple does not guess between them.
+
+### Configuration
+
+- One `token`, a user-to-server or installation token, read on the SDK route and
+  never sent to the overlay. `pull_requests: write` is the only scope needed.
+- `baseUrl` for GitHub Enterprise Server; it defaults to `api.github.com`.
+- Rate limits surface as the error GitHub sent, message intact, so core can
+  decide what to retry.
 
 ## Datadog
 
