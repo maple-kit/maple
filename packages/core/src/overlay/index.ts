@@ -25,3 +25,9 @@ export function createOverlayStyleSheet(css: string): CSSStyleSheet {
   sheet.replaceSync(css);
   return sheet;
 }
+
+export { captureContext, formatContext } from "./context.js";
+export type { CaptureOptions, PageContext, RegionContext, ViewportContext } from "./context.js";
+
+export { createDraftStore } from "./drafts.js";
+export type { Draft, DraftStore, DraftStoreOptions } from "./drafts.js";
