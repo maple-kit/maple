@@ -13,6 +13,7 @@ export default defineConfig({
     "src/config/index.ts",
     "src/overlay/index.ts",
     "src/route/index.ts",
+    "src/screenshot/index.ts",
     "src/tagger/index.ts",
     "src/testing/index.ts",
   ],

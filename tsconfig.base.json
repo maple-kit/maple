@@ -28,6 +28,7 @@
       "@maple-kit/core/config": ["./packages/core/src/config/index.ts"],
       "@maple-kit/core/overlay": ["./packages/core/src/overlay/index.ts"],
       "@maple-kit/core/route": ["./packages/core/src/route/index.ts"],
+      "@maple-kit/core/screenshot": ["./packages/core/src/screenshot/index.ts"],
       "@maple-kit/core/tagger": ["./packages/core/src/tagger/index.ts"],
       "@maple-kit/core/testing": ["./packages/core/src/testing/index.ts"],
       "@maple-kit/core/vite": ["./packages/core/src/vite/index.ts"],

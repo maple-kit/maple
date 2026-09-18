@@ -28,6 +28,7 @@
     "./config": "./dist/config/index.js",
     "./overlay": "./dist/overlay/index.js",
     "./route": "./dist/route/index.js",
+    "./screenshot": "./dist/screenshot/index.js",
     "./tagger": "./dist/tagger/index.js",
     "./testing": "./dist/testing/index.js",
     "./vite": "./dist/vite/index.js",
@@ -45,13 +46,18 @@
     "access": "public"
   },
   "devDependencies": {
-    "@babel/core": "8.0.5"
+    "@babel/core": "8.0.5",
+    "@zumer/snapdom": "3.0.0"
   },
   "peerDependencies": {
-    "@babel/core": "^7.22.0 || ^8.0.0"
+    "@babel/core": "^7.22.0 || ^8.0.0",
+    "@zumer/snapdom": "^3.0.0"
   },
   "peerDependenciesMeta": {
     "@babel/core": {
+      "optional": true
+    },
+    "@zumer/snapdom": {
       "optional": true
     }
   }
