@@ -1,5 +1,5 @@
 /**
- * The in-page overlay entrypoint.
+ * The in-page overlay.
  *
  * Two constraints are fixed and load-bearing under a strict CSP: the overlay
  * ships as a bundled component so it inherits the host's nonce, and all styling
@@ -19,15 +19,18 @@ export interface OverlayOptions {
 /** Path the SDK route is mounted at unless configured otherwise. */
 export const DEFAULT_BASE_PATH = "/api/maple";
 
-/** Builds an adoptable stylesheet, the only styling path the overlay may use. */
-export function createOverlayStyleSheet(css: string): CSSStyleSheet {
-  const sheet = new CSSStyleSheet();
-  sheet.replaceSync(css);
-  return sheet;
-}
-
 export { captureContext, formatContext } from "./context.js";
 export type { CaptureOptions, PageContext, RegionContext, ViewportContext } from "./context.js";
-
 export { createDraftStore } from "./drafts.js";
 export type { Draft, DraftStore, DraftStoreOptions } from "./drafts.js";
+
+export { createOverlayHost, createOverlayStyleSheet } from "./host.js";
+export type { OverlayHost, OverlayHostOptions } from "./host.js";
+export {
+  elementAt,
+  MINIMUM_REGION,
+  selectedText,
+  startElementPicking,
+  startRegionPicking,
+} from "./pick.js";
+export type { ElementPickingOptions, Pick, Rect, RegionPickingOptions } from "./pick.js";
