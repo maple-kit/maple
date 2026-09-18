@@ -9,7 +9,7 @@ hands it to a coding agent in a form it can act on, and holds the merge until
 every comment is resolved.
 
 **Status: pre-release.** Nothing is published yet. The contracts below are
-stable; the implementations behind them are not written.
+stable and implemented; the reviewer-facing interface is still being built.
 
 ## Why another one
 
@@ -17,7 +17,10 @@ Pincushion, Vercel Toolbar, Chromatic, BugHerd and Marker.io each do some of
 this. None combines all four of:
 
 - **Open source**, Apache-2.0, with no hosted service required.
-- **Deployed previews**, not a development server.
+- **Deployed previews.** Maple runs on the preview URL your CI already builds,
+  so anyone with the link can comment — a designer, a product manager, a client.
+  Tools like Agentation run against `localhost`, which means the only person who
+  can leave a comment is the person running the build.
 - **A merge gate** — CI blocks while a visual comment is unresolved.
 - **An agent loop** — the agent reads comments, fixes, and resolves them.
 
@@ -54,16 +57,12 @@ connector's capabilities are exactly the methods it defines. See
 | `@maple-kit/cli`  | The `maple` command.                         |
 | `@maple-kit/mcp`  | The MCP server an agent talks to.            |
 
-The product is Maple, the binary is `maple`, and the packages are `@maple-kit/*`
-because `maple` on npm is taken.
-
 ## Documentation
 
 - [Connectors and the capability matrix](docs/connectors.md)
 - [The JSX tagger](docs/tagger.md) — how a comment becomes `file:line`
 - [The overlay and CSP](docs/overlay-csp.md) — what Maple asks of your policy
-- [Owner setup](docs/setup-owner.md)
-- [What Phase 0 delivered](STATUS.md)
+- [The agent loop](docs/agent-loop.md) — the MCP tools and the Stop hook
 
 ## Development
 
@@ -73,7 +72,8 @@ pnpm hooks
 pnpm lint && pnpm typecheck && pnpm test
 ```
 
-Requires Node 22.13 or newer and pnpm 10. See [CONTRIBUTING.md](CONTRIBUTING.md).
+Requires Node 24, the active LTS, and pnpm 10. See
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Licence
 
