@@ -19,6 +19,7 @@
   ],
   "exports": {
     ".": "./dist/index.js",
+    "./anchor": "./dist/anchor/index.js",
     "./connectors": "./dist/connectors/index.js",
     "./logger": "./dist/logger/index.js",
     "./config": "./dist/config/index.js",
