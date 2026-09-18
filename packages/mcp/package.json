@@ -1,0 +1,33 @@
+{
+  "name": "@maplekit/mcp",
+  "version": "0.0.0",
+  "description": "Model Context Protocol server that gives an agent Maple's review comments",
+  "license": "Apache-2.0",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maple-kit/maple.git",
+    "directory": "packages/mcp"
+  },
+  "homepage": "https://github.com/maple-kit/maple/tree/main/packages/mcp",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": "./dist/index.js",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@maplekit/core": "workspace:*"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
