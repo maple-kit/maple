@@ -4,9 +4,12 @@ node_modules/
 
 # build output
 dist/
+dist-preview/
 build/
 *.tsbuildinfo
 .next/
+.next-preview/
+.next-strip/
 .turbo/
 
 # secrets — never commit a credential value

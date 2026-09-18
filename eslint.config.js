@@ -18,9 +18,12 @@ export default tseslint.config(
   {
     ignores: [
       "**/dist/**",
+      "**/dist-preview/**",
       "**/node_modules/**",
       "**/coverage/**",
       "**/.next/**",
+      "**/.next-preview/**",
+      "**/.next-strip/**",
       "**/*.d.ts",
       "examples/*/.vite/**",
     ],

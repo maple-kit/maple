@@ -17,22 +17,23 @@
   "homepage": "https://github.com/maple-kit/maple",
   "bugs": "https://github.com/maple-kit/maple/issues",
   "scripts": {
+    "attw": "pnpm -r --filter \"./packages/*\" exec attw --pack . --profile esm-only",
     "build": "pnpm -r --filter \"./packages/*\" build",
+    "changeset": "changeset",
     "check": "pnpm lint && pnpm typecheck && pnpm test",
+    "examples:verify": "pnpm build && pnpm -r --filter \"./examples/*\" verify",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "hooks": "lefthook install",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "lint:prune": "eslint . --prune-suppressions",
     "lint:suppress": "eslint . --suppress-all",
+    "publint": "pnpm -r --filter \"./packages/*\" exec publint",
     "test": "vitest run --project node",
     "test:browser": "vitest run --project browser",
     "test:watch": "vitest",
-    "typecheck": "tsc -p tsconfig.json",
-    "publint": "pnpm -r --filter \"./packages/*\" exec publint",
-    "attw": "pnpm -r --filter \"./packages/*\" exec attw --pack . --profile esm-only",
-    "changeset": "changeset",
-    "hooks": "lefthook install"
+    "typecheck": "tsc -p tsconfig.json && pnpm -r --filter \"./examples/*\" typecheck"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "0.18.5",

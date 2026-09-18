@@ -67,6 +67,11 @@ jobs:
         # --profile esm-only: these packages publish ESM with an exports map and
         # no CJS entry, so node10 and CJS resolution are expected not to apply.
         run: pnpm attw
+      - name: The examples prove what their READMEs say they prove
+        # Builds both example applications and asserts on their output: tagged
+        # on a preview build, and no data-maple- attribute anywhere in
+        # production, in the server bundle as well as the client one.
+        run: pnpm -r --filter "./examples/*" verify
 
   lockfile:
     runs-on: ubuntu-latest

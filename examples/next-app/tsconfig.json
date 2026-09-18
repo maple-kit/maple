@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node", "react"],
+    "jsx": "preserve",
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "allowJs": true,
+    "noPropertyAccessFromIndexSignature": false
+  },
+  "include": ["app/**/*.ts", "app/**/*.tsx", "scripts/**/*.ts", "*.config.ts"]
+}

@@ -1,7 +1,8 @@
 # The JSX tagger
 
-**Status:** the transform is implemented in `@maple-kit/core/tagger`. The Vite
-plugin and the Next loader that mount it are not yet.
+**Status:** implemented. The transform is `@maple-kit/core/tagger`, the Vite
+plugin is `@maple-kit/core/vite`, the Next loader is `@maple-kit/core/loader`,
+and `examples/vite-app` and `examples/next-app` assert on their own build output.
 
 ## The problem
 
@@ -77,11 +78,17 @@ const isPreview = process.env["MAPLE_PREVIEW"] === "1";
 
 export default {
   turbopack: {
-    rules: isPreview ? { "*.{jsx,tsx}": { loaders: ["@maple-kit/core/loader"] } } : {},
+    rules: isPreview ? { "*.tsx": { loaders: ["@maple-kit/core/loader"] } } : {},
   },
   compiler: { reactRemoveProperties: isPreview ? false : { properties: ["^data-maple-"] } },
 };
 ```
+
+**Do not add `as: "*.tsx"` to that rule.** It reads as the right thing to write
+— the loader does return TSX — but Turbopack's `*` captures the whole filename
+including its extension, so the module is renamed `page.tsx.tsx` and every
+relative import in the project fails to resolve. Omitting `as` keeps the
+original type, which is what is wanted.
 
 ### Vite
 
@@ -136,12 +143,29 @@ Both are regex-based removals over the whole property name space, so a stray
 - **Never tag twice.** An element that already carries `data-maple-src` is left
   alone, so a file passing through two transforms comes out the same.
 
-## Verification before implementation
+## Verification
 
-- Confirm that the `jsxImportSource` shortcut some libraries document is not
-  gated on `NODE_ENV`. If it is, it cannot be used for preview builds.
-- Confirm `reactRemoveProperties` runs on the server bundle as well as the
-  client bundle, not only in the browser output.
+Both questions this design opened are now answered by a build rather than by
+reading.
+
+**`reactRemoveProperties` does run over the server bundle.** This was the
+failure to worry about: a stripped client with an unstripped server looks
+exactly like success, because the thing people check is the browser. It is
+checked in `examples/next-app/scripts/verify.ts`, which runs three builds:
+
+| Build       | Tagger | Strip | Asserts                                              |
+| ----------- | ------ | ----- | ---------------------------------------------------- |
+| preview     | on     | off   | `data-maple-` present in `static/` **and** `server/` |
+| strip check | on     | on    | `data-maple-` absent from both                       |
+| production  | off    | on    | `data-maple-` absent from both                       |
+
+The middle one is the one that matters. A production build never runs the
+tagger, so finding it clean proves only that nothing happened; tagging and
+stripping in the same build is what exercises the stripping pass.
+
+**The `jsxImportSource` shortcut is moot.** It was only ever attractive as a way
+to avoid writing a transform. Maple writes one, so there is nothing to gate on
+`NODE_ENV`.
 
 ## Open
 

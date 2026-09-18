@@ -1,28 +1,29 @@
 # Example: Vite
 
-**Status:** stub. There is nothing to mount yet — the overlay in
-`@maple-kit/core/overlay` is a reserved entrypoint, not an implementation. This
-example is built in US1, against a real overlay.
+A real Vite 8 + React 19 application that Maple's plugin builds. `pnpm verify`
+builds it twice and asserts on the output, so what this example claims is
+checked rather than described.
 
-It is not a workspace package yet, deliberately: an example that pulls a build
-tool into the lockfile while demonstrating nothing costs install time and
-supply-chain surface for no return.
+```bash
+pnpm --filter @maple-kit/example-vite verify
+```
 
-## What it has to prove
+## What it proves today
 
-Vite is the easy target, and it is the one that shows how little setup Maple
-should need.
+1. **One plugin, no other configuration.** `maple({ tagger })` in
+   `vite.config.ts` is the whole setup.
+2. **The tagger runs on a preview build.** The bundle carries `data-maple-src`,
+   `data-maple-name`, and the repository-relative source path.
+3. **A production build carries nothing.** No `data-maple-` attribute and no
+   source path anywhere in the output. Vite needs no stripping pass for this:
+   the plugin simply does not run the transform, so there is nothing to strip.
+4. **A build, not a dev server.** Maple's premise is comments on deployed
+   previews, so the assertions run against `vite build` output.
 
-1. **Zero-configuration mounting.** One plugin in `vite.config.ts` and nothing
-   else. The plugin has every hook it needs: `configureServer` and
-   `configurePreviewServer` for the SDK route, `transformIndexHtml` to mount the
-   overlay. No codemod, no manual route.
-2. **The same plugin does the tagger.** `maple({ tagger: mode !== "production" })`
-   emits `data-maple-src` in preview and does not run the transform in
-   production, so there is nothing to strip.
-3. **A preview build, not a dev server.** Maple's whole premise is comments on
-   deployed previews. An example that only works under `vite dev` proves the
-   wrong thing; this one is exercised through `vite build && vite preview`.
-4. **The CSP contrast.** Run alongside the Next example under the same policy,
-   so the documentation's claim about which directives Maple needs is a test
-   rather than a sentence.
+## What it does not prove yet
+
+Mounting the overlay, and the CSP contrast with the Next example. The overlay's
+components do not exist yet — `@maple-kit/core/overlay` currently holds the
+context badge, the draft store and the stylesheet constraint, not a UI. When
+they land, this example gains `transformIndexHtml` mounting and is run under the
+same policy as the Next one, so `docs/overlay-csp.md`'s claim becomes a test.
