@@ -1,0 +1,14 @@
+{
+  "name": "eslint-plugin-maple",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Repository-local ESLint rules for the Maple monorepo",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "index.js",
+  "exports": "./index.js",
+  "files": [
+    "index.js",
+    "rules"
+  ]
+}
