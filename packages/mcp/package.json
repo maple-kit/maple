@@ -20,12 +20,18 @@
     ".": "./dist/index.js",
     "./package.json": "./package.json"
   },
+  "bin": {
+    "maple-mcp": "./dist/bin.js",
+    "maple-stop-hook": "./dist/stop-hook-bin.js"
+  },
   "scripts": {
     "build": "tsdown",
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@maple-kit/core": "workspace:*"
+    "@maple-kit/core": "workspace:*",
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "zod": "4.6.5"
   },
   "publishConfig": {
     "access": "public"

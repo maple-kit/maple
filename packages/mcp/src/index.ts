@@ -1,3 +1,7 @@
+export { createToolHandlers } from "./handlers.js";
+export type { CommentContext, HandlerOptions, ToolHandlers } from "./handlers.js";
+export { decideStop, MAX_BLOCKS } from "./stop-hook.js";
+export type { StopHookDecision, StopHookInput } from "./stop-hook.js";
 export {
   clampWaitMs,
   DEFAULT_WAIT_MS,
