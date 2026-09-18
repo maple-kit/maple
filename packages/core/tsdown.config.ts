@@ -12,6 +12,7 @@ export default defineConfig({
     "src/vite/index.ts",
     "src/config/index.ts",
     "src/overlay/index.ts",
+    "src/route/index.ts",
     "src/tagger/index.ts",
     "src/testing/index.ts",
   ],

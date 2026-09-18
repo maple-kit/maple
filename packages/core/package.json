@@ -27,6 +27,7 @@
     "./loader": "./dist/loader/index.js",
     "./config": "./dist/config/index.js",
     "./overlay": "./dist/overlay/index.js",
+    "./route": "./dist/route/index.js",
     "./tagger": "./dist/tagger/index.js",
     "./testing": "./dist/testing/index.js",
     "./vite": "./dist/vite/index.js",
