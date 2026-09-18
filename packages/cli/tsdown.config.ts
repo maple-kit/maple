@@ -7,5 +7,5 @@ export default defineConfig({
   clean: true,
   unbundle: true,
   fixedExtension: false,
-  target: "node22",
+  target: "node24",
 });

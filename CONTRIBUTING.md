@@ -8,7 +8,7 @@ pnpm hooks
 pnpm lint && pnpm typecheck && pnpm test
 ```
 
-Node 22.13 or newer, pnpm 10.
+Node 24, the active LTS, and pnpm 10. `.nvmrc` pins the exact version.
 
 `pnpm hooks` is a separate step on purpose. `.npmrc` sets `ignore-scripts=true`,
 so no package — including this one — runs code at install time. That is worth
