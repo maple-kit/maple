@@ -32,15 +32,14 @@ blocks or proxies it.
    for anything more per job.
 3. **Dependabot alerts** and **Dependabot security updates** are already enabled
    on all three repositories.
-4. **Secret scanning and push protection are not available yet.** On a Free
-   organisation they need GitHub Advanced Security for private repositories; the
-   API refuses them with _"Secret scanning is not available for this
-   repository."_ They cost nothing on a public repository, so enable them as
-   part of the flip — see section 6. Until then the gitleaks hook and the
-   gitleaks CI job are the only secret controls, and a contributor can skip the
-   hook with `--no-verify`.
-5. **Private vulnerability reporting** is likewise public-repository only.
-   `SECURITY.md` links to it, so turn it on at the flip or that link is dead.
+4. **Secret scanning and push protection — enabled.** Both were refused while
+   `maple` was private, because a Free organisation needs GitHub Advanced
+   Security for them on a private repository. They are free on a public one and
+   were turned on with the flip in section 5. The gitleaks hook and the gitleaks
+   CI job stay: a contributor can skip the hook with `--no-verify`, and push
+   protection catches what reaches the remote rather than what reaches a commit.
+5. **Private vulnerability reporting — enabled.** Also public-repository only.
+   `SECURITY.md` links to it, so it had to be on or that link was dead.
 6. _Allow members to create public repositories_ cannot be turned off on a Free
    organisation; GitHub refuses a private-only creation policy. Nothing to do.
 
@@ -120,33 +119,89 @@ Filling the form by hand instead:
      file should not be in the working tree at all.
 8. Install the app on the `maple-kit` organisation.
 
-## 5. Branch protection
+## 5. Branch protection — done
 
-**Not enabled yet, by choice.** Requiring status checks blocks direct pushes to
-`main`, and Phase 0 was built by pushing directly. Turn it on at the start of
-US1, so the first feature work goes through a pull request.
+**Enabled at the start of US1.** Phase 0 was built by pushing straight to
+`main`; from US1 on, every change goes through a pull request.
 
-On `maple-kit/maple`, protect `main`:
+It is a **repository ruleset** on `maple-kit/maple` named `main`, targeting
+`~DEFAULT_BRANCH`, enforcement `active`:
 
-- Require a pull request before merging, with one approval.
-- Require status checks to pass: `lint`, `typecheck`, `test`, `gitleaks`,
-  `publint`, `dco`.
-- Require branches to be up to date before merging.
-- Require signed commits.
-- Do not allow force pushes or deletions.
+| Rule                     | Setting                                                                        |
+| ------------------------ | ------------------------------------------------------------------------------ |
+| `pull_request`           | One approving review, stale reviews dismissed on push                          |
+| `required_status_checks` | `lint` `typecheck` `format` `test` `build` `gitleaks` `lockfile` `dco`, strict |
+| `required_signatures`    | Every commit signed                                                            |
+| `non_fast_forward`       | No force pushes                                                                |
+| `deletion`               | `main` cannot be deleted                                                       |
+
+Three things about that table are worth the words.
+
+**The check names are CI job ids, not script names.** `publint` and
+`arethetypeswrong` are steps inside the `build` job, so `build` is the context
+GitHub sees; requiring `publint` by name would wait forever on a check that
+never reports. `lockfile` and `format` are jobs in their own right. Read the job
+ids out of `.github/workflows/ci.yml` before changing this list.
+
+**`dco` only runs on a pull request.** The job carries
+`if: github.event_name == 'pull_request'`, which is correct — there is no base
+to diff against on a push — and harmless here, because the ruleset only gates
+merges.
+
+**Repository admin is a bypass actor.** A single maintainer cannot approve their
+own pull request, so with one required approval and no bypass the repository
+would be unmergeable by the only person in it. The approval requirement still
+applies to everyone else. Remove the bypass once there is a second reviewer.
+
+### Why the repository is public
+
+A ruleset is not available on a private repository in a Free organisation.
+GitHub refuses both the rulesets and the branch-protection endpoints with
+`403 Upgrade to GitHub Pro or make this repository public`. The three ways out
+were a paid plan, no server-side enforcement, or the flip to public that
+section 6 was always heading towards. The flip was chosen, and it also turned on
+the three controls in section 2 that a private Free repository cannot have.
+
+### Signed commits
+
+`required_signatures` verifies against keys registered on the **author's**
+account, so it needs a signing key before it can be satisfied. SSH signing is
+configured per repository rather than globally, for the same reason the commit
+identity is:
+
+```
+git config --local gpg.format ssh
+git config --local user.signingkey ~/.ssh/<key>.pub
+git config --local commit.gpgsign true
+```
+
+The public half is added at <https://github.com/settings/ssh/new> with **Key
+type: Signing Key** — an authentication key of the same value does not count,
+and a commit signed by a key GitHub does not know reads as `Unverified` and is
+refused by the rule.
+
+### Still to add
 
 Once the `maple/visual-review` check is live, add it as required and pin its
-`integration_id` to the app from step 4 in the ruleset. Without that pin anyone
-with push access can post a passing status under that name.
+`integration_id` to the app from step 4. Without that pin anyone with push
+access can post a passing status under that name.
 
-## 6. Before the repositories go public
+## 6. Before a repository goes public
+
+`maple` is public. `maple-action` and `maple-tui` are still private and each
+needs this list run over it before it flips.
 
 - Re-read the history for anything that should not be published:
-  `git log -p | grep -iE "<your own patterns>"`. The repositories were written
-  to be publishable, so this should find nothing.
-- Run `gitleaks detect --source . --log-opts="--all"` over the full history.
-- Publish `SECURITY.md`'s reporting address and confirm it is monitored.
-- Turn on Socket if section 3 deferred it.
+  `git log -p | grep -iE "<your own patterns>"`. These repositories were written
+  to be publishable, so this should find nothing. On `maple` it found nothing.
+- Run `gitleaks git --redact --verbose --exit-code 1 .` over the full history.
+  This is the same invocation the CI job uses, so a pass here predicts a pass
+  there.
+- Confirm `SECURITY.md` points somewhere that works. It links to GitHub's
+  private vulnerability reporting, which only exists once the repository is
+  public and the setting is on — so the link is dead until both are true.
 - **Enable secret scanning, push protection and private vulnerability
-  reporting.** All three are free on a public repository and were unavailable
-  while these were private.
+  reporting** immediately after the flip. All three are free on a public
+  repository and unavailable on a private one in a Free organisation.
+- Enable a ruleset on `main`. Same reason: section 5's rules need the repository
+  to be public on this plan.
