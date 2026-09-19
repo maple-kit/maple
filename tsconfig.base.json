@@ -38,7 +38,9 @@
       "@maple-kit/ui/composer": ["./packages/ui/src/composer/index.ts"],
       "@maple-kit/ui/icons": ["./packages/ui/src/icons/index.ts"],
       "@maple-kit/ui/island": ["./packages/ui/src/island/index.ts"],
+      "@maple-kit/ui/maple": ["./packages/ui/src/maple.ts"],
       "@maple-kit/ui/marks": ["./packages/ui/src/marks/index.ts"],
+      "@maple-kit/ui/picker": ["./packages/ui/src/picker/index.ts"],
       "@maple-kit/cli": ["./packages/cli/src/index.ts"],
       "@maple-kit/mcp": ["./packages/mcp/src/index.ts"]
     }
