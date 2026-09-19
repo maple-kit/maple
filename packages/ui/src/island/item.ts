@@ -9,12 +9,14 @@
  */
 
 import { labelFor } from "@maple-kit/core/anchor";
+import { useMapleClient } from "@maple-kit/react";
 import { createElement, forwardRef, useState } from "react";
 
 import { confidenceFor, dataAttributes } from "../data.js";
 import { TargetIcon } from "../icons/target.js";
 import { STATUS_LABELS } from "../language.js";
 import { applyReviewerSlot } from "../slots.js";
+import { Tip } from "../tip.js";
 import { kindOf } from "./comments.js";
 import { useIsland } from "./context.js";
 import {
@@ -28,8 +30,7 @@ import {
 } from "./language.js";
 import { Leaf } from "./leaf.js";
 import { cx, renderPart } from "./part.js";
-import { relativeTime } from "./time.js";
-import { Tip } from "./tip.js";
+import { absoluteTime, relativeTime } from "./time.js";
 
 import type { PartProps } from "./part.js";
 import type { Comment, CommentAnchor, CommentAuthor } from "@maple-kit/core";
@@ -46,10 +47,14 @@ const LONG_BODY = 150;
 
 const PART = "<Maple.Item>";
 
+/** A second of rest: nobody hovers a timestamp meaning to ask what it was. */
+export const TIME_DELAY_MS = 1000;
+
 /** A row: who and when, what they said, and what it is on. */
 export const Item = /** @__PURE__ */ forwardRef<HTMLElement, ItemProps>(function Item(props, ref) {
   const { asChild, className, comment, ...rest } = props;
   const island = useIsland(PART);
+  const client = useMapleClient();
   const [expanded, setExpanded] = useState(false);
 
   const long = comment.body.length > LONG_BODY;
@@ -65,6 +70,11 @@ export const Item = /** @__PURE__ */ forwardRef<HTMLElement, ItemProps>(function
       "data-mk-expanded": String(expanded),
       "data-mk-selected": String(island.selected === comment.id),
       className: cx("mk-row", className),
+      onClick: () => client.viewComment(comment.id),
+      onPointerEnter: () => client.peek(comment.id),
+      onPointerLeave: () => client.peek(null),
+      onFocus: () => client.peek(comment.id),
+      onBlur: () => client.peek(null),
       ref,
     },
     [
@@ -122,10 +132,14 @@ function who(comment: Comment): ReactNode {
     [
       avatar(author),
       renderPart("span", false, { key: "name", className: "mk-name" }, author.name),
-      renderPart(
-        "span",
-        false,
-        { key: "when", className: "mk-when" },
+      createElement(
+        Tip,
+        {
+          key: "when",
+          className: "mk-when",
+          delayMs: TIME_DELAY_MS,
+          sentence: absoluteTime(comment.createdAt),
+        },
         relativeTime(comment.createdAt, Date.now()),
       ),
     ],

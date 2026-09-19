@@ -30,6 +30,33 @@ export function opensComposer(event: ShortcutEvent, key: string = COMMENT_SHORTC
   return !isEditable(event.target);
 }
 
+/** How a surface asks to be told about Escape. */
+export interface EscapeOptions {
+  /** The one thing to shut, decided by the caller in its own order. */
+  onEscape(): void;
+  /** What the listener attaches to. Defaults to the page's own document. */
+  readonly view?: { addEventListener: Document["addEventListener"] };
+  readonly signal?: AbortSignal;
+}
+
+/**
+ * Escape, wherever the focus is. A surface that only hears it while focused
+ * cannot be shut by a reviewer who clicked back onto the page, which is most
+ * of the time the overlay is open.
+ */
+export function watchEscape(options: EscapeOptions): void {
+  const view = options.view ?? document;
+  const when = options.signal === undefined ? {} : { signal: options.signal };
+
+  view.addEventListener(
+    "keydown",
+    (event: Event) => {
+      if ((event as KeyboardEvent).key === "Escape") options.onEscape();
+    },
+    { capture: true, ...when },
+  );
+}
+
 /**
  * True for anywhere a person could be typing, including a `contenteditable`
  * host the browser has not told us is focused.

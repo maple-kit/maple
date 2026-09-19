@@ -14,7 +14,7 @@ import { ElementIcon } from "../icons/element.js";
 import { RegionIcon } from "../icons/region.js";
 import { TextIcon } from "../icons/text.js";
 import { Slot } from "../slot.js";
-import { KIND_WORDS, TARGET_PREFIX, targetName, targetPhrase } from "./phrase.js";
+import { KIND_WORDS, quotedText, TARGET_PREFIX, targetName, targetPhrase } from "./phrase.js";
 
 import type { AsChildProps } from "../slot.js";
 import type { ComposerTarget, PickKind } from "@maple-kit/core/client";
@@ -71,25 +71,30 @@ interface TargetLineProps {
   readonly target: ComposerTarget;
 }
 
-/** The chip says which kind; the sentence says what it is on. */
+/**
+ * The icon says the kind; the sentence says what it is on. The word beside the
+ * icon read as a second fact, and the sentence already says which.
+ */
 function TargetLine(props: TargetLineProps): ReactElement {
   const { kind } = props.target;
-  const phrase = targetPhrase(kind, targetName(props.target));
+  const quoted = quotedText(props.target);
+  const phrase = quoted ?? targetPhrase(kind, targetName(props.target));
 
   return createElement(
     "span",
     { className: "mk-target" },
     createElement(
       "span",
-      { className: "mk-chip" },
+      { className: "mk-target-kind", role: "img", "aria-label": KIND_WORDS[kind] },
       createElement(IconCrossfade, { name: kind, children: iconFor(kind) }),
-      KIND_WORDS[kind],
     ),
     createElement(
       "span",
       { className: "mk-target-on" },
       TARGET_PREFIX,
-      createElement("b", null, phrase),
+      quoted === undefined
+        ? createElement("b", null, phrase)
+        : createElement("q", { className: "mk-target-quote" }, quoted),
     ),
   );
 }

@@ -2,21 +2,22 @@
  * `Maple.Context`: what the page looked like, at the moment of writing.
  *
  * Half of what Maple has and a comment box does not, which is why it is on
- * screen while the comment is written rather than behind a disclosure.
- * `formatContext` renders it from a captured page or a stored comment — one
- * formatter, two inputs, so the two can never drift. Developer detail adds
- * the layout width, the breakpoint, the ratio and the locale to it.
+ * screen while the comment is written rather than behind a disclosure. It is
+ * a labelled list rather than a line of monospace: a wall of mono was the
+ * wrong shape for the one fact a reviewer actually reads off it, which is how
+ * wide the layout was. `contextRows` builds it from a captured page or from a
+ * stored comment — one builder, two inputs, so the two cannot drift.
  */
 
-import { formatContext } from "@maple-kit/core/overlay";
+import { contextRows } from "@maple-kit/core/overlay";
 import { useMaple } from "@maple-kit/react";
-import { createElement, forwardRef } from "react";
+import { createElement, forwardRef, Fragment } from "react";
 
 import { Slot } from "../slot.js";
 
 import type { AsChildProps } from "../slot.js";
 import type { CommentContext } from "@maple-kit/core";
-import type { PageContext } from "@maple-kit/core/overlay";
+import type { ContextRow, PageContext } from "@maple-kit/core/overlay";
 import type { ReactNode } from "react";
 
 /** The badge. The context defaults to the one the pick captured. */
@@ -26,40 +27,34 @@ export interface MapleContextProps extends AsChildProps {
   readonly context?: CommentContext | PageContext;
 }
 
-/** What `formatContext` joins its facts with. */
-const SEPARATOR = " · ";
-
-/** So a leading number can carry the emphasis. */
-const LEADING_DIGITS = /^\d+/;
-
-/** Every width is tabular: they all change in place. */
+/** Labels muted, values aligned, two columns. */
 export const MapleContextBadge = /** @__PURE__ */ forwardRef<HTMLElement, MapleContextProps>(
   function MapleContextBadge(props, ref) {
     const { composer, detail } = useMaple();
     const context = props.context ?? composer.target?.context;
-    const Element = (props.asChild ? Slot : "div") as "div";
+    const Element = (props.asChild ? Slot : "dl") as "dl";
 
     if (!context) return null;
 
-    return createElement(
-      Element,
-      {
-        ref,
-        className: props.className
-          ? `mk-composer-row mk-ctx ${props.className}`
-          : "mk-composer-row mk-ctx",
-      },
-      ...formatContext(context, detail).split(SEPARATOR).map(fact),
-    );
+    const className = ["mk-composer-row", "mk-ctx", props.className].filter(Boolean).join(" ");
+    return createElement(Element, { ref, className }, ...contextRows(context, detail).map(row));
   },
 );
 
-/** One fact, its number set apart from the word it measures. */
-function fact(text: string, index: number): ReactNode {
-  const rest = text.replace(LEADING_DIGITS, "");
-  const digits = text.slice(0, text.length - rest.length);
-  const body = digits ? [createElement("b", { key: "n" }, digits), rest] : [text];
-  const lead = index === 0 ? [] : [SEPARATOR];
-
-  return createElement("span", { key: `${String(index)}-${text}` }, ...lead, ...body);
+/**
+ * A label and its value. The pair is a fragment rather than a wrapper, so the
+ * two columns are the list's own grid and every value lines up.
+ */
+function row(one: ContextRow): ReactNode {
+  return createElement(
+    Fragment,
+    { key: one.label },
+    createElement("dt", null, one.label),
+    createElement(
+      "dd",
+      one.mono === true ? { className: "mk-mono" } : null,
+      one.value,
+      one.note === undefined ? null : createElement("em", null, ` · ${one.note}`),
+    ),
+  );
 }

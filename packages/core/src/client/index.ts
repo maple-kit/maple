@@ -42,13 +42,20 @@ export type {
   PreferencesOptions,
   StoredPreferences,
 } from "./preferences.js";
-export { COMMENT_SHORTCUT, isEditable, opensComposer } from "./shortcut.js";
-export type { ShortcutEvent } from "./shortcut.js";
-export { hostScheme, readThemeSignals, relativeLuminance, themeFrom, watchTheme } from "./theme.js";
+export { COMMENT_SHORTCUT, isEditable, opensComposer, watchEscape } from "./shortcut.js";
+export type { EscapeOptions, ShortcutEvent } from "./shortcut.js";
+export {
+  hostScheme,
+  overlaySchemeFor,
+  readThemeSignals,
+  relativeLuminance,
+  themeFrom,
+  watchTheme,
+} from "./theme.js";
 export type { ThemeSignals, ThemeView, ThemeWatch, ThemeWatchOptions } from "./theme.js";
 export { createTransport, DEFAULT_BASE_PATH, MapleRequestError } from "./transport.js";
 export type { Transport, TransportOptions } from "./transport.js";
-export { COMMENT_FILTERS, CORNERS, DETAILS } from "./types.js";
+export { COMMENT_FILTERS, CORNERS, DETAILS, THEME_PREFERENCES } from "./types.js";
 export type {
   ClientState,
   CommentFilter,
@@ -61,6 +68,7 @@ export type {
   PostedComment,
   ResolutionClaim,
   Scheme,
+  ThemePreference,
   ThemeSource,
   ThemeState,
 } from "./types.js";

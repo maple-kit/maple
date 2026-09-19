@@ -1,11 +1,12 @@
 /**
  * The bundle budget, asserted at build time.
  *
- * Marks and the island, with the root they need, stay under 25 KB gzipped; the
- * composer costs its own 8 KB on top. It runs as the second half of this
- * package's `build`, so the existing CI build job enforces it and no workflow
- * knows about it. It measures this package's own emitted modules: `react` is a
- * peer, and `@maple-kit/core` and `@maple-kit/react` carry their own budgets.
+ * It runs as the second half of this package's `build`, so the CI build job
+ * enforces it. It measures this package's own emitted modules only.
+ *
+ * The stylesheet is weighed first, on its own: the overlay adopts one sheet,
+ * so charging its rules to whichever column reached them first moved the
+ * component columns whenever a rule was added elsewhere.
  */
 
 import { readFileSync } from "node:fs";
@@ -17,12 +18,15 @@ const DIST = resolve(dirname(fileURLToPath(import.meta.url)), "..", "dist");
 
 /** Each budget is the gzipped size of the modules only that column reaches. */
 const BUDGETS = [
+  { name: "the adopted stylesheet", entries: ["stylesheet.js"], max: 10 * 1024 },
   {
     name: "root + marks + island + icons",
     entries: ["index.js", "marks/index.js", "island/index.js", "icons/index.js"],
-    max: 25 * 1024,
+    max: 19 * 1024,
   },
   { name: "composer, on top", entries: ["composer/index.js"], max: 8 * 1024 },
+  { name: "picker, on top", entries: ["picker/index.js"], max: 3 * 1024 },
+  { name: "the default composition, on top", entries: ["maple.js"], max: 1024 },
 ];
 
 const RELATIVE_IMPORT = /(?:from|import)[\s(]+["'](\.[^"']+)["']/g;

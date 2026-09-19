@@ -311,6 +311,7 @@ describe("what a link asked for", () => {
         enabled: true,
         position: "top-left",
         detail: "developer",
+        theme: "dark",
         hideResolved: false,
         shortcut: "c",
         allowUrlOverride: true,
@@ -322,6 +323,7 @@ describe("what a link asked for", () => {
     const state = maple.getState();
     expect(state.position).toBe("top-left");
     expect(state.detail).toBe("developer");
+    expect(state.themePreference).toBe("dark");
     expect(state.selected).toBe("c_9");
     expect(state.showResolved).toBe(true);
     expect(state.pick).toEqual({ armed: true, kind: "region" });
@@ -333,15 +335,37 @@ describe("what a link asked for", () => {
 });
 
 describe("a preference the viewer set", () => {
-  it("remembers the corner and the detail across a second controller", () => {
+  it("remembers the corner, the detail and the theme across a second controller", () => {
     const storage = memoryStorage();
     const first = client({ storage, origin: "https://preview.example" });
     first.setPosition("top-right");
     first.setDetail("developer");
+    first.setTheme("light");
 
     const second = client({ storage, origin: "https://preview.example" });
     expect(second.getState().position).toBe("top-right");
     expect(second.getState().detail).toBe("developer");
+    expect(second.getState().themePreference).toBe("light");
+  });
+
+  it("starts on auto, and takes each of the three when asked", () => {
+    const maple = client();
+    expect(maple.getState().themePreference).toBe("auto");
+
+    maple.setTheme("dark");
+    expect(maple.getState().themePreference).toBe("dark");
+    maple.setTheme("auto");
+    expect(maple.getState().themePreference).toBe("auto");
+  });
+
+  it("stays presentation only: the theme changes no comment", async () => {
+    fake.seed(storedComment({ id: "c_2" }));
+    const maple = client();
+    await maple.load();
+    const before = maple.getState().comments;
+
+    maple.setTheme("dark");
+    expect(maple.getState().comments).toBe(before);
   });
 
   it("stays presentation only: the detail changes no comment", async () => {
@@ -403,5 +427,90 @@ describe("hidden, which is not gone", () => {
 
     expect(maple.getState().hidden).toBe(true);
     expect(maple.getState().selected).toBeNull();
+  });
+});
+
+/**
+ * A row cannot carry the context badge or the screenshot, and those are most
+ * of what a comment written last week is worth opening.
+ */
+describe("reading a comment already written", () => {
+  it("opens the panel on it, with its body, its target and its context", async () => {
+    fake.seed(storedComment({ id: "c_7", body: "The gap under the heading is wrong." }));
+    const maple = client();
+    await maple.load();
+
+    maple.viewComment("c_7");
+    const { composer } = maple.getState();
+
+    expect(composer.open).toBe(true);
+    expect(composer.viewing).toBe("c_7");
+    expect(composer.body).toBe("The gap under the heading is wrong.");
+    expect(composer.target?.anchor).toEqual(maple.getState().comments[0]?.anchor);
+    expect(composer.target?.context).toEqual(maple.getState().comments[0]?.context);
+  });
+
+  it("selects it too, so the page rings what it is about", async () => {
+    fake.seed(storedComment({ id: "c_7" }));
+    const maple = client();
+    await maple.load();
+
+    maple.viewComment("c_7");
+
+    expect(maple.getState().selected).toBe("c_7");
+  });
+
+  it("opens no draft and makes nothing dirty: reading is not writing", async () => {
+    fake.seed(storedComment({ id: "c_7" }));
+    const maple = client();
+    await maple.load();
+
+    maple.viewComment("c_7");
+
+    expect(maple.getState().composer.dirty).toBe(false);
+    expect(maple.getState().composer.draftId).toBeUndefined();
+    expect(maple.getState().drafts).toHaveLength(0);
+  });
+
+  it("does nothing for an id the branch does not have", async () => {
+    const maple = client();
+    await maple.load();
+
+    maple.viewComment("c_nothing");
+
+    expect(maple.getState().composer.open).toBe(false);
+  });
+
+  it("takes the island back off hidden, as anything arriving does", async () => {
+    fake.seed(storedComment({ id: "c_7" }));
+    const maple = client();
+    await maple.load();
+    maple.setHidden(true);
+
+    maple.viewComment("c_7");
+
+    expect(maple.getState().hidden).toBe(false);
+  });
+});
+
+/** Hover and selection draw the same ring; only their lifetimes differ. */
+describe("what a pointer is over", () => {
+  it("starts at nothing and takes whatever is pointed at", () => {
+    const maple = client();
+    expect(maple.getState().peeked).toBeNull();
+
+    maple.peek("c_1");
+    expect(maple.getState().peeked).toBe("c_1");
+  });
+
+  it("clears without disturbing what was selected", () => {
+    const maple = client();
+    maple.select("c_1");
+    maple.peek("c_2");
+
+    maple.peek(null);
+
+    expect(maple.getState().peeked).toBeNull();
+    expect(maple.getState().selected).toBe("c_1");
   });
 });

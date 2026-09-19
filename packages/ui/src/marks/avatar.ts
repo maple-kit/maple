@@ -64,7 +64,7 @@ export const MapleAvatar = /** @__PURE__ */ forwardRef<HTMLSpanElement, AvatarPr
       ...inside(asChild, children, [
         createElement(MapleLeaf, {
           key: "leaf",
-          form: provenance === "guest" ? "dashed" : "solid",
+          form: provenance === "guest" ? "outline" : "solid",
           halo: false,
         }),
         createElement("span", { key: "ini", className: "mk-avatar-ini" }, initialsOf(name)),

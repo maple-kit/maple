@@ -8,7 +8,7 @@
  */
 
 /** The visible mark. The hit area is larger and extended with a pseudo-element. */
-export const MARK_SIZE_PX = 34;
+export const MARK_SIZE_PX = 38;
 
 /** The smallest a control may be to be hit reliably with a thumb. */
 export const MARK_HIT_PX = 40;

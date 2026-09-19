@@ -141,6 +141,65 @@ function developerBadge(fields: BadgeFields): readonly string[] {
   ];
 }
 
+/** One line of the badge when it is drawn as a list rather than a sentence. */
+export interface ContextRow {
+  /** The label, shown small and muted. Two words at most. */
+  readonly label: string;
+  readonly value: string;
+  /** A second clause, shown quieter than the value. */
+  readonly note?: string;
+  /** Set where the value is a machine string: a locale, a time zone. */
+  readonly mono?: boolean;
+}
+
+/**
+ * The same capture as a labelled list, for a surface with room for one.
+ *
+ * `formatContext` is the one-line form, which is what a scanned row of
+ * comments needs. In the composer there is room for two columns, and the
+ * window-versus-content gap is the insight — so the default form says
+ * "420px covered" rather than leaving a reader to subtract two numbers.
+ */
+export function contextRows(
+  context: PageContext | CommentContext,
+  detail: Detail = "developer",
+): readonly ContextRow[] {
+  const fields = badgeFields(context);
+  return detail === "developer" ? developerRows(fields) : defaultRows(fields);
+}
+
+function defaultRows(fields: BadgeFields): readonly ContextRow[] {
+  const covered = fields.width - fields.contentWidth;
+  return [
+    {
+      label: "Width",
+      value: `${String(fields.width)}px`,
+      ...(covered > 0 ? { note: `${String(covered)}px covered` } : {}),
+    },
+    { label: "Theme", value: fields.scheme },
+    ...openRow(fields),
+  ];
+}
+
+function developerRows(fields: BadgeFields): readonly ContextRow[] {
+  return [
+    { label: "Window", value: `${String(fields.width)}px` },
+    { label: "Content", value: `${String(fields.contentWidth)}px` },
+    ...(fields.breakpoint === undefined ? [] : [{ label: "Breakpoint", value: fields.breakpoint }]),
+    { label: "Scheme", value: fields.scheme },
+    { label: "DPR", value: `${String(fields.dpr)}×` },
+    ...(fields.locale === undefined ? [] : [{ label: "Locale", value: fields.locale, mono: true }]),
+    ...openRow(fields),
+  ];
+}
+
+/** One row for every region, because "open" is a list and not a number. */
+function openRow(fields: BadgeFields): readonly ContextRow[] {
+  if (fields.regions.length === 0) return [];
+  const names = fields.regions.map((region) => region.label ?? region.role);
+  return [{ label: "Open", value: names.join(", ") }];
+}
+
 interface BadgeFields {
   readonly width: number;
   readonly contentWidth: number;

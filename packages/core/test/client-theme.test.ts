@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { hostScheme, relativeLuminance, themeFrom } from "../src/client/index.js";
+import { hostScheme, overlaySchemeFor, relativeLuminance, themeFrom } from "../src/client/index.js";
 
 import type { ThemeSignals, ThemeSource } from "../src/client/index.js";
 
@@ -75,5 +75,31 @@ describe("relative luminance", () => {
     expect(relativeLuminance("transparent")).toBeUndefined();
     expect(relativeLuminance(undefined)).toBeUndefined();
     expect(relativeLuminance("rgb(1, 2)")).toBeUndefined();
+  });
+});
+
+/**
+ * The preference decides what the overlay is drawn in; the host's scheme is
+ * what a comment records. Conflating them writes the wrong one onto the wire.
+ */
+describe("what the overlay is drawn in", () => {
+  const overLight = themeFrom({ theme: "light" });
+  const overDark = themeFrom({ theme: "dark" });
+
+  it("takes the opposite of the host on auto", () => {
+    expect(overlaySchemeFor("auto", overLight)).toBe("dark");
+    expect(overlaySchemeFor("auto", overDark)).toBe("light");
+  });
+
+  it("takes the viewer at their word on light and on dark", () => {
+    expect(overlaySchemeFor("light", overLight)).toBe("light");
+    expect(overlaySchemeFor("dark", overLight)).toBe("dark");
+    expect(overlaySchemeFor("light", overDark)).toBe("light");
+    expect(overlaySchemeFor("dark", overDark)).toBe("dark");
+  });
+
+  it("leaves the host's own scheme alone whatever it is asked for", () => {
+    expect(overLight.host).toBe("light");
+    expect(overDark.host).toBe("dark");
   });
 });

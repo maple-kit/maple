@@ -31,19 +31,23 @@ describe("state on data-*, never in props", () => {
 });
 
 /** Fill says how far through its life a comment is, and nothing else does. */
+/**
+ * The leaf fills up as a comment goes through its life: open is an outline,
+ * re-verify is half, resolved is full. One never written is an outline too.
+ */
 describe("the mark's fill", () => {
   it.each([
-    ["open", true, "solid"],
-    ["resolved", true, "ring"],
+    ["open", true, "outline"],
+    ["resolved", true, "solid"],
     ["needs_reverify", true, "partial"],
-    ["orphaned", true, "dashed"],
-    ["open", false, "dashed"],
+    ["orphaned", true, "outline"],
+    ["open", false, "outline"],
   ] as const)("draws %s (sent: %s) as %s", (status, sent, form) => {
     expect(formFor(status, sent)).toBe(form);
   });
 
-  it("draws an unknown status solid rather than blank", () => {
-    expect(formFor(undefined)).toBe("solid");
+  it("draws an unknown status as an outline rather than blank", () => {
+    expect(formFor(undefined)).toBe("outline");
   });
 });
 

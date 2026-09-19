@@ -25,6 +25,9 @@ export interface IslandContextValue {
   /** Off by default. What it reveals is the developer detail, not the switch. */
   readonly developer: boolean;
   readonly setDeveloper: (on: boolean) => void;
+  /** The settings panel's, held here so Escape can shut the newest surface. */
+  readonly settingsOpen: boolean;
+  readonly setSettingsOpen: (open: boolean) => void;
   /** Ties the pill to the card for assistive technology. */
   readonly contentId: string;
   /** Each comment's place on the branch, oldest first. */

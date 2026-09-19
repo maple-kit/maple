@@ -41,10 +41,27 @@ Adding one is a decision, not a convenience.
   maintained, and whether its licence is compatible with Apache-2.0. **Record
   that reasoning in the commit body**, not in the pull request description,
   where it will not survive the squash.
-- `.npmrc` pins exact versions, refuses install scripts and enforces engines.
+- `.npmrc` pins exact versions, refuses install scripts and enforces engines —
+  except against a Node so old that pnpm cannot start on it, which is a
+  different error with the same cause. CONTRIBUTING.md names it.
   `pnpm-workspace.yaml` refuses anything published in the last three days. A
   package needing an install script goes in `onlyBuiltDependencies` with a
   reason.
+
+### Breaking changes
+
+Every package here is 0.x, and 0.x makes no compatibility promise. **Break a
+public interface when breaking it is the right shape**: rename the export,
+change the signature, move it to another entrypoint. Update every call site,
+every test and every example in the same commit, and say what broke in the
+changeset.
+
+Do not write a deprecation alias, a compatibility shim or a re-export that
+keeps an old name alive. There is nothing downstream to keep alive yet, and a
+shim is dead code that has to be read, tested and eventually deleted anyway.
+
+This stands until the packages ship 1.0, at which point this section is
+replaced rather than edited.
 
 ### Effect
 
@@ -118,8 +135,13 @@ job both check.
 ## Before opening a pull request
 
 ```
+nvm use
 pnpm lint && pnpm typecheck && pnpm test && pnpm build
 ```
+
+`nvm use` first: on the wrong Node, pnpm fails with
+`ERR_UNKNOWN_BUILTIN_MODULE: No such built-in module: node:sqlite`, which says
+nothing about the version and is entirely about the version.
 
 If the hooks are not running, `pnpm hooks`. They are not installed by
 `pnpm install`, because `ignore-scripts=true` stops every install-time script,

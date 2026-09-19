@@ -9,8 +9,18 @@
  * controller's: both outlive this component and both are shared.
  */
 
+import { watchEscape } from "@maple-kit/core/client";
 import { useMaple, useMapleClient } from "@maple-kit/react";
-import { createElement, forwardRef, useCallback, useId, useMemo, useState } from "react";
+import {
+  createElement,
+  forwardRef,
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { useMapleUi } from "../context.js";
 import { composeRefs } from "../slot.js";
@@ -64,10 +74,11 @@ export const Island = /** @__PURE__ */ forwardRef<HTMLDivElement, IslandProps>(
  * waits for anything reads as a surface that did not hear the click.
  */
 function useIslandState(defaultOpen: boolean): IslandContextValue {
-  const { comments, detail, selected } = useMaple();
+  const { comments, composer, detail, selected } = useMaple();
   const client = useMapleClient();
   const { container } = useMapleUi(PART);
   const [phase, setPhase] = useState<IslandPhase>(defaultOpen ? "open" : "closed");
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const contentId = useId();
 
   const setOpen = useCallback(
@@ -97,6 +108,8 @@ function useIslandState(defaultOpen: boolean): IslandContextValue {
   const snap = useCallback((corner: Corner) => client.setPosition(corner), [client]);
   const drag = useDrag(container, snap);
 
+  useEscape({ composerOpen: composer.open, settingsOpen, setSettingsOpen, setOpen, client });
+
   return useMemo(
     () => ({
       phase: selected === null ? phase : "open",
@@ -104,6 +117,8 @@ function useIslandState(defaultOpen: boolean): IslandContextValue {
       settled,
       developer,
       setDeveloper,
+      settingsOpen,
+      setSettingsOpen,
       contentId,
       numbers,
       comments,
@@ -122,9 +137,41 @@ function useIslandState(defaultOpen: boolean): IslandContextValue {
       selected,
       setDeveloper,
       setOpen,
+      settingsOpen,
       settled,
     ],
   );
+}
+
+interface EscapeOrder {
+  readonly composerOpen: boolean;
+  readonly settingsOpen: boolean;
+  readonly setSettingsOpen: (open: boolean) => void;
+  readonly setOpen: (open: boolean) => void;
+  readonly client: ReturnType<typeof useMapleClient>;
+}
+
+/**
+ * Newest first: the panel opened last is the one Escape shuts. Anything else
+ * and a reader with the composer up over the card loses both to one key.
+ */
+function useEscape(order: EscapeOrder): void {
+  const latest = useRef(order);
+  latest.current = order;
+
+  useEffect(() => {
+    const stop = new AbortController();
+    watchEscape({
+      signal: stop.signal,
+      onEscape: () => {
+        const now = latest.current;
+        if (now.composerOpen) return now.client.closeComposer();
+        if (now.settingsOpen) return now.setSettingsOpen(false);
+        now.setOpen(false);
+      },
+    });
+    return () => stop.abort();
+  }, []);
 }
 
 /** A close runs its exit first; anything already closed stays closed. */

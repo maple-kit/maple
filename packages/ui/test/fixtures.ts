@@ -168,9 +168,11 @@ export const PAGE_HTML = `
 
 /** Answers the route with the fixtures, and `/me` with no session. */
 export function fixtureFetch(comments: readonly Comment[] = COMMENTS): typeof globalThis.fetch {
-  return (input: RequestInfo | URL) => {
+  return (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input instanceof Request ? input.url : input);
-    const body = url.includes("/me") ? { user: null } : { comments };
+    const patch = (init?.method ?? "GET") === "PATCH";
+    const body = patch && init ? patched(url, comments, init) : listing(url, comments);
+
     return Promise.resolve(
       new Response(JSON.stringify(body), {
         status: 200,
@@ -178,4 +180,26 @@ export function fixtureFetch(comments: readonly Comment[] = COMMENTS): typeof gl
       }),
     );
   };
+}
+
+function listing(url: string, comments: readonly Comment[]): unknown {
+  return url.includes("/me") ? { user: null } : { comments };
+}
+
+/**
+ * A status change answers with the comment as it now is, which is what the
+ * route does: the controller replaces its copy rather than guessing.
+ */
+function patched(
+  url: string,
+  comments: readonly Comment[],
+  init: RequestInit,
+): Comment | undefined {
+  const id = decodeURIComponent(url.split("/comments/")[1] ?? "");
+  const found = comments.find((one) => one.id === id);
+  if (!found) return undefined;
+
+  const sent = typeof init.body === "string" ? init.body : "{}";
+  const change = JSON.parse(sent) as { status?: Comment["status"] };
+  return { ...found, ...(change.status === undefined ? {} : { status: change.status }) };
 }

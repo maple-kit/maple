@@ -124,21 +124,26 @@ afterEach(() => {
  * Fill says how far through its life a comment is, the edge says how sure the
  * anchor is, colour says its status. None of the three shares a pixel.
  */
-describe("the four forms", () => {
+/**
+ * The leaf fills up as a comment goes through its life: open is an outline,
+ * re-verify is half, resolved is full. One never written is grey.
+ */
+describe("the three forms", () => {
   async function mark(props: Partial<MarkProps>): Promise<HTMLElement> {
     await render(mounted(createElement(MapleMark, { address: 1, ...props })));
     await vi.waitFor(() => expect(root().querySelector(".mk-mark")).not.toBeNull());
     return root().querySelector<HTMLElement>(".mk-mark")!;
   }
 
-  it("fills an open comment solid, in the accent", async () => {
+  it("outlines an open comment, in the accent", async () => {
     const node = await mark({ status: "open" });
-    const body = node.querySelector(".mk-leaf-body")!;
+    const edge = node.querySelector(".mk-leaf-edge")!;
 
-    expect(node.getAttribute("data-form")).toBe("solid");
-    expect(node.querySelector(".mk-leaf-ring")).toBeNull();
-    expect(getComputedStyle(body).fill).toBe(token("--mk-accent"));
-    expect(getComputedStyle(body).strokeDasharray).toBe("none");
+    expect(node.getAttribute("data-form")).toBe("outline");
+    expect(node.querySelector("clipPath")).toBeNull();
+    expect(getComputedStyle(edge).fill).toBe("none");
+    expect(getComputedStyle(edge).stroke).toBe(token("--mk-accent"));
+    expect(getComputedStyle(edge).strokeDasharray).toBe("none");
   });
 
   it("half fills one that needs re-verifying, in amber", async () => {
@@ -147,28 +152,36 @@ describe("the four forms", () => {
     expect(node.getAttribute("data-form")).toBe("partial");
     expect(node.querySelector("clipPath rect")).not.toBeNull();
     expect(node.querySelectorAll(".mk-leaf-body")).toHaveLength(2);
-    expect(getComputedStyle(node.querySelector(".mk-leaf-ring")!).fill).toBe(token("--mk-warn"));
+    expect(getComputedStyle(node.querySelector(".mk-leaf-edge")!).stroke).toBe(token("--mk-warn"));
   });
 
-  it("leaves a resolved one an outline, muted", async () => {
+  it("fills a resolved one whole, in green, and holds it back", async () => {
     const node = await mark({ status: "resolved" });
-    const edge = node.querySelector(".mk-leaf-ring")!;
+    const body = node.querySelector(".mk-leaf-body")!;
 
-    expect(node.getAttribute("data-form")).toBe("ring");
+    expect(node.getAttribute("data-form")).toBe("solid");
     expect(node.querySelector("clipPath")).toBeNull();
-    expect(getComputedStyle(edge).fill).toBe(token("--mk-ok"));
-    expect(getComputedStyle(edge).stroke).toBe("none");
+    expect(node.querySelector(".mk-leaf-edge")).toBeNull();
+    expect(getComputedStyle(body).fill).toBe(token("--mk-ok"));
     await vi.waitFor(() => expect(getComputedStyle(node).opacity).toBe("0.6"));
   });
 
-  it("dashes one that has not been sent, and fills nothing", async () => {
+  it("outlines one that has not been sent, in grey rather than a status", async () => {
     const node = await mark({ sent: false });
-    const edge = node.querySelector(".mk-leaf-dashed")!;
+    const edge = node.querySelector(".mk-leaf-edge")!;
 
-    expect(node.getAttribute("data-form")).toBe("dashed");
+    expect(node.getAttribute("data-form")).toBe("outline");
+    expect(node.getAttribute("data-sent")).toBe("false");
     expect(getComputedStyle(edge).fill).toBe("none");
-    expect(getComputedStyle(edge).strokeDasharray).not.toBe("none");
+    expect(getComputedStyle(edge).strokeDasharray).toBe("none");
     expect(getComputedStyle(edge).stroke).toBe(token("--mk-muted"));
+  });
+
+  it("outlines an unpinned one in grey too, for the same reason", async () => {
+    const node = await mark({ status: "orphaned" });
+
+    expect(node.getAttribute("data-form")).toBe("outline");
+    expect(getComputedStyle(node.querySelector(".mk-leaf-edge")!).stroke).toBe(token("--mk-muted"));
   });
 
   it("thins the fill of a weak anchor and leaves its edge solid", async () => {
@@ -176,7 +189,7 @@ describe("the four forms", () => {
 
     expect(node.getAttribute("data-confidence")).toBe("weak");
     expect(getComputedStyle(node.querySelector(".mk-leaf-body")!).fillOpacity).toBe("0.42");
-    expect(getComputedStyle(node.querySelector(".mk-leaf-ring")!).fillOpacity).toBe("1");
+    expect(getComputedStyle(node.querySelector(".mk-leaf-edge")!).strokeOpacity).toBe("1");
   });
 
   it("carries the address, the name and the status without opening anything", async () => {
@@ -470,8 +483,8 @@ describe("asChild", () => {
     const node = root().querySelector<HTMLElement>("button.mine")!;
 
     expect(node.className).toBe("mk-mark mk-hit mine");
-    expect(node.getAttribute("data-form")).toBe("ring");
-    expect(node.querySelector(".mk-leaf-ring")).not.toBeNull();
+    expect(node.getAttribute("data-form")).toBe("solid");
+    expect(node.querySelector(".mk-leaf-body")).not.toBeNull();
   });
 });
 
@@ -503,7 +516,7 @@ describe("the avatar", () => {
   it("outlines it for someone who typed a name, and does not say so", async () => {
     const node = await avatar({ name: "Reviewer A", provenance: "guest" });
 
-    expect(node.querySelector(".mk-leaf-dashed")).not.toBeNull();
+    expect(node.querySelector(".mk-leaf-edge")).not.toBeNull();
     expect(node.getAttribute("title")).toBe("Reviewer A — typed a name into Maple");
     expect(node.getAttribute("title")).not.toContain("guest");
   });

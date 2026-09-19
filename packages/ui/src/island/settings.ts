@@ -7,15 +7,24 @@
  * because it changes the list every other surface reads as well.
  */
 
+import { THEME_PREFERENCES } from "@maple-kit/core/client";
 import { useMaple, useMapleClient } from "@maple-kit/react";
-import { createElement, forwardRef, useId, useState } from "react";
+import { createElement, forwardRef, useId } from "react";
 
 import { CogIcon } from "../icons/cog.js";
 import { useIsland } from "./context.js";
-import { ISLAND_COPY, SETTINGS_COPY } from "./language.js";
+import {
+  CORNER_LABELS,
+  CORNER_ORDER,
+  ISLAND_COPY,
+  SETTINGS_COPY,
+  THEME_LABELS,
+  THEME_TITLES,
+} from "./language.js";
 import { cx, renderPart } from "./part.js";
 
 import type { PartProps } from "./part.js";
+import type { Corner, ThemePreference } from "@maple-kit/core/client";
 import type { FocusEvent, KeyboardEvent, ReactNode } from "react";
 
 /** The control. Its children replace the icon inside it. */
@@ -29,7 +38,8 @@ const PART = "<Maple.Settings>";
 export const Settings = /** @__PURE__ */ forwardRef<HTMLButtonElement, SettingsProps>(
   function Settings(props, ref) {
     const { asChild, children, className, ...rest } = props;
-    const [open, setOpen] = useState(false);
+    const island = useIsland(PART);
+    const { settingsOpen: open, setSettingsOpen: setOpen } = island;
     const panelId = useId();
 
     const button = renderPart(
@@ -68,7 +78,7 @@ interface PanelProps {
  */
 function Panel(props: PanelProps): ReactNode {
   const client = useMapleClient();
-  const { showResolved } = useMaple();
+  const { position, showResolved, themePreference } = useMaple();
   const island = useIsland(PART);
 
   const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
@@ -81,6 +91,14 @@ function Panel(props: PanelProps): ReactNode {
   return createElement(
     "div",
     { id: props.id, className: "mk-settings", role: "group", onBlur, onKeyDown },
+    createElement(Theme, {
+      value: themePreference,
+      onPick: (theme: ThemePreference) => client.setTheme(theme),
+    }),
+    createElement(Corners, {
+      value: position,
+      onPick: (corner: Corner) => client.setPosition(corner),
+    }),
     createElement(Setting, {
       checked: !showResolved,
       copy: SETTINGS_COPY.hideResolved,
@@ -92,6 +110,92 @@ function Panel(props: PanelProps): ReactNode {
       onChange: island.setDeveloper,
     }),
     createElement(Dismiss, { onHide: () => client.setHidden(true) }),
+  );
+}
+
+interface ThemeProps {
+  readonly value: ThemePreference;
+  readonly onPick: (theme: ThemePreference) => void;
+}
+
+/**
+ * A segmented control, not a switch: three states cannot be a switch, and a
+ * select for three short words hides two behind a click.
+ */
+function Theme(props: ThemeProps): ReactNode {
+  const labelId = useId();
+  const copy = SETTINGS_COPY.theme;
+
+  return createElement(
+    "div",
+    { className: "mk-setting" },
+    createElement(
+      "span",
+      null,
+      createElement("span", { className: "mk-setting-name", id: labelId }, copy.name),
+      createElement("span", { className: "mk-setting-hint" }, copy.hint),
+    ),
+    createElement(
+      "span",
+      { className: "mk-seg", role: "radiogroup", "aria-labelledby": labelId },
+      ...THEME_PREFERENCES.map((theme) =>
+        createElement(
+          "button",
+          {
+            key: theme,
+            type: "button",
+            role: "radio",
+            "aria-checked": theme === props.value,
+            className: "mk-seg-one",
+            title: THEME_TITLES[theme],
+            onClick: () => props.onPick(theme),
+          },
+          THEME_LABELS[theme],
+        ),
+      ),
+    ),
+  );
+}
+
+interface CornersProps {
+  readonly value: Corner;
+  readonly onPick: (corner: Corner) => void;
+}
+
+/**
+ * The four corners as four corners. A list of their names would read as four
+ * options; a square reads as the screen it is about.
+ */
+function Corners(props: CornersProps): ReactNode {
+  const labelId = useId();
+  const copy = SETTINGS_COPY.position;
+
+  return createElement(
+    "div",
+    { className: "mk-setting" },
+    createElement(
+      "span",
+      null,
+      createElement("span", { className: "mk-setting-name", id: labelId }, copy.name),
+      createElement("span", { className: "mk-setting-hint" }, copy.hint),
+    ),
+    createElement(
+      "span",
+      { className: "mk-corners", role: "radiogroup", "aria-labelledby": labelId },
+      ...CORNER_ORDER.map((corner) =>
+        createElement("button", {
+          key: corner,
+          type: "button",
+          role: "radio",
+          "aria-checked": corner === props.value,
+          "aria-label": CORNER_LABELS[corner],
+          title: CORNER_LABELS[corner],
+          className: "mk-corner",
+          "data-mk-corner": corner,
+          onClick: () => props.onPick(corner),
+        }),
+      ),
+    ),
   );
 }
 

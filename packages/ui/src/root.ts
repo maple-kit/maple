@@ -16,15 +16,26 @@ import { createElement, forwardRef, useEffect, useLayoutEffect, useMemo, useStat
 import { createPortal } from "react-dom";
 
 import { MapleUiContext } from "./context.js";
+import { createShotStore, ShotContext } from "./shots.js";
 import { OVERLAY_CSS, SCHEME_ATTRIBUTE } from "./stylesheet.js";
 import { useOverlayScheme } from "./theme.js";
 
-import type { MapleClient, MapleClientOptions, MapleProps, Scheme } from "@maple-kit/core/client";
+import type {
+  MapleClient,
+  MapleClientOptions,
+  MapleProps,
+  ThemePreference as Preference,
+} from "@maple-kit/core/client";
 import type { OverlayHost } from "@maple-kit/core/overlay";
 import type { ReactElement, ReactNode } from "react";
 
-/** `auto` is the opposite of the host's scheme, not the same as it. */
-export type ThemePreference = "auto" | Scheme;
+/**
+ * `auto` is the opposite of the host's scheme, not the same as it.
+ *
+ * Re-exported from `@maple-kit/core/client` so a part can name the type
+ * without importing the controller's entrypoint for it.
+ */
+export type ThemePreference = Preference;
 
 /** How the overlay is mounted, and what it is pointed at. */
 export interface MapleRootProps extends MapleProps {
@@ -33,7 +44,10 @@ export interface MapleRootProps extends MapleProps {
   readonly children?: ReactNode;
   /** Added to the overlay's own layer, inside the shadow root. */
   readonly className?: string;
-  /** Defaults to `auto`: the opposite of whatever the host page is in. */
+  /**
+   * The default the viewer starts on, `auto` unless given. Their own choice,
+   * made in the island's settings, is remembered per origin and wins.
+   */
   readonly theme?: ThemePreference;
   /** Everything else the controller takes. `branch` comes from the prop above. */
   readonly options?: Omit<MapleClientOptions, "branch">;
@@ -49,6 +63,7 @@ export interface MapleRootProps extends MapleProps {
 export const MapleRoot = /** @__PURE__ */ forwardRef<HTMLDivElement, MapleRootProps>(
   function MapleRoot(props, ref) {
     const [config] = useState(() => readMapleConfig(props));
+    const [shots] = useState(createShotStore);
     const host = useOverlayHost(config.enabled, props.nonce, props.parent);
     const options = useMemo(
       () => ({ ...props.options, branch: props.branch, config }),
@@ -59,12 +74,12 @@ export const MapleRoot = /** @__PURE__ */ forwardRef<HTMLDivElement, MapleRootPr
 
     const className = props.className ? `mk-layer ${props.className}` : "mk-layer";
     const layer = createElement("div", { className, ref }, props.children);
-    const scoped = createElement(OverlayLayer, { host, theme: props.theme ?? "auto" }, layer);
+    const scoped = createElement(OverlayLayer, { host }, layer);
 
     return createElement(
       MapleProvider,
       props.client ? { client: props.client } : { options },
-      createPortal(scoped, host.root),
+      createElement(ShotContext.Provider, { value: shots }, createPortal(scoped, host.root)),
     );
   },
 );
@@ -93,7 +108,6 @@ function useOverlayHost(enabled: boolean, nonce: string | undefined, parent: Ele
 
 interface OverlayLayerProps {
   readonly host: OverlayHost;
-  readonly theme: ThemePreference;
   readonly children?: ReactNode;
 }
 
@@ -102,7 +116,7 @@ interface OverlayLayerProps {
  * before paint, so a theme toggle shows no frame in the wrong one.
  */
 function OverlayLayer(props: OverlayLayerProps): ReactElement {
-  const theme = useOverlayScheme(props.theme);
+  const theme = useOverlayScheme();
   const { container, root } = props.host;
 
   useLayoutEffect(() => {

@@ -71,6 +71,7 @@ export const MapleMark = /** @__PURE__ */ forwardRef<HTMLButtonElement, MarkProp
         ...dataAttributes({
           status,
           form,
+          sent: sent ?? true,
           ...(confidence === undefined ? {} : { confidence: confidenceFor(confidence) }),
         }),
         "aria-label": markLabel(address, author, status),

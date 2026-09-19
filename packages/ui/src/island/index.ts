@@ -21,7 +21,7 @@ export { Branch, Header, Logo } from "./header.js";
 export type { BranchProps, HeaderProps, LogoProps } from "./header.js";
 export { Island } from "./island.js";
 export type { IslandProps } from "./island.js";
-export { Item } from "./item.js";
+export { Item, TIME_DELAY_MS } from "./item.js";
 export type { ItemProps } from "./item.js";
 export {
   FILTER_LABELS,
@@ -44,8 +44,6 @@ export type { NewCommentProps, PickButtonProps } from "./new-comment.js";
 export { Settings } from "./settings.js";
 export type { SettingsProps } from "./settings.js";
 export { STAGGER_ROWS } from "./stagger.js";
-export { relativeTime } from "./time.js";
-export { Tip } from "./tip.js";
-export type { TipProps } from "./tip.js";
+export { absoluteTime, relativeTime } from "./time.js";
 export { IslandTrigger } from "./trigger.js";
 export type { IslandTriggerProps } from "./trigger.js";

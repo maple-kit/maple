@@ -5,12 +5,15 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
+    "dev": "vite",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json",
     "verify": "node scripts/verify.ts"
   },
   "dependencies": {
     "@maple-kit/core": "workspace:*",
+    "@maple-kit/react": "workspace:*",
+    "@maple-kit/ui": "workspace:*",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },

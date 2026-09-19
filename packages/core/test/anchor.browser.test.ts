@@ -184,3 +184,69 @@ describe("orphaning", () => {
     expect(outcome).toMatchObject({ tried: ["key", "source", "component", "selector"] });
   });
 });
+
+/**
+ * A text pick records `source` too, so the cascade places its element long
+ * before the quote rung and draws the whole paragraph.
+ */
+describe("narrowing to the passage", () => {
+  const PARAGRAPH =
+    '<p data-maple-src="src/Notice.tsx:4:3" data-maple-name="Notice">' +
+    "The merge gate is on. A pull request with an open comment is held." +
+    "</p>";
+
+  function anchorOn(exact: string): Anchor {
+    return {
+      source: "src/Notice.tsx:4:3",
+      component: "Notice",
+      quote: { exact },
+    };
+  }
+
+  it("resolves the element and no range when the passage is not asked for", () => {
+    mount(PARAGRAPH);
+    const found = resolved(anchorOn("held"));
+
+    expect(found.by).toBe("source");
+    expect(found.range).toBeUndefined();
+  });
+
+  it("returns the passage itself when it is", () => {
+    mount(PARAGRAPH);
+    const found = resolveAnchor(anchorOn("an open comment"), {
+      root: container,
+      passage: true,
+    });
+
+    expect(found.status).toBe("resolved");
+    if (found.status !== "resolved") return;
+    expect(found.range?.toString()).toBe("an open comment");
+  });
+
+  it("keeps the rung that found the element, because that is what placed it", () => {
+    mount(PARAGRAPH);
+    const found = resolveAnchor(anchorOn("merge gate"), { root: container, passage: true });
+
+    expect(found.status === "resolved" && found.by).toBe("source");
+  });
+
+  it("stands on the element when the quote is no longer in it", () => {
+    mount(PARAGRAPH);
+    const found = resolveAnchor(anchorOn("a sentence nobody wrote here at all"), {
+      root: container,
+      passage: true,
+    });
+
+    expect(found.status).toBe("resolved");
+    expect(found.status === "resolved" && found.range).toBeUndefined();
+  });
+
+  it("changes nothing for an anchor with no quote to narrow to", () => {
+    mount(PARAGRAPH);
+    const bare: Anchor = { source: "src/Notice.tsx:4:3" };
+
+    const found = resolveAnchor(bare, { root: container, passage: true });
+
+    expect(found.status === "resolved" && found.range).toBeUndefined();
+  });
+});

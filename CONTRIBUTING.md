@@ -3,12 +3,41 @@
 ## Getting set up
 
 ```
+nvm use          # or fnm use, mise install — .nvmrc pins the version
 pnpm install
 pnpm hooks
 pnpm lint && pnpm typecheck && pnpm test
 ```
 
 Node 24, the active LTS, and pnpm 10. `.nvmrc` pins the exact version.
+
+### Switch Node first
+
+`nvm use` is the first line for a reason, and it is not covered by
+`engine-strict`. pnpm 10 and 11 `require("node:sqlite")` on startup, and Node
+23 does not have that module, so pnpm dies before it reads this repository's
+`engines` field:
+
+```
+Error [ERR_UNKNOWN_BUILTIN_MODULE]: No such built-in module: node:sqlite
+```
+
+That is a Node version error wearing a different hat. `nvm use` fixes it; so
+does any version manager that reads `.nvmrc`. `engine-strict=true` still
+catches the versions where pnpm itself runs — Node 22, say — but it cannot
+catch one where pnpm cannot start.
+
+nvm does not switch on its own when you `cd` into a directory unless you have
+installed its shell hook, so a fresh terminal lands on your default version. If
+you work here often, `nvm alias default 24.21.0`, or add nvm's
+[deeper shell integration](https://github.com/nvm-sh/nvm#deeper-shell-integration)
+so `.nvmrc` is picked up automatically.
+
+Global packages are per Node version under nvm and fnm. After switching to a
+version for the first time you may have no `pnpm` at all, which reads as
+`command not found`. Install it there with `npm i -g pnpm@10`; do not reach for
+Corepack, which is deprecated and which a corporate registry proxy often
+blocks.
 
 `pnpm hooks` is a separate step on purpose. `.npmrc` sets `ignore-scripts=true`,
 so no package — including this one — runs code at install time. That is worth
@@ -62,6 +91,21 @@ Types: `build`, `chore`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor`,
 
 The body is where the reasoning goes. A reader six months from now has the diff
 and needs the rest.
+
+## Breaking changes
+
+These packages are 0.x, which makes no compatibility promise, and they are
+meant to be used as such. If an interface is the wrong shape, change it:
+rename the export, change the signature, move it to a different entrypoint.
+Update every call site, test and example in the same commit, and write what
+broke in the changeset — that line is what a reader of the release notes has.
+
+What not to do is leave the old shape behind. No deprecation aliases, no
+compatibility re-exports, no branch that handles both spellings. Nothing
+downstream depends on the old one yet, and a shim written now is dead code
+somebody deletes later after reading it twice.
+
+This holds until 1.0.
 
 ## Adding a dependency
 

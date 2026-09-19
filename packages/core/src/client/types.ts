@@ -40,6 +40,16 @@ export type Detail = (typeof DETAILS)[number];
 /** Light or dark, for the host page and for the overlay drawn over it. */
 export type Scheme = "dark" | "light";
 
+/** What a viewer may ask the overlay to be drawn in. */
+export const THEME_PREFERENCES = ["auto", "light", "dark"] as const;
+
+/**
+ * One of {@link THEME_PREFERENCES}. `auto` is the opposite of the host page,
+ * so the overlay reads as a guest on it rather than as part of it; the other
+ * two are taken literally, whatever the page underneath is doing.
+ */
+export type ThemePreference = (typeof THEME_PREFERENCES)[number];
+
 /** Which signal decided the host's scheme; earlier in the union is surer. */
 export type ThemeSource = "attribute" | "class" | "color-scheme" | "luminance" | "preference";
 
@@ -65,6 +75,11 @@ export interface ComposerTarget {
 /** The composer, whether or not it is showing. */
 export interface ComposerState {
   readonly open: boolean;
+  /**
+   * The comment being read, when the panel was opened on one rather than on a
+   * pick. A row cannot carry the context badge or the screenshot.
+   */
+  readonly viewing?: string;
   readonly target?: ComposerTarget;
   /** The draft being written into. Survives a close; cleared by a send. */
   readonly draftId?: string;
@@ -97,6 +112,11 @@ export interface ClientState {
   readonly hidden: boolean;
   /** The comment a link asked for, or a mark answered to. Null when none. */
   readonly selected: string | null;
+  /**
+   * What a surface is pointing at this moment: a hovered row or mark. It
+   * sticks to nothing; `selected` is the one that outlives a pointer leaving.
+   */
+  readonly peeked: string | null;
   /** Off by default: resolved comments are hidden until someone asks for them. */
   readonly showResolved: boolean;
   /** The pill's number: everything not resolved, unpinned included. */
@@ -106,6 +126,8 @@ export interface ClientState {
   readonly composer: ComposerState;
   readonly pick: PickState;
   readonly theme: ThemeState;
+  /** What the viewer asked the overlay to be drawn in. Remembered per origin. */
+  readonly themePreference: ThemePreference;
   /** Null once `GET /me` has answered with no session: offer the guest flow. */
   readonly user: MapleUser | null;
   /** What went wrong, in words a reviewer can read. Null when nothing did. */

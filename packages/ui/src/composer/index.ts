@@ -25,6 +25,15 @@ export {
   MapleComposer as Composer,
 } from "./composer.js";
 export type { MapleComposerProps } from "./composer.js";
+export {
+  appended,
+  REVIEW_EMOJI,
+  searchEmoji,
+  shortcodeAt,
+  SHORTCODE_LIMIT,
+  writeAt,
+} from "./emoji.js";
+export type { EmojiChoice, Shortcode, Written } from "./emoji.js";
 export { createLeaveAsk } from "./leave.js";
 export type { LeaveAsk } from "./leave.js";
 export { peeks } from "./peek.js";
@@ -33,11 +42,15 @@ export {
   LEAVE_DISCARD,
   LEAVE_KEEP,
   leaveMessage,
+  QUOTE_LIMIT,
+  quotedText,
   TARGET_PREFIX,
   targetName,
   targetPhrase,
   UNNAMED_TARGET,
 } from "./phrase.js";
+export { EMOJI_COPY, EmojiGrid, MapleEmoji, MapleEmoji as Emoji } from "./picker-emoji.js";
+export type { EmojiGridProps, MapleEmojiProps } from "./picker-emoji.js";
 export { ComposerScopeError } from "./scope.js";
 export type { SheetDetent } from "./scope.js";
 export { CLOSE_LABEL, DETAIL_ATTRIBUTE, MapleTarget, MapleTarget as Target } from "./target.js";

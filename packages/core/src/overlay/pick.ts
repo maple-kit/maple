@@ -47,11 +47,24 @@ export function selectedText(): Pick | undefined {
   return { kind: "text", range, rect: rectOf(range.getBoundingClientRect()) };
 }
 
+/**
+ * True for an event the picker must not act on.
+ *
+ * The overlay's own controls are the case this exists for. They live in a
+ * shadow root, so `elementsFromPoint` reports the host for them and the skip
+ * above hands back whatever is *behind* the control — which turns a click on
+ * the picker's own Cancel button into a pick of the page under it. Only the
+ * caller knows its shadow root, so only the caller can answer this.
+ */
+export type IgnoreEvent = (event: Event) => boolean;
+
 /** How element picking reports what it finds. */
 export interface ElementPickingOptions {
   /** Called as the pointer moves, so the caller can draw a highlight. */
   onHover?(pick: Pick | undefined): void;
   onPick(pick: Pick): void;
+  /** Events over the caller's own controls, which are never a pick. */
+  readonly ignore?: IgnoreEvent;
   /** Aborting removes every listener. */
   readonly signal?: AbortSignal;
 }
@@ -59,9 +72,13 @@ export interface ElementPickingOptions {
 /** Highlights what is under the pointer and reports what is clicked. */
 export function startElementPicking(options: ElementPickingOptions): void {
   const listen = listener(options.signal);
+  const ignored = options.ignore ?? (() => false);
 
-  listen("pointermove", (event) => options.onHover?.(elementPick(event)));
+  listen("pointermove", (event) => {
+    options.onHover?.(ignored(event) ? undefined : elementPick(event));
+  });
   listen("click", (event) => {
+    if (ignored(event)) return;
     const pick = elementPick(event);
     if (!pick) return;
     event.preventDefault();
@@ -74,6 +91,8 @@ export function startElementPicking(options: ElementPickingOptions): void {
 export interface RegionPickingOptions {
   onDraw?(rect: Rect): void;
   onPick(pick: Pick): void;
+  /** Events over the caller's own controls, which never start a rectangle. */
+  readonly ignore?: IgnoreEvent;
   readonly signal?: AbortSignal;
 }
 
@@ -83,9 +102,11 @@ export interface RegionPickingOptions {
  */
 export function startRegionPicking(options: RegionPickingOptions): void {
   const listen = listener(options.signal);
+  const ignored = options.ignore ?? (() => false);
   let origin: { x: number; y: number } | undefined;
 
   listen("pointerdown", (event) => {
+    if (ignored(event)) return;
     origin = { x: event.clientX, y: event.clientY };
   });
 
@@ -101,6 +122,69 @@ export function startRegionPicking(options: RegionPickingOptions): void {
       options.onPick({ kind: "region", rect });
     }
   });
+}
+
+/** How text picking reports what it finds. */
+export interface TextPickingOptions {
+  /** Called as the selection changes, so the caller can draw it. */
+  onHover?(pick: Pick | undefined): void;
+  onPick(pick: Pick): void;
+  /** Events over the caller's own controls, which never commit a passage. */
+  readonly ignore?: IgnoreEvent;
+  readonly signal?: AbortSignal;
+}
+
+/**
+ * Commits a passage when the pointer comes up, not on every selection change:
+ * a selection is still being made while it is dragged, and committing its
+ * first character is how a reviewer ends up quoting one letter.
+ */
+export function startTextPicking(options: TextPickingOptions): void {
+  const ignored = options.ignore ?? (() => false);
+  const listen = document.addEventListener.bind(document);
+  const when = options.signal === undefined ? {} : { signal: options.signal };
+
+  listen(
+    "pointerup",
+    (event: Event) => {
+      if (ignored(event)) return;
+      setTimeout(() => {
+        const pick = selectedText();
+        if (pick) options.onPick(pick);
+      }, 0);
+    },
+    when,
+  );
+
+  listen("selectionchange", () => options.onHover?.(selectedText()), when);
+}
+
+/** What the picker's own keys do while a pick is armed. */
+export interface PickKeyOptions {
+  /** Escape: the way out that needs no control on screen. */
+  onCancel(): void;
+  /** `t`: the three kinds, cycled without going back to the island. */
+  onCycle(): void;
+  readonly signal?: AbortSignal;
+}
+
+/**
+ * `c` opens comment mode and `Ctrl`+`C` is copy, so a bare key here checks its
+ * modifiers for the same reason the shortcut in the controller does.
+ */
+export function watchPickKeys(options: PickKeyOptions): void {
+  const when = options.signal === undefined ? {} : { signal: options.signal };
+
+  document.addEventListener(
+    "keydown",
+    (event: KeyboardEvent) => {
+      if (event.key === "Escape") return options.onCancel();
+      if (event.key !== "t" || event.metaKey || event.ctrlKey || event.altKey) return;
+      event.preventDefault();
+      options.onCycle();
+    },
+    { capture: true, ...when },
+  );
 }
 
 type PointerName = "pointerdown" | "pointermove" | "pointerup";

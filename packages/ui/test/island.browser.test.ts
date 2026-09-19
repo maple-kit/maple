@@ -73,10 +73,16 @@ function all(selector: string): Element[] {
   return [...root().querySelectorAll(selector)];
 }
 
-function filterNamed(label: string): HTMLButtonElement {
-  const found = all(".mk-filter").find((button) => button.textContent?.startsWith(label));
-  if (!found) throw new Error(`no filter reads ${label}`);
-  return found as HTMLButtonElement;
+/** The filter row is a select, so narrowing the list is choosing an option. */
+function filterNamed(name: string): { click: () => void } {
+  const select = root().querySelector<HTMLSelectElement>(".mk-filter-pick");
+  if (!select) throw new Error("no filter select is mounted");
+  return {
+    click: () => {
+      select.value = name;
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+    },
+  };
 }
 
 function switchNamed(label: string): HTMLButtonElement {
@@ -159,7 +165,7 @@ describe("swapping a filter", () => {
       if (event.target === card) entered += 1;
     });
 
-    filterNamed("Open").click();
+    filterNamed("open").click();
     await vi.waitFor(() => expect(all(".mk-row")).toHaveLength(3));
 
     expect(entered).toBe(0);
@@ -170,9 +176,9 @@ describe("swapping a filter", () => {
   it("keeps the card's own node through several swaps", async () => {
     const card = await open();
 
-    filterNamed("Re-verify").click();
+    filterNamed("needs_reverify").click();
     await vi.waitFor(() => expect(all(".mk-row")).toHaveLength(1));
-    filterNamed("All").click();
+    filterNamed("all").click();
     await vi.waitFor(() => expect(all(".mk-row")).toHaveLength(8));
 
     expect(find(".mk-card")).toBe(card);
@@ -188,7 +194,7 @@ describe("resolved comments", () => {
 
   it("are one click away and always honoured", async () => {
     await open();
-    filterNamed("Resolved").click();
+    filterNamed("resolved").click();
 
     await vi.waitFor(() => expect(all(".mk-row")).toHaveLength(1));
     expect(find(".mk-row").getAttribute("data-status")).toBe("resolved");
@@ -198,7 +204,7 @@ describe("resolved comments", () => {
 describe("the unpinned tab", () => {
   it("lists the four by reason, each with its two words", async () => {
     await open();
-    filterNamed("Unpinned").click();
+    filterNamed("unpinned").click();
 
     await vi.waitFor(() => expect(all(".mk-row")).toHaveLength(4));
     const labels = all(".mk-row .mk-meta .mk-chip-lost").map(
@@ -209,7 +215,7 @@ describe("the unpinned tab", () => {
 
   it("keeps the sentence in a tooltip rather than in the row", async () => {
     await open();
-    filterNamed("Unpinned").click();
+    filterNamed("unpinned").click();
 
     await vi.waitFor(() => expect(all(".mk-row")).toHaveLength(4));
     const chip = find(".mk-row .mk-meta .mk-chip-lost");
@@ -293,12 +299,18 @@ describe("the settings", () => {
     );
   });
 
-  it("is a switch rather than a segmented control", async () => {
+  /**
+   * A setting with two states is a switch. The theme has three and the corner
+   * has four, and neither collapses into one without losing a state.
+   */
+  it("is a switch where there are two states and a group where there are more", async () => {
     await open();
     find<HTMLButtonElement>('[aria-label="Settings"]').click();
 
     await vi.waitFor(() => expect(all('[role="switch"]')).toHaveLength(2));
-    expect(root().querySelector('[role="radiogroup"]')).toBeNull();
+    expect(all('[role="radiogroup"]')).toHaveLength(2);
+    expect(all(".mk-seg-one")).toHaveLength(3);
+    expect(all(".mk-corner")).toHaveLength(4);
   });
 });
 

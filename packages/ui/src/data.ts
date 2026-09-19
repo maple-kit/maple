@@ -9,8 +9,13 @@
 
 import type { CommentStatus } from "@maple-kit/core";
 
-/** How a mark is drawn: fill says how far through its life a comment is. */
-export type PartForm = "dashed" | "partial" | "ring" | "solid";
+/**
+ * How a mark is drawn: fill says how far through a comment's life it is, so
+ * the leaf fills up rather than emptying out. Open is an outline, re-verify
+ * is half, resolved is full, and one never written is an outline too — in
+ * grey, which is what tells the two apart.
+ */
+export type PartForm = "outline" | "partial" | "solid";
 
 /** The confidence word a reviewer reads, and what the low fill keys off. */
 export type PartConfidence = "certain" | "fair" | "strong" | "weak";
@@ -25,12 +30,14 @@ export interface PartState {
   readonly confidence?: PartConfidence;
   readonly provenance?: PartProvenance;
   readonly armed?: boolean;
+  /** False for a comment still being written, which is drawn in grey. */
+  readonly sent?: boolean;
 }
 
 /** The rendered attributes, ready to spread. Absent state produces no attribute. */
 export type PartAttributes = Readonly<Record<string, string>>;
 
-/** Turns state into the five attributes. The only place their names appear. */
+/** Turns state into the six attributes. The only place their names appear. */
 export function dataAttributes(state: PartState): PartAttributes {
   const attributes: Record<string, string> = {};
   if (state.status) attributes["data-status"] = state.status;
@@ -38,18 +45,19 @@ export function dataAttributes(state: PartState): PartAttributes {
   if (state.confidence) attributes["data-confidence"] = state.confidence;
   if (state.provenance) attributes["data-provenance"] = state.provenance;
   if (state.armed !== undefined) attributes["data-armed"] = String(state.armed);
+  if (state.sent !== undefined) attributes["data-sent"] = String(state.sent);
   return attributes;
 }
 
 /**
  * Fill, edge and colour never compete: this decides fill alone. An unsent
- * comment is dashed and so is an unpinned one, which never reaches the page.
+ * comment is an outline and so is an unpinned one, which never reached the
+ * page; their colour is what separates them from an open comment.
  */
 export function formFor(status: CommentStatus | undefined, sent = true): PartForm {
-  if (!sent) return "dashed";
-  if (status === "resolved") return "ring";
-  if (status === "needs_reverify") return "partial";
-  return status === "orphaned" ? "dashed" : "solid";
+  if (!sent) return "outline";
+  if (status === "resolved") return "solid";
+  return status === "needs_reverify" ? "partial" : "outline";
 }
 
 /** The four confidence words, at the thresholds the tooltips quote. */

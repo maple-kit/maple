@@ -30,10 +30,25 @@ export function targetName(target: ComposerTarget): string {
   return target.label ?? labelFor({ anchor: target.anchor }) ?? UNNAMED_TARGET;
 }
 
+/** Longer than this and the quote is trimmed, because the field is 336px. */
+export const QUOTE_LIMIT = 64;
+
 /** After "on": an element is its own name; a passage and a region are held. */
 export function targetPhrase(kind: PickKind, name: string): string {
   if (kind === "text") return `a passage in ${name}`;
   return kind === "region" ? `an area of ${name}` : name;
+}
+
+/**
+ * The words a passage pick actually selected, trimmed to fit the header. A
+ * reviewer who selected six words has to read those six words back, or the
+ * composer is asking them to remember what they highlighted.
+ */
+export function quotedText(target: ComposerTarget): string | undefined {
+  if (target.kind !== "text") return undefined;
+  const exact = target.anchor.quote?.exact?.trim();
+  if (!exact) return undefined;
+  return exact.length > QUOTE_LIMIT ? `${exact.slice(0, QUOTE_LIMIT).trimEnd()}…` : exact;
 }
 
 /** What is about to be lost, named. "Are you sure?" answers nothing. */

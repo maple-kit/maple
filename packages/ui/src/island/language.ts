@@ -9,7 +9,7 @@
 
 import type { PartConfidence } from "../data.js";
 import type { OrphanReason, Rung } from "@maple-kit/core/anchor";
-import type { CommentFilter, PickKind } from "@maple-kit/core/client";
+import type { CommentFilter, Corner, PickKind, ThemePreference } from "@maple-kit/core/client";
 
 /** The five filters, in the words the pills show. `unpinned` is `orphaned`. */
 export const FILTER_LABELS: Readonly<Record<CommentFilter, string>> = {
@@ -20,8 +20,28 @@ export const FILTER_LABELS: Readonly<Record<CommentFilter, string>> = {
   unpinned: "Unpinned",
 };
 
-/** The order the filters are shown in. Unpinned is last: it is the tab. */
+/** The order the filters are shown in. Unpinned is last: it is the odd one. */
 export const FILTER_ORDER: readonly CommentFilter[] = ["all", "open", "needs_reverify", "resolved"];
+
+/**
+ * The four the tally has a dot for, which is every filter but `all`. Their
+ * colours are the marks' colours, so the row doubles as the key to the page.
+ */
+export const TALLY_ORDER: readonly CommentFilter[] = [
+  "open",
+  "needs_reverify",
+  "resolved",
+  "unpinned",
+];
+
+/** What a screen reader calls the select, which shows a filter name not a noun. */
+export const FILTERS_LABEL = "Show";
+
+/** A dot's tooltip: what it counts, and the fact that clicking narrows to it. */
+export function tallyTitle(filter: CommentFilter, count: number): string {
+  const many = count === 1 ? "comment" : "comments";
+  return `${String(count)} ${FILTER_LABELS[filter].toLowerCase()} ${many} — click to show only these`;
+}
 
 /** Two words each. The sentence underneath belongs in the tooltip, not the row. */
 export const ORPHAN_LABELS: Readonly<Record<OrphanReason, string>> = {
@@ -65,8 +85,46 @@ export const PICK_LABELS: Readonly<Record<PickKind, string>> = {
   text: "Text",
 };
 
+/** The three themes, in the words the switch shows. */
+export const THEME_LABELS: Readonly<Record<ThemePreference, string>> = {
+  auto: "Auto",
+  light: "Light",
+  dark: "Dark",
+};
+
+/** What each theme does, for the tooltip. `auto` is the one worth explaining. */
+export const THEME_TITLES: Readonly<Record<ThemePreference, string>> = {
+  auto: "The opposite of this page, so the overlay reads as a guest on it.",
+  light: "Always light, whatever this page is in.",
+  dark: "Always dark, whatever this page is in.",
+};
+
+/** The four corners, in the words the picker shows under the switch. */
+export const CORNER_LABELS: Readonly<Record<Corner, string>> = {
+  "top-left": "Top left",
+  "top-right": "Top right",
+  "bottom-left": "Bottom left",
+  "bottom-right": "Bottom right",
+};
+
+/** The order the corner picker draws them in: reading order, two by two. */
+export const CORNER_ORDER: readonly Corner[] = [
+  "top-left",
+  "top-right",
+  "bottom-left",
+  "bottom-right",
+];
+
 /** One sentence per setting: what it does, not what it is called again. */
 export const SETTINGS_COPY = {
+  theme: {
+    name: "Theme",
+    hint: "What the overlay itself is drawn in. A comment always records the page's own.",
+  },
+  position: {
+    name: "Corner",
+    hint: "Where the island sits. Dragging it by its pill does the same thing.",
+  },
   hideResolved: {
     name: "Hide resolved",
     hint: "Done comments stay off the page and out of the list until you pick the Resolved filter.",

@@ -19,8 +19,14 @@ export interface OverlayOptions {
 /** Path the SDK route is mounted at unless configured otherwise. */
 export const DEFAULT_BASE_PATH = "/api/maple";
 
-export { captureContext, formatContext, toCommentContext } from "./context.js";
-export type { CaptureOptions, PageContext, RegionContext, ViewportContext } from "./context.js";
+export { captureContext, contextRows, formatContext, toCommentContext } from "./context.js";
+export type {
+  CaptureOptions,
+  ContextRow,
+  PageContext,
+  RegionContext,
+  ViewportContext,
+} from "./context.js";
 export { createDraftStore } from "./drafts.js";
 export type { Draft, DraftStore, DraftStoreOptions } from "./drafts.js";
 
@@ -32,5 +38,15 @@ export {
   selectedText,
   startElementPicking,
   startRegionPicking,
+  startTextPicking,
+  watchPickKeys,
 } from "./pick.js";
-export type { ElementPickingOptions, Pick, Rect, RegionPickingOptions } from "./pick.js";
+export type {
+  ElementPickingOptions,
+  IgnoreEvent,
+  Pick,
+  PickKeyOptions,
+  Rect,
+  RegionPickingOptions,
+  TextPickingOptions,
+} from "./pick.js";

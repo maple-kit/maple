@@ -21,7 +21,14 @@ const POSITIONED = `
  */
 function paintCss(): string {
   return `
-.mk-mark,
+/* A mark is drawn in its status, not in its author's hue: where a comment is
+   in its life is what a reviewer scans the page for, and the author is on the
+   row. The avatar is the other way round — that one is about who. */
+.mk-mark {
+  --mk-paint: var(--mk-pin, var(--mk-accent));
+  --mk-ink: var(--mk-pin-ink, var(--mk-accent-ink));
+}
+
 .mk-avatar {
   --mk-paint: var(--mk-pin, var(--mk-slot, var(--mk-accent)));
   --mk-ink: var(--mk-pin-ink, var(--mk-slot-ink, var(--mk-accent-ink)));
@@ -38,7 +45,11 @@ function paintCss(): string {
   opacity: 0.6;
 }
 
-.mk-mark[data-form="dashed"] {
+/* Unpinned never reached the page and unsent never left it, so neither takes
+   a status colour: grey is what separates them from an open comment, which
+   is drawn in the same outline. */
+.mk-mark[data-status="orphaned"],
+.mk-mark[data-sent="false"] {
   --mk-paint: var(--mk-pin, var(--mk-muted));
   --mk-ink: var(--mk-pin-ink, var(--mk-muted));
 }
@@ -71,17 +82,13 @@ function leafCss(): string {
   stroke-linejoin: round;
 }
 
-.mk-leaf-ring {
-  fill: var(--mk-paint);
-  stroke: none;
-}
-
-.mk-leaf-dashed {
+/* A full stroke, not a dashed one: at 34px a dash reads as a broken shape
+   rather than an empty one, and the number inside it loses its edge. */
+.mk-leaf-edge {
   fill: none;
   stroke: var(--mk-paint);
-  stroke-width: 3.2;
-  stroke-dasharray: 8 5.5;
-  stroke-linecap: round;
+  stroke-width: 2.6;
+  stroke-linejoin: round;
 }
 `;
 }
@@ -103,8 +110,8 @@ function markCss(): string {
   --mk-mark-up: 1.18;
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: 38px;
+  height: 38px;
   padding: 0;
   border: 0;
   border-radius: var(--mk-r-xs);
@@ -152,8 +159,7 @@ function markCss(): string {
   transform: translateY(-1px);
 }
 
-.mk-mark[data-form="ring"] .mk-mark-n,
-.mk-mark[data-form="dashed"] .mk-mark-n {
+.mk-mark[data-form="outline"] .mk-mark-n {
   color: var(--mk-paint);
 }
 
@@ -198,6 +204,12 @@ function ringCss(): string {
   box-shadow: 0 0 0 1.5px color-mix(in oklab, var(--mk-accent) 60%, transparent);
 }
 
+/* A passage is its own lines and nothing else: the box around them is the
+   paragraph, and outlining that says the comment is on the paragraph. */
+.mk-ring[data-mk-passage="true"] {
+  box-shadow: none;
+}
+
 .mk-ring-label {
   position: absolute;
   top: -21px;
@@ -220,12 +232,16 @@ function ringCss(): string {
   border-radius: 0 var(--mk-r-xs) var(--mk-r-xs) var(--mk-r-xs);
 }
 
+/* The wash a reviewer reads as "this text": the same green the ring is drawn
+   in, at the weight a selection has, so the passage is what is highlighted
+   and the element around it is not. */
 .mk-ring-run {
   ${POSITIONED}
   width: var(--mk-w);
   height: var(--mk-h);
-  border-radius: var(--mk-r-xs);
-  background: color-mix(in oklab, var(--mk-accent) 20%, transparent);
+  border-radius: 3px;
+  background: color-mix(in oklab, var(--mk-accent) 32%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--mk-accent) 45%, transparent);
 }
 
 @keyframes mk-ring-in {

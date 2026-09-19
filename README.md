@@ -64,15 +64,31 @@ connector's capabilities are exactly the methods it defines. See
 - [The overlay and CSP](docs/overlay-csp.md) — what Maple asks of your policy
 - [The agent loop](docs/agent-loop.md) — the MCP tools and the Stop hook
 
+## See it running
+
+```
+nvm use
+pnpm install
+pnpm --filter @maple-kit/example-vite dev   # http://localhost:5173
+```
+
+A real Vite application with three comments already on it: marks on the page,
+the island in the corner, and all three picks working against an SDK route the
+dev server mounts. [`examples/vite-app`](examples/vite-app) says what it does
+and does not prove.
+
 ## Development
 
 ```
+nvm use          # or fnm use, mise install — .nvmrc pins the version
 pnpm install
 pnpm hooks
 pnpm lint && pnpm typecheck && pnpm test
 ```
 
-Requires Node 24, the active LTS, and pnpm 10. See
+Requires Node 24, the active LTS, and pnpm 10. Switch **before** the install:
+pnpm 10 and 11 load `node:sqlite`, which Node 23 does not have, so on the wrong
+version pnpm crashes rather than telling you the version is wrong. See
 [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Licence

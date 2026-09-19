@@ -20,6 +20,11 @@ export interface ResolveOptions {
   readonly root?: ParentNode;
   /** Quote score below which the passage counts as changed. Defaults to 0.5. */
   readonly minimumScore?: number;
+  /**
+   * Narrow a resolved element to the passage its quote names. Off by default:
+   * an element pick carries a quote too, and there it is only a tiebreak.
+   */
+  readonly passage?: boolean;
 }
 
 /** What each rung is worth when it matches, before any quote score. */
@@ -53,12 +58,29 @@ export function resolveAnchor(anchor: Anchor, options: ResolveOptions = {}): Res
     tried.push(rung);
 
     const outcome = attempt(rung, anchor, { root, minimumScore: options.minimumScore });
-    if (outcome.status === "resolved") return outcome;
+    if (outcome.status === "resolved") {
+      return options.passage === true ? narrowed(outcome, anchor, options) : outcome;
+    }
     ambiguous ||= outcome.reason === "ambiguous";
     changed ||= outcome.reason === "changed";
   }
 
   return { status: "orphaned", reason: reasonFor(ambiguous, changed), tried };
+}
+
+/**
+ * The passage inside the element a higher rung found. The element stands if
+ * the quote cannot be placed in it, which is better than highlighting nothing.
+ */
+function narrowed(found: Resolution, anchor: Anchor, options: ResolveOptions): Resolution {
+  if (found.status !== "resolved" || found.range || !anchor.quote?.exact) return found;
+
+  const index = indexText(found.element);
+  const hit = matchQuote(index.text, anchor.quote.exact, context(anchor.quote));
+  if (!hit || hit.score < (options.minimumScore ?? MINIMUM_SCORE)) return found;
+
+  const range = rangeAt(index, hit.start, hit.end);
+  return range ? { ...found, range } : found;
 }
 
 interface Scope {

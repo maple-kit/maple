@@ -44,6 +44,7 @@ import type {
   PickState,
   PostedComment,
   ResolutionClaim,
+  ThemePreference,
 } from "./types.js";
 
 /** Everything the controller attaches to. `window` satisfies it. */
@@ -100,18 +101,30 @@ export interface MapleClient {
   setShowResolved(show: boolean): void;
   /** Presentation only, and remembered per origin. Nothing is recorded by it. */
   setDetail(detail: Detail): void;
+  /**
+   * What the overlay is drawn in. Remembered per origin, and presentation
+   * only: a comment records the host page's scheme whatever this says.
+   */
+  setTheme(preference: ThemePreference): void;
   /** Snapped to a corner by the surface; remembered per origin. */
   setPosition(position: Corner): void;
   /** Hidden for the session. Anything arriving takes it back off again. */
   setHidden(hidden: boolean): void;
   /** What a link, a mark or a row asked to be looked at. Null clears it. */
   select(id: string | null): void;
+  /** What a pointer is over right now. Null clears it; nothing records it. */
+  peek(id: string | null): void;
 
   arm(kind: PickKind): void;
   disarm(): void;
 
   /** Opens on a target, resuming the draft already left on it if there is one. */
   openComposer(target: ComposerTarget): void;
+  /**
+   * Opens the panel on a comment already written, to read rather than to
+   * write. Also selects it, so the page rings what it is about.
+   */
+  viewComment(id: string): void;
   resumeDraft(id: string): void;
   setBody(body: string): void;
   attach(ref: MediaRef): void;
@@ -164,14 +177,17 @@ export function createMapleClient(options: MapleClientOptions): MapleClient {
     setFilter: (filter) => patch(runtime, { filter }),
     setShowResolved: (showResolved) => patch(runtime, { showResolved }),
     setDetail: (detail) => remember(runtime, { detail }),
+    setTheme: (themePreference) => remember(runtime, { themePreference }),
     setPosition: (position) => remember(runtime, { position }),
     setHidden: (hidden) => patch(runtime, { hidden }),
     select: (id) => patch(runtime, { selected: id, hidden: id === null && runtime.state.hidden }),
+    peek: (id) => patch(runtime, { peeked: id }),
 
     arm: (kind) => patch(runtime, { pick: { armed: true, kind }, hidden: false }),
     disarm: () => patch(runtime, { pick: UNARMED }),
 
     openComposer: (target) => openComposer(runtime, target),
+    viewComment: (id) => viewComment(runtime, id),
     resumeDraft: (id) => resumeDraft(runtime, id),
     setBody: (body) => write(runtime, { body }),
     attach: (ref) => write(runtime, { attachments: [...runtime.state.composer.attachments, ref] }),
@@ -217,11 +233,13 @@ function runtimeFor(options: MapleClientOptions): Runtime {
       position: config.position,
       hidden: false,
       selected: config.comment ?? null,
+      peeked: null,
       openCount: 0,
       drafts: drafts.list(),
       composer: CLOSED,
       pick: config.pick === undefined ? UNARMED : { armed: true, kind: config.pick },
       theme: themeFrom({}),
+      themePreference: config.theme,
       user: null,
       error: null,
     }),
@@ -244,7 +262,11 @@ function storageOf(options: MapleClientOptions) {
 function remember(runtime: Runtime, change: Partial<ClientState>): void {
   patch(runtime, change);
   writePreferences(
-    { detail: runtime.state.detail, position: runtime.state.position },
+    {
+      detail: runtime.state.detail,
+      position: runtime.state.position,
+      theme: runtime.state.themePreference,
+    },
     storageOf(runtime.options),
   );
 }
@@ -406,6 +428,34 @@ function openComposer(runtime: Runtime, target: ComposerTarget): void {
     },
   });
   runtime.guard?.setDirty(runtime.state.composer.dirty);
+}
+
+/**
+ * Reading one, not writing one: no draft is opened and nothing is made dirty,
+ * so closing the panel leaves exactly what it found.
+ */
+function viewComment(runtime: Runtime, id: string): void {
+  const comment = runtime.state.comments.find((one) => one.id === id);
+  if (!comment) return;
+
+  patch(runtime, {
+    pick: UNARMED,
+    hidden: false,
+    selected: id,
+    composer: {
+      open: true,
+      viewing: id,
+      target: {
+        kind: comment.anchor.quote === undefined ? "element" : "text",
+        anchor: comment.anchor,
+        context: comment.context,
+      },
+      body: comment.body,
+      attachments: comment.attachments ?? [],
+      dirty: false,
+      sending: false,
+    },
+  });
 }
 
 /**

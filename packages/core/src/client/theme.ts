@@ -8,7 +8,7 @@
  * the judgement is table-testable without a browser.
  */
 
-import type { Scheme, ThemeSource, ThemeState } from "./types.js";
+import type { Scheme, ThemePreference, ThemeSource, ThemeState } from "./types.js";
 
 /** Everything the detector is allowed to look at, already read off the page. */
 export interface ThemeSignals {
@@ -53,6 +53,18 @@ export function hostScheme(signals: ThemeSignals): { scheme: Scheme; source: The
 export function themeFrom(signals: ThemeSignals): ThemeState {
   const { scheme, source } = hostScheme(signals);
   return { host: scheme, overlay: scheme === "dark" ? "light" : "dark", source };
+}
+
+/**
+ * What the overlay is actually drawn in, once the viewer has had their say.
+ *
+ * `auto` is the opposite of the host page, which is the default and the reason
+ * the overlay is legible on a site whose own theme nobody here controls. The
+ * other two are taken literally: a reviewer comparing two screenshots wants
+ * the same chrome in both, whatever the page under it is doing.
+ */
+export function overlaySchemeFor(preference: ThemePreference, theme: ThemeState): Scheme {
+  return preference === "auto" ? theme.overlay : preference;
 }
 
 /**

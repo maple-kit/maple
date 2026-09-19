@@ -70,9 +70,22 @@ describe("the exports map", () => {
       "./composer",
       "./icons",
       "./island",
+      "./maple",
       "./marks",
       "./package.json",
+      "./picker",
     ]);
+  });
+
+  /**
+   * The composition is the one entry that names every part, which is the
+   * deal an application makes by importing it rather than the parts.
+   */
+  it("keeps the default composition off the root entry", () => {
+    const root = readFileSync(join(SRC, "index.ts"), "utf8");
+
+    expect(exports["./maple"]).toBe("./dist/maple.js");
+    expect(root).not.toContain("./maple.js");
   });
 
   const entries = Object.entries(exports).filter(([, target]) => target.endsWith(".js"));
@@ -114,8 +127,8 @@ describe("the icons", () => {
     ({ path }) => path.includes(join("src", "icons")) && !/(index|icon|crossfade)\.ts$/.test(path),
   );
 
-  it("ships eight of them", () => {
-    expect(icons).toHaveLength(8);
+  it("ships nine of them", () => {
+    expect(icons).toHaveLength(9);
   });
 
   it("gives each one its own module, so importing one drags in one", () => {

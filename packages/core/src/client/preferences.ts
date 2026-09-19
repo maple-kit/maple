@@ -10,10 +10,10 @@
  */
 
 import { COMMENT_SHORTCUT } from "./shortcut.js";
-import { CORNERS, DETAILS } from "./types.js";
+import { CORNERS, DETAILS, THEME_PREFERENCES } from "./types.js";
 
 import type { Logger } from "../logger/types.js";
-import type { Corner, Detail, PickKind } from "./types.js";
+import type { Corner, Detail, PickKind, ThemePreference } from "./types.js";
 
 /** The key every stored preference hangs under, per origin. */
 const PREFERENCES_PREFIX = "maple:prefs:";
@@ -26,6 +26,7 @@ export const MAPLE_DEFAULTS = {
   hideResolved: true,
   shortcut: COMMENT_SHORTCUT,
   allowUrlOverride: true,
+  theme: "auto",
 } as const;
 
 /** What an application sets on the component. Every one of them is optional. */
@@ -34,6 +35,8 @@ export interface MapleProps {
   readonly enabled?: boolean;
   readonly position?: Corner;
   readonly detail?: Detail;
+  /** What the overlay is drawn in. Defaults to `auto`: the host's opposite. */
+  readonly theme?: ThemePreference;
   /** Whether resolved comments start hidden. The filter is one click away. */
   readonly hideResolved?: boolean;
   /** The bare key that arms a pick. */
@@ -48,6 +51,8 @@ export interface MapleQuery {
   readonly enabled?: boolean;
   readonly position?: Corner;
   readonly detail?: Detail;
+  /** `?maple-theme=` — so a screenshot can be asked for in either scheme. */
+  readonly theme?: ThemePreference;
   /** `?maple-comment=` — what a pull-request comment deep-links to. */
   readonly comment?: string;
   /** `?maple-new=` — arm this pick the moment the overlay is up. */
@@ -58,6 +63,7 @@ export interface MapleQuery {
 export interface StoredPreferences {
   readonly detail?: Detail;
   readonly position?: Corner;
+  readonly theme?: ThemePreference;
 }
 
 /** Everything a surface needs before it renders anything. */
@@ -65,6 +71,7 @@ export interface MapleConfig {
   readonly enabled: boolean;
   readonly position: Corner;
   readonly detail: Detail;
+  readonly theme: ThemePreference;
   readonly hideResolved: boolean;
   readonly shortcut: string;
   readonly allowUrlOverride: boolean;
@@ -124,6 +131,7 @@ export function parseMapleQuery(search: string): MapleQuery {
     enabled: switched(query.get("maple")),
     position: oneOf(query.get("maple-pos"), CORNERS),
     detail: oneOf(query.get("maple-detail"), DETAILS),
+    theme: oneOf(query.get("maple-theme"), THEME_PREFERENCES),
     comment: comment === null || comment === "" ? undefined : comment,
     pick: oneOf(query.get("maple-new"), PICKS),
   });
@@ -139,12 +147,13 @@ function enabledFrom(input: ConfigInput, allowUrlOverride: boolean): boolean {
   return input.query?.enabled === true && allowUrlOverride ? true : asked;
 }
 
-/** The viewer's own two, in the one order: link, then them, then the app. */
-function viewerFrom(input: ConfigInput): Pick<MapleConfig, "detail" | "position"> {
+/** The viewer's own three, in the one order: link, then them, then the app. */
+function viewerFrom(input: ConfigInput): Pick<MapleConfig, "detail" | "position" | "theme"> {
   const { props, query, stored } = input;
   return {
     position: query?.position ?? stored?.position ?? props?.position ?? MAPLE_DEFAULTS.position,
     detail: query?.detail ?? stored?.detail ?? props?.detail ?? MAPLE_DEFAULTS.detail,
+    theme: query?.theme ?? stored?.theme ?? props?.theme ?? MAPLE_DEFAULTS.theme,
   };
 }
 
@@ -204,6 +213,7 @@ function sanitised(stored: StoredPreferences): StoredPreferences {
   return present({
     detail: oneOf(stored.detail ?? null, DETAILS),
     position: oneOf(stored.position ?? null, CORNERS),
+    theme: oneOf(stored.theme ?? null, THEME_PREFERENCES),
   });
 }
 

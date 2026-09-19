@@ -10,7 +10,7 @@
 import { cloneElement, createElement, isValidElement, useState } from "react";
 
 import { waterline } from "./geometry.js";
-import { LEAF_OUTLINE, LEAF_ROTATION, LEAF_SOLID, LEAF_VIEW_BOX } from "./leaf.js";
+import { LEAF_ROTATION, LEAF_SOLID, LEAF_VIEW_BOX } from "./leaf.js";
 
 import type { PartForm } from "../data.js";
 import type { ReactElement, ReactNode } from "react";
@@ -77,10 +77,9 @@ function clipped(id: string, fraction: number): readonly ReactElement[] {
 }
 
 function body(form: PartForm, id: string, fraction: number): readonly ReactElement[] {
-  const ring = tilted("ring", path("mk-leaf-body mk-leaf-ring", LEAF_OUTLINE));
-  if (form === "ring") return [ring];
-  if (form === "partial") return [...clipped(id, fraction), ring];
-  if (form === "dashed") return [tilted("body", path("mk-leaf-body mk-leaf-dashed", LEAF_SOLID))];
+  const edge = tilted("edge", path("mk-leaf-body mk-leaf-edge", LEAF_SOLID));
+  if (form === "outline") return [edge];
+  if (form === "partial") return [...clipped(id, fraction), edge];
   return [tilted("body", path("mk-leaf-body", LEAF_SOLID))];
 }
 

@@ -209,3 +209,60 @@ describe("the corner a drag lands in", () => {
     ).toBe("top-left");
   });
 });
+
+/**
+ * A viewer preference, not the application's: a reviewer comparing two
+ * screenshots needs the choice to survive the next page they land on.
+ */
+describe("the theme the viewer chose", () => {
+  it("defaults to auto, which is the opposite of the host page", () => {
+    expect(resolveConfig({}).theme).toBe("auto");
+    expect(MAPLE_DEFAULTS.theme).toBe("auto");
+  });
+
+  it("reads a link's theme off the query string", () => {
+    expect(parseMapleQuery("?maple-theme=dark").theme).toBe("dark");
+    expect(parseMapleQuery("?maple-theme=light").theme).toBe("light");
+    expect(parseMapleQuery("?maple-theme=auto").theme).toBe("auto");
+  });
+
+  it("ignores a theme it does not recognise rather than defaulting it", () => {
+    expect(parseMapleQuery("?maple-theme=sepia").theme).toBeUndefined();
+  });
+
+  it("takes the link, then the viewer, then the application", () => {
+    const every: ConfigInput = {
+      query: { theme: "light" },
+      stored: { theme: "dark" },
+      props: { theme: "auto" },
+    };
+
+    expect(resolveConfig(every).theme).toBe("light");
+    expect(resolveConfig({ stored: { theme: "dark" }, props: { theme: "light" } }).theme).toBe(
+      "dark",
+    );
+    expect(resolveConfig({ props: { theme: "light" } }).theme).toBe("light");
+  });
+
+  it("remembers it per origin, beside the other two", () => {
+    const storage = memoryStorage();
+    writePreferences(
+      { detail: "developer", position: TOP_LEFT, theme: "dark" },
+      { storage, origin: ORIGIN },
+    );
+
+    expect(readPreferences({ storage, origin: ORIGIN })).toEqual({
+      detail: "developer",
+      position: TOP_LEFT,
+      theme: "dark",
+    });
+  });
+
+  it("drops a stored theme that is no longer one of ours", () => {
+    const storage = memoryStorage({
+      [`maple:prefs:${ORIGIN}`]: JSON.stringify({ theme: "sepia", position: TOP_LEFT }),
+    });
+
+    expect(readPreferences({ storage, origin: ORIGIN })).toEqual({ position: TOP_LEFT });
+  });
+});

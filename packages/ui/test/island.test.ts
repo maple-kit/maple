@@ -176,7 +176,7 @@ describe("the island's rules", () => {
 
     expect(delayed).toHaveLength(1);
     expect(delayed[0]).toContain("transition-delay: var(--mk-delay-tooltip)");
-    expect(delayed[0]).toContain(":hover");
+    expect(delayed[0]).toContain(":popover-open");
   });
 
   it("presses at the one press scale and never below it", () => {

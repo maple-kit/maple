@@ -19,10 +19,12 @@
   ],
   "exports": {
     ".": "./dist/index.js",
+    "./maple": "./dist/maple.js",
     "./composer": "./dist/composer/index.js",
     "./icons": "./dist/icons/index.js",
     "./island": "./dist/island/index.js",
     "./marks": "./dist/marks/index.js",
+    "./picker": "./dist/picker/index.js",
     "./package.json": "./package.json"
   },
   "scripts": {

@@ -1,0 +1,274 @@
+/*
+ * The demo's own stylesheet. It is the host page's, not Maple's: the overlay
+ * adopts its own sheet into a shadow root and nothing here reaches it. The
+ * page is deliberately light, so the overlay's `auto` theme resolves to dark
+ * and the two are told apart at a glance.
+ */
+
+:root {
+  --ink: #16181d;
+  --muted: #5f6672;
+  --line: #e4e7ec;
+  --bg: #f7f8fa;
+  --card: #ffffff;
+  --up: #17794a;
+  --down: #b4341f;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font:
+    15px/1.5 ui-sans-serif,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    sans-serif;
+}
+
+.shell {
+  display: grid;
+  grid-template-columns: 208px minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.sidenav {
+  padding: 22px 16px;
+  border-right: 1px solid var(--line);
+  background: var(--card);
+}
+
+.brand {
+  margin: 0 0 18px;
+  font-weight: 700;
+}
+
+.sidenav ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sidenav li {
+  padding: 7px 10px;
+  border-radius: 7px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.sidenav li.here {
+  background: var(--bg);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+main {
+  padding: 28px 32px 80px;
+  max-width: 1100px;
+}
+
+.page-head h1 {
+  margin: 0 0 4px;
+  font-size: 26px;
+}
+
+.page-head p {
+  margin: 0 0 24px;
+  color: var(--muted);
+}
+
+.card {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px;
+}
+
+.card h3 {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.metric-value {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.delta {
+  margin: 4px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.delta.up {
+  color: var(--up);
+}
+
+.delta.down {
+  color: var(--down);
+}
+
+.metric-note {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 132px;
+}
+
+.bar {
+  flex: 1;
+  border-radius: 3px 3px 0 0;
+  background: #2f6f4f;
+}
+
+.notice p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.notice code {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--bg);
+  font-size: 12px;
+}
+
+.table-card,
+.form-card {
+  margin-top: 14px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+th {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+td {
+  padding: 9px 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+}
+
+.pip {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 5px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.pip.blocked {
+  background: var(--down);
+}
+
+.pip.clear {
+  background: var(--up);
+}
+
+.pip.waiting {
+  background: #b07d10;
+}
+
+form {
+  display: grid;
+  gap: 12px;
+  max-width: 380px;
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  font-size: 13px;
+}
+
+.field input[type="email"],
+.field select {
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--card);
+  font: inherit;
+  font-size: 13px;
+}
+
+form button {
+  justify-self: start;
+  padding: 7px 16px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--ink);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+@media (max-width: 860px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidenav {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .split {
+    grid-template-columns: 1fr;
+  }
+
+  main {
+    padding: 20px 16px 80px;
+  }
+}

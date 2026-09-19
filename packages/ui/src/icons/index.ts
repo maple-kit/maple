@@ -1,5 +1,5 @@
 /**
- * The eight icons, one module each.
+ * The nine icons, one module each.
  *
  * This entry names them rather than collecting them: every export below is a
  * distinct module, so importing one drags in one. There is deliberately no
@@ -17,5 +17,6 @@ export { createIcon, ICON_SIZE } from "./icon.js";
 export type { IconComponent, IconProps, IconSpec } from "./icon.js";
 export { NoPlaceIcon } from "./noplace.js";
 export { RegionIcon } from "./region.js";
+export { SparkleIcon } from "./sparkle.js";
 export { TargetIcon } from "./target.js";
 export { TextIcon } from "./text.js";

@@ -247,47 +247,12 @@ function header(): string {
   display: contents;
 }
 
-.mk-settings {
-  position: absolute;
-  right: 6px;
-  top: 38px;
-  z-index: 5;
-  min-width: 216px;
-  padding: 12px;
-  border: 1px solid var(--mk-line);
-  border-radius: var(--mk-r);
-  background: var(--mk-bg);
-  box-shadow: var(--mk-sh3);
-  transform-origin: top right;
-  animation: mk-pop-in var(--mk-dur-tooltip) var(--mk-ease-surface);
-}
+/* The card's own width, and the card's own bottom corners: a panel inset from
+   one edge and not the other reads as a surface that missed. */
+${settingsPanel()}
 
-.mk-setting {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-}
+${preferenceControls()}
 
-.mk-setting + .mk-setting {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--mk-line);
-}
-
-.mk-setting-name {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--mk-fg);
-}
-
-.mk-setting-hint {
-  display: block;
-  margin-top: 2px;
-  font-size: 10.5px;
-  line-height: 1.4;
-  color: var(--mk-faint);
-  text-wrap: pretty;
-}
 
 .mk-switch {
   position: relative;
@@ -342,67 +307,262 @@ function header(): string {
 `.trim();
 }
 
+/** The panel itself: the card's own width, and the card's own bottom corners. */
+function settingsPanel(): string {
+  return `
+.mk-settings {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  z-index: 5;
+  padding: 12px;
+  border-top: 1px solid var(--mk-line);
+  border-radius: 0 0 var(--mk-r) var(--mk-r);
+  background: var(--mk-bg);
+  box-shadow: var(--mk-sh3);
+  transform-origin: top center;
+  animation: mk-pop-in var(--mk-dur-tooltip) var(--mk-ease-surface);
+}
+
+.mk-setting {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.mk-setting + .mk-setting {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--mk-line);
+}
+
+.mk-setting-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mk-fg);
+}
+
+.mk-setting-hint {
+  display: block;
+  margin-top: 2px;
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: var(--mk-faint);
+  text-wrap: pretty;
+}
+`.trim();
+}
+
+/** The two controls the settings panel is mostly made of. */
+function preferenceControls(): string {
+  return `
+.mk-seg {
+  flex: none;
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 999px;
+  background: var(--mk-sunk);
+}
+
+.mk-seg-one {
+  padding: 3px 8px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--mk-muted);
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color var(--mk-dur-swap) var(--mk-ease-swap),
+    color var(--mk-dur-swap) var(--mk-ease-swap);
+}
+
+.mk-seg-one[aria-checked="true"] {
+  background: var(--mk-bg);
+  box-shadow: var(--mk-sh1);
+  color: var(--mk-fg);
+}
+
+/* The control is the shape of the thing it sets: a screen, with a dot in
+   whichever corner the island is in. */
+.mk-corners {
+  flex: none;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2px;
+  width: 38px;
+  height: 28px;
+  padding: 2px;
+  border: 1px solid var(--mk-line);
+  border-radius: var(--mk-r-xs);
+  background: var(--mk-sunk);
+}
+
+.mk-corner {
+  position: relative;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  cursor: pointer;
+  transition: background-color var(--mk-dur-swap) var(--mk-ease-swap);
+}
+
+.mk-corner:hover {
+  background: var(--mk-line);
+}
+
+.mk-corner::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: 1px;
+  background: var(--mk-line-firm);
+  transition: background-color var(--mk-dur-swap) var(--mk-ease-swap);
+}
+
+.mk-corner[aria-checked="true"]::after {
+  background: var(--mk-accent);
+}
+`.trim();
+}
+
 function filters(): string {
   return `
 .mk-filters {
   flex: none;
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 8px 9px;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 9px;
   border-bottom: 1px solid var(--mk-line);
 }
 
-.mk-filter {
-  padding: 3px 9px;
+/* The chevron is two borders rotated, not an inline SVG: a data URI in a
+   background would need img-src data: in the host's policy, and the overlay
+   promises to ask for nothing beyond blob:. */
+.mk-filter-chip {
+  position: relative;
+  flex: none;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.mk-filter-chip::after {
+  content: "";
+  position: absolute;
+  right: 9px;
+  width: 5px;
+  height: 5px;
+  border-right: 1.5px solid var(--mk-muted);
+  border-bottom: 1.5px solid var(--mk-muted);
+  rotate: 45deg;
+  translate: 0 -2px;
+  pointer-events: none;
+}
+
+.mk-filter-pick {
+  width: 100%;
+  padding: 3px 22px 3px 10px;
   border: 1px solid var(--mk-line);
   border-radius: 999px;
   background: transparent;
-  color: var(--mk-muted);
+  color: var(--mk-fg);
   font: inherit;
   font-size: 11.5px;
   font-weight: 600;
-  white-space: nowrap;
+  text-overflow: ellipsis;
+  appearance: none;
+  cursor: pointer;
+  transition:
+    border-color var(--mk-dur-swap) var(--mk-ease-swap),
+    background-color var(--mk-dur-swap) var(--mk-ease-swap);
+}
+
+.mk-filter-pick:hover {
+  border-color: var(--mk-line-firm);
+  background: var(--mk-sunk);
+}
+
+/* The native menu is the host page's surface, not the overlay's: it renders
+   outside the shadow root, so it is given readable colours rather than left
+   to inherit a transparent background. */
+.mk-filter-pick option {
+  background: var(--mk-bg);
+  color: var(--mk-fg);
+}
+
+.mk-tally {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.mk-tally-one {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--mk-faint);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
   cursor: pointer;
   transition:
     background-color var(--mk-dur-swap) var(--mk-ease-swap),
-    color var(--mk-dur-swap) var(--mk-ease-swap),
     border-color var(--mk-dur-swap) var(--mk-ease-swap),
-    transform var(--mk-dur-fade) var(--mk-ease-surface);
+    color var(--mk-dur-swap) var(--mk-ease-swap);
 }
 
-.mk-filter:hover {
+.mk-tally-one:hover {
+  background: var(--mk-sunk);
+  color: var(--mk-muted);
+}
+
+.mk-tally-one[aria-pressed="true"] {
   border-color: var(--mk-line-firm);
-  transform: translateY(-1px);
+  color: var(--mk-fg);
 }
 
-.mk-filter:active {
-  transform: scale(var(--mk-press));
+.mk-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--mk-tally-paint);
 }
 
-.mk-filter[aria-selected="true"] {
-  border-color: transparent;
-  background: var(--mk-fg);
-  color: var(--mk-bg);
+/* A count of nothing is not news: the dot stays, so the key is still complete,
+   and the row stops competing with the ones that have something in them. */
+.mk-tally-one[data-mk-zero="true"] {
+  opacity: 0.45;
 }
 
-.mk-tab {
-  margin-left: auto;
-  padding-left: 9px;
-  border-style: dashed;
+.mk-tally-one[data-tally="open"] {
+  --mk-tally-paint: var(--mk-accent);
 }
 
-.mk-tab[aria-selected="true"] {
-  border-color: transparent;
-  background: var(--mk-lost);
-  color: var(--mk-bg);
+.mk-tally-one[data-tally="needs_reverify"] {
+  --mk-tally-paint: var(--mk-warn);
 }
 
-.mk-count {
-  margin-left: 4px;
-  opacity: 0.7;
-  font-variant-numeric: tabular-nums;
+.mk-tally-one[data-tally="resolved"] {
+  --mk-tally-paint: var(--mk-ok);
 }
+
+.mk-tally-one[data-tally="unpinned"] {
+  --mk-tally-paint: var(--mk-lost);
+}
+
 `.trim();
 }
 
@@ -651,11 +811,15 @@ function developer(): string {
   cursor: help;
 }
 
+/* The top layer, because the card hides its overflow and nothing else gets out
+   of an ancestor's. Placed by tipSpot, in viewport coordinates, which is what
+   the top layer is positioned against. */
 .mk-tip {
-  position: absolute;
+  position: fixed;
+  top: 0;
   left: 0;
-  bottom: calc(100% + 6px);
-  z-index: 2;
+  margin: 0;
+  translate: var(--mk-x) var(--mk-y);
   width: max-content;
   max-width: 228px;
   padding: 6px 8px;
@@ -681,11 +845,15 @@ function developer(): string {
 
 /* The delay is on the way in only. A hover-out is a dismissal, and a
    dismissal that waits reads as a surface that did not hear the pointer. */
-.mk-tipped:hover > .mk-tip,
-.mk-tipped:focus-visible > .mk-tip {
+.mk-tip:popover-open {
   opacity: 1;
   transform: scale(1);
   transition-delay: var(--mk-delay-tooltip);
+}
+
+/* A popover keeps its own inset and border, and both fight the placement. */
+.mk-tip:not(:popover-open) {
+  display: none;
 }
 
 .mk-chip-dev {

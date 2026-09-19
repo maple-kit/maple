@@ -9,6 +9,11 @@
 
 /** How much around the element to include. */
 export interface CaptureOptions {
+  /**
+   * The whole page rather than a widening from the element: two picks a few
+   * hundred pixels apart widen to the same ancestor anyway.
+   */
+  readonly page?: boolean;
   /** Ancestors to widen to, for context around the element. Defaults to 2. */
   readonly ancestors?: number;
   /** Device pixel ratio to render at. Defaults to the display's. */
@@ -44,7 +49,10 @@ export async function captureElement(
   options: CaptureOptions = {},
 ): Promise<Blob> {
   const snapdom = await load();
-  const target = widen(element, options.ancestors ?? DEFAULT_ANCESTORS);
+  const target =
+    options.page === true
+      ? pageOf(element)
+      : widen(element, options.ancestors ?? DEFAULT_ANCESTORS);
 
   const blob = await snapdom.toBlob(target, {
     scale: options.scale ?? window.devicePixelRatio,
@@ -70,6 +78,11 @@ async function imported(): Promise<{ snapdom?: { toBlob?: unknown } }> {
   } catch {
     throw new CaptureUnavailableError("snapdom is not installed, so Maple cannot capture.");
   }
+}
+
+/** The element's own page, which is its document's body. */
+function pageOf(element: Element): Element {
+  return element.ownerDocument.body;
 }
 
 /** Walks up for context, stopping at the body rather than capturing the page. */

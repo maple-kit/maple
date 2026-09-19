@@ -1,7 +1,18 @@
 /**
  * Proves the two claims this example exists to make: the tagger runs on a
- * preview build, and a production build carries no Maple attribute anywhere.
+ * preview build, and a production build carries nothing the tagger emitted.
+ *
+ * Since the example mounts the overlay, the bare strings `data-maple-src` and
+ * `data-maple-name` are in both bundles — the anchor reads those attributes to
+ * name a target, so `@maple-kit/ui` names them whatever the tagger did. What
+ * separates the two builds is the *emitted* form: a JSX prop, quoted and
+ * followed by a colon, which only a tagged element has.
  */
+
+/** The attribute as the tagger writes it into a build, not as the anchor reads it. */
+function emitted(attribute: string): string {
+  return `"${attribute}":`;
+}
 
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -33,22 +44,26 @@ function assert(condition: boolean, message: string): void {
 
 const previewOutput = await contentsOf(await buildInto("dist-preview", true));
 assert(
-  previewOutput.includes("data-maple-src"),
-  "A preview build should carry data-maple-src, and does not.",
+  previewOutput.includes(emitted("data-maple-src")),
+  "A preview build should carry data-maple-src on a tagged element, and does not.",
 );
 assert(
   previewOutput.includes("src/App.tsx:"),
   "A preview build should carry the source path the tagger emitted, and does not.",
 );
 assert(
-  previewOutput.includes("data-maple-name"),
-  "A preview build should carry data-maple-name, and does not.",
+  previewOutput.includes(emitted("data-maple-name")),
+  "A preview build should carry data-maple-name on a tagged element, and does not.",
 );
 
 const productionOutput = await contentsOf(await buildInto("dist", false));
 assert(
-  !productionOutput.includes("data-maple-"),
-  "A production build must carry no data-maple- attribute, and this one does.",
+  !productionOutput.includes(emitted("data-maple-src")),
+  "A production build must tag no element with data-maple-src, and this one does.",
+);
+assert(
+  !productionOutput.includes(emitted("data-maple-name")),
+  "A production build must tag no element with data-maple-name, and this one does.",
 );
 assert(
   !productionOutput.includes("src/App.tsx:"),

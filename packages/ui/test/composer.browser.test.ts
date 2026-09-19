@@ -268,15 +268,30 @@ describe("the panel and the sheet", () => {
 
 /** One formatter, two inputs: a fresh capture and a comment stored months ago. */
 describe("the context badge", () => {
+  /** The badge's rows as label to value, which is what it is drawn as. */
+  function rows(selector: string): Record<string, string> {
+    const list = root().querySelector(selector);
+    const labels = [...(list?.querySelectorAll("dt") ?? [])].map((one) => one.textContent ?? "");
+    const values = [...(list?.querySelectorAll("dd") ?? [])].map((one) => one.textContent ?? "");
+    return Object.fromEntries(labels.map((label, index) => [label, values[index] ?? ""]));
+  }
+
   it("renders the same badge from a captured page and from a stored comment", async () => {
     started();
     await open();
 
-    const fresh = root().querySelector(".probe-page")?.textContent;
-    const stored = root().querySelector(".probe-stored")?.textContent;
+    expect(rows(".probe-page")).toEqual(rows(".probe-stored"));
+  });
 
-    expect(fresh).toBe("1440px wide · dark · 420px covered · Copilot open");
-    expect(stored).toBe(fresh);
+  it("states how much of the width was covered rather than two numbers to subtract", async () => {
+    started();
+    await open();
+
+    expect(rows(".probe-page")).toEqual({
+      Width: "1440px · 420px covered",
+      Theme: "dark",
+      Open: "Copilot",
+    });
   });
 
   it("names the layout width, the breakpoint, the ratio and the locale in developer detail", async () => {
@@ -284,20 +299,33 @@ describe("the context badge", () => {
     await open();
     client.setDetail("developer");
 
-    await vi.waitFor(() =>
-      expect(root().querySelector(".probe-page")?.textContent).toContain("window"),
-    );
-    expect(root().querySelector(".probe-page")?.textContent).toBe(
-      "1440 window · 1020 content · dark · lg · 2× · en-GB · Copilot open",
-    );
+    await vi.waitFor(() => expect(rows(".probe-page")["Window"]).toBe("1440px"));
+    expect(rows(".probe-page")).toEqual({
+      Window: "1440px",
+      Content: "1020px",
+      Breakpoint: "lg",
+      Scheme: "dark",
+      DPR: "2×",
+      Locale: "en-GB",
+      Open: "Copilot",
+    });
+  });
+
+  it("is a labelled list, so its values line up in one column", async () => {
+    started();
+    await open();
+    const badge = root().querySelector<HTMLElement>(".probe-page");
+
+    expect(badge?.tagName).toBe("DL");
+    expect(getComputedStyle(badge!).display).toBe("grid");
   });
 
   it("sets every width in tabular figures, because they change in place", async () => {
     started();
     await open();
-    const badge = root().querySelector<HTMLElement>(".probe-page");
+    const value = root().querySelector<HTMLElement>(".probe-page dd");
 
-    expect(getComputedStyle(badge!).fontVariantNumeric).toContain("tabular-nums");
+    expect(getComputedStyle(value!).fontVariantNumeric).toContain("tabular-nums");
   });
 });
 
@@ -351,13 +379,14 @@ describe("attachments", () => {
     expect(root().querySelector("img.mk-shot")).not.toBeNull();
   });
 
-  it("offers paste before anything else while there is nothing attached", async () => {
+  it("asks for a paste or a drop, and offers no button to do it with", async () => {
     started();
     await open();
     const strip = root().querySelector(".mk-shots");
 
-    expect(strip?.textContent).toContain(ATTACH_WORDS.offer);
     expect(strip?.textContent).toContain(ATTACH_WORDS.hint);
+    expect(strip?.querySelector("button")).toBeNull();
+    expect(strip?.querySelector("input[type=file]")).toBeNull();
   });
 
   it("outlines the thumbnail rather than bordering it", async () => {
@@ -495,8 +524,22 @@ describe("writing a comment", () => {
     started();
     const surface = await open();
 
-    expect(surface.querySelector(".mk-target")?.textContent).toBe("elementon the Yield card");
+    expect(surface.querySelector(".mk-target")?.textContent).toBe("on the Yield card");
     expect(surface.querySelector(".mk-target-on")?.textContent).not.toContain("#");
+  });
+
+  /**
+   * The kind was a word beside the icon until the two together read as two
+   * facts. They are one, and the sentence after them already says which.
+   */
+  it("says the kind with an icon, and keeps the word for a screen reader", async () => {
+    started();
+    const surface = await open();
+    const kind = surface.querySelector(".mk-target-kind");
+
+    expect(kind?.textContent).toBe("");
+    expect(kind?.querySelector("svg")).not.toBeNull();
+    expect(kind?.getAttribute("aria-label")).toBe("element");
   });
 
   it("leaves the rung, the confidence and the paths to developer mode", async () => {

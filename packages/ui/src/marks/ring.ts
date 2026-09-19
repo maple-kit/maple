@@ -92,6 +92,7 @@ export const MapleTargetRing = /** @__PURE__ */ forwardRef<HTMLDivElement, Targe
       {
         className: className ? `mk-ring ${className}` : "mk-ring",
         "data-mk-state": state,
+        "data-mk-passage": String("startContainer" in target),
         ref: composeRefs<HTMLDivElement>(ref, (node) => {
           ring.current = node;
         }),

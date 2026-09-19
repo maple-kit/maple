@@ -8,16 +8,8 @@
  */
 
 import { resolveAnchor } from "@maple-kit/core/anchor";
-import { useMaple } from "@maple-kit/react";
-import {
-  createElement,
-  forwardRef,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useMaple, useMapleClient } from "@maple-kit/react";
+import { createElement, forwardRef, useCallback, useEffect, useMemo, useRef } from "react";
 
 import { useMapleUi } from "../context.js";
 import { useFrameLoop, viewportHeight } from "./frame.js";
@@ -53,11 +45,12 @@ export const MapleMarkLayer = /** @__PURE__ */ forwardRef<HTMLDivElement, MarkLa
     const { className, onSelect } = props;
     const { container } = useMapleUi(PART);
     const state = useMaple();
-    const [hovered, setHovered] = useState<string>();
+    const client = useMapleClient();
 
     const comments = props.comments ?? state.comments;
     const visible = props.visible ?? state.visible;
     const selectedId = props.selectedId ?? state.selected ?? undefined;
+    const peeked = state.peeked ?? undefined;
     const address = useMemo(() => addresses(comments), [comments]);
     const placed = useMemo(
       () => placements(visible, address, container.ownerDocument),
@@ -87,13 +80,13 @@ export const MapleMarkLayer = /** @__PURE__ */ forwardRef<HTMLDivElement, MarkLa
             key: placement.comment.id,
             ref: keep(nodes.current, placement.comment.id),
             onClick: () => onSelect?.(placement.comment),
-            onPointerEnter: () => setHovered(placement.comment.id),
-            onPointerLeave: () => setHovered(undefined),
-            onFocus: () => setHovered(placement.comment.id),
-            onBlur: () => setHovered(undefined),
+            onPointerEnter: () => client.peek(placement.comment.id),
+            onPointerLeave: () => client.peek(null),
+            onFocus: () => client.peek(placement.comment.id),
+            onBlur: () => client.peek(null),
           }),
         ),
-      [onSelect, placed, selectedId],
+      [client, onSelect, placed, selectedId],
     );
 
     return createElement(
@@ -105,7 +98,7 @@ export const MapleMarkLayer = /** @__PURE__ */ forwardRef<HTMLDivElement, MarkLa
         ringFor({
           client: state,
           placed,
-          hovered: hovered ?? selectedId,
+          hovered: peeked ?? selectedId,
           root: container.ownerDocument,
         }),
       ),
@@ -190,7 +183,7 @@ function ringFor(input: RingInput): TargetRingProps {
 
 /** A composer on something the page no longer has gets no ring, and no guess. */
 function composing(target: ComposerTarget, root: ParentNode): TargetRingProps {
-  const found = resolveAnchor(target.anchor, { root });
+  const found = resolveAnchor(target.anchor, { root, passage: target.kind === "text" });
   const label = ringLabel({
     kind: target.kind,
     anchor: target.anchor,
