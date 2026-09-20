@@ -31,6 +31,7 @@ export interface GateContractSubject {
 
 const BLOCKED = decideGate([storedComment({ status: "open" })]);
 const CLEAR = decideGate([storedComment({ status: "resolved" })]);
+const NO_REVIEW = decideGate(undefined, { hasReview: false });
 
 /** Unique commit per test, so a shared backend does not leak between them. */
 function target(name: string): GateTarget {
@@ -76,6 +77,17 @@ export function runGateContract(options: GateContractOptions): void {
         const read = await connector.read(at);
         expect(read?.conclusion).toBe("blocked");
         expect(read?.open).toBe(BLOCKED.open);
+      });
+    });
+
+    it("reports on a commit it was never reviewing, without blocking it", async () => {
+      await withSubject(async (connector, at) => {
+        await connector.publish({ ...at, verdict: NO_REVIEW });
+
+        if (!connector.read) return;
+        const read = await connector.read(at);
+        expect(read?.conclusion).toBe("neutral");
+        expect(read?.reason).toBe("no-review");
       });
     });
 

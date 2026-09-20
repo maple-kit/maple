@@ -19,6 +19,11 @@ export interface GateOptions {
    */
   readonly blockOn?: readonly CommentStatus[];
   /**
+   * False when Maple is not reviewing this surface at all: a fork, a bot's
+   * bump, a branch with no preview. Neither `unreadable` nor `no-comments`.
+   */
+  readonly hasReview?: boolean;
+  /**
    * False when the store cannot record status, so nothing it reports can be
    * trusted to mean resolved. The verdict is then `neutral`, never `clear`.
    */
@@ -30,15 +35,29 @@ const LISTED = 10;
 
 /**
  * Decides the verdict for one surface. `comments` is undefined when the store
- * could not be read at all, which is neutral rather than clear.
+ * could not be read at all; `hasReview: false` is a surface Maple was never
+ * reviewing. Both are neutral, and each says which one it is.
  */
 export function decideGate(
   comments: readonly Comment[] | undefined,
   options: GateOptions = {},
 ): GateVerdict {
-  if (comments === undefined) return unknown("unreadable", "Maple could not read the comments");
+  if (options.hasReview === false) {
+    return neutral(
+      "no-review",
+      "No visual review on this pull request",
+      "Maple is not reviewing this pull request, so this check has nothing to hold it on.",
+    );
+  }
+  if (comments === undefined) {
+    return neutral("unreadable", NOT_CHECKED, `Maple could not read the comments${NO_ANSWER}`);
+  }
   if (options.statusTracked === false) {
-    return unknown("status-untracked", "This store cannot record whether a comment was resolved");
+    return neutral(
+      "status-untracked",
+      NOT_CHECKED,
+      `This store cannot record whether a comment was resolved${NO_ANSWER}`,
+    );
   }
 
   const blockOn = options.blockOn ?? BLOCKING_STATUSES;
@@ -70,16 +89,13 @@ function cleared(
   return { reason, title, summary };
 }
 
-/** Neutral says what it does not know. A gate that cannot see must not block. */
-function unknown(reason: GateVerdict["reason"], sentence: string): GateVerdict {
-  return {
-    conclusion: "neutral",
-    reason,
-    open: 0,
-    total: 0,
-    title: "Visual review was not checked",
-    summary: `${sentence}, so this check has nothing to say about them.`,
-  };
+/** The title the two "I cannot tell" neutrals share, and the way both end. */
+const NOT_CHECKED = "Visual review was not checked";
+const NO_ANSWER = ", so this check has nothing to say about them.";
+
+/** A gate with nothing it can judge must not block, and must say which nothing. */
+function neutral(reason: GateVerdict["reason"], title: string, summary: string): GateVerdict {
+  return { conclusion: "neutral", reason, open: 0, total: 0, title, summary };
 }
 
 /**

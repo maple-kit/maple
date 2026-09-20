@@ -14,10 +14,15 @@ export type GateConclusion = "blocked" | "clear" | "neutral";
 
 /**
  * Why the gate reached its conclusion. A reason can be branched on; a summary
- * sentence cannot, and the two neutrals need different answers from a person.
+ * sentence cannot, and the three neutrals need different answers from a person.
  */
 export type GateReason =
-  "all-resolved" | "comments-open" | "no-comments" | "status-untracked" | "unreadable";
+  | "all-resolved"
+  | "comments-open"
+  | "no-comments"
+  | "no-review"
+  | "status-untracked"
+  | "unreadable";
 
 /** One gate decision about one commit. */
 export interface GateVerdict {

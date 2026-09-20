@@ -35,13 +35,18 @@ describe("what holds the gate", () => {
   });
 });
 
-describe("the two ways of not knowing", () => {
+describe("the three ways of having nothing to say", () => {
   it.each<[string, GateReason, ReturnType<typeof decideGate>]>([
     ["comments that could not be read", "unreadable", decideGate(undefined)],
     [
       "a store that cannot record status",
       "status-untracked",
       decideGate([], { statusTracked: false }),
+    ],
+    [
+      "a pull request Maple never reviewed",
+      "no-review",
+      decideGate(undefined, { hasReview: false }),
     ],
   ])("%s is neutral, not clear", (_, reason, verdict) => {
     expect(verdict.conclusion).toBe("neutral");
@@ -51,6 +56,15 @@ describe("the two ways of not knowing", () => {
 
   it("does not block on an untracked store even with open comments", () => {
     expect(decideGate([at("open")], { statusTracked: false }).conclusion).toBe("neutral");
+  });
+
+  it("keeps a pull request out of scope apart from one Maple could not read", () => {
+    expect(decideGate(undefined, { hasReview: false }).summary).not.toContain("could not read");
+    expect(decideGate(undefined).summary).toContain("could not read");
+  });
+
+  it("says nothing was reviewed even when comments were handed to it", () => {
+    expect(decideGate([at("open")], { hasReview: false }).conclusion).toBe("neutral");
   });
 });
 

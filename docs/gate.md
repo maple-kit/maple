@@ -35,6 +35,7 @@ branched on and the two neutrals need different answers from a person.
 | `no-comments`      | `clear`    | Nobody commented                                   |
 | `unreadable`       | `neutral`  | The store could not be read at all                 |
 | `status-untracked` | `neutral`  | The store cannot record that anything was resolved |
+| `no-review`        | `neutral`  | Maple was never reviewing this pull request        |
 
 ### Everything but `resolved` blocks
 
@@ -51,6 +52,15 @@ decides otherwise.
 `setStatus` keeps status client-side, so nothing it reports can be trusted to
 mean resolved, and blocking on it would be blocking on a guess. Both are
 neutral, and both say which one they are.
+
+`hasReview: false` is the third neutral, and it is not an "I cannot tell" at
+all: a fork, a bot's version bump, a branch with no preview deployment. Nothing
+is broken and nothing is expected. It is a separate reason rather than a flavour
+of `unreadable` because the check would otherwise tell a person that Maple
+failed to read comments on a pull request Maple was never installed for — and
+because the gate must report on every pull request, so this is the case it
+reports most often. The caller decides it, since only the caller knows whether a
+preview exists; the sentence a reviewer reads is written once, here.
 
 ## Publishing it
 
