@@ -20,6 +20,10 @@ export default defineConfig({
     "src/tagger/index.ts",
     "src/testing/index.ts",
   ],
+  // `/testing` imports describe/it/expect. Without this, unbundle copies
+  // vitest into dist/ and the contract suite registers against that copy
+  // rather than the consumer's runner. Declared as an optional peer instead.
+  external: ["vitest"],
   format: ["esm"],
   dts: true,
   clean: true,

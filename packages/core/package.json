@@ -50,17 +50,22 @@
   },
   "devDependencies": {
     "@babel/core": "8.0.5",
-    "@zumer/snapdom": "3.0.0"
+    "@zumer/snapdom": "3.0.0",
+    "vitest": "5.0.1"
   },
   "peerDependencies": {
     "@babel/core": "^7.22.0 || ^8.0.0",
-    "@zumer/snapdom": "^3.0.0"
+    "@zumer/snapdom": "^3.0.0",
+    "vitest": "^4.0.0 || ^5.0.0"
   },
   "peerDependenciesMeta": {
     "@babel/core": {
       "optional": true
     },
     "@zumer/snapdom": {
+      "optional": true
+    },
+    "vitest": {
       "optional": true
     }
   }
