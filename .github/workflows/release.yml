@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      # Opening and updating the "Version Packages" pull request.
+      contents: write
+      pull-requests: write
+      # The OIDC token npm exchanges for a provenance attestation. Without it
+      # `provenance=true` in .npmrc fails the publish rather than skipping.
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: ./.github/actions/setup
+
+      - name: Point npm at the public registry
+        # Writes the registry and the auth line into the runner's ~/.npmrc.
+        # The project .npmrc pins the same registry; this adds the credential.
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          registry-url: https://registry.npmjs.org
+
+      - name: Version, or publish what was versioned
+        # `version` writes the bumps and opens a pull request. Merging that
+        # pull request runs this job again, finds no changesets, and `publish`
+        # is what runs instead.
+        #
+        # `pnpm build` is explicit because ignore-scripts=true means a prepack
+        # would never fire: nothing else rebuilds dist before it is packed.
+        uses: changesets/action@v1
+        with:
+          version: pnpm changeset version
+          publish: pnpm release
+          commit: "chore: version packages"
+          title: "chore: version packages"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_CONFIG_PROVENANCE: "true"
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

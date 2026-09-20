@@ -30,6 +30,7 @@
     "lint:prune": "eslint . --prune-suppressions",
     "lint:suppress": "eslint . --suppress-all",
     "publint": "pnpm -r --filter \"./packages/*\" exec publint",
+    "release": "pnpm build && pnpm changeset publish",
     "test": "vitest run --project node",
     "test:browser": "vitest run --project browser",
     "test:watch": "vitest",
