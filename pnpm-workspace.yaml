@@ -14,3 +14,10 @@ onlyBuiltDependencies:
   # evalite's local result store. Ships prebuilt binaries fetched by a postinstall
   # script, so without this the eval runner installs but cannot open its database.
   - better-sqlite3
+
+# Dependabot reports four advisories on @fastify/static, which evalite pins at
+# 8.3.0 for its local result viewer. The 8.x line has no patched release, so the
+# advisory can only be answered by moving off it. Nothing here imports fastify;
+# it is the eval harness's own web UI.
+overrides:
+  "@fastify/static": "10.1.4"
