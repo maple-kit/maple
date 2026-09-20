@@ -253,3 +253,28 @@ describe("the byte budget", () => {
     expect(first?.commit).toBe("a1b2c3d4e5f6a7b8");
   });
 });
+
+describe("a summary, with no fence", () => {
+  it("returns the table alone", () => {
+    const result = exportMarkdown([storedComment({ status: "open" })], {
+      branch: BRANCH,
+      fence: false,
+    });
+
+    expect(result.markdown).toContain("| # | Where | Comment | Viewport |");
+    expect(result.markdown).not.toContain("```maple");
+    expect(parseFence(result.markdown)).toBeUndefined();
+  });
+
+  it("costs no budget, because there is nothing to fit", () => {
+    const wordy = Array.from({ length: 400 }, (_, index) =>
+      storedComment({ id: `c_${String(index)}`, body: "x".repeat(200) }),
+    );
+
+    expect(exportMarkdown(wordy, { branch: BRANCH, fence: false })).toMatchObject({
+      bytes: 0,
+      reduced: [],
+      overBudget: false,
+    });
+  });
+});

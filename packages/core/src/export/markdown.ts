@@ -41,6 +41,11 @@ export interface ExportOptions {
   readonly screenshots?: ReadonlyMap<string, string>;
   /** Defaults to {@link FENCE_BUDGET}. */
   readonly budget?: number;
+  /**
+   * False returns the table alone. A summary repeating a fence already on the
+   * pull request reads back as a second comment; `docs/connectors.md` says why.
+   */
+  readonly fence?: boolean;
 }
 
 /** The markdown, and what it cost to fit. */
@@ -59,11 +64,14 @@ export function exportMarkdown(
   comments: readonly Comment[],
   options: ExportOptions,
 ): MarkdownExport {
-  const budget = options.budget ?? FENCE_BUDGET;
-  const screenshots = hostedOnly(options.screenshots);
-  const { fence, bytes, reduced } = fit(comments, options.branch, budget);
+  const rendered = table(comments, hostedOnly(options.screenshots));
+  if (options.fence === false) {
+    return { markdown: rendered, bytes: 0, reduced: [], overBudget: false };
+  }
 
-  const markdown = [table(comments, screenshots), "", "```maple", fence, "```"].join("\n");
+  const budget = options.budget ?? FENCE_BUDGET;
+  const { fence, bytes, reduced } = fit(comments, options.branch, budget);
+  const markdown = [rendered, "", "```maple", fence, "```"].join("\n");
   return { markdown, bytes, reduced, overBudget: bytes > budget };
 }
 

@@ -87,6 +87,14 @@ One Maple comment is one issue comment, carrying the table above its fence. That
 is what buys GitHub's own threading, reactions and notifications, and it is why
 the fence has a byte budget.
 
+**A second fence on the same pull request is a second comment.** `list` reads
+every issue comment that carries one, so a summary that repeats them all is read
+back as one more comment — with an id nothing can resolve, because it points at
+the summary rather than at what a reviewer clicked. It would hold the gate for
+ever. Anything summarising a pull request passes `fence: false` to
+`exportMarkdown` and writes the table alone; the fences on the individual
+comments are what an agent reads.
+
 ### What it costs
 
 | Method      | How                                                                   | Cost                                                                |
