@@ -2,7 +2,9 @@
   "$schema": "https://unpkg.com/@changesets/config@3.1.1/schema.json",
   "changelog": "@changesets/cli/changelog",
   "commit": false,
-  "fixed": [["@maple-kit/core", "@maple-kit/cli", "@maple-kit/mcp"]],
+  "fixed": [
+    ["@maple-kit/core", "@maple-kit/cli", "@maple-kit/mcp", "@maple-kit/react", "@maple-kit/ui"]
+  ],
   "linked": [],
   "access": "public",
   "baseBranch": "main",
