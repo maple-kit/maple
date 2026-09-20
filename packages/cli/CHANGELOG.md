@@ -1,5 +1,12 @@
 # @maple-kit/cli
 
+## 0.3.0
+
+### Patch Changes
+
+- Updated dependencies [f46ab2c]
+  - @maple-kit/core@0.3.0
+
 ## 0.2.0
 
 ### Patch Changes
