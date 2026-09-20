@@ -39,7 +39,7 @@ describe("what a failed call becomes", () => {
   });
 
   it("never repeats the route's own words, which can name a repository", () => {
-    const secretish = "gh_store: daylight/private-thing is rate limited until 09:12";
+    const secretish = "gh_store: acme/private-thing is rate limited until 09:12";
     const failure = failureFrom(new MapleRequestError(429, "/comments", secretish), "load");
 
     expect(failure.message).not.toContain("private-thing");
