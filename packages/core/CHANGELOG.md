@@ -1,5 +1,20 @@
 # @maple-kit/core
 
+## 0.1.1
+
+### Patch Changes
+
+- 69fb978: Publish from CI with no npm token at all.
+
+  `release.yml` authenticates to npm by exchanging the job's OIDC token instead of
+  carrying a secret. `id-token: write`, the `registry-url` step and
+  `NPM_CONFIG_PROVENANCE` all stay — provenance and trusted publishing use the
+  same exchange — and `NODE_AUTH_TOKEN` is gone.
+
+  The token this replaces existed for one reason: npm registers a trusted
+  publisher only from an _existing_ package's settings page, so the first release
+  could not use one. This version is the proof that the second one can.
+
 ## 0.1.0
 
 ### Minor Changes
