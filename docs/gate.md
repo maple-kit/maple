@@ -85,24 +85,33 @@ commit, with no new push.** A reviewer resolving the last comment expects the
 merge button to light up; asking them to push an empty commit to unstick CI is
 how a required check gets deleted from the ruleset within a week.
 
-## What the GitHub gate will have to do
+## What the GitHub gate does
 
-Not built yet. Recorded here so the next person does not rediscover it:
+`githubGate` in `@maple-kit/core/connectors` was built in #56, and
+`maple-action` calls it. What follows is why each part is the way it is, so
+nobody rediscovers it by breaking it.
 
-- **Only a GitHub App can create a check run.** The gate authenticates as
-  itself and never needs a user token — which is why it is a _second_ app.
+- **Only a GitHub App can create a check run**, so the gate authenticates as
+  itself and never sees a reviewer's token — which is why it is a _second_ app.
   `docs/github-auth.md` has the reasoning: a user-to-server token is bounded by
   its app's permissions, so an app carrying `Checks` and `Contents` would hand
-  every reviewer's token read access to the source.
+  every reviewer's token read access to the source. A workflow's own
+  `GITHUB_TOKEN` with `checks: write` can create the run at push time; the App
+  is what the SDK route needs, where a reviewer resolving a comment flips the
+  check with no workflow running at all.
 - **Blocked is `in_progress`, not `failure`.** A required check passes only on
   `success`, `skipped` or `neutral`, so `in_progress` blocks exactly as hard as
   a failure and can still be exited. Updating a _completed_ run is unreliable,
-  so a completed run is never where the gate parks.
+  so a completed run is never where the gate parks: a new run supersedes it.
+- **The counts ride in `external_id`**, the field the API reserves for exactly
+  this. Reading them back out of the markdown summary would be parsing prose.
 - **Report on every pull request**, including forks, Dependabot and anything
-  with no preview, and conclude `neutral` there. A required check that never
-  reports on some pull requests is a required check somebody removes.
-- **Subscribe to `merge_group.checks_requested` and pass immediately.** A merge
-  queue entry has no preview and nobody to comment on it. This exact hang is
-  what sank Chromatic.
+  with no preview. That last case is `no-review`, and it concludes `neutral`. A
+  required check that never reports on some pull requests is a required check
+  somebody removes.
+- **`merge_group.checks_requested` passes immediately.** A merge queue entry
+  has no preview and nobody to comment on it, and its head commit is in the
+  event payload rather than in `GITHUB_HEAD_REF`, which it does not have. This
+  exact hang is what sank Chromatic.
 - **Pin `integration_id` in the ruleset**, or anyone with push access can forge
   a green status under the same check name.
