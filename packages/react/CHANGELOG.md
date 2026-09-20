@@ -1,0 +1,115 @@
+# @maple-kit/react
+
+## 0.1.0
+
+### Minor Changes
+
+- 69ba1e5: Let a reviewer link their GitHub account from the overlay.
+
+  `ClientState.github` carries the link, and it has four states rather than a
+  boolean. `unsupported` is a route that serves no sign-in at all, which is a
+  deployment storing comments some other way — not a reviewer who has not linked.
+  A surface draws nothing for the first and an offer for the second, so the two
+  must not collapse.
+
+  `MapleClient` gains `linkGitHub()` and `unlinkGitHub()`. The first resolves as
+  soon as there is a code to show and keeps polling after it; watch `github` for
+  the rest. The wait is here rather than in a held-open request, because a person
+  takes minutes to read a code, reach github.com and type it.
+
+  `@maple-kit/react` gains `useGitHubLink()`. `@maple-kit/ui` gains
+  `Maple.Account`, the row the settings panel now opens with: the offer, the code
+  and where to type it, or the account and a way to forget it here. It says
+  plainly that forgetting the token is not revoking the authorisation, because a
+  reviewer who thinks it is will not revoke.
+
+  **Breaking:** `Transport.me()` returns `{ user, github? }` rather than the user
+  alone, so the link state travels with the identity it belongs to.
+
+  The island's bundle budget goes from 21 KB to 22 KB gzipped. It was at 21.0 with
+  this row in it, which is not a number to leave a build standing on.
+
+- caec174: Add `@maple-kit/react`, the React binding over the reviewer controller.
+
+  `MapleProvider` puts one `@maple-kit/core/client` controller in scope and starts
+  it in an effect, so nothing reaches `document`, `localStorage` or the route
+  while React renders. `useMaple`, `useComments`, `useComposer`, `usePicker`,
+  `useAnchor`, `useDraft` and `useMapleClient` are each one `useSyncExternalStore`
+  over it and nothing more — the state machine stays in core, where a Svelte or
+  Astro binding can reach it without a rewrite.
+
+  Every derived read is cached against the state it came from, so a keystroke in
+  the composer does not re-render every mark on the page. `getServerSnapshot` is
+  that same read: an application that renders on the server gets the idle state
+  rather than a crash.
+
+  React is a peer dependency, 18 or 19. This package never depends on
+  `@maple-kit/ui`, so an application rendering comments in its own design system
+  pulls in none of the composed parts.
+
+### Patch Changes
+
+- 417376e: Every package publishes its licence, its notice and a readme. `files` was
+  `["dist"]` and the three texts lived only at the repository root, so the
+  artifact met none of Apache-2.0's redistribution terms and every npm page would
+  have been blank.
+
+  `@maple-kit/core` no longer carries a private copy of vitest. `/testing` imports
+  `describe`, `it` and `expect` for the shared connector contract suite, and with
+  vitest undeclared the build wrote it — and chai, expect-type, magic-string and
+  tinybench — into `dist/node_modules/`, about half the tarball. Worse than the
+  size: the suite registered its tests against that copy rather than the runner
+  the consumer invoked, so it collected nothing. vitest is an optional peer
+  dependency now, and running the contract suite means running it in your vitest.
+
+- 567b444: Ship the docs in the type declarations and not in the JavaScript.
+
+  Prose was about 46% of `@maple-kit/ui`'s gzipped weight, which is weight every
+  application downloads to read something no runtime looks at. Every package's
+  build now drops JSDoc from the emitted JavaScript and keeps it in the `.d.ts`,
+  which is what an editor reads anyway.
+
+  Two kinds of comment are kept deliberately. `@__PURE__` and
+  `@__NO_SIDE_EFFECTS__` stay, because dropping them would silently cost
+  tree-shaking. Legal notices stay, and the two ported files in
+  `packages/core/src/lib/` are now marked `@preserve` so their BSD-2-Clause and
+  MIT attributions reach the published build, which those licences require.
+
+- Updated dependencies [bbb7433]
+- Updated dependencies [8038da7]
+- Updated dependencies [061766e]
+- Updated dependencies [1cb6bcc]
+- Updated dependencies [f99659d]
+- Updated dependencies [8dd0e2e]
+- Updated dependencies [038f2c7]
+- Updated dependencies [cf9bd03]
+- Updated dependencies [991363a]
+- Updated dependencies [417376e]
+- Updated dependencies [74adfe4]
+- Updated dependencies [8c26051]
+- Updated dependencies [473898c]
+- Updated dependencies [3b2edc2]
+- Updated dependencies [40f2ee4]
+- Updated dependencies [22f0fc5]
+- Updated dependencies [7181bfd]
+- Updated dependencies [7212b52]
+- Updated dependencies [02dadef]
+- Updated dependencies [657204d]
+- Updated dependencies [aed6bc7]
+- Updated dependencies [16957ec]
+- Updated dependencies [74adfe4]
+- Updated dependencies [2d5eb8d]
+- Updated dependencies [fbe201b]
+- Updated dependencies [f09d860]
+- Updated dependencies [25c47f5]
+- Updated dependencies [d2f84b7]
+- Updated dependencies [5eec274]
+- Updated dependencies [a96ffa4]
+- Updated dependencies [69ba1e5]
+- Updated dependencies [567b444]
+- Updated dependencies [16f5582]
+- Updated dependencies [9fcecc0]
+- Updated dependencies [33c1689]
+- Updated dependencies [55dddc9]
+- Updated dependencies [bf6e1ea]
+  - @maple-kit/core@0.1.0

@@ -1,0 +1,507 @@
+# @maple-kit/ui
+
+## 0.1.0
+
+### Minor Changes
+
+- 64de19c: Add `Maple.Composer` and its five parts: `Target`, `Body`, `Context`,
+  `Attachments` and `Actions`.
+
+  The composer is a side panel, and the same panel as a bottom sheet at two
+  detents below `SHEET_BREAKPOINT_PX` — a media query rather than a variant prop.
+  The context badge and the target line are on screen while the comment is being
+  written, because that is where Maple's two differentiators have to be visible.
+  The panel's cost is met by insetting the preview frame where Maple serves it
+  and by hold-to-peek where it cannot; a pasted or dropped image previews from a
+  `blob:` URL before it uploads; and a link that would take an unsent comment
+  away is answered by a prompt naming what is at stake.
+
+- d54c366: Add `@maple-kit/ui`, the composed reviewer parts, and the contract they share.
+
+  `Maple.Root` mounts one shadow root through `createOverlayHost`, adopts one
+  constructed stylesheet and owns the controller, so every part below it reads
+  state rather than taking a comment list as a prop. `theme="auto"` resolves to
+  the opposite of the host page's scheme, from the controller's own detection —
+  a guest that matches the wallpaper cannot be seen — and re-resolves when a
+  reviewer toggles the site's theme mid-comment.
+
+  The stylesheet is a string built from a token table, not a CSS file behind a
+  loader, so it stays tree-shakeable and `docs/overlay-csp.md`'s claim is still
+  checkable by reading one function. Every `--mk-*` is declared on `:host` in both
+  schemes, including the motion set: no part writes a duration or an easing, and
+  `prefers-reduced-motion` redefines those tokens rather than switching rules off,
+  so the motion is reduced and the state feedback is not removed.
+
+  The conventions the parts follow are here in code: `dataAttributes` for the five
+  `data-*` names, `Slot` for `asChild`, `applyReviewerSlot` for the ten OKLCH
+  reviewer colours, and icons as individual named exports rather than a record.
+  Subpath exports are granular — `/marks`, `/island`, `/composer`, `/icons` — with
+  no index naming every part, and the build asserts the bundle budget.
+
+  React and React DOM are peers, 18 or 19. This package never re-exports
+  `@maple-kit/react`, so the split that lets an application render comments in its
+  own design system holds.
+
+- 40f2ee4: Screenshots have somewhere to go, and every way of not having one says so.
+
+  Maple captured the page at pick time and then dropped it. `MediaConnector` was
+  a contract with no route behind it, and `Maple.Attachments` only attached an
+  image when the host application passed it an `upload` function — so a default
+  installation previewed a thumbnail and lost it on send. The three ways not to
+  end up with a screenshot all rendered as the same grey line asking for a paste,
+  which reads as a tool that never took one.
+
+  **The route carries media now.** `RouteOptions.media` takes a `MediaConnector`
+  or a per-request `MediaResolver`, the same shape `store` has, and serves:
+
+  - `POST {base}/media` — the bytes in, the `MediaRef` back.
+  - `GET {base}/media/{key}?type=…` — a redirect to the connector's own URL,
+    because a signed URL is the point of `getUrl` and proxying every screenshot
+    would put them on the application's budget. A `data:` URL is served instead
+    of redirected to, since a browser refuses to follow one.
+  - `GET /me` now reports `media`, so the overlay knows before it offers anything.
+
+  **Breaking.** `Maple.Attachments`'s `upload` and `resolve` are overrides rather
+  than requirements: without them the strip posts to the route and reads back
+  from it. `MapleClient` gains `uploadMedia` and `mediaUrl`, so a Svelte binding
+  gets the same default. `ShotStore` holds a `Shot` — an image **or** a reason it
+  failed — rather than a `PastedImage`, and `ComposerScopeValue.offer` takes the
+  `MediaSource`, so a stored comment can say whether Maple took the picture or
+  the author did.
+
+  **A screenshot used to arrive corrupt through the Node adapter.**
+  `toNodeMiddleware` read the request body with `setEncoding("utf8")` and wrote
+  the response with `response.end(await result.text())`. Both round-trip bytes
+  through a UTF-8 string, so an uploaded PNG came back as an image no decoder
+  opens — and nothing on either side said so. It carries bytes now.
+
+  New: `memoryMedia()` in `@maple-kit/core/testing`, so the examples and the
+  suites exercise capture → upload → reference → image without a bucket. The Vite
+  example uses it, and its seeded screenshots go in through the same `putBlob` a
+  capture uses rather than through a resolver written for the demo.
+
+  `@zumer/snapdom` stays an optional peer — 550 KB for a transform a server-only
+  use of the route never reaches, behind a dynamic import — but skipping it is no
+  longer silent. `docs/screenshots.md` is the whole path and that reasoning.
+
+- 60b5478: Add the island: the one object a page at rest carries.
+
+  `<Maple.Island>` is a pill reading `8 open` until it is asked for, and the card
+  it opens into carries both halves of the job — what has been said here, and how
+  to say something. That is why entering comment mode has no chrome of its own:
+  the three picks sit on the card's bottom edge under a muted `NEW COMMENT` label,
+  so a page at rest never grows a second floating thing.
+
+  Twelve parts over one context — `IslandTrigger`, `IslandContent`, `Header`,
+  `Logo`, `Branch`, `Settings`, `Filters`, `List`, `Item`, `NewComment`,
+  `PickButton` — each taking `asChild`, passing `className` through, forwarding a
+  ref, and putting state on `data-*` rather than into a visual variant prop.
+
+  The count is open comments only, unpinned included. Unpinned is a tab rather
+  than an empty state, listing by the reason the anchor lost its place, in two
+  words with the sentence in a tooltip. Resolved comments are hidden until the
+  filter asks for them. Swapping a filter replaces the rows and leaves the card
+  alone, which a Chromium test holds to.
+
+- ec59945: Add the marks and the target ring at `@maple-kit/ui/marks`.
+
+  The mark is a maple leaf, not a speech bubble: a bubble would mean "chat happens
+  here", which is a promise Maple does not make. Three signals share it without
+  sharing a pixel — the fill says how far through its life a comment is, the edge
+  says how sure the anchor is, the colour says its status. The half-filled form is
+  a clip outside the rotation, so the waterline stays horizontal while the leaf
+  stays tilted, and the number inside is the address the island's list and the
+  export table also show, so a reviewer moving between the pull request and the
+  page never translates. The same leaf is the avatar, where provenance is the
+  whole of the signal and none of the three tooltips says the word "guest".
+
+  `Maple.MarkLayer` draws one mark per pinned comment and `Maple.TargetRing` rings
+  what a composer is open on, or what a reviewer is pointing at, with a label
+  naming it in `labelFor`'s words. Both are measured and moved per scrolled frame
+  through `setProperty`, never transitioned: a transition on a position lags a
+  frame behind the page and reads as broken. A passage draws one rectangle per
+  line from `Range.getClientRects()`, and the collision resolver steps a mark
+  sideways until its hit area clears its neighbours', so no two marks can be
+  clicked wrong.
+
+  An unpinned comment draws no mark and is never snapped to the nearest ancestor:
+  a comment silently attached to the wrong element looks answered, which is worse
+  than one that admits it is lost.
+
+  Every part takes `asChild`, passes `className` through and forwards its ref; no
+  part takes a visual variant. The marks' rules are their own module, composed
+  into the one adopted stylesheet, and they spell no duration, no easing and no
+  colour of their own.
+
+- 74adfe4: A row is scanned and the panel is read, so the facts move to the panel.
+
+  `Maple.Detail` is a new part: who wrote a comment and how much that name is
+  worth, where it is in its life, why the page has nowhere to put it, and — in
+  developer detail — the rung that found it again, the confidence, the source line
+  and the CSS path. Those four were grey footnotes on a row, where they were noise
+  over the one thing a row is for, and the reason an anchor lost its place was two
+  words that read as a second status beside the one already there.
+
+  The row's leaf is now the comment's own, drawn from the same form and the same
+  paint as the mark on the page: two drawings of one comment are two comments.
+  The author's provenance moves to a dot on their name, in their own colour, and
+  both carry the sentence a shape cannot say. The `#6` beside the row goes — the
+  leaf has carried that number all along.
+
+  A mark answers to a drag, so it can be moved off what it is covering; the offset
+  is held for the session and never recorded. A pointed-at row grows its mark the
+  way a click does, without the glow the click keeps. A clicked mark brings its row
+  into view inside the list. A resolved mark is held back at 0.85 rather than faded
+  to 0.6, which read as one that had failed to load.
+
+  The leaf's outline form is the ring path filled rather than the silhouette
+  stroked, so it keeps one weight at every size; the number sits where the leaf's
+  middle is rather than where the box's is, shrinks at two digits instead of
+  growing the leaf, and is stroked in the paint on a half-filled leaf, where the
+  waterline used to run through it.
+
+  The accent is an olive at both ends — the hexes it was asked for, #283618 and
+  #606c38, cleared neither background — and `--mk-maple` is a new warm colour for
+  what Maple noticed rather than what a reviewer said. It is never a fill: a filled
+  panel in a warm colour reads as an error, and nothing is wrong when it shows.
+
+  `Maple.Emoji` draws a filled face rather than an outlined `☺`, which was a smudge
+  at 14px. `Maple.NewComment` sets its label beside the picks rather than over
+  them. `ComposerTarget.label` is the bare name again — every surface puts its own
+  words round it, and a phrase stored there came back as "an area of an area of".
+
+  All three of this package's budgets go up, to 13, 21 and 9 KB: two new parts, a
+  tenth icon and the rules they need do not fit under the old ones. The numbers are
+  in docs/ui-conventions.md.
+
+- f09d860: `withMaple` for Next, and a page that says when the tagger did not run.
+
+  Tagging a Next build takes two settings that have to agree: a Turbopack rule
+  that adds `data-maple-src` and `data-maple-name`, and `reactRemoveProperties`,
+  which must not take them off again on the same build. Wired by hand they
+  disagree **silently** — nothing throws, the page renders, and every comment
+  anchors to "this page" with no component name and no file.
+
+  Both ways it goes wrong have now happened in a real integration:
+
+  1. `reactRemoveProperties` left on for the preview build, so the rule tags and
+     the pass immediately untags.
+  2. `"src/**/*.tsx"` as the rule key. Turbopack matches a key containing a
+     separator against the whole path, so it never matches — and a rule that
+     matches nothing is not an error.
+
+  `@maple-kit/core/next` exports `withMaple(config, { preview })`: one flag drives
+  the rule, the stripping and a webpack hook, so `next dev --webpack` is not a
+  quiet downgrade either. It throws when the config already sets
+  `compiler.reactRemoveProperties`, because two owners for the field that decides
+  whether the tagger's work survives is the bug it exists to prevent; extra
+  patterns go through `removeProperties`.
+
+  A build still cannot report this — from the build's side nothing happened — so
+  the page is asked instead. `pageIsTagged` in `@maple-kit/core/overlay` looks for
+  one `data-maple-src`; the controller asks on start and on every pick and keeps
+  the answer as `ClientState.tagged`, logging a warning the first time it turns
+  false. The island's settings panel carries a row saying so and naming
+  `withMaple`, because that panel is where someone wondering why everything says
+  "this page" will already be looking.
+
+- 02dadef: Developer detail, the query string, dismissal and the island's corner.
+
+  **Developer detail.** A `detail` prop, `default` or `developer`, and Default is
+  the default. In Default a comment is on the Yield card or on a passage in the
+  retention paragraph, and that is all: the rung, the confidence, the source
+  line, the CSS path, the device pixel ratio and the locale are absent. In
+  Developer they come back as sentences rather than field names — the chip
+  carries the number and the tooltip carries the sentence, because a row of
+  comments is scanned and a sentence in a scanned row is skipped along with
+  everything beside it. The tooltip takes 150ms after an 80ms intent delay and
+  150ms to go, with no delay on the way out. Nothing is recorded differently in
+  either: the export fence carries every field, which is what makes Default safe.
+
+  **The query string.** `?maple=off` mounts nothing, whatever the application
+  says; `?maple=on` needs `allowUrlOverride`; `?maple-pos=`, `?maple-detail=`,
+  `?maple-comment=` and `?maple-new=` move the island, open developer detail,
+  select a comment and arm a pick. A link naming a comment opens the island on
+  it, scrolls the page to it and draws its ring — which is what a pull-request
+  comment deep-links to.
+
+  **Dismissal.** The island hides for the session from its own settings, the way
+  a framework's dev indicator does. Hidden is not gone: a comment arriving, a
+  pick armed or a link naming a comment brings it straight back.
+
+  **Position.** A `position` prop for each of the four corners, `bottom-right` by
+  default, and the pill drags: it follows the pointer, snaps to the nearest
+  corner and is remembered per origin — useful when the island lands on the thing
+  under review.
+
+- 74adfe4: A mark answers to a pointer and to a click, and the panel stops sitting on the
+  inventory.
+
+  `Maple.MarkLayer` now defaults `onSelect` to opening the comment, so clicking a
+  mark reads it, rings it and opens the inventory on it; the ring a hover draws
+  belongs to whatever is pointed at, ahead of an open panel, and stays after the
+  pointer has gone once something is clicked. `RingState` gains `selected`, and
+  `TargetRingProps` gains `note` — the source line, under the name, in developer
+  detail only.
+
+  A text comment's mark now rings the passage rather than the paragraph around
+  it. The inventory steps aside by the panel's width instead of being covered by
+  it. Developer detail no longer redraws a row: its facts are a quiet footnote
+  rather than a dashed box each. The context badge lays its pairs out two to a
+  row, and a selected mark glows in the leaf's shape rather than behind its box.
+
+  The package's two budgets go up by 1 KB each, to 11 KB for the adopted
+  stylesheet and 20 KB for the root, marks, island and icons.
+
+- a96ffa4: Say out loud when a request did not work, instead of drawing nothing.
+
+  Every failure the overlay could hit was silent. A 401 on the list rendered as
+  "Nothing here under this filter", which reads as a branch nobody has commented
+  on. A 401 on a send rendered as a button that did not move — and a reviewer
+  retries a button forever, where they read a sentence once and act on it. On a
+  preview whose store is built per reviewer, that is the **first** thing anyone
+  sees, and it said nothing at all.
+
+  **Breaking.** `ClientState.error` is a `MapleFailure`, not a string:
+
+  ```ts
+  interface MapleFailure {
+    kind: "offline" | "store" | "unauthorized" | "unknown";
+    message: string; // already addressed to a reviewer
+    during: "link" | "load" | "send" | "status";
+    status?: number;
+  }
+  ```
+
+  A string could not be branched on, so no surface could tell "sign in first"
+  from "the store is down" from "you are offline" — and those have three
+  different answers. `failureFrom` builds one; the route's own words go to the
+  logger instead of the page, because a connector's message can name a repository
+  or a rate limit.
+
+  `MapleClient` gains `clearError()`. `setStatus` no longer throws past the
+  binding into a click handler; it records the failure like the other three.
+
+  `load()` now asks `GET /me` **alongside** the list rather than after it. A 401
+  on the comments is usually a reviewer who has not signed in, and the sign-in is
+  the thing `/me` reports — so the one case that needed the offer was the one
+  case that never fetched it.
+
+  New in `@maple-kit/ui`, on its own subpath `@maple-kit/ui/notice`:
+  `Maple.Notice`, one band carrying the sentence and the single thing that would
+  fix it — **Sign in** under a 401 where a sign-in is on offer, **Try again**
+  under anything retryable, and no offer at all where the deployment serves no
+  sign-in, because pointing at a door that is not there is worse than silence.
+  The default composition mounts one in the island for `load`, `status` and
+  `link`, and one in the composer for `send`.
+
+  `Maple.List` no longer claims a branch is empty when it failed to read it.
+
+- 69ba1e5: Let a reviewer link their GitHub account from the overlay.
+
+  `ClientState.github` carries the link, and it has four states rather than a
+  boolean. `unsupported` is a route that serves no sign-in at all, which is a
+  deployment storing comments some other way — not a reviewer who has not linked.
+  A surface draws nothing for the first and an offer for the second, so the two
+  must not collapse.
+
+  `MapleClient` gains `linkGitHub()` and `unlinkGitHub()`. The first resolves as
+  soon as there is a code to show and keeps polling after it; watch `github` for
+  the rest. The wait is here rather than in a held-open request, because a person
+  takes minutes to read a code, reach github.com and type it.
+
+  `@maple-kit/react` gains `useGitHubLink()`. `@maple-kit/ui` gains
+  `Maple.Account`, the row the settings panel now opens with: the offer, the code
+  and where to type it, or the account and a way to forget it here. It says
+  plainly that forgetting the token is not revoking the authorisation, because a
+  reviewer who thinks it is will not revoke.
+
+  **Breaking:** `Transport.me()` returns `{ user, github? }` rather than the user
+  alone, so the link state travels with the identity it belongs to.
+
+  The island's bundle budget goes from 21 KB to 22 KB gzipped. It was at 21.0 with
+  this row in it, which is not a number to leave a build standing on.
+
+- 16f5582: Record what a reviewer calls a preview, and which commit it was serving.
+
+  A preview hostname carries a shortened branch — a ticket key, or a name cut to
+  fit a DNS label — and that shortening is lossy, so the string a person reads is
+  not the string a store resolves a pull request from. `Comment.label` carries the
+  readable one and `Comment.branch` stays the identifier; `Comment.commit` carries
+  the exact thing the label is an abbreviation of, and is what a later re-verify
+  compares against.
+
+  Both are optional and set by the application: `<Maple branch label commit>` on
+  the component, `label` and `commit` on `MapleClientOptions`. The branch chip in
+  the island reads the label and keeps the branch as its title, because a label is
+  what you recognise and a branch is what you copy. Neither field is ever shed by
+  the export fence's byte budget.
+
+  The route takes both off the draft the way it already takes the branch and the
+  URL — the client describes its own page — and checks only that a commit is
+  shaped like one. The author stays the route's to decide.
+
+  **Breaking:** `MapleRootProps.options` now omits `label` and `commit` as well as
+  `branch`. The three are props on the component, so passing them twice could
+  disagree; move them out of `options`.
+
+- 55dddc9: Picking works end to end, and one import mounts all of it.
+
+  `Maple.Picker` in `@maple-kit/ui/picker` runs the gesture an armed pick starts
+  and opens the composer on what it finds — until now `arm()` set a flag nothing
+  read. `@maple-kit/ui/maple` exports `<Maple branch="…" />`, the whole reviewer
+  interface as one element, for an application that wants the default.
+
+  A screenshot of the page is taken at pick time, before the panel insets the
+  layout it is over, and lands in the composer on its own; paste and drop
+  override it and there is no button for either. Clicking a comment opens the
+  panel on it to read, with the context badge and the screenshot a row cannot
+  carry. Escape shuts the newest surface first: the panel, then the settings,
+  then the island.
+
+  The overlay's scheme and the island's corner are now the viewer's, remembered
+  per origin and settable from the island's settings: `client.setTheme()`,
+  `?maple-theme=`, and a corner picker beside it.
+
+  **Breaking:** `PartForm` is now `"outline" | "partial" | "solid"` — a leaf
+  fills up as a comment goes through its life rather than emptying out, so open
+  is an outline, re-verify is half and resolved is full. `useOverlayScheme()`
+  takes no argument and reads the viewer's preference from the controller.
+  `MapleAttachments` no longer takes `capture`, and `Tip` moved from
+  `@maple-kit/ui/island` to the package root.
+
+### Patch Changes
+
+- 74adfe4: Mark the row a link or a mark landed on.
+
+  `Maple.Item` has written `data-mk-selected` since the island was built and no
+  rule has ever read it, so a link naming a comment — and now a click on its mark
+  — opened the inventory onto a list with nothing in it saying which row that
+  was. The row takes an accent rail. It is a rail rather than a wash because the
+  wash is what hover already means, and the landed-on row has to stay legible
+  while the pointer is over another one.
+
+- 417376e: Every package publishes its licence, its notice and a readme. `files` was
+  `["dist"]` and the three texts lived only at the repository root, so the
+  artifact met none of Apache-2.0's redistribution terms and every npm page would
+  have been blank.
+
+  `@maple-kit/core` no longer carries a private copy of vitest. `/testing` imports
+  `describe`, `it` and `expect` for the shared connector contract suite, and with
+  vitest undeclared the build wrote it — and chai, expect-type, magic-string and
+  tinybench — into `dist/node_modules/`, about half the tarball. Worse than the
+  size: the suite registered its tests against that copy rather than the runner
+  the consumer invoked, so it collected nothing. vitest is an optional peer
+  dependency now, and running the contract suite means running it in your vitest.
+
+- 74adfe4: Let reduced motion reach the four keyframes that spelled their own distance.
+
+  `mk-island-in`, `mk-island-out`, `mk-pop-in`, `mk-row-in` and `mk-pick-in` wrote
+  `12px` and `6px` into the keyframe, and `prefers-reduced-motion` is honoured by
+  redefining the tokens rather than by switching rules off — so a reader who asked
+  for less motion still got the full travel, only faster. The distances are
+  `--mk-rise-card` and `--mk-rise-row` now, both `0px` under reduced motion, and
+  `stylesheet.test.ts` fails on any keyframe that spells a pixel.
+
+- f4db280: The strip knows there is nowhere to keep a screenshot even when the load failed.
+
+  It held the optimistic line — "taken of the page when you picked" — until
+  `phase` reached `ready`, which a deployment whose store refuses the reviewer
+  never does. So the one case the honest line exists for, a preview nobody has
+  signed in to yet, was the one case that never showed it.
+
+  `GET /me` is asked alongside the list rather than after it, so a failed load
+  has still answered this. Only a route nobody asked is unknown.
+
+- 74adfe4: Stop the island header's two controls sharing a hit area.
+
+  `.mk-iconbtn` was 28px wide with an 8px gap, so the 40px squares `.mk-hit`
+  centres on each of them overlapped by four pixels, and the settings control
+  lost that strip to the close control painted after it. The buttons are 32px
+  now, which with the header's gap puts their centres exactly 40 apart. The marks
+  carry a collision resolver for the same reason; the header had nothing.
+
+- 74adfe4: Grow a tooltip from the edge it was placed against.
+
+  `.mk-tip` scales in from `transform-origin: bottom left` whichever way it was
+  placed, and it prefers to sit _under_ its chip — so the usual case grew upward,
+  into the thing it was explaining, and only the flipped case grew the right way.
+  `place` now sets `data-mk-below` when the tooltip landed under its anchor, and
+  the origin follows it.
+
+- 567b444: Ship the docs in the type declarations and not in the JavaScript.
+
+  Prose was about 46% of `@maple-kit/ui`'s gzipped weight, which is weight every
+  application downloads to read something no runtime looks at. Every package's
+  build now drops JSDoc from the emitted JavaScript and keeps it in the `.d.ts`,
+  which is what an editor reads anyway.
+
+  Two kinds of comment are kept deliberately. `@__PURE__` and
+  `@__NO_SIDE_EFFECTS__` stay, because dropping them would silently cost
+  tree-shaking. Legal notices stay, and the two ported files in
+  `packages/core/src/lib/` are now marked `@preserve` so their BSD-2-Clause and
+  MIT attributions reach the published build, which those licences require.
+
+- 345a5e2: The settings panel stops at the card's bottom edge instead of being cut off by it.
+
+  `.mk-settings` hung off the header at `top: 100%` and grew to whatever height
+  its rows came to. The card it grows inside is `overflow: hidden` and between
+  330px and 460px tall, so every row past that height was simply gone: with the
+  GitHub sign-in row present the panel is 435px against a 330px card, which loses
+  **Developer mode** and **Hide the island** entirely — and nothing scrolled, so
+  there was no sign anything was missing.
+
+  It is now positioned against the card rather than against the header — `top:
+var(--mk-head-h); bottom: 0` with `overflow-y: auto` — so it is exactly the
+  card's body whatever height the card is at, and taller content scrolls. The
+  header takes that same token as a fixed height, so the two cannot disagree.
+
+- 74adfe4: Stop the focus ring squaring off every pill in the overlay.
+
+  The shared `:focus-visible` rule set `border-radius: var(--mk-r-xs)` alongside
+  the outline, so a 999px control — the pill, the pick buttons, the tally dots,
+  the branch chip, the switch — snapped to 5px corners the moment it took focus,
+  and snapped back on blur. An outline already follows the control's own corners;
+  the rule sets only the outline now, and the two controls that carry no radius
+  of their own (`.mk-more` and `.mk-tipped`) are given one.
+
+- Updated dependencies [bbb7433]
+- Updated dependencies [8038da7]
+- Updated dependencies [061766e]
+- Updated dependencies [1cb6bcc]
+- Updated dependencies [f99659d]
+- Updated dependencies [8dd0e2e]
+- Updated dependencies [038f2c7]
+- Updated dependencies [cf9bd03]
+- Updated dependencies [991363a]
+- Updated dependencies [417376e]
+- Updated dependencies [74adfe4]
+- Updated dependencies [8c26051]
+- Updated dependencies [473898c]
+- Updated dependencies [3b2edc2]
+- Updated dependencies [40f2ee4]
+- Updated dependencies [22f0fc5]
+- Updated dependencies [7181bfd]
+- Updated dependencies [7212b52]
+- Updated dependencies [02dadef]
+- Updated dependencies [657204d]
+- Updated dependencies [aed6bc7]
+- Updated dependencies [16957ec]
+- Updated dependencies [74adfe4]
+- Updated dependencies [2d5eb8d]
+- Updated dependencies [fbe201b]
+- Updated dependencies [f09d860]
+- Updated dependencies [25c47f5]
+- Updated dependencies [d2f84b7]
+- Updated dependencies [5eec274]
+- Updated dependencies [a96ffa4]
+- Updated dependencies [69ba1e5]
+- Updated dependencies [567b444]
+- Updated dependencies [16f5582]
+- Updated dependencies [9fcecc0]
+- Updated dependencies [33c1689]
+- Updated dependencies [caec174]
+- Updated dependencies [55dddc9]
+- Updated dependencies [bf6e1ea]
+  - @maple-kit/core@0.1.0
+  - @maple-kit/react@0.1.0
