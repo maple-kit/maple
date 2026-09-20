@@ -112,9 +112,8 @@ cannot push, and cannot open a pull request.
 
 ### One App or two
 
-It is tempting to register one App for everything, and `docs/setup-owner.md`
-records that the first one was. It should not stay that way, and the reason is
-the paragraph above.
+It is tempting to register one App for everything, and the first one here was.
+It should not stay that way, and the reason is the paragraph above.
 
 A user-to-server token is bounded by the App's permissions. An App that also
 carries the merge gate's `Checks: Read and write`, and the `Contents: Read-only`

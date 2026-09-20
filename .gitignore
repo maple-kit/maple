@@ -24,6 +24,15 @@ build/
 # Maple local artifacts (screenshots may contain application data)
 .maple/shots/
 
+# Owner notes. STATUS.md and setup-owner.md live here: both describe the state
+# of this installation — what is registered, what is still open, which gaps are
+# unclosed — which is a maintainer's working note and not a published document.
+.local/
+
+# Claude Code's per-machine settings. Ignored globally on the maintainer's
+# machine, which does nothing for a contributor's.
+.claude/settings.local.json
+
 # test and tooling output
 coverage/
 .vitest/

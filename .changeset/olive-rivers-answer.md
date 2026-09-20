@@ -41,4 +41,4 @@ words round it, and a phrase stored there came back as "an area of an area of".
 
 All three of this package's budgets go up, to 13, 21 and 9 KB: two new parts, a
 tenth icon and the rules they need do not fit under the old ones. The numbers are
-in docs/ui-conventions.md and STATUS.md.
+in docs/ui-conventions.md.

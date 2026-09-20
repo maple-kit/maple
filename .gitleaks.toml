@@ -9,6 +9,8 @@ description = "GitHub App private key (PEM)"
 regex = '''-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----'''
 keywords = ["PRIVATE KEY"]
 
+# For the Datadog connector in docs/connectors.md. An app key is not in
+# gitleaks' default rule set and is what its observability path would need.
 [[rules]]
 id = "maple-datadog-app-key"
 description = "Datadog application key"
@@ -16,9 +18,8 @@ regex = '''(?i)\b(dd|datadog)[_-]?app(lication)?[_-]?key\b\s*[:=]\s*['"]?([a-f0-
 keywords = ["datadog", "dd_app"]
 
 [allowlist]
-description = "Documentation and fixtures that show the shape of a credential, never a value"
+description = "Files that hold credential names and integrity hashes, never a value"
 paths = [
-  '''docs/setup-owner\.md''',
   '''\.env\.example$''',
   '''pnpm-lock\.yaml$''',
 ]
