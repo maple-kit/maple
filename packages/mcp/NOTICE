@@ -1,0 +1,9 @@
+Maple
+Copyright 2026 The Maple Authors
+
+This product includes software developed by The Maple Authors
+(https://github.com/maple-kit/maple).
+
+Portions of this software are derived from third-party sources. Each derived
+file carries an attribution header naming its origin and license. A summary is
+kept in packages/core/src/lib/README.md.
