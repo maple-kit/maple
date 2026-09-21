@@ -131,7 +131,11 @@ counter is the only thing that says the leaf is a letter at all.
 It is a manual upload under **Display information** — GitHub has no manifest
 field for a logo and no REST endpoint for an App's avatar — so the
 `setup-maple-org` skill asks for it at the step where a person is already on
-that page. The badge background beside it is `#465a2b`, the light accent.
+that page. The badge background beside it is `#fdf8e8`, the cream, and not the
+accent: GitHub fills a circle behind the square logo with that colour, so the
+accent would be the leaf's own green and the leaf would vanish into its plate.
+At sixteen pixels, in the corner of a reviewer's avatar, that is the whole
+mark gone.
 
 `leafSize` is a percentage of the **ink**, not of the view box: the leaf's box
 is padded so its tips cannot clip when it rotates, and the ink inside it is

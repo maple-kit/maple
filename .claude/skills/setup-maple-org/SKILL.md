@@ -101,11 +101,20 @@ at the first comment. Keep going.
 
 Still on that settings page, under **Display information**: drag the Maple
 avatar onto **Upload a logo**, click **Set new avatar**, and set **Badge
-background colour** to `#465a2b`.
+background colour** to `#fdf8e8`.
+
+**The badge colour is the plate, not the leaf.** GitHub puts the square logo
+inside a circle filled with that colour, and the leaf is already `#465a2b`,
+so setting the plate to the same green makes the leaf disappear into it —
+which is exactly what it looks like in the corner of a reviewer's avatar on
+every comment, at sixteen pixels. Cream is the contrast the mark was drawn
+for. The field only appears once a logo is uploaded.
 
 The avatar is `docs/assets/app-logo.png` in the Maple repository — the leaf
-with a lowercase `m` cut out of it, 1024 square on a transparent ground, well
-inside GitHub's 1 MB limit. Download it without cloning:
+filling the square edge to edge with a lowercase `m` cut out of it, 1024
+square on a transparent ground, well inside GitHub's 1 MB limit. It is drawn
+to survive being shrunk: the whole square is leaf, because a margin is the
+one thing a sixteen-pixel badge cannot afford. Download it without cloning:
 
 ```
 curl -O https://raw.githubusercontent.com/maple-kit/maple/main/docs/assets/app-logo.png
@@ -264,7 +273,7 @@ Register it separately, when you come to wire the gate and not before. It is a
 second **New GitHub App** with `Checks: Read and write`, Device Flow **off**,
 and a private key — the opposite of the comment App on all three counts,
 because it is the case the comment App exists to avoid. Install it on the same
-repositories, and give it the same `app-logo.png` and `#465a2b` badge colour
+repositories, and give it the same `app-logo.png` and `#fdf8e8` badge colour
 from section 1a: the gate App's avatar is what sits beside
 `maple/visual-review` in the checks list on every pull request, at about
 twenty pixels, which is the size the mark was drawn to survive. `docs/gate.md` covers the rest.
