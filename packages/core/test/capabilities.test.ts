@@ -9,7 +9,7 @@ import {
 } from "../src/connectors/capabilities.js";
 import { memoryStore } from "../src/testing/memory-store.js";
 
-import type { AnyConnector, StoreConnector } from "../src/connectors/types.js";
+import type { AnyConnector, ClassifierConnector, StoreConnector } from "../src/connectors/types.js";
 
 describe("capability detection", () => {
   it("reports every method of the kind", () => {
@@ -52,5 +52,12 @@ describe("assertUsable", () => {
 
     expect(() => assertUsable("store", partial)).toThrow(MissingCapabilityError);
     expect(() => assertUsable("store", partial)).toThrow(/partial.*list, append/s);
+  });
+
+  it("accepts a classifier that does nothing, because it requires nothing", () => {
+    const inert = { name: "inert", pillars: [] } as ClassifierConnector;
+
+    expect(() => assertUsable("classifier", inert)).not.toThrow();
+    expect(capabilitiesOf("classifier", inert)).toEqual({ classify: false, score: false });
   });
 });

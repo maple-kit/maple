@@ -36,6 +36,12 @@ describe("run", () => {
     for (const kind of Object.keys(CONNECTOR_METHODS)) expect(output).toContain(kind);
   });
 
+  it("says a kind requiring nothing requires none, rather than leaving a blank", () => {
+    const output = run(["connectors"], OPTIONS).output;
+
+    expect(output).toContain("classifier    required: none");
+  });
+
   it("emits JSON for --json", () => {
     const result = run(["connectors", "--json"], OPTIONS);
     const parsed: unknown = JSON.parse(result.output);

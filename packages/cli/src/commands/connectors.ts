@@ -21,11 +21,16 @@ export function connectorKindRows(): readonly ConnectorKindRow[] {
   });
 }
 
-/** Renders one row as two aligned lines. */
+/** Renders one row as two aligned lines. A kind may require nothing at all. */
 function renderRow(row: ConnectorKindRow): string {
-  const optional = row.optional.length > 0 ? row.optional.join(", ") : "none";
   const indent = " ".repeat(16);
-  return `  ${row.kind.padEnd(14)}required: ${row.required.join(", ")}\n${indent}optional: ${optional}`;
+  const required = listed(row.required);
+  return `  ${row.kind.padEnd(14)}required: ${required}\n${indent}optional: ${listed(row.optional)}`;
+}
+
+/** An empty list reads as "none", never as a blank nobody can interpret. */
+function listed(methods: readonly string[]): string {
+  return methods.length > 0 ? methods.join(", ") : "none";
 }
 
 /** Renders the matrix as plain text. */

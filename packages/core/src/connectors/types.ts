@@ -19,8 +19,9 @@ import type {
   NewComment,
 } from "../types.js";
 
-/** The five kinds of backend Maple knows how to talk to. */
-export type ConnectorKind = "store" | "media" | "observability" | "identity" | "gate";
+/** The six kinds of backend Maple knows how to talk to. */
+export type ConnectorKind =
+  "classifier" | "gate" | "identity" | "media" | "observability" | "store";
 
 /** Fields every connector carries, whatever its kind. */
 export interface ConnectorMeta {
@@ -131,6 +132,100 @@ export interface IdentityRequest {
   readonly url: string;
 }
 
+/**
+ * Judges a comment as it is written: how well it reads against each pillar,
+ * and what kind of comment it looks like. Both methods are optional, so a
+ * backend that can only do one of the two is used for that one.
+ *
+ * Every judgement is advice. Nothing here blocks, gates, delays or rewrites a
+ * send, and `docs/assist.md` is the design record for why.
+ */
+export interface ClassifierConnector extends ConnectorMeta {
+  /**
+   * The dimensions it scores against, in the order a surface shows them, and
+   * empty when it only classifies. Configuration, not a capability claim.
+   */
+  readonly pillars: readonly Pillar[];
+  /** Scores a comment. Rejects a pillar id it was never configured with. */
+  score?(request: ScoreRequest): Promise<readonly PillarScore[]>;
+  /** Guesses what kind of comment this is, from the text alone. */
+  classify?(request: ClassifierRequest): Promise<KindGuess>;
+}
+
+/**
+ * One dimension a comment is judged on — "specific", "concise" — with the
+ * ordered levels it is judged against. The host configures the set; a
+ * reviewer never does, because a pillar a reviewer can move measures nothing.
+ */
+export interface Pillar {
+  /** Stable id, used in configuration, in a {@link PillarScore} and in an eval case. */
+  readonly id: string;
+  /** The judgement a classifier is asked to make, in one sentence. */
+  readonly instruction: string;
+  /** Ordered worst to best. Each level describes a concrete comment. */
+  readonly levels: readonly PillarLevel[];
+}
+
+/** One rung of a pillar's ladder. */
+export interface PillarLevel {
+  /** Two or three words, short enough to sit under a field. */
+  readonly label: string;
+  /** The situation this rung describes, complete enough to judge against. */
+  readonly description: string;
+}
+
+/**
+ * Where one comment sits on one pillar.
+ *
+ * It carries the distribution and the confidence as well as the level,
+ * because a level on its own cannot say how nearly it was a different level —
+ * and a surface that cannot say that presents a guess as a fact.
+ */
+export interface PillarScore {
+  /** The {@link Pillar.id} this is about. */
+  readonly pillar: string;
+  /** Index into that pillar's levels: the rung the comment reached. */
+  readonly level: number;
+  /** Probability per level, in the pillar's own order. Sums to one. */
+  readonly distribution: readonly number[];
+  /** How concentrated that distribution is, from zero to one. */
+  readonly confidence: number;
+}
+
+/** What a comment looks like it is. `other` is an absence, never a verdict. */
+export type CommentKind = "bug" | "copy" | "other" | "praise" | "question" | "request";
+
+/** A guess at a comment's kind, carrying the spread that produced it. */
+export interface KindGuess {
+  /** The kind that took the most probability. */
+  readonly kind: CommentKind;
+  /** Probability per kind. Sums to one. */
+  readonly distribution: Readonly<Record<CommentKind, number>>;
+  /** How concentrated that distribution is, from zero to one. */
+  readonly confidence: number;
+}
+
+/**
+ * What a classifier is given. The comment text and nothing else: two of the
+ * pillars ask whether it reads without the page in front of you, and handing
+ * the classifier the anchor would hide exactly what they measure.
+ */
+export interface ClassifierRequest {
+  /** The comment as it stands, which while typing is usually mid-sentence. */
+  readonly body: string;
+}
+
+/** A scoring request, optionally narrowed to some of the pillars. */
+export interface ScoreRequest extends ClassifierRequest {
+  /** Which pillars to score, by id. Defaults to every configured pillar. */
+  readonly pillars?: readonly string[];
+}
+
 /** Any connector, whatever its kind. */
 export type AnyConnector =
-  GateConnector | IdentityConnector | MediaConnector | ObservabilityConnector | StoreConnector;
+  | ClassifierConnector
+  | GateConnector
+  | IdentityConnector
+  | MediaConnector
+  | ObservabilityConnector
+  | StoreConnector;

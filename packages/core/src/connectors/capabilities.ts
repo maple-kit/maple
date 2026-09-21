@@ -15,15 +15,23 @@ export const CONNECTOR_METHODS = {
   observability: ["getReplayLink", "fetchEvents"],
   identity: ["resolveUser"],
   gate: ["publish", "read"],
+  classifier: ["score", "classify"],
 } as const satisfies Record<ConnectorKind, readonly string[]>;
 
-/** The methods a connector of each kind must define to be usable at all. */
+/**
+ * The methods a connector of each kind must define to be usable at all.
+ *
+ * A classifier requires none: both of its methods are optional, so one that
+ * defines neither is inert rather than invalid — it reports no capabilities
+ * and is never called. The contract suite refuses it; construction does not.
+ */
 export const REQUIRED_METHODS = {
   store: ["list", "append"],
   media: ["putBlob", "getUrl"],
   observability: ["getReplayLink"],
   identity: ["resolveUser"],
   gate: ["publish"],
+  classifier: [],
 } as const satisfies Record<ConnectorKind, readonly string[]>;
 
 /** The method names valid for a given connector kind. */
