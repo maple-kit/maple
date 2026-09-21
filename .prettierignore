@@ -3,3 +3,6 @@ coverage/
 pnpm-lock.yaml
 .changeset/*.md
 eslint-suppressions.json
+
+# Vendored agent skills, kept byte-identical so skills-lock.json verifies.
+.agents/
