@@ -71,7 +71,7 @@ const ASSET_URL = "https://raw.githubusercontent.com/maple-kit/maple/main/docs/a
 const WORDMARK = [
   "<picture>",
   `<source media="(prefers-color-scheme: dark)" srcset="${ASSET_URL}/wordmark-dark.svg">`,
-  `<img src="${ASSET_URL}/wordmark.svg" alt="Maple" height="18">`,
+  `<img src="${ASSET_URL}/wordmark.svg" alt="Maple" height="20" align="middle">`,
   "</picture>",
 ].join("");
 
@@ -225,9 +225,9 @@ function essentialContext(context: CommentContext): CommentContext {
 function introduce(comments: readonly Comment[]): string {
   const names = [...new Set(comments.map((comment) => cell(comment.author.name)))].filter(Boolean);
   const noun = comments.length === 1 ? "Comment" : "Comments";
-  if (names.length === 0) return `${noun} collected via ${WORDMARK}:`;
+  if (names.length === 0) return `${noun} collected via ${WORDMARK} :`;
 
-  return `${noun} written by ${conjoin(names)} via ${WORDMARK}:`;
+  return `${noun} written by ${conjoin(names)} via ${WORDMARK} :`;
 }
 
 /**

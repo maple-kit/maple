@@ -64,8 +64,8 @@ describe("the chrome around it", () => {
 
     expect(first).toContain("Comment written by Reviewer via <picture>");
     expect(first).toContain("(prefers-color-scheme: dark)");
-    expect(first).toContain('alt="Maple"');
-    expect(first?.endsWith("</picture>:")).toBe(true);
+    expect(first).toContain('alt="Maple" height="20" align="middle"');
+    expect(first?.endsWith("</picture> :")).toBe(true);
   });
 
   it("keeps the picture on one line, since a blank line would end the HTML block", () => {
