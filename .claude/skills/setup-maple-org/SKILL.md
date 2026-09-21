@@ -111,8 +111,9 @@ every comment, at sixteen pixels. Cream is the contrast the mark was drawn
 for. The field only appears once a logo is uploaded.
 
 The avatar is `docs/assets/app-logo.png` in the Maple repository — the leaf
-filling the square edge to edge with a lowercase `m` cut out of it, 1024
-square on a transparent ground, well inside GitHub's 1 MB limit. It is drawn
+filling the square edge to edge, outlined in cream, with a lowercase `m` cut
+out of it, 1024 square on a transparent ground, well inside GitHub's 1 MB
+limit. It is drawn
 to survive being shrunk: the whole square is leaf, because a margin is the
 one thing a sixteen-pixel badge cannot afford. Download it without cloning:
 

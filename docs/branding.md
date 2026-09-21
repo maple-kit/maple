@@ -122,8 +122,10 @@ branded would be a flag nobody sets.
 ## The App's logo
 
 `docs/assets/app-logo.png` is the avatar both GitHub Apps wear: the solid leaf
-filling a transparent square edge to edge, tilted its own 20 degrees, with a
-lowercase `m` in Caveat Brush cut out of it in `--mk-accent-sub` cream. Lowercase,
+filling a transparent square edge to edge, tilted its own 20 degrees, outlined
+in cream, with a lowercase `m` in Caveat Brush cut out of it in the same cream.
+The outline is what holds the leaf off a dark surface behind it, and it
+disappears harmlessly into a cream badge plate. Lowercase,
 because the wordmark's word is lowercase and a capital reads as a different
 mark; cut out rather than laid on, because at 20 pixels in a checks list the
 counter is the only thing that says the leaf is a letter at all.
@@ -141,8 +143,10 @@ mark gone.
 is padded so its tips cannot clip when it rotates, and the ink inside it is
 only about 68% of that box, by a different amount at every tilt. The lab
 measures the ink and fits to it, so `100` means the leaf touches all four
-edges and `92` used to mean 63%. The `m` is nudged off centre because the
-leaf's body is: its stem hangs below and to the left of the ink's middle.
+edges and `92` used to mean 63%. The `m` is anchored on the leaf's centre of
+**mass** rather than on its box, because the stem hangs off one corner: a
+letter centred in the box reads off centre in the leaf, which is the only
+centre a reader sees. `mX` and `mY` are offsets from that, and both are zero.
 
 Regenerate it from `tools/logo-lab/index.html`, which draws `LEAF_SOLID` and
 the letter onto a canvas at any size and previews the result down to 20
@@ -155,10 +159,12 @@ file was rendered at, at 1024:
   "leafColor": "#465a2b",
   "leafSize": 100,
   "leafTilt": 20,
+  "strokeWidth": 3.5,
+  "strokeColor": "#fdf8e8",
   "mColor": "#fdf8e8",
   "mSize": 34,
-  "mX": 3,
-  "mY": -2,
+  "mX": 0,
+  "mY": 0,
   "mTilt": 0,
   "mCase": "m",
   "bgAlpha": 0
