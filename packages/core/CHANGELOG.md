@@ -1,5 +1,150 @@
 # @maple-kit/core
 
+## 0.5.0
+
+### Minor Changes
+
+- f86a5c9: `POST /api/maple/assist`: a comment judged as it is typed
+
+  A new route arm and the client loop over it. The endpoint lives in
+  `src/route/assist.ts` rather than in the dispatcher, because it owns state a
+  dispatcher has no business holding: a cache, so a pause and a retype cost one
+  call, and a per-session limiter, so a stuck client cannot spend a model budget.
+  `RouteOptions.assist` switches the whole tier on; without it `/assist` answers
+  404 and nothing about the composer changes.
+
+  On the client, `ComposerState.assist` carries the judgement and
+  `ClientState.assist` carries what this deployment can judge, read off `/me` so a
+  card has its pillars before it has any scores. The loop debounces over the value
+  the composer already debounces into drafts, aborts the request in flight on the
+  next keystroke, and **swallows a failure**: the field keeps working and the
+  score just does not arrive.
+
+  `maple-assist=off` joins the precedence chain the interface already has — query
+  string, then the viewer's stored preference, then props, then the default — and
+  `MapleClient.setAssist` is the viewer's own switch.
+
+  **Breaking:** `ComposerState` gains a required `assist`, and `MapleConfig` gains
+  a required `assist`. Anything constructing either literal has to add the field;
+  `ASSIST_IDLE` is exported for the first.
+
+- 45a07cc: The score card, in the context card's slot
+
+  `Maple.Score` draws how the comment being typed reads and what kind it looks
+  like, in the slot the context card folds out of. It renders from `ComposerState`
+  and holds nothing of its own.
+
+  **A pillar is one slot per rung, filled by the probability that rung took.**
+  Equal widths keep _which_ rung it is readable and the fill says how sure it
+  was, so three pale slots are visibly a shrug and one solid slot is an answer.
+  That is what makes the confidence legible with no key beside it — a low
+  confidence drawn as a fact is a lie, and a number beside a bar is a key.
+
+  The rows are laid out before there is anything to put in them, so nothing under
+  the card moves as the scores land, and there is no spinner per pillar: five
+  things moving beside a field somebody is typing in is worse than five still
+  ones.
+
+  **The kind is a control, not a verdict.** A reviewer's own label beats any
+  classifier, so the chip starts on the guess and is never stuck on it. An unsure
+  guess names both kinds it was torn between — "bug or request" — which says it
+  is unsure without a number. The choice lives in `ComposerState` and does not
+  yet reach the posted comment; carrying it there changes `Comment` and the
+  markdown fence, which is its own decision.
+
+  **`Maple.Context` is now a collapsible**, open on a pick and folded by the first
+  keystroke, reopening only when a reviewer asks. Folded it keeps the width,
+  which is the one fact anyone reads off it. A stored comment's context does not
+  fold: nothing is being typed beside it.
+
+  **Breaking, in `@maple-kit/ui`:** `MapleContextBadge` renders a `<section>`
+  wrapping its `<dl>` rather than the `<dl>` itself, so it can carry a
+  disclosure. Anything selecting `.mk-ctx` for the outer box wants `.mk-ctx-card`.
+
+  **Breaking, in `@maple-kit/core`:** `ComposerState` gains a required
+  `contextOpen`, and `AssistState` an optional `chosenKind`.
+  `MapleClient.setContextOpen` and `MapleClient.setKind` are new.
+
+  **Two size budgets are raised**, from 13 KB to 14 KB on the stylesheet and 9 KB
+  to 10 KB on the composer. The card, the chip and the disclosure are ~1.7 KB
+  gzipped between them, and every byte is inert on a deployment with no
+  classifier configured, which is the default. The reasons are in
+  `packages/ui/scripts/size.js` beside the numbers.
+
+- 4b922ba: `@maple-kit/core/auth` gains `createInstallationAuth`, which mints and caches an
+  installation token for Maple's own GitHub App.
+
+  This is what lets the SDK route publish a check run. Device Flow signs a
+  reviewer in and acts as them; a check run can only be written by an App acting
+  as itself, which is the second App `docs/github-auth.md` argues for. The token
+  is cached for its hour and given up five minutes early, so a resolve never pays
+  for a mint and a request that starts valid cannot finish expired.
+
+  Nothing broke: this is new surface.
+
+- bdffcc5: Score a comment with a model: `@maple-kit/classifier` and its jev provider
+
+  A new package, `@maple-kit/classifier`, exports `jevClassifier()` — a
+  `ClassifierConnector` backed by a System One decision model. Every pillar's
+  question and the kind's travel in one request, because that is what makes
+  scoring a comment as it is typed affordable. It returns the provider's own
+  probabilities and confidence rather than a spread re-derived from a position.
+
+  It peers on the Effect v4 release candidate, which is the line carrying the
+  TypeSafe provider. `@maple-kit/core` stays on Effect v3 and nothing published
+  there changes shape. Effect appears nowhere on the new package's boundary; a
+  lint rule keeps it under `src/internal/`.
+
+  **Breaking, in core:** `ClassifierRequest` gains an optional `signal`, so a
+  judgement can be abandoned when the next keystroke makes it stale. Abort
+  belongs with the fetch that needs it, which is the provider's. Nothing that
+  implements the interface has to change; a connector reaching a network should
+  honour it.
+
+  Core also gains `COMMENT_KIND_DESCRIPTIONS`, the vocabulary's own definition of
+  each kind, so two providers cannot quietly recognise two different sets of
+  `bug`.
+
+  `@maple-kit/classifier` joins the fixed version group with the other five
+  packages, so it versions with them.
+
+- 6e694c2: The SDK route publishes the merge gate, so resolving the last comment clears
+  `maple/visual-review` on the same commit with no new push.
+
+  - **`RouteOptions.gate`** takes a `GateConnector` or a `GateResolver`, chosen
+    per request the way `store` and `media` already are. The logic is in
+    `src/route/gate.ts`, not in `handler.ts`.
+  - **`StoreConnector.head(branch)`** is a new optional method: the commit a
+    surface points at now. A gate is about a commit and the route has only a
+    branch, and the sha is resolved server-side rather than accepted from the
+    browser, because the gate App holds `Checks: write`. `githubStore` implements
+    it; `memoryStore` implements it when given `heads`.
+  - A gate publish that fails **costs the check update and nothing else**. The
+    status change has already happened, the route still answers 200, and the
+    failure goes to the logger.
+
+  **What broke:** `capabilitiesOf("store", …)` and `maple connectors --json` now
+  report a `head` key. Anything asserting on the exact shape of either needs the
+  extra field. No connector has to change: `head` is optional, and a store
+  without it publishes no gate rather than failing.
+
+### Patch Changes
+
+- f86a5c9: The eval harness is plain vitest, and `better-sqlite3` is gone with evalite
+
+  evalite ran the first eval set and then aborted the process on exit: its result
+  store is `better-sqlite3`, whose statement finaliser calls
+  `RemoveEnvironmentCleanupHook` after the environment is gone, which on Node 24
+  is a native assertion failure and a non-zero exit. A harness that always exits
+  non-zero cannot enforce a threshold, which is what it was there for.
+
+  `evals/README.md` already said to port the scoring harness onto vitest if the
+  runner fought the code. Doing it removed the native build at install time —
+  `onlyBuiltDependencies` is empty again — and the `@fastify/static` override,
+  whose four advisories left with the dependency that carried them.
+
+  No published package changes. This is the repository's own tooling.
+
 ## 0.4.0
 
 ### Minor Changes

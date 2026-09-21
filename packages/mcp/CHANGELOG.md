@@ -1,5 +1,17 @@
 # @maple-kit/mcp
 
+## 0.5.0
+
+### Patch Changes
+
+- Updated dependencies [f86a5c9]
+- Updated dependencies [45a07cc]
+- Updated dependencies [f86a5c9]
+- Updated dependencies [4b922ba]
+- Updated dependencies [bdffcc5]
+- Updated dependencies [6e694c2]
+  - @maple-kit/core@0.5.0
+
 ## 0.4.0
 
 ### Patch Changes
