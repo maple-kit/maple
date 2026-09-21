@@ -103,6 +103,12 @@ branded would be a flag nobody sets.
 - **It sits in the sentence rather than above it.** A banner on its own line
   reads as a header on the reviewer's comment, which is whose comment it is
   not. In the sentence it reads as the byline it is.
+- **`<sub>` is how it is lowered**, because GitHub's sanitiser drops `style`
+  from a comment body and replaces it with its own. The word's baseline sits
+  two thirds down the image, so left on the text baseline the mark reads about
+  7 pixels high, and `align="middle"` overcorrects by the same amount: it puts
+  the word on the baseline and the leaf, which carries the eye, below the
+  line. `<sub>` lowers it by about 3 and is the half that looks level.
 - **The author line is derived, never stored.** It names each distinct
   `comment.author.name` once, in first-appearance order. A set whose authors
   are all blank says `collected via` instead, so the mark never drops out.

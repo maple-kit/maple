@@ -62,10 +62,10 @@ describe("the chrome around it", () => {
   it("carries the wordmark inline in the line above the table, with a dark form", () => {
     const [first] = exported([storedComment()]).split("\n");
 
-    expect(first).toContain("Comment written by Reviewer via <picture>");
+    expect(first).toContain("Comment written by Reviewer via <sub><picture>");
     expect(first).toContain("(prefers-color-scheme: dark)");
-    expect(first).toContain('alt="Maple" height="20" align="middle"');
-    expect(first?.endsWith("</picture> :")).toBe(true);
+    expect(first).toContain('alt="Maple" height="20"');
+    expect(first?.endsWith("</picture></sub> :")).toBe(true);
   });
 
   it("keeps the picture on one line, since a blank line would end the HTML block", () => {
@@ -78,7 +78,7 @@ describe("the chrome around it", () => {
       storedComment({ id, author: { id: name, name, provenance: "server" } });
     const markdown = exported([by("Ada", "a"), by("Grace", "b"), by("Ada", "c")]);
 
-    expect(markdown).toContain("Comments written by Ada and Grace via <picture>");
+    expect(markdown).toContain("Comments written by Ada and Grace via <sub><picture>");
   });
 
   it("keeps the wordmark when nobody signed, rather than crediting nobody", () => {
@@ -86,7 +86,7 @@ describe("the chrome around it", () => {
       storedComment({ author: { id: "u", name: " ", provenance: "guest" } }),
     ]);
 
-    expect(markdown).toContain("Comment collected via <picture>");
+    expect(markdown).toContain("Comment collected via <sub><picture>");
     expect(markdown).not.toContain("written by");
   });
 
@@ -332,7 +332,7 @@ describe("a summary, with no fence", () => {
     });
 
     expect(result.markdown).toContain("| # | Where | Comment | Viewport |");
-    expect(result.markdown).toContain("via <picture>");
+    expect(result.markdown).toContain("via <sub><picture>");
     expect(result.markdown).toContain("powered by");
     expect(result.markdown).not.toContain("```maple");
     expect(result.markdown).not.toContain("copy into an agent");

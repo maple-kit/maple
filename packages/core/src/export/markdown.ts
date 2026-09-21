@@ -65,14 +65,14 @@ const REPO_URL = "https://github.com/maple-kit/maple";
 const ASSET_URL = "https://raw.githubusercontent.com/maple-kit/maple/main/docs/assets";
 
 /**
- * Two files in a `<picture>`, on one line: GitHub strips inline SVG, and a
- * blank line inside an HTML block ends it. `docs/branding.md` says why two.
+ * Two files in a `<picture>`, on one line, lowered by the only alignment a
+ * comment body keeps. `docs/branding.md` has the reasons and the numbers.
  */
 const WORDMARK = [
-  "<picture>",
+  "<sub><picture>",
   `<source media="(prefers-color-scheme: dark)" srcset="${ASSET_URL}/wordmark-dark.svg">`,
-  `<img src="${ASSET_URL}/wordmark.svg" alt="Maple" height="20" align="middle">`,
-  "</picture>",
+  `<img src="${ASSET_URL}/wordmark.svg" alt="Maple" height="20">`,
+  "</picture></sub>",
 ].join("");
 
 const FENCE_LEAD = "The full comment details in markdown, to copy into an agent:";
