@@ -1,5 +1,46 @@
 # @maple-kit/core
 
+## 0.4.0
+
+### Minor Changes
+
+- 8cdf898: The pull-request body a comment lands in is branded: the wordmark inline in the
+  line that names who wrote the table, a line saying the fence is the full detail
+  to copy into an agent, and a footer stamping the preview and commit beside
+  `powered by Maple`.
+
+  The chrome is unconditional and takes no option, including for the summary
+  `exportMarkdown(…, { fence: false })` builds. A caller that was matching on the
+  exact body — the table as the first line, or the fence last — now needs to
+  match on the table or the fence itself; `parseFence` is unchanged and still
+  finds it anywhere in the body. The fence's byte budget is untouched: `bytes`
+  and `reduced` still describe the fence alone.
+
+- 64eabf6: A sixth connector kind: `ClassifierConnector`, for judging a comment as it is
+  written.
+
+  `score` and `classify` are both optional, so a backend that can only do one is
+  used for that one, and `pillars` declares what it scores against. A score
+  carries its distribution across the pillar's levels and a confidence, not just
+  a level — a judgement that landed between two rungs has to be able to say so,
+  or a surface renders a guess as a fact.
+
+  `keywordClassifier()` is the zero-configuration tier: no network, no model, no
+  options. It is what the feature does with the model tier switched off and the
+  floor every eval measures against. `runClassifierContract` and
+  `memoryClassifier` ship from `@maple-kit/core/testing`.
+
+  **Breaking:** `ConnectorKind` gains `"classifier"`, so an exhaustive `switch`
+  or a `Record<ConnectorKind, …>` over it no longer compiles until the new member
+  is handled. `CONNECTOR_METHODS` and `REQUIRED_METHODS` gain a row each;
+  `REQUIRED_METHODS.classifier` is empty, because a classifier that implements
+  neither method is inert rather than invalid.
+
+  `maple connectors` prints the sixth kind, and a kind that requires nothing now
+  prints `required: none` rather than a blank the reader has to interpret.
+
+  `docs/assist.md` is the design record — what a score is, and what it never is.
+
 ## 0.3.0
 
 ### Minor Changes

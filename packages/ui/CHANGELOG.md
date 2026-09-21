@@ -1,5 +1,35 @@
 # @maple-kit/ui
 
+## 0.4.0
+
+### Minor Changes
+
+- 30b661b: The island's header carries the Maple wordmark instead of the word "Comments".
+
+  `Maple.Logo` now draws the new `Maple.Wordmark`: the leaf and the word `maple`
+  as one composite, sized by a single number. Both halves are path data — the
+  overlay lives in a shadow root, where `@font-face` does not apply, and a
+  wordmark that fetched a font would put a request on the host application's
+  page. `docs/branding.md` records how the outlines were taken and why the word
+  rides one part in 38 above the leaf's box centre.
+
+  **Breaking.** `ISLAND_COPY.title` no longer reaches the header; it stays as the
+  accessible name of the content region, which is what it now only means. A
+  composition that wants its own text there passes children to `Maple.Logo`,
+  which it could already do. The new `ISLAND_COPY.wordmark` is the lockup's
+  accessible name.
+
+### Patch Changes
+
+- 30b661b: Typing a space in the composer types a space. Hold-to-peek listens on `window`,
+  where a shadow root has already retargeted the event to the overlay's host, so
+  its "not while you are typing" guard saw a `div` for every key and swallowed
+  every space. A comment could only ever be one word.
+- Updated dependencies [8cdf898]
+- Updated dependencies [64eabf6]
+  - @maple-kit/core@0.4.0
+  - @maple-kit/react@0.4.0
+
 ## 0.3.0
 
 ### Patch Changes
