@@ -1,0 +1,46 @@
+name: Feature or change request
+description: Something Maple should do, or should do differently
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        These packages are 0.x and make no compatibility promise, so "this
+        interface is the wrong shape" is a welcome request, not a rude one.
+
+        Adding support for a new backend? That is a connector — read
+        [docs/connectors.md](https://github.com/maple-kit/maple/blob/main/docs/connectors.md)
+        first, and say which of the four kinds it is below.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What you were trying to do, and where Maple got in the way.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like instead
+      description: A sketch of the interface is worth more than a paragraph about it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you tried or considered
+      description: Including workarounds that nearly work, and why they do not.
+
+  - type: dropdown
+    id: contributing
+    attributes:
+      label: Would you like to build it?
+      options:
+        - "Yes, if someone says the shape is right"
+        - "Maybe, with guidance"
+        - "No — reporting it"
+    validations:
+      required: true

@@ -76,6 +76,20 @@ That adds a `Signed-off-by:` line, which certifies you wrote the change or have
 the right to submit it under Apache-2.0. The full text is in [DCO](DCO). CI
 checks every commit in a pull request. There is no CLA.
 
+### Cryptographic signatures are a separate thing
+
+A DCO sign-off is a line of text, not a signature. `main` separately requires
+every commit on it to be verified, so a pull request whose commits are unsigned
+is squash-merged — GitHub signs the commit it creates, and the branch stays
+verified. That path needs nothing from you.
+
+Rebase-merging is what unsigned commits cannot do, because it replays your
+commits onto `main` as they are. If you would like your own commits to land
+verified, sign them with
+[SSH or GPG](https://docs.github.com/authentication/managing-commit-signature-verification)
+and set `git config commit.gpgsign true` here. Otherwise ignore this; the
+default path works.
+
 ## Commit messages
 
 Conventional commits, one concern per commit:

@@ -1,0 +1,75 @@
+name: Bug report
+description: Maple does something it should not, or stops doing something it should
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Maple is pre-release and nothing is published yet, so "which version"
+        usually means a commit. A reproduction beats a description.
+
+        Found a security problem? Do not file it here — see
+        [SECURITY.md](https://github.com/maple-kit/maple/blob/main/SECURITY.md).
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: How to reproduce it
+      description: >
+        The smallest path you have. A branch or a diff against
+        `examples/vite-app` is the most useful form; numbered steps are fine.
+      placeholder: |
+        1. pnpm --filter @maple-kit/example-vite dev
+        2. …
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where it is
+      options:
+        - "@maple-kit/core — server SDK"
+        - "@maple-kit/core — overlay"
+        - "@maple-kit/core — a connector"
+        - "@maple-kit/cli"
+        - "@maple-kit/mcp"
+        - "The merge gate / CI"
+        - "Docs"
+        - "Somewhere else, or not sure"
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: A published version, or the commit you are on (`git rev-parse --short HEAD`).
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Node and pnpm versions, OS, browser, and the framework Maple is mounted into.
+      placeholder: |
+        node -v
+        pnpm -v
+        macOS 15.5, Chromium 140, Next 15
+      render: shell
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or errors
+      description: Paste the output. Redact anything that is not yours to publish.
+      render: shell
