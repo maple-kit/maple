@@ -1,0 +1,706 @@
+<title>Maple Leaf Lab</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Caveat+Brush&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+/>
+<style>
+  :root {
+    --ink: #14170f;
+    --ink-soft: #5c6353;
+    --ink-faint: #8b9180;
+    --ground: #f7f6f1;
+    --panel: #ffffff;
+    --line: #e2e0d6;
+    --accent: #465a2b;
+    --accent-soft: #eef1e4;
+    --cream: #fdf8e8;
+    --sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+    --brush: "Caveat Brush", "Brush Script MT", cursive;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink: #f2f3ec;
+      --ink-soft: #a9b09c;
+      --ink-faint: #767c6b;
+      --ground: #14170f;
+      --panel: #1c2015;
+      --line: #2e3324;
+      --accent: #a6bb72;
+      --accent-soft: #232818;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ink: #f2f3ec;
+    --ink-soft: #a9b09c;
+    --ink-faint: #767c6b;
+    --ground: #14170f;
+    --panel: #1c2015;
+    --line: #2e3324;
+    --accent: #a6bb72;
+    --accent-soft: #232818;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding-inline: 16px;
+    padding-block: 32px 64px;
+  }
+
+  header {
+    margin-bottom: 28px;
+  }
+
+  h1 {
+    font-family: var(--brush);
+    font-size: clamp(32px, 6vw, 46px);
+    font-weight: 400;
+    margin: 0;
+    letter-spacing: 0.01em;
+  }
+
+  .sub {
+    color: var(--ink-soft);
+    margin: 4px 0 0;
+    max-width: 62ch;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 28px;
+    align-items: start;
+  }
+
+  @media (max-width: 860px) {
+    .layout {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px;
+  }
+
+  .stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+
+  #hero {
+    width: 320px;
+    height: 320px;
+    max-width: 100%;
+  }
+
+  .checker {
+    background-image:
+      linear-gradient(45deg, var(--line) 25%, transparent 25%),
+      linear-gradient(-45deg, var(--line) 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, var(--line) 75%),
+      linear-gradient(-45deg, transparent 75%, var(--line) 75%);
+    background-size: 16px 16px;
+    background-position:
+      0 0,
+      0 8px,
+      8px -8px,
+      -8px 0;
+  }
+
+  .sizes {
+    display: flex;
+    align-items: flex-end;
+    gap: 22px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .size {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .size span {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-faint);
+  }
+
+  .contexts {
+    display: grid;
+    gap: 12px;
+    width: 100%;
+    margin-top: 4px;
+  }
+
+  .ctx {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+
+  .ctx.dark {
+    background: #0d1117;
+    border-color: #30363d;
+    color: #e6edf3;
+  }
+  .ctx.light {
+    background: #ffffff;
+    border-color: #d1d9e0;
+    color: #1f2328;
+  }
+
+  .ctx b {
+    font-weight: 600;
+    font-size: 13px;
+  }
+  .ctx small {
+    color: currentColor;
+    opacity: 0.6;
+    font-size: 12px;
+  }
+
+  fieldset {
+    border: 0;
+    padding: 0;
+    margin: 0 0 22px;
+  }
+
+  legend {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    padding: 0 0 10px;
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: 74px minmax(0, 1fr) 46px;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 9px;
+  }
+
+  .row label {
+    color: var(--ink-soft);
+    font-size: 13px;
+  }
+
+  .row output {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-faint);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  input[type="range"] {
+    width: 100%;
+    accent-color: var(--accent);
+  }
+  input[type="color"] {
+    width: 100%;
+    height: 30px;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: none;
+  }
+
+  .seg {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .seg button,
+  .btn {
+    font-family: var(--sans);
+    font-size: 12.5px;
+    color: var(--ink);
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 5px 12px;
+    cursor: pointer;
+  }
+
+  .seg button[aria-pressed="true"] {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--panel);
+  }
+
+  .seg button:focus-visible,
+  .btn:focus-visible,
+  .swatch:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .swatches {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .swatch {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .btn.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--panel);
+    font-weight: 500;
+  }
+
+  textarea {
+    width: 100%;
+    height: 116px;
+    font-family: var(--mono);
+    font-size: 11px;
+    line-height: 1.6;
+    color: var(--ink-soft);
+    background: var(--ground);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px;
+    resize: vertical;
+    margin-top: 10px;
+  }
+
+  .note {
+    color: var(--ink-faint);
+    font-size: 12px;
+    margin: 10px 0 0;
+  }
+
+  .presets {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 22px;
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Leaf Lab</h1>
+    <p class="sub">
+      The square avatar for the Maple GitHub Apps: the leaf from
+      <code>packages/ui/src/marks/leaf.ts</code>, with an <b>M</b> in Caveat Brush — the face the
+      wordmark is drawn from — set in the middle of it. Tune it, then send me the settings block.
+    </p>
+  </header>
+
+  <div class="layout">
+    <section class="panel stage">
+      <canvas id="hero" width="640" height="640" aria-label="Logo preview"></canvas>
+
+      <div class="sizes">
+        <div class="size">
+          <canvas id="p128" width="256" height="256" style="width: 128px; height: 128px"></canvas
+          ><span>128</span>
+        </div>
+        <div class="size">
+          <canvas id="p64" width="128" height="128" style="width: 64px; height: 64px"></canvas
+          ><span>64</span>
+        </div>
+        <div class="size">
+          <canvas id="p32" width="64" height="64" style="width: 32px; height: 32px"></canvas
+          ><span>32</span>
+        </div>
+        <div class="size">
+          <canvas id="p20" width="40" height="40" style="width: 20px; height: 20px"></canvas
+          ><span>20</span>
+        </div>
+      </div>
+
+      <div class="contexts">
+        <div class="ctx dark">
+          <canvas
+            id="c1"
+            width="80"
+            height="80"
+            style="width: 40px; height: 40px; border-radius: 6px"
+          ></canvas>
+          <div>
+            <b>Maple — acme</b><br /><small
+              >wants to access your account · authorisation screen</small
+            >
+          </div>
+        </div>
+        <div class="ctx light">
+          <canvas
+            id="c2"
+            width="40"
+            height="40"
+            style="width: 20px; height: 20px; border-radius: 4px"
+          ></canvas>
+          <div><b>maple/visual-review</b> <small>— 2 comments open · checks list</small></div>
+        </div>
+      </div>
+    </section>
+
+    <form class="panel" id="controls">
+      <div class="presets" id="presets"></div>
+
+      <fieldset>
+        <legend>Leaf</legend>
+        <div class="seg" id="leafStyle" role="group" aria-label="Leaf style">
+          <button type="button" data-value="solid">Solid</button>
+          <button type="button" data-value="outline">Outline</button>
+        </div>
+        <div class="row" style="margin-top: 10px">
+          <label for="leafColor">Colour</label>
+          <input type="color" id="leafColor" value="#465a2b" />
+          <output></output>
+        </div>
+        <div class="swatches" id="leafSwatches"></div>
+        <div class="row" style="margin-top: 10px">
+          <label for="leafSize">Size</label>
+          <input type="range" id="leafSize" min="60" max="100" step="1" value="92" />
+          <output for="leafSize"></output>
+        </div>
+        <div class="row">
+          <label for="leafTilt">Tilt</label>
+          <input type="range" id="leafTilt" min="-30" max="45" step="1" value="20" />
+          <output for="leafTilt"></output>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>The M</legend>
+        <div class="row">
+          <label for="mColor">Colour</label>
+          <input type="color" id="mColor" value="#fdf8e8" />
+          <output></output>
+        </div>
+        <div class="swatches" id="mSwatches"></div>
+        <div class="row" style="margin-top: 10px">
+          <label for="mSize">Size</label>
+          <input type="range" id="mSize" min="15" max="70" step="1" value="40" />
+          <output for="mSize"></output>
+        </div>
+        <div class="row">
+          <label for="mX">Nudge x</label>
+          <input type="range" id="mX" min="-20" max="20" step="0.5" value="0" />
+          <output for="mX"></output>
+        </div>
+        <div class="row">
+          <label for="mY">Nudge y</label>
+          <input type="range" id="mY" min="-20" max="20" step="0.5" value="1" />
+          <output for="mY"></output>
+        </div>
+        <div class="row">
+          <label for="mTilt">Tilt</label>
+          <input type="range" id="mTilt" min="-30" max="45" step="1" value="0" />
+          <output for="mTilt"></output>
+        </div>
+        <div class="row">
+          <label for="mCase">Case</label>
+          <div class="seg" id="mCase" role="group" aria-label="Letter">
+            <button type="button" data-value="M">M</button>
+            <button type="button" data-value="m">m</button>
+          </div>
+          <output></output>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Plate</legend>
+        <div class="row">
+          <label for="bgColor">Colour</label>
+          <input type="color" id="bgColor" value="#fdf8e8" />
+          <output></output>
+        </div>
+        <div class="swatches" id="bgSwatches"></div>
+        <div class="row" style="margin-top: 10px">
+          <label for="bgAlpha">Opacity</label>
+          <input type="range" id="bgAlpha" min="0" max="100" step="1" value="0" />
+          <output for="bgAlpha"></output>
+        </div>
+        <div class="row">
+          <label for="radius">Radius</label>
+          <input type="range" id="radius" min="0" max="50" step="1" value="0" />
+          <output for="radius"></output>
+        </div>
+      </fieldset>
+
+      <div class="actions">
+        <button type="button" class="btn primary" id="download">Download PNG</button>
+        <button type="button" class="btn" id="copy">Copy settings</button>
+      </div>
+      <textarea id="settings" readonly aria-label="Settings"></textarea>
+      <p class="note">
+        Download works when this page is open from a file on your machine. In a published artifact
+        the sandbox blocks it — copy the settings across instead and I will render the PNG.
+      </p>
+    </form>
+  </div>
+</div>
+
+<script>
+  const LEAF_SOLID =
+    "m56.97 32.46c-1.32-0.74-2.03-1.54-2.03-2.85 0-2.32 2.43-5.26 2.23-6.55-0.09-0.83-1.03-1.48-2.24-1.48-1.33 0-2.76 0.42-4.02 0.42-1.25 0-1.84-0.44-2.52-0.44-1.84 0-3.19 2.52-4.74 2.52-1.13 0-1.72-0.95-1.72-2.42 0-1.92 0.8-4.43 0.8-6.43 0-2.43-1.02-3.33-2.77-3.82-1.89-0.52-2.99-1.31-4.37-4.07-0.99-2.04-2.1-3.34-3.3-3.34-1.1 0-2.2 1.55-3.08 3.34-1.31 2.65-2.53 3.62-4.57 4.18-1.83 0.5-2.7 1.54-2.7 3.73 0 2.16 0.8 4.6 0.8 6.49 0 1.59-0.75 2.44-1.77 2.44-1.56 0-3.36-2.6-5.07-2.6-0.81 0-1.59 0.42-2.69 0.42-1.19 0-2.61-0.41-3.86-0.41-1.28 0-2.19 0.68-2.19 1.62 0 1.68 2.17 4.06 2.17 6.36 0 1.49-0.92 2.25-2.25 2.97-0.66 0.36-0.96 0.68-0.96 1.21 0 0.74 1.4 1.93 4 3.74 3.44 2.42 5.37 2.72 6.31 3.58 0.29 0.27 0.42 0.58 0.42 1.11 0 1.65-3.42 4.11-3.42 5.6 0 1.13 1.5 1.5 3.88 1.57 2.14 0.05 3.64 0.2 4.42 0.88 0.53 0.45 1.08 0.7 1.71 0.7 2.38 0 5.9-2.9 7.08-2.9 0.42 0 0.54 0.3 0.54 1.09 0 3.68-0.92 7.36-0.92 8.84 0 1.37 0.78 2.04 1.73 2.04 0.98 0 1.78-0.89 1.78-2.29 0-2.08-0.55-5.02-0.55-8.11 0-1.24 0.16-1.57 0.7-1.57 1.12 0 4.93 2.9 7.01 2.9 0.6 0 1.15-0.24 1.63-0.66 0.82-0.69 2.38-0.85 4.48-0.89 2.57-0.05 3.82-0.51 3.82-1.58 0-1.34-3.1-3.7-3.1-5.44 0-0.89 0.65-1.56 1.93-2.09 1.79-0.76 4.26-2.35 6.27-3.89 1.63-1.25 2.39-1.96 2.39-2.62 0-0.51-0.48-0.88-1.26-1.3z";
+  const LEAF_OUTLINE =
+    "m56.99 32.75c-1.36-0.576-2.44-1.416-2.44-2.584 0-1.304 2.472-4.976 2.472-6.064 0-0.88-1-1.208-1.952-1.208-1.936 0-4.496 1.472-6.04 1.472-1.648 0-1.536-1.8-2.728-1.8-1.144 0-3.512 2.8-4.944 2.8-0.8 0-1.072-0.728-1.072-1.712 0-2.128 1.744-6.76 1.744-8.424 0-1.816-1.32-2.192-2.936-2.416-4.264-0.608-5.072-7.64-7.272-7.64-1.432 0-2.544 2.6-3.576 4.656-0.952 1.888-2.096 2.928-4.096 3.272-1.632 0.28-2.36 1.008-2.36 2.488 0 1.88 1.632 6.12 1.632 8.56 0 0.944-0.352 1.48-0.992 1.48-1.688 0-3.736-2.952-5.032-2.952-1.16 0-1.064 1.84-2.72 1.84-1.488 0-4.104-1.336-5.728-1.336-1.28 0-2.088 0.464-2.088 1.264 0 1.032 2.512 4.52 2.512 5.976 0 1.504-1.656 2.224-2.72 2.632-0.456 0.176-0.656 0.512-0.656 0.904 0 0.808 1.504 1.84 3.752 3.744 3.36 2.88 6.456 3.672 6.456 5 0 1.928-3.888 4.752-3.888 5.744 0 0.656 0.768 0.808 1.832 0.928 2.136 0.24 4.496 0.376 6.08 1.712 0.616 0.512 1.272 0.912 1.952 0.912 2.192 0 6.832-3.088 7.592-3.088 0.48 0 0.584 0.624 0.584 2.088 0 2.576-0.392 5.168-0.392 6.184 0 1.504 1.088 2.04 2.072 2.04s1.912-0.616 1.912-1.92c0-1.36-0.432-3.528-0.432-5.528 0-2.136 0.168-2.856 0.64-2.856 0.88 0 5.352 3.072 7.368 3.072 0.704 0 1.336-0.424 1.984-0.928 2.08-1.68 7.288-1.384 7.84-2.32 0.184-0.312 0.096-0.696-0.264-1.208-1.04-1.504-3.408-3.4-3.408-4.792 0-1.248 1.944-2.056 4.52-3.928 1.52-1.104 2.728-2.232 4.112-3.2 1.056-0.744 1.664-1.272 1.664-1.888 0.016-0.464-0.432-0.752-0.984-0.976zm-1.28 2.2c-1.576 1.128-3.528 2.928-6.784 5-1.296 0.824-2.176 1.56-2.176 2.696 0 1.696 3.352 4.928 3.352 5.432 0 0.28-0.408 0.416-1.168 0.464-2.288 0.168-4.984 0.512-6.472 1.776-0.432 0.344-0.784 0.512-1.192 0.512-2.192 0-6.592-3-7.72-3-0.744 0-0.88 0.688-0.88 2.44 0 2.68 0.168 5.48 0.168 6.68 0 0.848-0.4 1.184-0.888 1.184-0.56 0-0.888-0.392-0.888-1.264 0-1.056 0.224-3.744 0.224-6.576 0-1.744-0.168-2.448-1.04-2.448-1.032 0-5.76 3.064-7.704 3.064-0.568 0-1.072-0.288-1.68-0.656-1.936-1.224-4.56-1.376-6.6-1.656-0.448-0.064-0.608-0.184-0.608-0.4 0-0.688 3.704-3.936 3.704-5.736 0-1.176-1.72-1.928-3.36-2.928-1.624-0.992-2.696-2.192-4.248-3.304-1.496-0.984-2.544-1.584-2.544-2.12 0-0.304 0.384-0.512 0.944-0.784 1.216-0.592 2.432-1.384 2.432-2.768 0-1.68-2.344-5.04-2.344-5.8 0-0.408 0.416-0.552 1.024-0.552 1.512 0 4.536 1.224 5.656 1.224 1.68 0 2.144-1.456 2.84-1.456 0.952 0 3.232 2.904 4.976 2.904 1.224 0 1.776-1.04 1.776-2.36 0-2.392-1.592-6.24-1.592-8.384 0-1.376 0.52-1.864 2.032-2.208 1.856-0.432 2.968-1.56 4.016-3.496 1.024-1.968 2.096-3.768 2.856-3.768 0.848 0 1.824 2.44 3.04 4.6 0.968 1.688 2.08 2.4 3.92 2.584 1.52 0.152 2.032 0.64 2.032 1.888 0 2.208-1.568 6.152-1.568 8.216 0 1.728 0.84 2.608 1.912 2.608 1.792 0 3.984-2.76 4.936-2.76 0.84 0 1.072 1.416 2.896 1.416 1.656 0 4.576-1.28 5.968-1.28 0.44 0 0.64 0.2 0.64 0.536 0 0.976-1.488 3.52-2.144 4.816-0.168 0.36-0.216 0.68-0.216 0.992 0 1.328 1.64 2.368 2.944 3.016 0.352 0.176 0.52 0.344 0.52 0.552-0.016 0.32-0.424 0.704-0.992 1.104z";
+
+  // The leaf's own view box, from leaf.ts: the rotated box, so the tips never clip.
+  const BOX = { x: -7, y: -7, size: 78 };
+
+  const PATHS = { solid: new Path2D(LEAF_SOLID), outline: new Path2D(LEAF_OUTLINE) };
+
+  const PALETTE = {
+    leaf: ["#465a2b", "#a6bb72", "#1a1d23", "#f6f7f9", "#fdf8e8"],
+    m: ["#fdf8e8", "#f6f7f9", "#465a2b", "#1a1d23", "#a6bb72"],
+    bg: ["#fdf8e8", "#ffffff", "#465a2b", "#1a1d23", "#a6bb72"],
+  };
+
+  const PRESETS = {
+    "Cut-out": {
+      leafStyle: "solid",
+      leafColor: "#465a2b",
+      mColor: "#fdf8e8",
+      bgAlpha: 0,
+      mSize: 40,
+      mCase: "M",
+    },
+    Badge: {
+      leafStyle: "solid",
+      leafColor: "#fdf8e8",
+      mColor: "#465a2b",
+      bgColor: "#465a2b",
+      bgAlpha: 100,
+      radius: 22,
+      leafSize: 78,
+      mSize: 34,
+      mCase: "M",
+    },
+    Outline: {
+      leafStyle: "outline",
+      leafColor: "#465a2b",
+      mColor: "#465a2b",
+      bgAlpha: 0,
+      mSize: 34,
+      mCase: "m",
+    },
+    Night: {
+      leafStyle: "solid",
+      leafColor: "#a6bb72",
+      mColor: "#14170f",
+      bgColor: "#14170f",
+      bgAlpha: 100,
+      radius: 50,
+      leafSize: 76,
+      mSize: 36,
+      mCase: "M",
+    },
+  };
+
+  const state = {
+    leafStyle: "solid",
+    leafColor: "#465a2b",
+    leafSize: 92,
+    leafTilt: 20,
+    mColor: "#fdf8e8",
+    mSize: 40,
+    mX: 0,
+    mY: 1,
+    mTilt: 0,
+    mCase: "M",
+    bgColor: "#fdf8e8",
+    bgAlpha: 0,
+    radius: 0,
+  };
+
+  const $ = (id) => document.getElementById(id);
+  const SLIDERS = ["leafSize", "leafTilt", "mSize", "mX", "mY", "mTilt", "bgAlpha", "radius"];
+  const COLORS = ["leafColor", "mColor", "bgColor"];
+  const TARGETS = ["hero", "p128", "p64", "p32", "p20", "c1", "c2"];
+
+  function roundedRect(ctx, size, radiusPercent) {
+    const r = (Math.min(50, radiusPercent) / 100) * size;
+    ctx.beginPath();
+    ctx.moveTo(r, 0);
+    ctx.arcTo(size, 0, size, size, r);
+    ctx.arcTo(size, size, 0, size, r);
+    ctx.arcTo(0, size, 0, 0, r);
+    ctx.arcTo(0, 0, size, 0, r);
+    ctx.closePath();
+  }
+
+  function draw(canvas) {
+    const ctx = canvas.getContext("2d");
+    const size = canvas.width;
+    ctx.clearRect(0, 0, size, size);
+
+    if (state.bgAlpha > 0) {
+      ctx.save();
+      ctx.globalAlpha = state.bgAlpha / 100;
+      ctx.fillStyle = state.bgColor;
+      roundedRect(ctx, size, state.radius);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    const leaf = (size * state.leafSize) / 100;
+    const scale = leaf / BOX.size;
+
+    ctx.save();
+    ctx.translate((size - leaf) / 2, (size - leaf) / 2);
+    ctx.scale(scale, scale);
+    ctx.translate(-BOX.x, -BOX.y);
+    ctx.translate(32, 32);
+    ctx.rotate((state.leafTilt * Math.PI) / 180);
+    ctx.translate(-32, -32);
+    ctx.fillStyle = state.leafColor;
+    ctx.fill(PATHS[state.leafStyle], "evenodd");
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(size / 2 + (size * state.mX) / 100, size / 2 + (size * state.mY) / 100);
+    ctx.rotate((state.mTilt * Math.PI) / 180);
+    ctx.fillStyle = state.mColor;
+    ctx.font = `${(size * state.mSize) / 100}px "Caveat Brush", cursive`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(state.mCase, 0, 0);
+    ctx.restore();
+  }
+
+  function render() {
+    for (const id of TARGETS) draw($(id));
+    $("settings").value = JSON.stringify(state, null, 2);
+    $("hero").classList.toggle("checker", state.bgAlpha < 100);
+  }
+
+  function syncControls() {
+    for (const key of SLIDERS) {
+      $(key).value = state[key];
+      const out = document.querySelector(`output[for="${key}"]`);
+      if (out)
+        out.textContent = key === "leafTilt" || key === "mTilt" ? `${state[key]}°` : state[key];
+    }
+    for (const key of COLORS) $(key).value = state[key];
+    for (const group of ["leafStyle", "mCase"]) {
+      for (const button of $(group).querySelectorAll("button")) {
+        button.setAttribute("aria-pressed", String(button.dataset.value === state[group]));
+      }
+    }
+  }
+
+  function update(patch) {
+    Object.assign(state, patch);
+    syncControls();
+    render();
+  }
+
+  for (const key of SLIDERS) {
+    $(key).addEventListener("input", (event) => update({ [key]: Number(event.target.value) }));
+  }
+  for (const key of COLORS) {
+    $(key).addEventListener("input", (event) => update({ [key]: event.target.value }));
+  }
+  for (const group of ["leafStyle", "mCase"]) {
+    $(group).addEventListener("click", (event) => {
+      const button = event.target.closest("button");
+      if (button) update({ [group]: button.dataset.value });
+    });
+  }
+
+  for (const [name, list] of Object.entries(PALETTE)) {
+    const key = name === "leaf" ? "leafColor" : name === "m" ? "mColor" : "bgColor";
+    const host = $(`${name}Swatches`);
+    for (const value of list) {
+      const swatch = document.createElement("button");
+      swatch.type = "button";
+      swatch.className = "swatch";
+      swatch.style.background = value;
+      swatch.title = value;
+      swatch.setAttribute("aria-label", `${name} ${value}`);
+      swatch.addEventListener("click", () => update({ [key]: value }));
+      host.append(swatch);
+    }
+  }
+
+  for (const [name, patch] of Object.entries(PRESETS)) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "btn";
+    button.textContent = name;
+    button.addEventListener("click", () => update(patch));
+    $("presets").append(button);
+  }
+
+  $("download").addEventListener("click", () => {
+    const out = document.createElement("canvas");
+    out.width = out.height = 512;
+    draw(out);
+    const link = document.createElement("a");
+    link.download = "app-logo.png";
+    link.href = out.toDataURL("image/png");
+    link.click();
+  });
+
+  $("copy").addEventListener("click", async () => {
+    const button = $("copy");
+    try {
+      await navigator.clipboard.writeText($("settings").value);
+      button.textContent = "Copied";
+    } catch {
+      $("settings").select();
+      button.textContent = "Select and copy";
+    }
+    setTimeout(() => (button.textContent = "Copy settings"), 1600);
+  });
+
+  syncControls();
+  render();
+  document.fonts
+    .load('40px "Caveat Brush"')
+    .then(render)
+    .catch(() => {});
+</script>
