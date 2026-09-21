@@ -70,9 +70,26 @@ those change; nothing checks that they still agree.
 
 ## On a pull request
 
-Every body `exportMarkdown` writes is assembled in the same order: the
-wordmark, a line naming who wrote the table, the table, a line saying what the
-fence is, the fence, then a rule above `powered by Maple`.
+Every body `exportMarkdown` writes is assembled in the same order: one line
+saying who wrote the comments and what wrote them down, the table, a line
+saying what the fence is, the fence, then a rule above the footer.
+
+````
+Comment written by Ada Lovelace via ⟨wordmark⟩:
+
+| # | Where | Comment | Viewport |
+…
+
+The full comment details in markdown, to copy into an agent:
+
+```maple
+…
+```
+
+---
+
+⟨preview.example.com @ a1b2c3d⟩ · powered by Maple
+````
 
 The chrome is not optional and takes no argument. A comment Maple posts is the
 only place most people ever see the project, and a flag deciding whether it is
@@ -80,12 +97,19 @@ branded would be a flag nobody sets.
 
 - **The wordmark is the same `<picture>` pair the README uses**, served from
   `raw.githubusercontent.com` on `main`, which is why moving or renaming
-  `docs/assets/wordmark.svg` breaks the banner on every comment already posted.
+  `docs/assets/wordmark.svg` breaks the mark on every comment already posted.
   It is emitted on one line: a blank line inside an HTML block ends the block,
   and the rest would render as literal markup.
+- **It sits in the sentence rather than above it.** A banner on its own line
+  reads as a header on the reviewer's comment, which is whose comment it is
+  not. In the sentence it reads as the byline it is.
 - **The author line is derived, never stored.** It names each distinct
   `comment.author.name` once, in first-appearance order. A set whose authors
-  are all blank drops the line rather than crediting the table to nobody.
+  are all blank says `collected via` instead, so the mark never drops out.
+- **The footer stamps the preview.** The host of `context.url` and the first
+  seven of `commit`, from the first comment in the set: a reviewer with three
+  previews open cannot tell them apart from the table. A URL that will not
+  parse costs the stamp and nothing else.
 - **The fence keeps its own budget.** `bytes` and `reduced` describe the fence
   alone, so the chrome cannot push a comment into a reduction.
 
@@ -95,3 +119,7 @@ GitHub has no API for it and no manifest field: an App's avatar is a manual
 upload under **Display information**, and the `setup-maple-org` skill says so
 at the step where a person is already on that page. The same asset serves both
 Apps; the badge background is `#465a2b`, the light accent above.
+
+```
+
+```

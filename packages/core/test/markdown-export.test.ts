@@ -59,25 +59,18 @@ describe("the human table", () => {
 });
 
 describe("the chrome around it", () => {
-  it("opens with a wordmark that has a dark form", () => {
-    const markdown = exported([storedComment()]);
-    const [first] = markdown.split("\n");
+  it("carries the wordmark inline in the line above the table, with a dark form", () => {
+    const [first] = exported([storedComment()]).split("\n");
 
-    expect(first).toContain("docs/assets/wordmark.svg");
+    expect(first).toContain("Comment written by Reviewer via <picture>");
     expect(first).toContain("(prefers-color-scheme: dark)");
     expect(first).toContain('alt="Maple"');
+    expect(first?.endsWith("</picture>:")).toBe(true);
   });
 
   it("keeps the picture on one line, since a blank line would end the HTML block", () => {
-    const banner = exported([storedComment()]).split("\n")[0]!;
-    expect(banner.startsWith("<picture>")).toBe(true);
-    expect(banner.endsWith("</picture>")).toBe(true);
-  });
-
-  it("names the author above the table", () => {
-    const markdown = exported([storedComment()]);
-    expect(markdown).toContain("Comment written by Reviewer:");
-    expect(markdown.indexOf("written by")).toBeLessThan(markdown.indexOf("| # |"));
+    const first = exported([storedComment()]).split("\n")[0]!;
+    expect(first.split("<picture>")).toHaveLength(2);
   });
 
   it("names every author once, in the order they first appear", () => {
@@ -85,13 +78,15 @@ describe("the chrome around it", () => {
       storedComment({ id, author: { id: name, name, provenance: "server" } });
     const markdown = exported([by("Ada", "a"), by("Grace", "b"), by("Ada", "c")]);
 
-    expect(markdown).toContain("Comments written by Ada and Grace:");
+    expect(markdown).toContain("Comments written by Ada and Grace via <picture>");
   });
 
-  it("drops the line rather than crediting a table to nobody", () => {
+  it("keeps the wordmark when nobody signed, rather than crediting nobody", () => {
     const markdown = exported([
       storedComment({ author: { id: "u", name: " ", provenance: "guest" } }),
     ]);
+
+    expect(markdown).toContain("Comment collected via <picture>");
     expect(markdown).not.toContain("written by");
   });
 
@@ -103,13 +98,27 @@ describe("the chrome around it", () => {
     expect(lead).toBeLessThan(markdown.indexOf("```maple"));
   });
 
-  it("closes with a link back to the repository", () => {
-    const markdown = exported([storedComment()]);
+  it("closes with the preview, the commit and a link back to the repository", () => {
+    const markdown = exported([storedComment({ commit: "a1b2c3d4e5f6a7b8" })]);
     expect(
       markdown.endsWith(
-        '<sub>powered by <a href="https://github.com/maple-kit/maple">Maple</a></sub>',
+        "<sub><code>preview.example.com @ a1b2c3d</code> · " +
+          'powered by <a href="https://github.com/maple-kit/maple">Maple</a></sub>',
       ),
     ).toBe(true);
+  });
+
+  it("stamps the preview alone when the comment carries no commit", () => {
+    const markdown = exported([storedComment()]);
+    expect(markdown).toContain("<code>preview.example.com</code> · powered by");
+  });
+
+  it("drops a stamp it cannot read rather than printing a broken one", () => {
+    const context = { ...SAMPLE_CONTEXT, url: "not a url" };
+    const markdown = exported([storedComment({ context })]);
+
+    expect(markdown).not.toContain("<code>");
+    expect(markdown).toContain("<sub>powered by");
   });
 
   it("costs the fence none of its budget", () => {
@@ -323,6 +332,7 @@ describe("a summary, with no fence", () => {
     });
 
     expect(result.markdown).toContain("| # | Where | Comment | Viewport |");
+    expect(result.markdown).toContain("via <picture>");
     expect(result.markdown).toContain("powered by");
     expect(result.markdown).not.toContain("```maple");
     expect(result.markdown).not.toContain("copy into an agent");

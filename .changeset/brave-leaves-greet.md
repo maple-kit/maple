@@ -2,9 +2,10 @@
 "@maple-kit/core": minor
 ---
 
-The pull-request body a comment lands in is branded: the wordmark above it, a
-line naming who wrote the table, a line saying the fence is the full detail to
-copy into an agent, and `powered by Maple` under a rule at the foot.
+The pull-request body a comment lands in is branded: the wordmark inline in the
+line that names who wrote the table, a line saying the fence is the full detail
+to copy into an agent, and a footer stamping the preview and commit beside
+`powered by Maple`.
 
 The chrome is unconditional and takes no option, including for the summary
 `exportMarkdown(…, { fence: false })` builds. A caller that was matching on the

@@ -68,35 +68,31 @@ const ASSET_URL = "https://raw.githubusercontent.com/maple-kit/maple/main/docs/a
  * Two files in a `<picture>`, on one line: GitHub strips inline SVG, and a
  * blank line inside an HTML block ends it. `docs/branding.md` says why two.
  */
-const BANNER = [
+const WORDMARK = [
   "<picture>",
   `<source media="(prefers-color-scheme: dark)" srcset="${ASSET_URL}/wordmark-dark.svg">`,
-  `<img src="${ASSET_URL}/wordmark.svg" alt="Maple" height="22">`,
+  `<img src="${ASSET_URL}/wordmark.svg" alt="Maple" height="18">`,
   "</picture>",
 ].join("");
 
 const FENCE_LEAD = "The full comment details in markdown, to copy into an agent:";
 
-const FOOTER = `---\n\n<sub>powered by <a href="${REPO_URL}">Maple</a></sub>`;
+const POWERED_BY = `powered by <a href="${REPO_URL}">Maple</a>`;
 
 /** Builds the pull-request body for a set of comments. */
 export function exportMarkdown(
   comments: readonly Comment[],
   options: ExportOptions,
 ): MarkdownExport {
-  const head = [
-    BANNER,
-    "",
-    ...introduce(comments),
-    table(comments, hostedOnly(options.screenshots)),
-  ];
+  const head = [introduce(comments), "", table(comments, hostedOnly(options.screenshots))];
+  const foot = ["", footer(comments)];
   if (options.fence === false) {
-    return { markdown: [...head, "", FOOTER].join("\n"), bytes: 0, reduced: [], overBudget: false };
+    return { markdown: [...head, ...foot].join("\n"), bytes: 0, reduced: [], overBudget: false };
   }
 
   const budget = options.budget ?? FENCE_BUDGET;
   const { fence, bytes, reduced } = fit(comments, options.branch, budget);
-  const body = [...head, "", FENCE_LEAD, "", "```maple", fence, "```", "", FOOTER];
+  const body = [...head, "", FENCE_LEAD, "", "```maple", fence, "```", ...foot];
   return { markdown: body.join("\n"), bytes, reduced, overBudget: bytes > budget };
 }
 
@@ -223,15 +219,39 @@ function essentialContext(context: CommentContext): CommentContext {
   };
 }
 /**
- * Who wrote the table, above it: each author once, first appearance first. A
- * set nobody signed loses the line rather than being credited to nobody.
+ * Who wrote the table and what wrote it down, in one line above it. Each author
+ * is named once, first appearance first; a set nobody signed says so.
  */
-function introduce(comments: readonly Comment[]): readonly string[] {
+function introduce(comments: readonly Comment[]): string {
   const names = [...new Set(comments.map((comment) => cell(comment.author.name)))].filter(Boolean);
-  if (names.length === 0) return [];
+  const noun = comments.length === 1 ? "Comment" : "Comments";
+  if (names.length === 0) return `${noun} collected via ${WORDMARK}:`;
 
-  const written = comments.length === 1 ? "Comment written by" : "Comments written by";
-  return [`${written} ${conjoin(names)}:`, ""];
+  return `${noun} written by ${conjoin(names)} via ${WORDMARK}:`;
+}
+
+/**
+ * Which preview, at which commit, then the project. A reader with three
+ * previews open cannot tell them apart from the table alone.
+ */
+function footer(comments: readonly Comment[]): string {
+  return `---\n\n<sub>${stamp(comments[0])}${POWERED_BY}</sub>`;
+}
+
+function stamp(comment: Comment | undefined): string {
+  if (comment === undefined) return "";
+  const parts = [hostOf(comment.context.url), comment.commit?.slice(0, 7) ?? ""].filter(Boolean);
+
+  return parts.length === 0 ? "" : `<code>${parts.join(" @ ")}</code> · `;
+}
+
+/** A URL a store handed back may be anything; an unparsable one costs the host. */
+function hostOf(url: string): string {
+  try {
+    return new URL(url).host;
+  } catch {
+    return "";
+  }
 }
 
 /** `a`, `a and b`, `a, b and c`. `Intl` is in Node and every browser Maple runs in. */
