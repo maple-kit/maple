@@ -1,5 +1,7 @@
 # Maple
 
+![The Maple overlay on a preview deployment: numbered pins on the page, a comment thread, and the context captured with each comment.](docs/assets/overlay.png)
+
 Visual review comments on deployed previews, written for people and read by
 agents.
 
