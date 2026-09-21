@@ -145,17 +145,27 @@ Mount the route behind your preview flag so it never exists in production:
 
 ```ts
 import { readGitHubSession } from "@maple-kit/core/auth";
-import { githubStore } from "@maple-kit/core/connectors";
+import { createPullCache, githubStore } from "@maple-kit/core/connectors";
+import { consoleSink, createLogger } from "@maple-kit/core/logger";
 import { createMapleHandler } from "@maple-kit/core/route";
 
 const key = process.env.MAPLE_COOKIE_KEY;
+const logger = createLogger({ sinks: [consoleSink()] });
+const pulls = createPullCache();
 
 const mounted =
   process.env.MAPLE_PREVIEW === "1"
     ? createMapleHandler({
+        logger,
         store: async (request) => {
           const session = await readGitHubSession(request, key ? { key } : {});
-          return session ? githubStore({ owner: "acme", repo: "web", token: session.token }) : null;
+          if (!session) return null;
+          return githubStore({
+            owner: "acme",
+            repo: "web",
+            token: session.token,
+            cache: pulls,
+          });
         },
         githubAuth: {
           clientId: process.env.MAPLE_GITHUB_CLIENT_ID!,
@@ -171,6 +181,14 @@ The store is built per request from the reviewer's own token, which is what
 makes the comment show up under their name rather than a bot's. Returning
 `null` — nobody has linked yet — makes the route answer `401`, and the overlay
 offers **Link GitHub** rather than writing the comment as somebody else.
+
+**Both of the other two arguments earn their place.** A connector's message is
+deliberately kept out of the browser, so without `logger` every failure below
+is a `500` with its cause recorded nowhere — which is most of this file's
+troubleshooting turned into guesswork. And a store built per request gets a
+new closure every time, so `cache` is where a resolved pull request is
+remembered; without it every call asks GitHub which pull request the branch
+belongs to, again.
 
 `githubAuth` is what serves the three link endpoints. Without it they answer
 `404`, which is the right shape for a deployment that stores comments some
@@ -190,9 +208,9 @@ the first four steps pass on an App that can read nothing.
    and list `Pull requests` and nothing else. If it also lists `Issues`, the
    permissions are wider than they need to be; fix them in section 1.
 4. **Before writing anything, watch the comment list load.** It should say the
-   surface has no comments yet. If it says the store refused the request, the
-   App is not installed on this repository — section 2, then reload; nobody
-   signs in again.
+   surface has no comments yet. If it says the store refused the request, stop
+   here and read the log: a `404` is a missing installation, section 2. Nobody
+   signs in again either way.
 5. Leave a comment in the overlay, then open the pull request on GitHub. The
    comment should be there, **authored by your own account**, not by the App.
 6. Have a second person do steps 1 to 5 on the same preview. Their comment
@@ -262,11 +280,27 @@ from the outside. This is the single most common way this setup fails, because
 sections 1, 3 and 4 all succeed without it. Install it from section 2 and
 retry — the reviewer does not need to sign in again.
 
-**Sign-in works, posting fails with a 403.** The reviewer does not have write
-access to the repository. A user-to-server token is bounded by the App's
-permissions _and_ by what that user can already do; the App cannot grant someone
-access they do not have. Give them repository access, or accept that they cannot
-comment.
+**Reading comments works, posting one fails with a 403** — the log shows
+`GitHub 403 on /repos/acme/web/issues/42/comments: Resource not accessible by
+integration`. Two causes, and this is the order to check them in.
+
+_The App's permissions are wrong._ Every call Maple makes goes to an
+`/issues/…` path, because a pull-request conversation comment is an issue
+comment, so `Issues: Read and write` with `Pull requests` read-only looks
+correct and is not: GitHub authorises a comment on a pull request under
+`Pull requests`. Reading succeeds under either permission, which is why
+sign-in, the branch lookup and the comment list are all green and only the
+send fails. Set `Pull requests: Read and write` as section 1 says — and note
+that changing permissions on an App people have already installed does not
+take effect until the installation **accepts** them, from
+**Settings → Applications → Installed GitHub Apps**. GitHub prompts for it;
+until someone says yes the old permissions are still what the token carries.
+
+_The reviewer cannot write to the repository._ A user-to-server token is
+bounded by the App's permissions _and_ by what that person can already do, so
+the App cannot grant access they do not have. If one reviewer gets a 403 and
+another does not, this is why. Give them repository access, or accept that they
+cannot comment. If **everyone** gets it, it is the first cause, not this one.
 
 **"No pull request for branch …; Maple has nowhere to post."** The branch has no
 open pull request. Maple stores comments as pull-request comments, so there is
