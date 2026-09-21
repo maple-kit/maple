@@ -129,6 +129,7 @@ export const ACCOUNT_COPY = {
 /** Copy with no better home than a name. */
 export const ISLAND_COPY = {
   title: "Comments",
+  wordmark: "Maple",
   settings: "Settings",
   close: "Close the inventory",
   closeGlyph: "✕",

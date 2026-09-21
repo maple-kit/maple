@@ -11,7 +11,7 @@ import { forwardRef } from "react";
 import { cx, renderPart } from "../part.js";
 import { useIsland } from "./context.js";
 import { ISLAND_COPY } from "./language.js";
-import { Leaf } from "./leaf.js";
+import { Wordmark } from "./wordmark.js";
 
 import type { PartProps } from "../part.js";
 import type { ReactNode } from "react";
@@ -21,9 +21,9 @@ export interface HeaderProps extends PartProps {
   readonly children?: ReactNode;
 }
 
-/** The wordmark, and the word. */
+/** The wordmark. */
 export interface LogoProps extends PartProps {
-  /** Replaces the title beside the leaf. */
+  /** Replaces the wordmark, for an application that brands the island. */
   readonly children?: ReactNode;
 }
 
@@ -62,15 +62,21 @@ export const Header = /** @__PURE__ */ forwardRef<HTMLDivElement, HeaderProps>(
   },
 );
 
-/** The leaf and the word "Comments", which is what the island is. */
+/**
+ * The lockup, which is what the island is. It said "Comments" beside the leaf
+ * and now says the product's name: the island is the one Maple object on the
+ * page, and what it holds is already the only thing in it.
+ */
 export const Logo = /** @__PURE__ */ forwardRef<HTMLHeadingElement, LogoProps>(
   function Logo(props, ref) {
     const { asChild, children, className, ...rest } = props;
 
-    return renderPart("h2", asChild, { ...rest, className: cx("mk-head-title", className), ref }, [
-      renderPart(Leaf, false, { key: "leaf", size: 17, className: "mk-logo-leaf" }),
-      children ?? ISLAND_COPY.title,
-    ]);
+    return renderPart(
+      "h2",
+      asChild,
+      { ...rest, className: cx("mk-head-title", className), ref },
+      children ?? renderPart(Wordmark, false, { key: "wordmark" }),
+    );
   },
 );
 

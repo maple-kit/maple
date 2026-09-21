@@ -19,10 +19,13 @@ const DIST = resolve(dirname(fileURLToPath(import.meta.url)), "..", "dist");
 /** Each budget is the gzipped size of the modules only that column reaches. */
 const BUDGETS = [
   { name: "the adopted stylesheet", entries: ["stylesheet.js"], max: 13 * 1024 },
+  // 22 KB until the wordmark, which is 1.7 KB of path data the island's
+  // header always reaches. A drawing costs bytes where a string did not; the
+  // alternative was a webfont the host application pays for in a request.
   {
     name: "root + marks + island + icons",
     entries: ["index.js", "marks/index.js", "island/index.js", "icons/index.js"],
-    max: 22 * 1024,
+    max: 24 * 1024,
   },
   { name: "composer, on top", entries: ["composer/index.js"], max: 9 * 1024 },
   { name: "picker, on top", entries: ["picker/index.js"], max: 3 * 1024 },

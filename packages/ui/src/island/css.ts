@@ -113,6 +113,41 @@ function shell(): string {
   stroke-linejoin: round;
 }
 
+/* The lockup. Both halves are their own ink box, so centring them centres the
+   drawing rather than two boxes of whitespace. The gap is zero: the leaf's
+   own tips carry the air, and a gap on top of them reads as a gap. */
+.mk-wordmark {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+}
+
+.mk-wordmark-leaf {
+  flex: none;
+  display: block;
+  color: var(--mk-accent);
+  filter: saturate(0.9);
+}
+
+.mk-wordmark-leaf path {
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+
+/* The leaf's mass is below its box centre — the stem is the long end — so the
+   word rides up by the same ratio the mark's number rides down: one part in
+   38 of the leaf's edge. A percentage resolves against the word's own height,
+   which is 0.86 of that edge, so 1 / (38 * 0.86) holds at every size. */
+.mk-wordmark-word {
+  flex: none;
+  display: block;
+  fill: var(--mk-fg);
+  transform: translateY(-3.06%);
+}
+
 .mk-card {
   position: absolute;
   right: 0;
@@ -223,6 +258,12 @@ function header(): string {
   font-size: 12.5px;
   font-weight: 650;
   letter-spacing: -0.01em;
+}
+
+/* An application that replaces the wordmark with its own text gets the type
+   back; the drawing sets its own size and ignores this. */
+.mk-head-title:has(.mk-wordmark) {
+  font-size: 0;
 }
 
 .mk-spacer {

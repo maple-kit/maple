@@ -1,4 +1,7 @@
-# Maple
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/wordmark-dark.svg">
+  <img src="docs/assets/wordmark.svg" alt="Maple" height="56">
+</picture>
 
 ![The Maple overlay on a preview deployment: numbered pins on the page, a comment thread, and the context captured with each comment.](docs/assets/overlay.png)
 

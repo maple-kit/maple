@@ -36,3 +36,5 @@ export { STAGGER_ROWS } from "./stagger.js";
 export { absoluteTime, relativeTime } from "./time.js";
 export { IslandTrigger } from "./trigger.js";
 export type { IslandTriggerProps } from "./trigger.js";
+export { Wordmark, WORDMARK_SIZE_PX, WORDMARK_WORD_SCALE } from "./wordmark.js";
+export type { WordmarkProps } from "./wordmark.js";
