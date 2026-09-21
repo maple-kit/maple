@@ -67,3 +67,24 @@ the two files exist rather than one that adapts.
 
 Regenerate them from the token values in `packages/ui/src/tokens.ts` whenever
 those change; nothing checks that they still agree.
+
+## On a pull request
+
+Every body `exportMarkdown` writes is assembled in the same order: the
+wordmark, a line naming who wrote the table, the table, a line saying what the
+fence is, the fence, then a rule above `powered by Maple`.
+
+The chrome is not optional and takes no argument. A comment Maple posts is the
+only place most people ever see the project, and a flag deciding whether it is
+branded would be a flag nobody sets.
+
+- **The wordmark is the same `<picture>` pair the README uses**, served from
+  `raw.githubusercontent.com` on `main`, which is why moving or renaming
+  `docs/assets/wordmark.svg` breaks the banner on every comment already posted.
+  It is emitted on one line: a blank line inside an HTML block ends the block,
+  and the rest would render as literal markup.
+- **The author line is derived, never stored.** It names each distinct
+  `comment.author.name` once, in first-appearance order. A set whose authors
+  are all blank drops the line rather than crediting the table to nobody.
+- **The fence keeps its own budget.** `bytes` and `reduced` describe the fence
+  alone, so the chrome cannot push a comment into a reduction.

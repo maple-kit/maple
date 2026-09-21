@@ -58,6 +58,67 @@ describe("the human table", () => {
   });
 });
 
+describe("the chrome around it", () => {
+  it("opens with a wordmark that has a dark form", () => {
+    const markdown = exported([storedComment()]);
+    const [first] = markdown.split("\n");
+
+    expect(first).toContain("docs/assets/wordmark.svg");
+    expect(first).toContain("(prefers-color-scheme: dark)");
+    expect(first).toContain('alt="Maple"');
+  });
+
+  it("keeps the picture on one line, since a blank line would end the HTML block", () => {
+    const banner = exported([storedComment()]).split("\n")[0]!;
+    expect(banner.startsWith("<picture>")).toBe(true);
+    expect(banner.endsWith("</picture>")).toBe(true);
+  });
+
+  it("names the author above the table", () => {
+    const markdown = exported([storedComment()]);
+    expect(markdown).toContain("Comment written by Reviewer:");
+    expect(markdown.indexOf("written by")).toBeLessThan(markdown.indexOf("| # |"));
+  });
+
+  it("names every author once, in the order they first appear", () => {
+    const by = (name: string, id: string): Comment =>
+      storedComment({ id, author: { id: name, name, provenance: "server" } });
+    const markdown = exported([by("Ada", "a"), by("Grace", "b"), by("Ada", "c")]);
+
+    expect(markdown).toContain("Comments written by Ada and Grace:");
+  });
+
+  it("drops the line rather than crediting a table to nobody", () => {
+    const markdown = exported([
+      storedComment({ author: { id: "u", name: " ", provenance: "guest" } }),
+    ]);
+    expect(markdown).not.toContain("written by");
+  });
+
+  it("says what the fence is for, directly above it", () => {
+    const markdown = exported([storedComment()]);
+    const lead = markdown.indexOf("The full comment details in markdown, to copy into an agent:");
+
+    expect(lead).toBeGreaterThan(markdown.indexOf("| # |"));
+    expect(lead).toBeLessThan(markdown.indexOf("```maple"));
+  });
+
+  it("closes with a link back to the repository", () => {
+    const markdown = exported([storedComment()]);
+    expect(
+      markdown.endsWith(
+        '<sub>powered by <a href="https://github.com/maple-kit/maple">Maple</a></sub>',
+      ),
+    ).toBe(true);
+  });
+
+  it("costs the fence none of its budget", () => {
+    const result = exportMarkdown([storedComment()], { branch: BRANCH, budget: 8192 });
+    expect(result.bytes).toBeLessThan(result.markdown.length);
+    expect(result.overBudget).toBe(false);
+  });
+});
+
 describe("screenshots", () => {
   it("links a hosted screenshot", () => {
     const markdown = exported([storedComment()], {
@@ -255,14 +316,16 @@ describe("the byte budget", () => {
 });
 
 describe("a summary, with no fence", () => {
-  it("returns the table alone", () => {
+  it("returns the chrome and the table, and no fence", () => {
     const result = exportMarkdown([storedComment({ status: "open" })], {
       branch: BRANCH,
       fence: false,
     });
 
     expect(result.markdown).toContain("| # | Where | Comment | Viewport |");
+    expect(result.markdown).toContain("powered by");
     expect(result.markdown).not.toContain("```maple");
+    expect(result.markdown).not.toContain("copy into an agent");
     expect(parseFence(result.markdown)).toBeUndefined();
   });
 

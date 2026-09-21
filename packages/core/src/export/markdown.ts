@@ -1,11 +1,12 @@
 /**
- * Comments as a pull-request body: a table a person reads above a fenced JSON
- * block an agent reads.
+ * Comments as a pull-request body: a wordmark, a table a person reads, and a
+ * fenced JSON block an agent reads, each under the line that says what it is.
  *
  * Two constraints shape everything here. The fence is **visible**, never an
  * HTML comment, because the action that hands a pull-request body to an agent
  * strips `<!-- -->` before the model sees it. And it has a byte budget, so
  * detail is shed in a fixed order rather than comments being dropped.
+ * `docs/branding.md` covers the chrome around them.
  */
 
 import { stableStringify } from "../lib/stable-stringify.js";
@@ -42,8 +43,8 @@ export interface ExportOptions {
   /** Defaults to {@link FENCE_BUDGET}. */
   readonly budget?: number;
   /**
-   * False returns the table alone. A summary repeating a fence already on the
-   * pull request reads back as a second comment; `docs/connectors.md` says why.
+   * False leaves the fence out. A summary repeating a fence already on the pull
+   * request reads back as a second comment; `docs/connectors.md` says why.
    */
   readonly fence?: boolean;
 }
@@ -59,20 +60,44 @@ export interface MarkdownExport {
   readonly overBudget: boolean;
 }
 
+/** Where the chrome points. The repository is public; both assets are in it. */
+const REPO_URL = "https://github.com/maple-kit/maple";
+const ASSET_URL = "https://raw.githubusercontent.com/maple-kit/maple/main/docs/assets";
+
+/**
+ * Two files in a `<picture>`, on one line: GitHub strips inline SVG, and a
+ * blank line inside an HTML block ends it. `docs/branding.md` says why two.
+ */
+const BANNER = [
+  "<picture>",
+  `<source media="(prefers-color-scheme: dark)" srcset="${ASSET_URL}/wordmark-dark.svg">`,
+  `<img src="${ASSET_URL}/wordmark.svg" alt="Maple" height="22">`,
+  "</picture>",
+].join("");
+
+const FENCE_LEAD = "The full comment details in markdown, to copy into an agent:";
+
+const FOOTER = `---\n\n<sub>powered by <a href="${REPO_URL}">Maple</a></sub>`;
+
 /** Builds the pull-request body for a set of comments. */
 export function exportMarkdown(
   comments: readonly Comment[],
   options: ExportOptions,
 ): MarkdownExport {
-  const rendered = table(comments, hostedOnly(options.screenshots));
+  const head = [
+    BANNER,
+    "",
+    ...introduce(comments),
+    table(comments, hostedOnly(options.screenshots)),
+  ];
   if (options.fence === false) {
-    return { markdown: rendered, bytes: 0, reduced: [], overBudget: false };
+    return { markdown: [...head, "", FOOTER].join("\n"), bytes: 0, reduced: [], overBudget: false };
   }
 
   const budget = options.budget ?? FENCE_BUDGET;
   const { fence, bytes, reduced } = fit(comments, options.branch, budget);
-  const markdown = [rendered, "", "```maple", fence, "```"].join("\n");
-  return { markdown, bytes, reduced, overBudget: bytes > budget };
+  const body = [...head, "", FENCE_LEAD, "", "```maple", fence, "```", "", FOOTER];
+  return { markdown: body.join("\n"), bytes, reduced, overBudget: bytes > budget };
 }
 
 /** What a reader gets back out of a fence, including fields Maple does not know. */
@@ -197,6 +222,22 @@ function essentialContext(context: CommentContext): CommentContext {
     colorScheme: context.colorScheme,
   };
 }
+/**
+ * Who wrote the table, above it: each author once, first appearance first. A
+ * set nobody signed loses the line rather than being credited to nobody.
+ */
+function introduce(comments: readonly Comment[]): readonly string[] {
+  const names = [...new Set(comments.map((comment) => cell(comment.author.name)))].filter(Boolean);
+  if (names.length === 0) return [];
+
+  const written = comments.length === 1 ? "Comment written by" : "Comments written by";
+  return [`${written} ${conjoin(names)}:`, ""];
+}
+
+/** `a`, `a and b`, `a, b and c`. `Intl` is in Node and every browser Maple runs in. */
+function conjoin(names: readonly string[]): string {
+  return new Intl.ListFormat("en", { style: "long", type: "conjunction" }).format(names);
+}
 
 function table(comments: readonly Comment[], screenshots: ReadonlyMap<string, string>): string {
   const withShots = comments.some((comment) => screenshots.has(comment.id));
@@ -226,7 +267,7 @@ function where(anchor: CommentAnchor): string {
   return name ? `\`${cell(name)}\`` : "—";
 }
 
-/** A table cell cannot contain a pipe or a newline and still be a table cell. */
+/** A table cell cannot hold a pipe or a newline; an escaped pipe renders as one anywhere. */
 function cell(text: string): string {
   return text.replaceAll("|", "\\|").replaceAll(/\r?\n/g, "<br>").trim();
 }
