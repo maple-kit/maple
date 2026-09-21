@@ -1,5 +1,12 @@
 # @maple-kit/cli
 
+## 0.6.0
+
+### Patch Changes
+
+- Updated dependencies [18643c0]
+  - @maple-kit/core@0.6.0
+
 ## 0.5.0
 
 ### Patch Changes

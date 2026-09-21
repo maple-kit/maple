@@ -1,6 +1,6 @@
 {
   "name": "@maple-kit/core",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Server SDK, overlay and connector contracts for Maple",
   "license": "Apache-2.0",
   "type": "module",

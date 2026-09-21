@@ -1,5 +1,13 @@
 # @maple-kit/ui
 
+## 0.6.0
+
+### Patch Changes
+
+- Updated dependencies [18643c0]
+  - @maple-kit/core@0.6.0
+  - @maple-kit/react@0.6.0
+
 ## 0.5.0
 
 ### Minor Changes
