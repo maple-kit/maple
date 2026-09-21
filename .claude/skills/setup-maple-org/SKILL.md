@@ -99,9 +99,21 @@ at the first comment. Keep going.
 
 ## 1a. Give it the Maple logo
 
-Still on that settings page, under **Display information**: drag
-`docs/assets/app-logo.png` from the Maple repository onto **Upload a logo**,
-click **Set new avatar**, and set **Badge background colour** to `#465a2b`.
+Still on that settings page, under **Display information**: drag the Maple
+avatar onto **Upload a logo**, click **Set new avatar**, and set **Badge
+background colour** to `#465a2b`.
+
+The avatar is `docs/assets/app-logo.png` in the Maple repository — the leaf
+with a lowercase `m` cut out of it, 1024 square on a transparent ground, well
+inside GitHub's 1 MB limit. Download it without cloning:
+
+```
+curl -O https://raw.githubusercontent.com/maple-kit/maple/main/docs/assets/app-logo.png
+```
+
+`docs/branding.md` records the settings it was drawn at and the lab it was
+drawn in, `tools/logo-lab/index.html`, for an organisation that would rather
+render its own.
 
 **There is no other way to do this.** GitHub's App manifest has no logo field
 and its REST API has no endpoint for an App's avatar, so it is a browser step
@@ -219,8 +231,10 @@ the first four steps pass on an App that can read nothing.
    against `acme/web`.
 2. Click **Link GitHub** in the overlay. You should see an eight-character code
    and a link to `https://github.com/login/device`.
-3. Enter the code and authorise. The authorisation screen should name your App
-   and list `Pull requests` and nothing else. If it also lists `Issues`, the
+3. Enter the code and authorise. The authorisation screen should show the
+   Maple leaf, name your App, and list `Pull requests` and nothing else. A
+   grey default avatar means section 1a was skipped; it costs nothing but the
+   first impression, and it is fixed without anyone signing in again. If it also lists `Issues`, the
    permissions are wider than they need to be; fix them in section 1.
 4. **Before writing anything, watch the comment list load.** It should say the
    surface has no comments yet. If it says the store refused the request, stop
@@ -250,9 +264,10 @@ Register it separately, when you come to wire the gate and not before. It is a
 second **New GitHub App** with `Checks: Read and write`, Device Flow **off**,
 and a private key — the opposite of the comment App on all three counts,
 because it is the case the comment App exists to avoid. Install it on the same
-repositories, and give it the same logo and badge colour from section 1a: the
-gate App's avatar is what sits beside `maple/visual-review` in the checks list
-on every pull request. `docs/gate.md` covers the rest.
+repositories, and give it the same `app-logo.png` and `#465a2b` badge colour
+from section 1a: the gate App's avatar is what sits beside
+`maple/visual-review` in the checks list on every pull request, at about
+twenty pixels, which is the size the mark was drawn to survive. `docs/gate.md` covers the rest.
 
 The reason the permissions cannot simply be added to the App you just made is
 the one sentence this whole design rests on: **a user-to-server token carries
