@@ -97,6 +97,21 @@ need for section 3 is on the screen in front of you, so it is possible to
 configure Maple completely, sign a reviewer in successfully, and only find out
 at the first comment. Keep going.
 
+## 1a. Give it the Maple logo
+
+Still on that settings page, under **Display information**: drag
+`docs/assets/app-logo.png` from the Maple repository onto **Upload a logo**,
+click **Set new avatar**, and set **Badge background colour** to `#465a2b`.
+
+**There is no other way to do this.** GitHub's App manifest has no logo field
+and its REST API has no endpoint for an App's avatar, so it is a browser step
+or it does not happen — which is why it is a step here rather than something
+Maple configures for you.
+
+Skipped, the App wears GitHub's grey default on the authorisation screen every
+reviewer sees, which is the one moment Maple has to look like something a
+person should hand their account to.
+
 ## 2. Install it on repositories
 
 From the App's page, **Install App → acme**, then choose **Only select
@@ -235,7 +250,9 @@ Register it separately, when you come to wire the gate and not before. It is a
 second **New GitHub App** with `Checks: Read and write`, Device Flow **off**,
 and a private key — the opposite of the comment App on all three counts,
 because it is the case the comment App exists to avoid. Install it on the same
-repositories. `docs/gate.md` covers the rest.
+repositories, and give it the same logo and badge colour from section 1a: the
+gate App's avatar is what sits beside `maple/visual-review` in the checks list
+on every pull request. `docs/gate.md` covers the rest.
 
 The reason the permissions cannot simply be added to the App you just made is
 the one sentence this whole design rests on: **a user-to-server token carries

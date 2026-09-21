@@ -88,3 +88,10 @@ branded would be a flag nobody sets.
   are all blank drops the line rather than crediting the table to nobody.
 - **The fence keeps its own budget.** `bytes` and `reduced` describe the fence
   alone, so the chrome cannot push a comment into a reduction.
+
+## The App's logo
+
+GitHub has no API for it and no manifest field: an App's avatar is a manual
+upload under **Display information**, and the `setup-maple-org` skill says so
+at the step where a person is already on that page. The same asset serves both
+Apps; the badge background is `#465a2b`, the light accent above.
