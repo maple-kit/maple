@@ -32,6 +32,10 @@ const box = path.getBoundingBox(); // then translate by -box.x1, -box.y1
 `WORDMARK_VIEW_BOX` is that box and `WORDMARK_RATIO` is its aspect, so a
 caller sizing by height gets the width for free.
 
+## In the island
+
+![The island's header before and after, in light and dark: the leaf beside the word "Comments", and the leaf beside the word "maple".](assets/island-wordmark.png)
+
 ## The lockup
 
 `Wordmark` in `packages/ui/src/island/wordmark.ts` is the composite, and it is
