@@ -400,7 +400,7 @@
         </div>
         <div class="swatches" id="leafSwatches"></div>
         <div class="row" style="margin-top: 10px">
-          <label for="leafSize">Size</label>
+          <label for="leafSize">Fill</label>
           <input type="range" id="leafSize" min="60" max="100" step="1" value="92" />
           <output for="leafSize"></output>
         </div>
@@ -505,7 +505,7 @@
       leafColor: "#465a2b",
       mColor: "#fdf8e8",
       bgAlpha: 0,
-      mSize: 40,
+      mSize: 34,
       mCase: "M",
     },
     Badge: {
@@ -543,12 +543,12 @@
   const state = {
     leafStyle: "solid",
     leafColor: "#465a2b",
-    leafSize: 92,
+    leafSize: 100,
     leafTilt: 20,
     mColor: "#fdf8e8",
-    mSize: 40,
-    mX: 0,
-    mY: 1,
+    mSize: 34,
+    mX: 3,
+    mY: -2,
     mTilt: 0,
     mCase: "M",
     bgColor: "#fdf8e8",
@@ -572,6 +572,61 @@
     ctx.closePath();
   }
 
+  // The leaf's view box is padded so its tips cannot clip; its ink is smaller
+  // than that, and by a different amount at every tilt. Measuring it is what
+  // lets `leafSize` mean "how much of the square the leaf fills".
+  const INK = new Map();
+  const PROBE = 400;
+
+  function leafPath(ctx) {
+    ctx.translate(-BOX.x, -BOX.y);
+    ctx.translate(32, 32);
+    ctx.rotate((state.leafTilt * Math.PI) / 180);
+    ctx.translate(-32, -32);
+  }
+
+  function inkBox(style, tilt) {
+    const key = `${style}:${tilt}`;
+    const cached = INK.get(key);
+    if (cached) return cached;
+
+    const probe = document.createElement("canvas");
+    probe.width = probe.height = PROBE;
+    const ctx = probe.getContext("2d");
+    const unit = PROBE / BOX.size;
+    ctx.scale(unit, unit);
+    leafPath(ctx);
+    ctx.fillStyle = "#000";
+    ctx.fill(PATHS[style], "evenodd");
+
+    const box = alphaBounds(ctx.getImageData(0, 0, PROBE, PROBE), PROBE);
+    const measured = {
+      x: box.left / unit,
+      y: box.top / unit,
+      width: (box.right - box.left + 1) / unit,
+      height: (box.bottom - box.top + 1) / unit,
+    };
+    INK.set(key, measured);
+    return measured;
+  }
+
+  function alphaBounds(image, side) {
+    let left = side,
+      top = side,
+      right = -1,
+      bottom = -1;
+    for (let y = 0; y < side; y++) {
+      for (let x = 0; x < side; x++) {
+        if (image.data[(y * side + x) * 4 + 3] <= 8) continue;
+        if (x < left) left = x;
+        if (x > right) right = x;
+        if (y < top) top = y;
+        bottom = y;
+      }
+    }
+    return { left, top, right, bottom };
+  }
+
   function draw(canvas) {
     const ctx = canvas.getContext("2d");
     const size = canvas.width;
@@ -586,16 +641,14 @@
       ctx.restore();
     }
 
-    const leaf = (size * state.leafSize) / 100;
-    const scale = leaf / BOX.size;
+    const ink = inkBox(state.leafStyle, state.leafTilt);
+    const scale = (size * state.leafSize) / 100 / Math.max(ink.width, ink.height);
 
     ctx.save();
-    ctx.translate((size - leaf) / 2, (size - leaf) / 2);
+    ctx.translate(size / 2, size / 2);
     ctx.scale(scale, scale);
-    ctx.translate(-BOX.x, -BOX.y);
-    ctx.translate(32, 32);
-    ctx.rotate((state.leafTilt * Math.PI) / 180);
-    ctx.translate(-32, -32);
+    ctx.translate(-(ink.x + ink.width / 2), -(ink.y + ink.height / 2));
+    leafPath(ctx);
     ctx.fillStyle = state.leafColor;
     ctx.fill(PATHS[state.leafStyle], "evenodd");
     ctx.restore();
