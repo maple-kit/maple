@@ -12,6 +12,18 @@ and installing it both need a browser and an owner.
 It takes about fifteen minutes. Work top to bottom; later steps use values
 earlier ones produce.
 
+**Maple uses two GitHub Apps, and this file registers one of them.** The
+comment App authenticates as the reviewer and carries `Pull requests`; the
+gate App authenticates as itself and carries `Checks`.
+They are separate because a user-to-server token carries every permission its
+App holds, so merging them would hand each reviewer's token the gate's reach.
+Section 6 says when to register the second one. Do not add `Checks` here.
+
+On a personal account rather than an organisation, every path below is
+**Settings → Developer settings** instead of **Organisation settings →
+Developer settings**, and there is no organisation to choose when installing.
+Nothing else differs.
+
 Read `docs/github-auth.md` before or after, depending on whether you want the
 reasoning first. This file is the sequence; that file is why the sequence is
 this one.
@@ -60,27 +72,49 @@ Then set **Repository permissions** to exactly this, and nothing more:
 
 | Permission      | Access         |
 | --------------- | -------------- |
-| `Issues`        | Read and write |
-| `Pull requests` | Read-only      |
+| `Pull requests` | Read and write |
 
 `Metadata: Read-only` is added by GitHub and cannot be removed. Leave every
 other permission at **No access** — in particular `Contents`, which Maple does
 not need because it never reads or writes repository code.
 
+**`Issues` stays at No access, although the endpoints look like it needs it.**
+A pull-request conversation comment _is_ an issue comment, so every call Maple
+makes goes to `/repos/{owner}/{repo}/issues/…` and it is tempting to grant
+`Issues: Read and write`. GitHub lists those endpoints under **both**
+permissions and authorises a comment on a pull request under `Pull requests`,
+so granting `Issues` would hand every reviewer's token write access to every
+issue in the repository and buy nothing. `docs/github-auth.md` has the full
+reasoning.
+
 Create the App. You do not need to generate a private key: the private key is
 for an App acting as itself, and Maple's comment path never does.
+
+**Creating the App is not the end of this step.** GitHub drops you on a
+settings page that looks like a finish line, and it is not one: an App that
+exists but is installed nowhere can see no repository at all. Everything you
+need for section 3 is on the screen in front of you, so it is possible to
+configure Maple completely, sign a reviewer in successfully, and only find out
+at the first comment. Keep going.
 
 ## 2. Install it on repositories
 
 From the App's page, **Install App → acme**, then choose **Only select
-repositories** and pick the ones that should be reviewable.
+repositories** and pick the ones that should be reviewable. The direct URL is
+`https://github.com/apps/<slug>/installations/new`, where `<slug>` is the last
+path segment of the App's public page — `Maple — acme` becomes `maple-acme`.
 
 Install it on the repositories you actually review. The set you choose here is
 the blast radius of every reviewer token Maple will ever issue, so keeping it
 small is worth the minute it costs. You can add repositories later without
 anyone signing in again.
 
-## 3. Copy the client id
+Confirm it landed: the App should now appear under
+**Settings → Applications → Installed GitHub Apps** (organisation owners see it
+under the organisation's **Installed GitHub Apps** instead), listing the
+repositories you picked.
+
+## 3. Copy the client id and the slug
 
 On the App's settings page, copy the **Client ID**. It starts with `Iv` and is
 not the App ID printed above it — the two are easy to confuse and only one of
@@ -92,6 +126,13 @@ repository. It is the only GitHub identifier the preview needs.
 
 Do not put an App ID, a private key or a client secret anywhere near a preview
 environment.
+
+Write down the **slug** beside it, from the App's public URL
+(`https://github.com/apps/<slug>`). Nothing in Maple reads it, but every later
+question about this App is answered through it: `gh api /apps/<slug>` describes
+the App without credentials, `https://github.com/apps/<slug>/installations/new`
+adds a repository, and there is no way to recover it from the Client ID — GitHub
+publishes no mapping between the two.
 
 ## 4. Configure the SDK route
 
@@ -137,23 +178,57 @@ other way and needs no GitHub sign-in at all.
 
 ## 5. Verify it end to end
 
-Do all five. Stopping at the third is how a setup that looks finished turns out
-not to be.
+Do all six. Stopping at the fourth is how a setup that looks finished turns out
+not to be: linking succeeds whether or not the App is installed anywhere, so
+the first four steps pass on an App that can read nothing.
 
 1. Open a preview for a branch that has an open pull request — say `web-482`
    against `acme/web`.
 2. Click **Link GitHub** in the overlay. You should see an eight-character code
    and a link to `https://github.com/login/device`.
 3. Enter the code and authorise. The authorisation screen should name your App
-   and list `Issues` and `Pull requests` and nothing else.
-4. Leave a comment in the overlay, then open the pull request on GitHub. The
+   and list `Pull requests` and nothing else. If it also lists `Issues`, the
+   permissions are wider than they need to be; fix them in section 1.
+4. **Before writing anything, watch the comment list load.** It should say the
+   surface has no comments yet. If it says the store refused the request, the
+   App is not installed on this repository — section 2, then reload; nobody
+   signs in again.
+5. Leave a comment in the overlay, then open the pull request on GitHub. The
    comment should be there, **authored by your own account**, not by the App.
-5. Have a second person do steps 1 to 4 on the same preview. Their comment
+6. Have a second person do steps 1 to 5 on the same preview. Their comment
    should be authored by them. That is the proof that tokens are per reviewer
    and not shared.
 
+Configure `RouteOptions.logger` before you start. A connector's message is kept
+out of the browser deliberately, so without a logger a store failure is a `500`
+with its cause recorded nowhere — which turns each entry below into guesswork.
+
 Then confirm the other half: fetch `/api/maple/comments?branch=web-482` against
 a **production** build and expect a `404`. Maple should not exist there.
+
+## 6. The second App, when you wire the gate
+
+The comment App above is half of Maple. The merge gate publishes a
+`maple/visual-review` check run, which needs `Checks: Read and write`, and it
+authenticates **as itself** with an installation token rather than as any
+reviewer.
+
+Register it separately, when you come to wire the gate and not before. It is a
+second **New GitHub App** with `Checks: Read and write`, Device Flow **off**,
+and a private key — the opposite of the comment App on all three counts,
+because it is the case the comment App exists to avoid. Install it on the same
+repositories. `docs/gate.md` covers the rest.
+
+The reason the permissions cannot simply be added to the App you just made is
+the one sentence this whole design rests on: **a user-to-server token carries
+every permission its App holds, not just the ones in use.** Add `Checks` here
+and every reviewer's cookie can write check runs from then on — with no
+re-authorisation, no prompt and no error. Nothing visible changes, which is
+exactly why it has to be two Apps rather than a note saying to be careful.
+
+Until the gate is wired, registering only the comment App is complete and
+correct. Setting up a second App now, for a gate that does not run yet, buys
+the exposure and none of the benefit.
 
 ## What to tell your security team
 
@@ -167,9 +242,10 @@ The three facts that answer most of the questions:
    `SameSite=Lax` cookie scoped to the preview's own origin and to
    `/api/maple`. A stolen token is one person's, and they revoke it themselves
    from **Settings → Applications → Authorized GitHub Apps**.
-3. **The permissions are the minimum.** `Issues: write` to post the comment,
-   `Pull requests: read` to find the pull request, on only the repositories you
-   installed the App on. No access to code, no merge, no settings.
+3. **The permissions are the minimum.** `Pull requests: write` covers all of
+   it — finding the pull request and listing, posting, reading and editing a
+   comment on it — on only the repositories you installed the App on. No access
+   to issues, no access to code, no merge, no settings.
 
 ## Troubleshooting
 
@@ -177,11 +253,14 @@ The three facts that answer most of the questions:
 Turn it on under **Identifying and authorising users** and try again; no
 reinstall is needed and nobody has to sign in twice.
 
-**Sign-in works, posting a comment fails with a 404.** The App is not installed
-on that repository. A user-to-server token only reaches repositories the App is
-installed on, and GitHub answers with `404` rather than `403` for a repository
-the token cannot see. Install it from step 2 and retry — the reviewer does not
-need to sign in again.
+**Sign-in works, but reading or posting a comment fails with a 404** — the log
+shows `GitHub 404 on /repos/acme/web/pulls?head=…`. The App is not installed on
+that repository. A user-to-server token only reaches repositories the App is
+installed on, and GitHub answers `404` rather than `403` for a repository the
+token cannot see, so "not installed" and "does not exist" are indistinguishable
+from the outside. This is the single most common way this setup fails, because
+sections 1, 3 and 4 all succeed without it. Install it from section 2 and
+retry — the reviewer does not need to sign in again.
 
 **Sign-in works, posting fails with a 403.** The reviewer does not have write
 access to the repository. A user-to-server token is bounded by the App's
