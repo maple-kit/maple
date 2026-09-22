@@ -47,6 +47,12 @@ App registered at all. These three variables buy the other half: a resolve
 clearing the check live, rather than a reviewer waiting for a commit nobody
 needs to make.
 
+**`requireApproval` is a route option, not a variable**, and when it is on the
+action needs `require-approval: "true"` to match. The two publish the same
+check name, so a disagreement lets a push clear a gate a reviewer is holding.
+It also needs an identity connector, or anyone with the preview URL can clear a
+required check as "Guest".
+
 The installation id is on the installation's settings URL —
 `https://github.com/organizations/<org>/settings/installations/<id>` — and
 `gh api /app/installations` lists it once the key is in hand.
