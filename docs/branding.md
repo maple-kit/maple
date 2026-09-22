@@ -3,6 +3,11 @@
 Maple's mark is a leaf and the word `maple`, drawn together. Both are path
 data in `packages/ui/src/marks/`, and neither is a font at runtime.
 
+There are two leaves and they are not interchangeable. `leaf.ts` is the
+comment mark: one silhouette in one colour, because `marks/shape.ts` draws it
+in four forms that all depend on that. `pixel-leaf.ts` is the brand mark, and
+only the lockup draws it.
+
 ## Why a path and not a webfont
 
 The overlay renders inside a shadow root. `@font-face` is a document-level
@@ -36,22 +41,54 @@ caller sizing by height gets the width for free.
 
 ![The island's header before and after, in light and dark: the leaf beside the word "Comments", and the leaf beside the word "maple".](assets/island-wordmark.png)
 
+## The pixel leaf
+
+`PIXEL_LEAF_SHADES` in `packages/ui/src/marks/pixel-leaf.ts` is artwork: 443
+cells in 33 colours, merged greedily into 263 rectangles and emitted darkest
+first, one `<path>` per colour inside one `<svg>`. `shape-rendering:
+crispEdges` is not optional. Without it the cells are smoothed into a blob at
+24 pixels and into a poster at 1024, which is the whole drawing gone.
+
+**Its 33 colours are its own and are not tokens.** They do not resolve against
+the theme, they do not change between light and dark, and they are not a
+second accent. Read as a ramp they run from `oklch(0.31 0.064 119)` to
+`oklch(0.78 0.151 108)`: the accent's own hue at the dark end, opening toward
+the yellow end as it lightens. That is the accent's hue opened, not a second
+one, which is why the drawing sits beside accent-coloured chrome without
+arguing with it.
+
+**It cannot be the comment mark.** Three signals never compete for the same
+pixel in `marks/index.ts`: a fill clipped at a waterline is how far through
+its life a comment is, the outline path filled rather than the silhouette
+stroked is how sure the anchor is, and `currentColor` is its status. A drawing
+in 33 fixed colours collapses all three: it cannot be recoloured, and clipped
+at a waterline it reads as nothing.
+
 ## The lockup
 
 `Wordmark` in `packages/ui/src/island/wordmark.ts` is the composite, and it is
 a composite rather than two parts because the two are only correct together.
 
+The leaf in the lockup is the pixel leaf, and the lockup is the only thing
+that draws it. All three numbers below were re-measured against it: the leaf
+it replaced was a 64-unit drawing rotated inside a 78-unit box, so only 0.82
+of its height was ever ink, and none of the old numbers survived a drawing
+that fills 0.93 of its box.
+
 - **One number sizes it.** `size` is the leaf's edge in pixels. The word is
-  `WORDMARK_WORD_SCALE` (0.86) of it: at parity the leaf overpowers a
-  lowercase word whose x-height is half its own box.
-- **No gap.** The leaf's own tips carry the air between the two. A gap on top
-  of them reads as a gap.
-- **The word rides up by one part in 38 of the leaf's edge.** The leaf's mass
-  sits below its box centre because the stem is the long end, so a
-  box-centred word reads high beside it. This is the same correction, in the
-  same direction, that `.mk-mark-n` makes for the number inside a mark. It is
-  written as a percentage of the word's own height, which is 0.86 of the
-  leaf's edge, so `1 / (38 * 0.86)` holds at every size.
+  `WORDMARK_WORD_SCALE` (0.90) of it: at parity the leaf overpowers a
+  lowercase word whose x-height is half its own box, and at the old 0.86 the
+  word reads short beside a leaf with this much ink in it.
+- **A gap of 0.2 of the leaf's edge.** The old leaf's own tips carried the air
+  between the two and the rule was no gap at all. This one ends where its box
+  ends, so butted against the word it reads as a collision.
+- **The word rides up by both centres of mass.** The rise is
+  `(0.5 - LEAF_MASS) * size + (WORD_MASS - 0.5) * height`, where `LEAF_MASS`
+  is 13.42 of the leaf's 28 and `WORD_MASS` is 0.5076 of the word's 94.22.
+  It changed direction: the old leaf's mass sat below its box centre because
+  the stem was the long end, this one's sits a little above it, and the word's
+  sits a little below its own. Both halves are the correction, so both are in
+  it. `wordmark.ts` computes it; nothing in `css.ts` restates it.
 
 ## In the README
 

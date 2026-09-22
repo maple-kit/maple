@@ -115,38 +115,26 @@ function shell(): string {
 }
 
 /* The lockup. Both halves are their own ink box, so centring them centres the
-   drawing rather than two boxes of whitespace. The gap is zero: the leaf's
-   own tips carry the air, and a gap on top of them reads as a gap. */
+   drawing rather than two boxes of whitespace. The gap and the word's rise
+   are fractions of the leaf's edge, so the component sets both inline and
+   nothing here can disagree with it. */
 .mk-wordmark {
   flex: none;
   display: inline-flex;
   align-items: center;
-  gap: 0;
 }
 
+/* The leaf is artwork and paints its own 33 colours. No colour, no fill and
+   no stroke here: every one of them would flatten the drawing. */
 .mk-wordmark-leaf {
   flex: none;
   display: block;
-  color: var(--mk-accent);
-  filter: saturate(0.9);
 }
 
-.mk-wordmark-leaf path {
-  fill: currentColor;
-  stroke: currentColor;
-  stroke-width: 1.5;
-  stroke-linejoin: round;
-}
-
-/* The leaf's mass is below its box centre — the stem is the long end — so the
-   word rides up by the same ratio the mark's number rides down: one part in
-   38 of the leaf's edge. A percentage resolves against the word's own height,
-   which is 0.86 of that edge, so 1 / (38 * 0.86) holds at every size. */
 .mk-wordmark-word {
   flex: none;
   display: block;
   fill: var(--mk-fg);
-  transform: translateY(-3.06%);
 }
 
 .mk-card {

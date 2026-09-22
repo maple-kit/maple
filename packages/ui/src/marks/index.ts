@@ -6,6 +6,10 @@
  * its life a comment is, the edge says how sure the anchor is, colour says its
  * status. `formFor` in the root entry decides fill; this decides the shape,
  * where it goes, and how it gets out of the way of its neighbours.
+ *
+ * `leaf.ts` is that mark and `pixel-leaf.ts` is the brand's, which is artwork
+ * in 33 fixed colours: it cannot be recoloured by status or clipped at a
+ * waterline, so only the lockup draws it.
  */
 
 export { MapleAvatar, MapleAvatar as Avatar, initialsOf } from "./avatar.js";
@@ -38,6 +42,7 @@ export type { MarkProps } from "./mark.js";
 export { clampNudge, dragged, NUDGE_LIMIT_PX, NUDGE_THRESHOLD_PX, useNudges } from "./nudge.js";
 export type { Nudge, NudgeHandlers, NudgePointer, Nudges } from "./nudge.js";
 export { flag, MOVING_ATTRIBUTE, OFF_ATTRIBUTE, place } from "./paint.js";
+export { PIXEL_LEAF_SHADES, PIXEL_LEAF_VIEW_BOX } from "./pixel-leaf.js";
 export { addresses, placements } from "./placement.js";
 export type { Placement } from "./placement.js";
 export { BELOW_ATTRIBUTE, MapleTargetRing, MapleTargetRing as TargetRing } from "./ring.js";

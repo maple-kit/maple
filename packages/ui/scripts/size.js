@@ -23,14 +23,14 @@ const BUDGETS = [
   // honestly costs: the bars are the distribution rather than a percentage,
   // which is five rules instead of one and is why it needs no key beside it.
   { name: "the adopted stylesheet", entries: ["stylesheet.js"], max: 14 * 1024 },
-  // 22 KB until the wordmark, which is 1.7 KB of path data the island's
-  // header always reaches; 24 KB until the sign-off and the unsent list, which
-  // are 0.7 KB between them. Both are rows the island draws only when there is
-  // something to say, and neither is reachable on a deployment without them.
+  // 22 KB until the wordmark, 1.7 KB of path data the header always reaches;
+  // 24 KB until the sign-off and the unsent list, 0.7 KB between them; 26 KB
+  // until the pixel leaf, whose 263 rectangles are 1.3 KB the header reaches
+  // too, and which docs/branding.md says is a drawing and not a recolour.
   {
     name: "root + marks + island + icons",
     entries: ["index.js", "marks/index.js", "island/index.js", "icons/index.js"],
-    max: 26 * 1024,
+    max: 28 * 1024,
   },
   // 9 KB until the score card. The extra 1 KB is the card, the kind control
   // and the context card's disclosure. Every byte of it is inert on a

@@ -4,6 +4,7 @@ import { render } from "vitest-browser-react";
 
 import { MapleRoot } from "../src/index.js";
 import { Wordmark, WORDMARK_SIZE_PX, WORDMARK_WORD_SCALE } from "../src/island/index.js";
+import { PIXEL_LEAF_SHADES } from "../src/marks/pixel-leaf.js";
 import { WORDMARK_RATIO } from "../src/marks/wordmark.js";
 import { offlineFetch } from "./offline.js";
 
@@ -91,7 +92,9 @@ describe("the wordmark", () => {
   });
 
   /* The two halves are their own ink box, so this is the drawing's own
-     centring and not two boxes of whitespace agreeing by accident. */
+     centring and not two boxes of whitespace agreeing by accident. Both
+     masses move: the leaf's sits above its box centre and the word's below
+     its own, so the rise is the two halves added. */
   it("centres the word's ink on the leaf's, off the box centre", async () => {
     await render(mount(createElement(Wordmark, { size: 60 })));
 
@@ -99,15 +102,41 @@ describe("the wordmark", () => {
     const word = find(".mk-wordmark-word").getBoundingClientRect();
     const leafMiddle = leaf.top + leaf.height / 2;
     const wordMiddle = word.top + word.height / 2;
+    const rise = (0.5 - 13.42 / 28) * 60 + (0.5076 - 0.5) * 60 * WORDMARK_WORD_SCALE;
 
     expect(wordMiddle).toBeLessThan(leafMiddle);
-    expect(leafMiddle - wordMiddle).toBeCloseTo(60 / 38, 1);
+    expect(leafMiddle - wordMiddle).toBeCloseTo(rise, 1);
   });
 
-  it("paints the leaf in the accent and the word in the foreground", async () => {
+  /* This leaf ends where its box ends. The old one had tips to carry the air
+     and this rule replaces them, so a zero gap is a collision. */
+  it("holds the word off the leaf by a fifth of the leaf's edge", async () => {
+    await render(mount(createElement(Wordmark, { size: 60 })));
+
+    const leaf = find(".mk-wordmark-leaf").getBoundingClientRect();
+    const word = find(".mk-wordmark-word").getBoundingClientRect();
+
+    expect(word.left - leaf.right).toBeCloseTo(12, 0);
+  });
+
+  it("paints the word in the foreground and leaves the leaf its own colours", async () => {
     await render(mount(createElement(Wordmark)));
 
+    const leaf = find<SVGSVGElement>(".mk-wordmark-leaf");
+    const paths = [...leaf.querySelectorAll("path")];
+
     expect(getComputedStyle(find(".mk-wordmark-word")).fill).toBe(token("--mk-fg"));
-    expect(getComputedStyle(find(".mk-wordmark-leaf")).color).toBe(token("--mk-accent"));
+    expect(paths).toHaveLength(PIXEL_LEAF_SHADES.length);
+    expect(paths.map((path) => path.getAttribute("fill"))).toEqual(
+      PIXEL_LEAF_SHADES.map(([colour]) => colour),
+    );
+  });
+
+  /* Without this the cells are smoothed into a blob at 24px and a poster at
+     1024, which is the whole drawing gone. */
+  it("draws the cells square at every size", async () => {
+    await render(mount(createElement(Wordmark)));
+
+    expect(find(".mk-wordmark-leaf").getAttribute("shape-rendering")).toBe("crispEdges");
   });
 });
