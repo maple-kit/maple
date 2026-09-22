@@ -13,6 +13,7 @@ import { githubStore } from "../src/connectors/github.js";
 import { createLogger } from "../src/logger/index.js";
 import { memorySink } from "../src/logger/sinks/memory.js";
 import { createMapleHandler } from "../src/route/index.js";
+import { createCommentStore } from "../src/store.js";
 import { sampleComment } from "../src/testing/fixtures.js";
 import { memoryGate } from "../src/testing/memory-gate.js";
 import { memoryStore } from "../src/testing/memory-store.js";
@@ -20,7 +21,8 @@ import { createChecksFake } from "./msw/github-checks.js";
 import { createGitHubFake, pullFor } from "./msw/handlers.js";
 import { createTestServer, useTestServer } from "./msw/server.js";
 
-import type { GateConnector, StoreConnector } from "../src/connectors/types.js";
+import type { GateConnector } from "../src/connectors/types.js";
+import type { CommentStore } from "../src/store.js";
 import type { MemoryGate } from "../src/testing/memory-gate.js";
 
 const BASE = "https://preview.example.com";
@@ -37,8 +39,8 @@ function patch(id: string, body: unknown): Request {
 async function withOpen(
   count: number,
   heads: Readonly<Record<string, string>> = { [BRANCH]: SHA },
-): Promise<StoreConnector> {
-  const store = memoryStore({ heads });
+): Promise<CommentStore> {
+  const store = createCommentStore(memoryStore({ heads }));
   for (let index = 0; index < count; index += 1) {
     await store.append(sampleComment({ branch: BRANCH, body: `comment ${String(index)}` }));
   }
@@ -109,8 +111,39 @@ describe("resolving through the route", () => {
     expect(gate.history({ branch: BRANCH, sha: SHA }).at(-1)?.total).toBe(150);
   });
 
+  /**
+   * A store that keeps no approvals leaves the gate neutral. `[]` would read as
+   * "nobody approved" and block for ever on the store that cannot record one.
+   */
+  it("stays neutral when the store keeps no approvals, rather than blocking", async () => {
+    const store = createCommentStore(
+      memoryStore({ withoutApprovals: true, heads: { [BRANCH]: SHA } }),
+    );
+    await store.append(sampleComment({ branch: BRANCH }));
+    const handle = createMapleHandler({ store, gate, requireApproval: true });
+
+    expect((await handle(patch("mem_1", { status: "resolved" }))).status).toBe(200);
+
+    expect(gate.history({ branch: BRANCH, sha: SHA }).at(-1)).toMatchObject({
+      conclusion: "neutral",
+      reason: "approval-untracked",
+    });
+  });
+
+  it("blocks when the store keeps approvals and nobody has left one", async () => {
+    const store = await withOpen(1);
+    const handle = createMapleHandler({ store, gate, requireApproval: true });
+
+    await handle(patch("mem_1", { status: "resolved" }));
+
+    expect(gate.history({ branch: BRANCH, sha: SHA }).at(-1)).toMatchObject({
+      conclusion: "blocked",
+      reason: "awaiting-approval",
+    });
+  });
+
   it("says the gate is untracked when the store cannot record a status", async () => {
-    const store = memoryStore({ appendOnly: true, heads: { [BRANCH]: SHA } });
+    const store = createCommentStore(memoryStore({ appendOnly: true, heads: { [BRANCH]: SHA } }));
     const handle = createMapleHandler({ store, gate });
 
     expect((await handle(patch("mem_1", { status: "resolved" }))).status).toBe(501);
@@ -157,7 +190,7 @@ describe("when the gate cannot be published", () => {
   it("publishes nothing when the store cannot name a head commit", async () => {
     const sink = memorySink();
     const gate = memoryGate();
-    const store = memoryStore();
+    const store = createCommentStore(memoryStore());
     await store.append(sampleComment({ branch: BRANCH }));
 
     const handle = createMapleHandler({ store, gate, logger: createLogger({ sinks: [sink] }) });
@@ -231,7 +264,9 @@ describe("against GitHub, end to end", () => {
   });
 
   function handler(): (request: Request) => Promise<Response> {
-    const store = githubStore({ owner: "maple-kit", repo: "app", token: "ghs_store" });
+    const store = createCommentStore(
+      githubStore({ owner: "maple-kit", repo: "app", token: "ghs_store" }),
+    );
     const gate = githubGate({ owner: "maple-kit", repo: "app", token: "ghs_gate" });
     return createMapleHandler({ store, gate });
   }

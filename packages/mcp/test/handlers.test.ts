@@ -1,9 +1,10 @@
+import { createCommentStore } from "@maple-kit/core";
 import { memoryStore, sampleComment } from "@maple-kit/core/testing";
 import { describe, expect, it } from "vitest";
 
 import { createToolHandlers } from "../src/handlers.js";
 
-import type { StoreConnector } from "@maple-kit/core";
+import type { CommentStore } from "@maple-kit/core";
 
 const BRANCH = "feature/x";
 
@@ -11,8 +12,8 @@ function at(minute: number): string {
   return new Date(Date.UTC(2026, 0, 1, 12, minute)).toISOString();
 }
 
-async function seeded(...minutes: number[]): Promise<StoreConnector> {
-  const store = memoryStore();
+async function seeded(...minutes: number[]): Promise<CommentStore> {
+  const store = createCommentStore(memoryStore());
   for (const minute of minutes) {
     await store.append(sampleComment({ branch: BRANCH, createdAt: at(minute) }));
   }
@@ -147,7 +148,9 @@ describe("resolve_comment", () => {
   });
 
   it("says where to go when the store cannot change a status", async () => {
-    const handlers = createToolHandlers({ store: memoryStore({ appendOnly: true }) });
+    const handlers = createToolHandlers({
+      store: createCommentStore(memoryStore({ appendOnly: true })),
+    });
 
     await expect(handlers.resolveComment({ id: "x", sha: "abc" })).rejects.toThrow(
       /cannot change a status/,

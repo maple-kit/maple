@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { DEFAULT_PILLARS } from "../src/connectors/index.js";
 import { createMapleHandler } from "../src/route/index.js";
+import { createCommentStore } from "../src/store.js";
 import { memoryClassifier } from "../src/testing/memory-classifier.js";
 import { memoryStore } from "../src/testing/memory-store.js";
 
@@ -19,7 +20,7 @@ const reviewer: IdentityConnector = {
 
 function handler(assist?: AssistOptions, identity?: IdentityConnector) {
   return createMapleHandler({
-    store: memoryStore(),
+    store: createCommentStore(memoryStore()),
     ...(assist === undefined ? {} : { assist }),
     ...(identity === undefined ? {} : { identity }),
   });

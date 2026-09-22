@@ -34,6 +34,9 @@ const CALL_TIMEOUT = "10 seconds";
 
 /** True for errors that another attempt might get past. */
 function isRetryable(cause: unknown): boolean {
+  // A RangeError is the caller's argument, not the backend: a bad cursor or a
+  // negative limit is refused identically however many times it is sent.
+  if (cause instanceof RangeError) return false;
   if (!(cause instanceof Error)) return true;
   return !/\b(4\d\d|invalid|unauthori[sz]ed|forbidden|not found)\b/i.test(cause.message);
 }

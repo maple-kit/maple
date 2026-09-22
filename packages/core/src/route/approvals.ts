@@ -7,12 +7,12 @@
  * the decision; this file is the three endpoints behind it.
  */
 
-import type { StoreConnector } from "../connectors/types.js";
-import type { Approval, CommentAuthor, MapleUser, NewApproval } from "../types.js";
+import type { CommentStore } from "../store.js";
+import type { CommentAuthor, MapleUser, NewApproval } from "../types.js";
 
 /** What the approval endpoints need, gathered by the dispatcher. */
 export interface ApprovalContext {
-  readonly store: StoreConnector;
+  readonly store: CommentStore;
   /** Null when the request carries no session. A guest cannot sign anything. */
   readonly user: MapleUser | null;
   /** Builds the author record, so the colour slot is derived in one place. */
@@ -20,8 +20,8 @@ export interface ApprovalContext {
 }
 
 /** The two methods a gate needs together; one without the other keeps nothing. */
-export function keepsApprovals(store: StoreConnector): boolean {
-  return typeof store.approvals === "function" && typeof store.approve === "function";
+export function keepsApprovals(store: CommentStore): boolean {
+  return store.capabilities.approvals && store.capabilities.approve;
 }
 
 /**
@@ -35,8 +35,8 @@ export async function handleApprovals(
   id: string | undefined,
   url: URL,
 ): Promise<Response> {
-  const store = reachable(context.store);
-  if (!store) return json({ error: "This store keeps no approvals" }, 501);
+  const { store } = context;
+  if (!keepsApprovals(store)) return json({ error: "This store keeps no approvals" }, 501);
 
   if (id !== undefined) {
     if (request.method !== "DELETE") return json({ error: "Method not allowed" }, 405);
@@ -47,32 +47,11 @@ export async function handleApprovals(
   return json({ error: "Method not allowed" }, 405);
 }
 
-/** The store narrowed to the methods this file may call, bound once. */
-interface Approving {
-  approvals(branch: string): Promise<readonly Approval[]>;
-  approve(approval: NewApproval): Promise<Approval>;
-  head?(branch: string): Promise<string | undefined>;
-  unapprove?(id: string): Promise<void>;
-}
-
-function reachable(store: StoreConnector): Approving | undefined {
-  const approvals = store.approvals?.bind(store);
-  const approve = store.approve?.bind(store);
-  if (!approvals || !approve) return undefined;
-
-  return {
-    approvals,
-    approve,
-    ...(store.head === undefined ? {} : { head: store.head.bind(store) }),
-    ...(store.unapprove === undefined ? {} : { unapprove: store.unapprove.bind(store) }),
-  };
-}
-
-async function listApprovals(store: Approving, url: URL): Promise<Response> {
+async function listApprovals(store: CommentStore, url: URL): Promise<Response> {
   const branch = url.searchParams.get("branch");
   if (!branch) return json({ error: "A branch is required" }, 400);
 
-  return json({ approvals: await store.approvals(branch) }, 200);
+  return json({ approvals: (await store.approvals(branch)) ?? [] }, 200);
 }
 
 /**
@@ -81,7 +60,7 @@ async function listApprovals(store: Approving, url: URL): Promise<Response> {
  */
 async function approve(
   context: ApprovalContext,
-  store: Approving,
+  store: CommentStore,
   request: Request,
 ): Promise<Response> {
   const { user } = context;
@@ -93,7 +72,7 @@ async function approve(
     return json({ error: "A branch is required" }, 400);
   }
 
-  const commit = await store.head?.(branch);
+  const commit = await store.head(branch);
   if (commit === undefined) {
     return json({ error: "Nothing here can name the commit this preview is serving" }, 409);
   }
@@ -106,7 +85,9 @@ async function approve(
     at: new Date().toISOString(),
     ...(note === undefined ? {} : { note }),
   };
-  return json(await store.approve(approval), 201);
+  const recorded = await store.approve(approval);
+  if (!recorded) return json({ error: "This store keeps no approvals" }, 501);
+  return json(recorded, 201);
 }
 
 /**
@@ -115,18 +96,20 @@ async function approve(
  */
 async function withdraw(
   context: ApprovalContext,
-  store: Approving,
+  store: CommentStore,
   id: string,
   url: URL,
 ): Promise<Response> {
   const { user } = context;
   if (!user) return json({ error: "Sign in before you can withdraw an approval" }, 401);
-  if (!store.unapprove) return json({ error: "This store cannot withdraw an approval" }, 501);
+  if (!store.capabilities.unapprove) {
+    return json({ error: "This store cannot withdraw an approval" }, 501);
+  }
 
   const branch = url.searchParams.get("branch");
   if (!branch) return json({ error: "A branch is required" }, 400);
 
-  const approvals = await store.approvals(branch);
+  const approvals = (await store.approvals(branch)) ?? [];
   const found = approvals.find((one) => one.id === id && one.author.id === user.id);
   if (!found) return json({ error: "No approval of yours with that id" }, 404);
 

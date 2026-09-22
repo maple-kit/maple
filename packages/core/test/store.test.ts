@@ -86,6 +86,14 @@ describe("createCommentStore", () => {
     expect(connector.calls()).toBe(1);
   });
 
+  it("does not retry a RangeError: the argument is wrong, not the backend", async () => {
+    const connector = flakyStore(99, new RangeError("limit must be positive, received -1"));
+    const store = createCommentStore(connector);
+
+    await expect(store.list({ branch: "main" })).rejects.toMatchObject({ reason: "rejected" });
+    expect(connector.calls()).toBe(1);
+  });
+
   it("carries the original failure as the cause", async () => {
     const cause = new Error("403 forbidden");
     const store = createCommentStore(flakyStore(99, cause));

@@ -1,25 +1,27 @@
 import { describe, expect, it } from "vitest";
 
 import { createMapleHandler } from "../src/route/index.js";
+import { createCommentStore } from "../src/store.js";
 import { sampleComment } from "../src/testing/fixtures.js";
 import { memoryGate } from "../src/testing/memory-gate.js";
 import { memoryStore } from "../src/testing/memory-store.js";
 
 import type { IdentityConnector, StoreConnector } from "../src/connectors/types.js";
 import type { StoreResolver } from "../src/route/index.js";
+import type { CommentStore } from "../src/store.js";
 
 const BASE = "https://preview.example.com";
 
 function handler(
   overrides: {
-    store?: StoreConnector | StoreResolver;
+    store?: CommentStore | StoreResolver;
     identity?: IdentityConnector;
     gate?: Parameters<typeof createMapleHandler>[0]["gate"];
   } = {},
 ) {
   const { gate, ...rest } = overrides;
   return createMapleHandler({
-    store: overrides.store ?? memoryStore(),
+    store: overrides.store ?? createCommentStore(memoryStore()),
     ...rest,
     ...(gate === undefined ? {} : { gate }),
   });
@@ -46,7 +48,10 @@ describe("routing", () => {
   });
 
   it("can be mounted somewhere else", async () => {
-    const handle = createMapleHandler({ store: memoryStore(), basePath: "/_maple" });
+    const handle = createMapleHandler({
+      store: createCommentStore(memoryStore()),
+      basePath: "/_maple",
+    });
     expect((await handle(request("GET", "/_maple/comments?branch=main"))).status).toBe(200);
   });
 
@@ -71,7 +76,7 @@ describe("listing comments", () => {
   });
 
   it("returns the page the store returned", async () => {
-    const store = memoryStore();
+    const store = createCommentStore(memoryStore());
     await store.append(sampleComment({ branch: "main" }));
 
     const response = await handler({ store })(request("GET", "/api/maple/comments?branch=main"));
@@ -80,7 +85,7 @@ describe("listing comments", () => {
   });
 
   it("passes the limit and cursor through", async () => {
-    const store = memoryStore();
+    const store = createCommentStore(memoryStore());
     for (const body of ["a", "b", "c"]) await store.append(sampleComment({ branch: "main", body }));
 
     const first = await handler({ store })(
@@ -136,7 +141,7 @@ describe("writing a comment", () => {
   });
 
   it("drops a resolution posted with a new comment, which cannot arrive resolved", async () => {
-    const store = memoryStore();
+    const store = createCommentStore(memoryStore());
     const draft = {
       ...sampleComment({ branch: "main" }),
       resolution: { sha: "deadbee", at: "2020-01-01T00:00:00.000Z" },
@@ -245,7 +250,7 @@ describe("a reviewer's colour slot", () => {
 
 describe("changing a status", () => {
   it("changes it", async () => {
-    const store = memoryStore();
+    const store = createCommentStore(memoryStore());
     const stored = await store.append(sampleComment({ branch: "main" }));
 
     const response = await handler({ store })(
@@ -255,7 +260,7 @@ describe("changing a status", () => {
   });
 
   it("records a resolution and stamps the time itself", async () => {
-    const store = memoryStore();
+    const store = createCommentStore(memoryStore());
     const stored = await store.append(sampleComment({ branch: "main" }));
 
     const response = await handler({ store })(
@@ -276,7 +281,7 @@ describe("changing a status", () => {
   });
 
   it("rejects a resolution with no sha rather than storing an empty claim", async () => {
-    const store = memoryStore();
+    const store = createCommentStore(memoryStore());
     const stored = await store.append(sampleComment({ branch: "main" }));
 
     const response = await handler({ store })(
@@ -296,9 +301,9 @@ describe("changing a status", () => {
   });
 
   it("says 501 when the store cannot change a status at all", async () => {
-    const response = await handler({ store: memoryStore({ appendOnly: true }) })(
-      request("PATCH", "/api/maple/comments/c_1", { status: "resolved" }),
-    );
+    const response = await handler({
+      store: createCommentStore(memoryStore({ appendOnly: true })),
+    })(request("PATCH", "/api/maple/comments/c_1", { status: "resolved" }));
     expect(response.status).toBe(501);
   });
 });
@@ -333,12 +338,12 @@ describe("when something breaks", () => {
       append: () => Promise.reject(new Error("no")),
     };
 
-    const response = await handler({ store: exploding })(
+    const response = await handler({ store: createCommentStore(exploding) })(
       request("GET", "/api/maple/comments?branch=main"),
     );
     const body = await response.text();
 
-    expect(response.status).toBe(500);
+    expect(response.status).toBe(503);
     expect(body).not.toContain("ghp_secret");
     expect(body).not.toContain("private-repo");
   });
@@ -387,7 +392,7 @@ describe("mounting on a Node server", () => {
 
 describe("a store chosen per request", () => {
   it("asks the resolver, and uses what it hands back", async () => {
-    const store = memoryStore();
+    const store = createCommentStore(memoryStore());
     const seen: string[] = [];
     const resolve: StoreResolver = (incoming) => {
       seen.push(incoming.headers["cookie"] ?? "");
@@ -408,7 +413,7 @@ describe("a store chosen per request", () => {
     let asked = 0;
     const resolve: StoreResolver = () => {
       asked += 1;
-      return memoryStore();
+      return createCommentStore(memoryStore());
     };
     const handle = handler({ store: resolve });
 
@@ -418,7 +423,7 @@ describe("a store chosen per request", () => {
   });
 
   it("takes a resolver that answers with a promise", async () => {
-    const resolve: StoreResolver = () => Promise.resolve(memoryStore());
+    const resolve: StoreResolver = () => Promise.resolve(createCommentStore(memoryStore()));
     const response = await handler({ store: resolve })(
       request("GET", "/api/maple/comments?branch=main"),
     );
@@ -452,7 +457,7 @@ describe("a store chosen per request", () => {
     let asked = 0;
     const resolve: StoreResolver = () => {
       asked += 1;
-      return memoryStore();
+      return createCommentStore(memoryStore());
     };
 
     const response = await handler({ store: resolve })(request("DELETE", "/api/maple/comments"));
@@ -528,14 +533,14 @@ describe("publishing a set of comments at once", () => {
   });
 
   it("stores nothing and complains about nothing for an empty set", async () => {
-    const handle = handler({ store: memoryStore() });
+    const handle = handler({ store: createCommentStore(memoryStore()) });
     const response = await handle(request("POST", "/api/maple/comments", []));
     expect(response.status).toBe(201);
     expect((await response.json()) as { comments: unknown[] }).toEqual({ comments: [] });
   });
 
   it("falls back to one at a time where the store takes no batch", async () => {
-    const handle = handler({ store: memoryStore({ withoutBatch: true }) });
+    const handle = handler({ store: createCommentStore(memoryStore({ withoutBatch: true })) });
     const response = await handle(
       request("POST", "/api/maple/comments", [
         sampleComment({ branch: "main", body: "first" }),
@@ -553,7 +558,7 @@ describe("what the gate hears about a new comment", () => {
     const gate = memoryGate();
     const branch = "feat/new-comment";
     const handle = handler({
-      store: memoryStore({ heads: { [branch]: "abcdef1" } }),
+      store: createCommentStore(memoryStore({ heads: { [branch]: "abcdef1" } })),
       gate,
     });
 

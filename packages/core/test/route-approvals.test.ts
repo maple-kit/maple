@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { createMapleHandler } from "../src/route/index.js";
+import { createCommentStore } from "../src/store.js";
 import { memoryGate } from "../src/testing/memory-gate.js";
 import { memoryStore } from "../src/testing/memory-store.js";
 
-import type { IdentityConnector, StoreConnector } from "../src/connectors/types.js";
+import type { IdentityConnector } from "../src/connectors/types.js";
+import type { CommentStore } from "../src/store.js";
 import type { Approval } from "../src/types.js";
 
 const BASE = "https://preview.example.com";
@@ -19,8 +21,8 @@ const reviewer: IdentityConnector = {
     ),
 };
 
-function store(): StoreConnector {
-  return memoryStore({ heads: { [BRANCH]: HEAD } });
+function store(): CommentStore {
+  return createCommentStore(memoryStore({ heads: { [BRANCH]: HEAD } }));
 }
 
 function signedIn(method: string, path: string, body?: unknown): Request {
@@ -70,7 +72,10 @@ describe("approving a preview", () => {
   });
 
   it("refuses rather than guessing when the store cannot name a commit", async () => {
-    const handle = createMapleHandler({ store: memoryStore(), identity: reviewer });
+    const handle = createMapleHandler({
+      store: createCommentStore(memoryStore()),
+      identity: reviewer,
+    });
     const response = await handle(signedIn("POST", "/api/maple/approvals", { branch: BRANCH }));
 
     expect(response.status).toBe(409);
@@ -101,7 +106,7 @@ describe("approving a preview", () => {
 
   it("answers 501 where the store keeps no approvals", async () => {
     const handle = createMapleHandler({
-      store: memoryStore({ withoutApprovals: true, heads: { [BRANCH]: HEAD } }),
+      store: createCommentStore(memoryStore({ withoutApprovals: true, heads: { [BRANCH]: HEAD } })),
       identity: reviewer,
     });
 

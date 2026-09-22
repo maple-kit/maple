@@ -7,11 +7,11 @@
  * check holding on work already done.
  */
 
-import { supports } from "../connectors/capabilities.js";
 import { decideGate } from "./decide.js";
 
-import type { GateConnector, StoreConnector } from "../connectors/types.js";
+import type { GateConnector } from "../connectors/types.js";
 import type { Logger } from "../logger/types.js";
+import type { CommentStore } from "../store.js";
 import type { Approval, Comment } from "../types.js";
 
 /** How many comments are read back before the verdict stops being exact. */
@@ -41,7 +41,7 @@ export async function publishGate(
 
 /** What a publish needs, gathered once by the caller. */
 export interface GateContext {
-  readonly store: StoreConnector;
+  readonly store: CommentStore;
   readonly gate: GateConnector;
   readonly logger?: Logger;
   /**
@@ -57,7 +57,7 @@ async function publish(context: GateContext, branch: string, reviewUrl?: string)
 
   const approvals = await approvalsOn(context, branch);
   const verdict = decideGate(await commentsOn(context.store, branch), {
-    statusTracked: supports(context.store, "setStatus"),
+    statusTracked: context.store.capabilities.setStatus,
     commit: sha,
     ...(context.requireApproval === undefined ? {} : { requireApproval: context.requireApproval }),
     ...(approvals === undefined ? {} : { approvals }),
@@ -79,8 +79,7 @@ async function approvalsOn(
   context: GateContext,
   branch: string,
 ): Promise<readonly Approval[] | undefined> {
-  const ask = context.store.approvals?.bind(context.store);
-  return ask ? await ask(branch) : undefined;
+  return await context.store.approvals(branch);
 }
 
 /**
@@ -88,15 +87,14 @@ async function approvalsOn(
  * commit reads as an answer, which is worse than silence.
  */
 async function headOf(context: GateContext, branch: string): Promise<string | undefined> {
-  const ask = context.store.head?.bind(context.store);
-  if (!ask) {
+  if (!context.store.capabilities.head) {
     context.logger?.warn(
       `Store "${context.store.name}" cannot name a head commit, so no gate was published.`,
     );
     return undefined;
   }
 
-  const sha = await ask(branch);
+  const sha = await context.store.head(branch);
   if (sha === undefined) {
     context.logger?.warn(`No head commit for "${branch}", so no gate was published.`);
   }
@@ -108,7 +106,7 @@ async function headOf(context: GateContext, branch: string): Promise<string | un
  * Every comment on the surface, not one page: a count that stopped at the
  * first page would clear a gate that holds.
  */
-async function commentsOn(store: StoreConnector, branch: string): Promise<Comment[]> {
+async function commentsOn(store: CommentStore, branch: string): Promise<Comment[]> {
   const comments: Comment[] = [];
   let cursor: string | undefined;
 

@@ -21,9 +21,9 @@ import type {
   IdentityRequest,
   ListQuery,
   MediaConnector,
-  StoreConnector,
 } from "../connectors/types.js";
 import type { Logger } from "../logger/types.js";
+import type { CommentStore } from "../store.js";
 import type {
   Comment,
   CommentAuthor,
@@ -43,7 +43,7 @@ import type { GateResolver } from "./gate.js";
  */
 export type StoreResolver = (
   request: IdentityRequest,
-) => StoreConnector | null | Promise<StoreConnector | null>;
+) => CommentStore | null | Promise<CommentStore | null>;
 
 /**
  * Chooses the media connector for one request, for the same reason a store is
@@ -55,8 +55,11 @@ export type MediaResolver = (
 
 /** What the route is wired to. */
 export interface RouteOptions {
-  /** Where comments live. One connector, or one chosen per request. */
-  readonly store: StoreConnector | StoreResolver;
+  /**
+   * Where comments live: a `createCommentStore(connector)`, or one chosen per
+   * request. The wrapper is the seam — it is what carries the retries.
+   */
+  readonly store: CommentStore | StoreResolver;
   /**
    * Where screenshots go. Without one the overlay says a screenshot has
    * nowhere to be kept, rather than offering to take one and dropping it.
@@ -289,12 +292,12 @@ function methodAllowed(route: string, one: boolean, method: string): boolean {
 }
 
 /** A plain connector is used as it is; a resolver is asked, every request. */
-async function storeFor(options: RouteOptions, request: Request): Promise<StoreConnector | null> {
+async function storeFor(options: RouteOptions, request: Request): Promise<CommentStore | null> {
   const { store } = options;
   return typeof store === "function" ? store(identityRequest(request)) : store;
 }
 
-async function listComments(store: StoreConnector, url: URL): Promise<Response> {
+async function listComments(store: CommentStore, url: URL): Promise<Response> {
   const branch = url.searchParams.get("branch");
   if (!branch) return json({ error: "A branch is required" }, 400);
 
@@ -325,7 +328,7 @@ function queryFrom(url: URL, branch: string): ListQuery {
  */
 async function appendComment(
   options: RouteOptions,
-  store: StoreConnector,
+  store: CommentStore,
   request: Request,
 ): Promise<Response> {
   const posted = await readJson(request);
@@ -342,7 +345,7 @@ async function appendComment(
     author,
   }));
 
-  const stored = await appendAll(store, comments);
+  const stored = await store.appendMany(comments);
   const branch = stored[0]?.branch;
   if (branch !== undefined) await reportGate(options, store, request, branch);
 
@@ -351,19 +354,6 @@ async function appendComment(
 
 /** The author Maple records when no identity connector named one. */
 const GUEST = { id: "guest", name: "Guest", provenance: "guest" } as const;
-
-/** `appendMany` where the store has it, one at a time where it does not. */
-async function appendAll(
-  store: StoreConnector,
-  comments: readonly NewComment[],
-): Promise<readonly Comment[]> {
-  const many = store.appendMany?.bind(store);
-  if (many) return await many(comments);
-
-  const stored: Comment[] = [];
-  for (const comment of comments) stored.push(await store.append(comment));
-  return stored;
-}
 
 /** A resolved reviewer, as a comment or an approval records them. */
 function authorFor(user: MapleUser): CommentAuthor {
@@ -386,7 +376,7 @@ function colorSlotFor(id: string): number {
 
 async function setStatus(
   options: RouteOptions,
-  store: StoreConnector,
+  store: CommentStore,
   request: Request,
   id: string,
 ): Promise<Response> {
@@ -402,11 +392,9 @@ async function setStatus(
     return json({ error: "A resolution needs a sha" }, 400);
   }
 
-  const update = store.setStatus?.bind(store);
-  if (!update) return json({ error: "This store cannot change a status" }, 501);
-
   const resolution = claimed === undefined ? undefined : stamp(claimed);
-  const updated = await update(id, status as CommentStatus, resolution);
+  const updated = await store.setStatus(id, status as CommentStatus, resolution);
+  if (!updated) return json({ error: "This store cannot change a status" }, 501);
 
   await reportGate(options, store, request, updated.branch);
   return json(updated, 200);
@@ -418,7 +406,7 @@ async function setStatus(
  */
 async function reportGate(
   options: RouteOptions,
-  store: StoreConnector,
+  store: CommentStore,
   request: Request,
   branch: string,
 ): Promise<void> {
@@ -533,15 +521,18 @@ function isDraft(value: unknown): value is Omit<NewComment, "author"> & { author
  * repository, a rate limit or a token that is about to expire.
  */
 function failure(logger: Logger | undefined, error: unknown): Response {
-  const known = error instanceof MapleStoreError || error instanceof RangeError;
   logger?.error(
     "The Maple route failed.",
     error instanceof Error ? error : new Error(String(error)),
   );
 
-  return known
-    ? json({ error: "The request was not valid for this store" }, 400)
-    : json({ error: "Something went wrong" }, 500);
+  if (error instanceof MapleStoreError && error.reason === "unavailable") {
+    return json({ error: "The store could not be reached" }, 503);
+  }
+  if (error instanceof MapleStoreError || error instanceof RangeError) {
+    return json({ error: "The request was not valid for this store" }, 400);
+  }
+  return json({ error: "Something went wrong" }, 500);
 }
 
 function json(body: unknown, status: number): Response {

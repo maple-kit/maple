@@ -183,6 +183,7 @@ which side of that line each falls on.
 Mount the route behind your preview flag so it never exists in production:
 
 ```ts
+import { createCommentStore } from "@maple-kit/core";
 import { readGitHubSession } from "@maple-kit/core/auth";
 import { createPullCache, githubStore } from "@maple-kit/core/connectors";
 import { consoleSink, createLogger } from "@maple-kit/core/logger";
@@ -199,12 +200,14 @@ const mounted =
         store: async (request) => {
           const session = await readGitHubSession(request, key ? { key } : {});
           if (!session) return null;
-          return githubStore({
-            owner: "acme",
-            repo: "web",
-            token: session.token,
-            cache: pulls,
-          });
+          return createCommentStore(
+            githubStore({
+              owner: "acme",
+              repo: "web",
+              token: session.token,
+              cache: pulls,
+            }),
+          );
         },
         githubAuth: {
           clientId: process.env.MAPLE_GITHUB_CLIENT_ID!,
@@ -216,8 +219,10 @@ const mounted =
 export { mounted as DELETE, mounted as GET, mounted as PATCH, mounted as POST };
 ```
 
-The store is built per request from the reviewer's own token, which is what
-makes the comment show up under their name rather than a bot's. Returning
+`createCommentStore` is what the route takes: the connector is the backend, the
+store around it is what carries Maple's retries, its timeout and its one error
+type. The store is built per request from the reviewer's own token, which is
+what makes the comment show up under their name rather than a bot's. Returning
 `null` — nobody has linked yet — makes the route answer `401`, and the overlay
 offers **Link GitHub** rather than writing the comment as somebody else.
 

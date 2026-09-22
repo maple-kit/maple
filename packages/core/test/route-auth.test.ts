@@ -2,6 +2,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 
 import { readGitHubSession, SESSION_COOKIE } from "../src/auth/index.js";
 import { createMapleHandler } from "../src/route/index.js";
+import { createCommentStore } from "../src/store.js";
 import { memoryStore } from "../src/testing/memory-store.js";
 import { createDeviceFlowFake } from "./msw/github.js";
 import { createTestServer, useTestServer } from "./msw/server.js";
@@ -24,7 +25,7 @@ const KEY = btoa("0123456789abcdef0123456789abcdef");
 
 function handler(auth: Partial<GitHubAuthOptions> = {}) {
   return createMapleHandler({
-    store: memoryStore(),
+    store: createCommentStore(memoryStore()),
     githubAuth: { clientId: "Iv1.test", insecure: true, ...auth },
   });
 }
@@ -163,7 +164,7 @@ describe("finishing a link", () => {
 describe("the session cookie", () => {
   it("carries every flag the design leans on", async () => {
     const handle = createMapleHandler({
-      store: memoryStore(),
+      store: createCommentStore(memoryStore()),
       githubAuth: { clientId: "Iv1.test" },
     });
     const started = await handle(request("POST", "/api/maple/auth/github"));
@@ -218,7 +219,7 @@ describe("signing out", () => {
 
 describe("what /me says about the link", () => {
   it("says nothing at all when the route was given no auth", async () => {
-    const handle = createMapleHandler({ store: memoryStore() });
+    const handle = createMapleHandler({ store: createCommentStore(memoryStore()) });
     const body = (await handle(request("GET", "/api/maple/me")).then((one) => one.json())) as {
       github?: unknown;
     };
@@ -249,7 +250,7 @@ describe("what /me says about the link", () => {
 
 describe("a route with no auth configured", () => {
   it("has no link endpoint at all, rather than one that fails", async () => {
-    const handle = createMapleHandler({ store: memoryStore() });
+    const handle = createMapleHandler({ store: createCommentStore(memoryStore()) });
     expect((await handle(request("POST", "/api/maple/auth/github"))).status).toBe(404);
   });
 

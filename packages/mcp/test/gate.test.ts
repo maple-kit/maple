@@ -1,15 +1,16 @@
+import { createCommentStore } from "@maple-kit/core";
 import { memoryGate, memoryStore, sampleComment } from "@maple-kit/core/testing";
 import { describe, expect, it } from "vitest";
 
 import { createToolHandlers } from "../src/handlers.js";
 
-import type { Comment, StoreConnector } from "@maple-kit/core";
+import type { Comment, CommentStore } from "@maple-kit/core";
 
 const BRANCH = "feature/agent";
 const HEAD = "9ab1c2d";
 
-async function seeded(count: number): Promise<{ store: StoreConnector; comments: Comment[] }> {
-  const store = memoryStore({ heads: { [BRANCH]: HEAD } });
+async function seeded(count: number): Promise<{ store: CommentStore; comments: Comment[] }> {
+  const store = createCommentStore(memoryStore({ heads: { [BRANCH]: HEAD } }));
   const comments: Comment[] = [];
   for (let index = 0; index < count; index += 1) {
     comments.push(await store.append(sampleComment({ branch: BRANCH })));

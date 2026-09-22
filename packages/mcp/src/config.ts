@@ -6,23 +6,26 @@
  * than on the first tool call, where a client would show it as a tool error.
  */
 
+import { createCommentStore } from "@maple-kit/core";
 import { githubGate, githubStore } from "@maple-kit/core/connectors";
 
-import type { GateConnector, StoreConnector } from "@maple-kit/core";
+import type { CommentStore, GateConnector } from "@maple-kit/core";
 
-/** Builds the store named by `MAPLE_STORE`, or the default. */
+/** Builds the store named by `MAPLE_STORE`, or the default, wrapped for use. */
 export function storeFromEnvironment(
   env: Readonly<Record<string, string | undefined>>,
-): StoreConnector {
+): CommentStore {
   const kind = env["MAPLE_STORE"] ?? "github";
   if (kind !== "github") throw new Error(`Unknown MAPLE_STORE ${kind}; only "github" exists yet.`);
 
-  return githubStore({
-    owner: required(env, "MAPLE_GITHUB_OWNER"),
-    repo: required(env, "MAPLE_GITHUB_REPO"),
-    token: required(env, "GITHUB_TOKEN"),
-    ...(env["MAPLE_GITHUB_API"] === undefined ? {} : { baseUrl: env["MAPLE_GITHUB_API"] }),
-  });
+  return createCommentStore(
+    githubStore({
+      owner: required(env, "MAPLE_GITHUB_OWNER"),
+      repo: required(env, "MAPLE_GITHUB_REPO"),
+      token: required(env, "GITHUB_TOKEN"),
+      ...(env["MAPLE_GITHUB_API"] === undefined ? {} : { baseUrl: env["MAPLE_GITHUB_API"] }),
+    }),
+  );
 }
 
 /**

@@ -1,5 +1,6 @@
 import { fileURLToPath } from "node:url";
 
+import { createCommentStore } from "@maple-kit/core";
 import { memoryMedia, memoryStore } from "@maple-kit/core/testing";
 import { maple } from "@maple-kit/core/vite";
 import react from "@vitejs/plugin-react";
@@ -8,7 +9,8 @@ import { defineConfig } from "vite";
 import { SEEDED_FRAMES } from "./src/app/frames.js";
 import { seedComments } from "./src/app/seed.js";
 
-import type { MediaConnector, StoreConnector } from "@maple-kit/core/connectors";
+import type { CommentStore } from "@maple-kit/core";
+import type { MediaConnector } from "@maple-kit/core/connectors";
 
 /** A path inside this repository, for the workspace aliases below. */
 function here(path: string): string {
@@ -30,7 +32,7 @@ const alias = [
 
 /** Store and blobs, both in memory and both seeded. The screenshots go in
  * through the same putBlob a capture uses, so the demo exercises the real path. */
-async function seeded(branch: string): Promise<{ store: StoreConnector; media: MediaConnector }> {
+async function seeded(branch: string): Promise<{ store: CommentStore; media: MediaConnector }> {
   const media = memoryMedia();
   const shots = await Promise.all(
     SEEDED_FRAMES.map((svg) =>
@@ -38,7 +40,7 @@ async function seeded(branch: string): Promise<{ store: StoreConnector; media: M
     ),
   );
 
-  const store = memoryStore();
+  const store = createCommentStore(memoryStore());
   for (const comment of seedComments(branch, shots)) await store.append(comment);
   return { store, media };
 }

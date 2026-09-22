@@ -16,11 +16,11 @@ import type {
   WaitForCommentsArgs,
   WaitResult,
 } from "./tools.js";
-import type { Comment, GateConnector, Logger, StoreConnector } from "@maple-kit/core";
+import type { Comment, CommentStore, GateConnector, Logger } from "@maple-kit/core";
 
 /** How the handlers reach the comments. */
 export interface HandlerOptions {
-  readonly store: StoreConnector;
+  readonly store: CommentStore;
   /**
    * Where the verdict goes after the agent resolves something. Without one the
    * check keeps holding until a push, which is what the route's publish avoids.
@@ -115,17 +115,16 @@ export function createToolHandlers(options: HandlerOptions): ToolHandlers {
      * them still records the status rather than refusing the call.
      */
     async resolveComment(args): Promise<Comment> {
-      const setStatus = options.store.setStatus?.bind(options.store);
-      if (!setStatus) {
-        throw new Error(
-          `The ${options.store.name} store cannot change a status; resolve the comment where it lives.`,
-        );
-      }
-      const updated = await setStatus(args.id, "resolved", {
+      const updated = await options.store.setStatus(args.id, "resolved", {
         sha: args.sha,
         ...(args.note === undefined ? {} : { note: args.note }),
         at: new Date(now()).toISOString(),
       });
+      if (!updated) {
+        throw new Error(
+          `The ${options.store.name} store cannot change a status; resolve the comment where it lives.`,
+        );
+      }
 
       await report(options, updated.branch);
       return updated;

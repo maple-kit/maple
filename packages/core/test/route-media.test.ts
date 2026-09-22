@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { createMapleHandler } from "../src/route/index.js";
+import { createCommentStore } from "../src/store.js";
 import { memoryMedia } from "../src/testing/memory-media.js";
 import { memoryStore } from "../src/testing/memory-store.js";
 
@@ -14,7 +15,7 @@ const PNG = new Uint8Array([137, 80, 78, 71]);
 
 function handler(media?: MediaConnector) {
   return createMapleHandler({
-    store: memoryStore(),
+    store: createCommentStore(memoryStore()),
     ...(media === undefined ? {} : { media }),
   });
 }
