@@ -233,6 +233,33 @@ belongs to, again.
 `404`, which is the right shape for a deployment that stores comments some
 other way and needs no GitHub sign-in at all.
 
+### The assist tier, if you want it
+
+Maple can score a comment against five pillars as the reviewer types it. It is
+advice and never a gate — it cannot block a send or reach the check run — and
+the whole tier is off unless a classifier is configured.
+
+Turning it on is one option and one secret:
+
+```ts
+import { jevClassifier } from "@maple-kit/classifier";
+
+const key = process.env.TYPESAFE_API_KEY;
+// …on the same createMapleHandler call:
+...(key ? { assist: { classifier: jevClassifier({ apiKey: key }) } } : {}),
+```
+
+`TYPESAFE_API_KEY` keeps the provider's name rather than a `MAPLE_` one, so a
+rejected key says where to go. It is a real secret and it belongs wherever the
+deployment keeps those — never in a ConfigMap beside the client id.
+
+**Read it on the server and pass it in; never ship it to the browser.**
+`/assist` is same-origin on the route that already exists, which is also what
+keeps `connect-src` unchanged. Absent a key, drop the option: the endpoint
+answers `404`, `/me` says nothing about it, and the composer draws what it drew
+before. `docs/assist.md` is the design and `docs/configuration.md` has the
+table.
+
 ## 5. Verify it end to end
 
 Do all six. Stopping at the fourth is how a setup that looks finished turns out
@@ -272,7 +299,26 @@ The comment App above is half of Maple. The merge gate publishes a
 authenticates **as itself** with an installation token rather than as any
 reviewer.
 
-Register it separately, when you come to wire the gate and not before. It is a
+**Run the gate in CI first.** `maple-action` publishes `maple/visual-review` on
+the workflow's own `GITHUB_TOKEN` with `checks: write`, so the merge is gated
+with no App registered and nobody's rights needed:
+
+```yaml
+- uses: maple-kit/maple-action@v0
+  with:
+    mode: sync
+- uses: maple-kit/maple-action@v0
+  with:
+    mode: gate
+    require-approval: "true"
+```
+
+`require-approval` has to match `RouteOptions.requireApproval`, because the
+action and the route publish the same check name and a disagreement means a
+push clears a gate a reviewer is holding. It also needs an identity connector,
+or anyone with the preview URL clears a required check as "Guest".
+
+Register the second App separately, when you come to wire the gate and not before. It is a
 second **New GitHub App** with `Checks: Read and write`, Device Flow **off**,
 and a private key — the opposite of the comment App on all three counts,
 because it is the case the comment App exists to avoid. Install it on the same
