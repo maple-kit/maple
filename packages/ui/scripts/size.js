@@ -24,12 +24,13 @@ const BUDGETS = [
   // which is five rules instead of one and is why it needs no key beside it.
   { name: "the adopted stylesheet", entries: ["stylesheet.js"], max: 14 * 1024 },
   // 22 KB until the wordmark, which is 1.7 KB of path data the island's
-  // header always reaches. A drawing costs bytes where a string did not; the
-  // alternative was a webfont the host application pays for in a request.
+  // header always reaches; 24 KB until the sign-off and the unsent list, which
+  // are 0.7 KB between them. Both are rows the island draws only when there is
+  // something to say, and neither is reachable on a deployment without them.
   {
     name: "root + marks + island + icons",
     entries: ["index.js", "marks/index.js", "island/index.js", "icons/index.js"],
-    max: 24 * 1024,
+    max: 26 * 1024,
   },
   // 9 KB until the score card. The extra 1 KB is the card, the kind control
   // and the context card's disclosure. Every byte of it is inert on a
