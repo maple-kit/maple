@@ -72,7 +72,8 @@ export function githubStore(options: GitHubStoreOptions): StoreConnector {
   return {
     name: "github",
     list: (query) => list(api, query),
-    append: (comment) => append(api, comment),
+    append: async (comment) => (await appendMany(api, [comment]))[0]!,
+    appendMany: (comments) => appendMany(api, comments),
     setStatus: (id, status, resolution) => setStatus(api, id, status, resolution),
     head: (branch) => head(api, branch),
     approvals: (branch) => approvalsOn(api, branch),
@@ -281,23 +282,33 @@ async function list(api: Client, query: ListQuery): Promise<CommentPage> {
   return { comments: page, ...(next < matching.length ? { cursor: String(next) } : {}) };
 }
 
-async function append(api: Client, comment: NewComment): Promise<Comment> {
-  const ledger = await readLedger(api, comment.branch);
+/**
+ * One read and one repost, however many comments arrive. A reviewer
+ * publishing five drafts spends one write and sends one notification.
+ */
+async function appendMany(
+  api: Client,
+  incoming: readonly NewComment[],
+): Promise<readonly Comment[]> {
+  const branch = incoming[0]?.branch;
+  if (branch === undefined) return [];
+
+  const ledger = await readLedger(api, branch);
   if (!ledger) {
-    throw new Error(`No pull request for branch ${comment.branch}; Maple has nowhere to post.`);
+    throw new Error(`No pull request for branch ${branch}; Maple has nowhere to post.`);
   }
 
-  const stored: Comment = {
+  let seq = nextSeq(
+    ledger.comments.map((one) => one.id),
+    ID,
+  );
+  const stored = incoming.map((comment) => ({
     ...comment,
-    id: `gh_${String(ledger.pull)}_${String(
-      nextSeq(
-        ledger.comments.map((one) => one.id),
-        ID,
-      ),
-    )}`,
+    id: `gh_${String(ledger.pull)}_${String(seq++)}`,
     status: comment.status ?? "open",
-  };
-  await writeLedger(api, { ...ledger, comments: [...ledger.comments, stored] }, true);
+  }));
+
+  await writeLedger(api, { ...ledger, comments: [...ledger.comments, ...stored] }, true);
   return stored;
 }
 

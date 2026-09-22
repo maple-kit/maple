@@ -143,6 +143,23 @@ export const APPROVE_COPY = {
   signIn: "Sign in first: an approval nobody can be named for is not one.",
 } as const;
 
+/**
+ * The unsent list. A comment is a draft until it is published, and every word
+ * here has to carry that without ever calling it a failure.
+ */
+export const UNSENT_COPY = {
+  heading: (count: number) => `Unsent · ${String(count)}`,
+  publish: (count: number) => (count === 1 ? "Publish" : `Publish all ${String(count)}`),
+  publishing: "Publishing…",
+  copy: "Copy",
+  copied: "Copied",
+  copyHint: "Every unsent comment as markdown, to paste into an agent or a ticket.",
+  resumeHint: "Open it again",
+  discard: "Throw this one away",
+  discardGlyph: "✕",
+  blank: "(nothing written yet)",
+} as const;
+
 /** Copy with no better home than a name. */
 export const ISLAND_COPY = {
   title: "Comments",

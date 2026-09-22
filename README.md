@@ -76,6 +76,8 @@ connector's capabilities are exactly the methods it defines. See
 - [The JSX tagger](docs/tagger.md) — how a comment becomes `file:line`
 - [The overlay and CSP](docs/overlay-csp.md) — what Maple asks of your policy
 - [The agent loop](docs/agent-loop.md) — the MCP tools and the Stop hook
+- [Drafts and publishing](docs/drafts.md) — why a comment is unsent until it is not
+- [The merge gate](docs/gate.md) — what blocks a merge, and what approving does
 
 ## See it running
 

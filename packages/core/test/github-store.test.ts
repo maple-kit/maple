@@ -145,6 +145,37 @@ describe("what gets written to the pull request", () => {
   });
 });
 
+describe("publishing several at once", () => {
+  it("spends one repost on a whole set of drafts", async () => {
+    const branch = "feature/batch";
+    const connector = store();
+    await connector.append(sampleComment({ branch, body: "first" }));
+
+    const stored = await connector.appendMany!([
+      sampleComment({ branch, body: "second" }),
+      sampleComment({ branch, body: "third" }),
+    ]);
+
+    expect(stored.map((one) => one.body)).toEqual(["second", "third"]);
+    expect(new Set(stored.map((one) => one.id)).size).toBe(2);
+
+    const on = github.commentsOn(pullFor(branch));
+    expect(on).toHaveLength(1);
+    expect(parseFence(on[0]!.body)?.comments.map((one) => one.body)).toEqual([
+      "first",
+      "second",
+      "third",
+    ]);
+    expect(github.writes().filter((one) => one.startsWith("POST"))).toHaveLength(2);
+  });
+
+  it("writes nothing at all for an empty set", async () => {
+    const branch = "feature/nothing";
+    expect(await store().appendMany!([])).toEqual([]);
+    expect(github.commentsOn(pullFor(branch))).toEqual([]);
+  });
+});
+
 describe("approvals on the ledger", () => {
   it("rides in the same comment as the visual comments", async () => {
     const branch = "feature/signed";

@@ -10,7 +10,7 @@
  */
 
 export { SHEET_BREAKPOINT_PX } from "../tokens.js";
-export { CANCEL_LABEL, MapleActions, MapleActions as Actions, SEND_LABEL } from "./actions.js";
+export { KEEP_LABEL, MapleActions, MapleActions as Actions, PUBLISH_LABEL } from "./actions.js";
 export type { MapleActionsProps } from "./actions.js";
 export { ATTACH_WORDS, MapleAttachments, MapleAttachments as Attachments } from "./attachments.js";
 export type { MapleAttachmentsProps } from "./attachments.js";

@@ -34,6 +34,7 @@ export {
   kindPhrase,
   openLabel,
   SETTINGS_COPY,
+  UNSENT_COPY,
 } from "./language.js";
 export { List } from "./list.js";
 export type { ListProps } from "./list.js";
@@ -45,5 +46,7 @@ export { STAGGER_ROWS } from "./stagger.js";
 export { absoluteTime, relativeTime } from "./time.js";
 export { IslandTrigger } from "./trigger.js";
 export type { IslandTriggerProps } from "./trigger.js";
+export { Unsent } from "./unsent.js";
+export type { UnsentProps } from "./unsent.js";
 export { Wordmark, WORDMARK_SIZE_PX, WORDMARK_WORD_SCALE } from "./wordmark.js";
 export type { WordmarkProps } from "./wordmark.js";

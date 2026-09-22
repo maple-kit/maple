@@ -10,7 +10,17 @@ import type { AnyConnector, ConnectorKind } from "./types.js";
 
 /** Every method Maple may call on a connector, by kind. */
 export const CONNECTOR_METHODS = {
-  store: ["list", "append", "setStatus", "head", "watch", "approvals", "approve", "unapprove"],
+  store: [
+    "list",
+    "append",
+    "appendMany",
+    "setStatus",
+    "head",
+    "watch",
+    "approvals",
+    "approve",
+    "unapprove",
+  ],
   media: ["putBlob", "getUrl", "remove"],
   observability: ["getReplayLink", "fetchEvents"],
   identity: ["resolveUser"],

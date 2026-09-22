@@ -318,23 +318,50 @@ function queryFrom(url: URL, branch: string): ListQuery {
  * The author and their colour slot are built here, never read off the body: a
  * client that can choose its own author can choose someone else's.
  */
+/**
+ * One comment, or a whole set published at once. A store that can take a batch
+ * in one write posts one notification rather than one per comment.
+ */
 async function appendComment(
   options: RouteOptions,
   store: StoreConnector,
   request: Request,
 ): Promise<Response> {
   const posted = await readJson(request);
-  if (!isDraft(posted)) return json({ error: "A branch and a body are required" }, 400);
+  const batch = Array.isArray(posted) ? posted : undefined;
+  const drafts: unknown[] = batch ?? [posted];
 
-  const draft = withoutResolution(posted);
+  if (drafts.length === 0) return json({ comments: [] }, 201);
+  if (!drafts.every(isDraft)) return json({ error: "A branch and a body are required" }, 400);
 
   const user = await options.identity?.resolveUser(identityRequest(request));
-  const comment: NewComment = {
-    ...draft,
-    author: user ? authorFor(user) : { id: "guest", name: "Guest", provenance: "guest" },
-  };
+  const author = user ? authorFor(user) : GUEST;
+  const comments: NewComment[] = drafts.map((draft) => ({
+    ...withoutResolution(draft),
+    author,
+  }));
 
-  return json(await store.append(comment), 201);
+  const stored = await appendAll(store, comments);
+  const branch = stored[0]?.branch;
+  if (branch !== undefined) await reportGate(options, store, request, branch);
+
+  return json(batch ? { comments: stored } : stored[0], 201);
+}
+
+/** The author Maple records when no identity connector named one. */
+const GUEST = { id: "guest", name: "Guest", provenance: "guest" } as const;
+
+/** `appendMany` where the store has it, one at a time where it does not. */
+async function appendAll(
+  store: StoreConnector,
+  comments: readonly NewComment[],
+): Promise<readonly Comment[]> {
+  const many = store.appendMany?.bind(store);
+  if (many) return await many(comments);
+
+  const stored: Comment[] = [];
+  for (const comment of comments) stored.push(await store.append(comment));
+  return stored;
 }
 
 /** A resolved reviewer, as a comment or an approval records them. */

@@ -279,32 +279,32 @@ describe("the composer", () => {
   });
 });
 
-describe("sending", () => {
-  it("posts, keeps the comment, and clears the draft it came from", async () => {
+describe("publishing", () => {
+  it("posts what is open, keeps the comment, and clears the draft it came from", async () => {
     const maple = client();
     maple.openComposer(TARGET);
     maple.setBody("The spacing is off.");
-    const comment = await maple.send();
+    const [comment] = await maple.publish();
 
-    expect(comment.body).toBe("The spacing is off.");
-    expect(maple.getState().comments.map((found) => found.id)).toEqual([comment.id]);
+    expect(comment?.body).toBe("The spacing is off.");
+    expect(maple.getState().comments.map((found) => found.id)).toEqual([comment?.id]);
     expect(maple.getState().drafts).toEqual([]);
     expect(maple.getState().composer).toMatchObject({ open: false, dirty: false });
   });
 
-  it("refuses an empty body rather than posting a blank comment", async () => {
+  it("publishes nothing rather than posting a blank comment", async () => {
     const maple = client();
     maple.openComposer(TARGET);
     maple.setBody("   ");
 
-    await expect(maple.send()).rejects.toThrow("A comment needs a body");
+    expect(await maple.publish()).toEqual([]);
   });
 
-  it("refuses when there is no composer at all", async () => {
-    await expect(client().send()).rejects.toThrow("There is no composer");
+  it("publishes nothing when there is nothing kept", async () => {
+    expect(await client().publish()).toEqual([]);
   });
 
-  it("keeps the draft and says what happened when the route refuses it", async () => {
+  it("keeps the drafts and says what happened when the route refuses them", async () => {
     server.use(
       http.post(`${MAPLE_BASE}/comments`, () =>
         HttpResponse.json({ error: "The request was not valid for this store" }, { status: 400 }),
@@ -314,9 +314,9 @@ describe("sending", () => {
     maple.openComposer(TARGET);
     maple.setBody("The spacing is off.");
 
-    await expect(maple.send()).rejects.toThrow("not valid for this store");
+    await expect(maple.publish()).rejects.toThrow("not valid for this store");
     expect(maple.getState().drafts).toHaveLength(1);
-    expect(maple.getState().composer.sending).toBe(false);
+    expect(maple.getState().publishing).toBe(false);
     expect(maple.getState().error).toMatchObject({ during: "send", kind: "store", status: 400 });
   });
 });
@@ -326,9 +326,9 @@ describe("resolving", () => {
     const maple = client();
     maple.openComposer(TARGET);
     maple.setBody("The spacing is off.");
-    const comment = await maple.send();
+    const [comment] = await maple.publish();
 
-    await maple.setStatus(comment.id, "resolved", { sha: "abc123", note: "Fixed the gap." });
+    await maple.setStatus(comment!.id, "resolved", { sha: "abc123", note: "Fixed the gap." });
     expect(maple.getState().comments[0]?.status).toBe("resolved");
     expect(maple.getState().openCount).toBe(0);
   });
@@ -419,7 +419,7 @@ describe("hidden, which is not gone", () => {
 
     maple.setHidden(true);
     maple.setBody("The spacing is off.");
-    await maple.send();
+    await maple.publish();
     expect(maple.getState().hidden).toBe(false);
   });
 

@@ -22,6 +22,7 @@ export function islandCss(): string {
     row(),
     rowDetail(),
     developer(),
+    ledger(),
     newComment(),
     keyframes(),
     sheet(),
@@ -989,11 +990,103 @@ function developer(): string {
 `.trim();
 }
 
-function newComment(): string {
+/** The two rows above the picks: what is waiting, and the sign-off. */
+function ledger(): string {
   return `
-/* One row, not a label over a row: the label is two syllables and the three
-   picks it introduces are beside it, which is half the height for the same
-   sentence. */
+.mk-unsent {
+  flex: none;
+  border-top: 1px solid var(--mk-line);
+  background: var(--mk-sunk);
+}
+
+.mk-unsent-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px 5px;
+}
+
+.mk-unsent-label {
+  flex: 1 1 auto;
+  color: var(--mk-faint);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.mk-unsent-copy {
+  flex: none;
+  padding: 2px 8px;
+  border: 1px solid var(--mk-line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--mk-muted);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mk-unsent-publish {
+  flex: none;
+  font-size: 11px;
+  padding: 3px 11px;
+}
+
+.mk-unsent-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0 6px 7px;
+  list-style: none;
+  max-height: 132px;
+  overflow-y: auto;
+}
+
+.mk-unsent-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 6px;
+}
+
+.mk-unsent-row:hover {
+  background: var(--mk-bg);
+}
+
+.mk-unsent-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 4px 6px;
+  border: 0;
+  background: transparent;
+  color: var(--mk-fg);
+  font: inherit;
+  font-size: 12px;
+  text-align: start;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.mk-unsent-drop {
+  flex: none;
+  padding: 2px 7px;
+  border: 0;
+  background: transparent;
+  color: var(--mk-faint);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.mk-unsent-drop:hover {
+  color: var(--mk-fg);
+}
+
 .mk-approve {
   flex: none;
   display: flex;
@@ -1034,6 +1127,14 @@ function newComment(): string {
   cursor: not-allowed;
 }
 
+`.trim();
+}
+
+function newComment(): string {
+  return `
+/* One row, not a label over a row: the label is two syllables and the three
+   picks it introduces are beside it, which is half the height for the same
+   sentence. */
 .mk-new {
   flex: none;
   display: flex;

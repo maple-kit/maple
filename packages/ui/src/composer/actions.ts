@@ -1,9 +1,10 @@
 /**
- * `Maple.Actions`: send, or leave it. Nothing here throws a draft away.
+ * `Maple.Actions`: keep it, or publish it. Nothing here throws a draft away.
  *
- * Cancel closes the composer and the unsent comment stays where it was; only a
- * send clears one. Send is disabled while the body is blank and while a send
- * is in flight, so a double click cannot post twice.
+ * A comment is a draft until it is published, so the quiet control is the
+ * usual one: **Keep** closes the composer and leaves the comment unsent, on
+ * the list with everything else waiting. **Publish** is the deliberate act
+ * that puts it in the store. Both are disabled on a blank body.
  */
 
 import { useMaple, useMapleClient } from "@maple-kit/react";
@@ -21,11 +22,11 @@ export interface MapleActionsProps extends AsChildProps {
   readonly children?: ReactNode;
 }
 
-/** Leaves the draft where it is. */
-export const CANCEL_LABEL = "Cancel";
+/** Closes the composer and keeps what was written, unsent. */
+export const KEEP_LABEL = "Keep";
 
-/** The noun: it is what the reviewer is making. */
-export const SEND_LABEL = "Comment";
+/** The verb, because publishing is the act and the comment already exists. */
+export const PUBLISH_LABEL = "Publish";
 
 /** What a comment already written offers instead: done with it, or not yet. */
 export const VIEW_LABELS = {
@@ -37,13 +38,13 @@ export const VIEW_LABELS = {
 /** The two controls, and room beside them for a later one. */
 export const MapleActions = /** @__PURE__ */ forwardRef<HTMLElement, MapleActionsProps>(
   function MapleActions(props, ref) {
-    const { composer } = useMaple();
+    const { composer, publishing } = useMaple();
     const client = useMapleClient();
     const scope = useComposerScope("Maple.Actions");
     const Element = (props.asChild ? Slot : "footer") as "footer";
 
-    const send = (): void => {
-      void client.send().then(
+    const publish = (): void => {
+      void client.publish().then(
         () => scope.clear(),
         () => undefined,
       );
@@ -74,19 +75,20 @@ export const MapleActions = /** @__PURE__ */ forwardRef<HTMLElement, MapleAction
         {
           type: "button",
           className: "mk-btn mk-btn-quiet mk-press",
-          onClick: () => client.closeComposer(),
+          disabled: composer.body.trim() === "",
+          onClick: () => client.keepDraft(),
         },
-        CANCEL_LABEL,
+        KEEP_LABEL,
       ),
       createElement(
         "button",
         {
           type: "button",
           className: "mk-btn mk-btn-primary mk-press",
-          disabled: composer.body.trim() === "" || composer.sending,
-          onClick: send,
+          disabled: composer.body.trim() === "" || publishing,
+          onClick: publish,
         },
-        SEND_LABEL,
+        PUBLISH_LABEL,
       ),
     );
   },

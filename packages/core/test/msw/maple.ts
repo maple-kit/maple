@@ -80,10 +80,13 @@ export function createMapleFake(options: MapleFakeOptions = {}): MapleFake {
       }),
       http.get(`${MAPLE_BASE}/comments`, ({ request }) => page(stored, request, options.pageSize)),
       http.post(`${MAPLE_BASE}/comments`, async ({ request }) => {
-        const posted = (await request.json()) as NewComment;
-        next += 1;
-        const comment = stored[stored.push(appended(posted, next, user)) - 1]!;
-        return HttpResponse.json(comment, { status: 201 });
+        const posted = (await request.json()) as NewComment | NewComment[];
+        const batch = Array.isArray(posted);
+        const made = (batch ? posted : [posted]).map((one) => {
+          next += 1;
+          return stored[stored.push(appended(one, next, user)) - 1]!;
+        });
+        return HttpResponse.json(batch ? { comments: made } : made[0], { status: 201 });
       }),
       http.patch(`${MAPLE_BASE}/comments/:id`, async ({ params, request }) => {
         const change = (await request.json()) as { status: CommentStatus };

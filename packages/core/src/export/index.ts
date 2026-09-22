@@ -5,6 +5,8 @@
  * to an agent strips HTML comments before the model sees them.
  */
 
+export { exportDrafts } from "./drafts.js";
+export type { DraftExportOptions } from "./drafts.js";
 export {
   exportMarkdown,
   FENCE_BUDGET,

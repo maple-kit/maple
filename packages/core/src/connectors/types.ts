@@ -61,6 +61,11 @@ export interface CommentPage {
 export interface StoreConnector extends ConnectorMeta {
   list(query: ListQuery): Promise<CommentPage>;
   append(comment: NewComment): Promise<Comment>;
+  /**
+   * Several at once, in order. A backend where one write holds many records —
+   * a pull request's ledger — spends one write and sends one notification.
+   */
+  appendMany?(comments: readonly NewComment[]): Promise<readonly Comment[]>;
   setStatus?(id: string, status: CommentStatus, resolution?: CommentResolution): Promise<Comment>;
   /**
    * The commit a surface points at now, or undefined where the backend cannot

@@ -574,7 +574,7 @@ describe("writing a comment", () => {
     expect(surface.textContent).not.toContain("%");
   });
 
-  it("will not send an empty comment, and sends what was written", async () => {
+  it("will not publish an empty comment, and publishes what was written", async () => {
     started();
     const surface = await open();
     const send = [...surface.querySelectorAll<HTMLButtonElement>(".mk-composer-foot button")].at(
@@ -589,6 +589,20 @@ describe("writing a comment", () => {
     await vi.waitFor(() => expect(client.getState().comments).toHaveLength(1));
     expect(client.getState().composer.open).toBe(false);
     expect(client.getState().drafts).toHaveLength(0);
+  });
+
+  it("keeps the comment unsent when Keep is pressed, and closes", async () => {
+    started();
+    const surface = await open();
+    client.setBody("Worth saying, not yet.");
+
+    const keep = surface.querySelector<HTMLButtonElement>(".mk-composer-foot button");
+    await vi.waitFor(() => expect(keep?.disabled).toBe(false));
+    keep?.click();
+
+    await vi.waitFor(() => expect(client.getState().composer.open).toBe(false));
+    expect(client.getState().drafts).toHaveLength(1);
+    expect(client.getState().comments).toHaveLength(0);
   });
 
   it("closes on Escape and keeps the unsent comment where it was", async () => {

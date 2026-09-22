@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { createMapleHandler } from "../src/route/index.js";
 import { sampleComment } from "../src/testing/fixtures.js";
+import { memoryGate } from "../src/testing/memory-gate.js";
 import { memoryStore } from "../src/testing/memory-store.js";
 
 import type { IdentityConnector, StoreConnector } from "../src/connectors/types.js";
@@ -10,9 +11,18 @@ import type { StoreResolver } from "../src/route/index.js";
 const BASE = "https://preview.example.com";
 
 function handler(
-  overrides: { store?: StoreConnector | StoreResolver; identity?: IdentityConnector } = {},
+  overrides: {
+    store?: StoreConnector | StoreResolver;
+    identity?: IdentityConnector;
+    gate?: Parameters<typeof createMapleHandler>[0]["gate"];
+  } = {},
 ) {
-  return createMapleHandler({ store: overrides.store ?? memoryStore(), ...overrides });
+  const { gate, ...rest } = overrides;
+  return createMapleHandler({
+    store: overrides.store ?? memoryStore(),
+    ...rest,
+    ...(gate === undefined ? {} : { gate }),
+  });
 }
 
 function request(method: string, path: string, body?: unknown): Request {
@@ -486,3 +496,72 @@ function through(
     });
   });
 }
+
+describe("publishing a set of comments at once", () => {
+  it("takes an array and answers with what it stored, in order", async () => {
+    const handle = handler();
+    const response = await handle(
+      request("POST", "/api/maple/comments", [
+        sampleComment({ branch: "main", body: "first" }),
+        sampleComment({ branch: "main", body: "second" }),
+      ]),
+    );
+
+    expect(response.status).toBe(201);
+    const body = (await response.json()) as { comments: { body: string; id: string }[] };
+    expect(body.comments.map((one) => one.body)).toEqual(["first", "second"]);
+    expect(new Set(body.comments.map((one) => one.id)).size).toBe(2);
+  });
+
+  it("still answers one comment with one comment, not a list", async () => {
+    const response = await handler()(
+      request("POST", "/api/maple/comments", sampleComment({ branch: "main" })),
+    );
+    expect((await response.json()) as { comments?: unknown }).not.toHaveProperty("comments");
+  });
+
+  it("refuses the whole set when one of them is not a comment", async () => {
+    const response = await handler()(
+      request("POST", "/api/maple/comments", [sampleComment({ branch: "main" }), { body: "no" }]),
+    );
+    expect(response.status).toBe(400);
+  });
+
+  it("stores nothing and complains about nothing for an empty set", async () => {
+    const handle = handler({ store: memoryStore() });
+    const response = await handle(request("POST", "/api/maple/comments", []));
+    expect(response.status).toBe(201);
+    expect((await response.json()) as { comments: unknown[] }).toEqual({ comments: [] });
+  });
+
+  it("falls back to one at a time where the store takes no batch", async () => {
+    const handle = handler({ store: memoryStore({ withoutBatch: true }) });
+    const response = await handle(
+      request("POST", "/api/maple/comments", [
+        sampleComment({ branch: "main", body: "first" }),
+        sampleComment({ branch: "main", body: "second" }),
+      ]),
+    );
+
+    const body = (await response.json()) as { comments: { body: string }[] };
+    expect(body.comments.map((one) => one.body)).toEqual(["first", "second"]);
+  });
+});
+
+describe("what the gate hears about a new comment", () => {
+  it("publishes a verdict, so a comment turns a green check red", async () => {
+    const gate = memoryGate();
+    const branch = "feat/new-comment";
+    const handle = handler({
+      store: memoryStore({ heads: { [branch]: "abcdef1" } }),
+      gate,
+    });
+
+    await handle(request("POST", "/api/maple/comments", sampleComment({ branch })));
+
+    expect(gate.history({ branch, sha: "abcdef1" }).at(-1)).toMatchObject({
+      conclusion: "blocked",
+      reason: "comments-open",
+    });
+  });
+});

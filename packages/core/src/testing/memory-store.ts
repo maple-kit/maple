@@ -33,6 +33,8 @@ export interface MemoryStoreOptions {
    * approval from and found nowhere to look. Defaults to false.
    */
   readonly withoutApprovals?: boolean;
+  /** Omit `appendMany`, so the one-at-a-time fallback is exercised too. */
+  readonly withoutBatch?: boolean;
 }
 
 /** Cursors are just the offset, encoded so callers cannot do arithmetic on them. */
@@ -95,6 +97,10 @@ export function memoryStore(options: MemoryStoreOptions = {}): StoreConnector {
     return Promise.resolve(updated);
   }
 
+  function appendMany(incoming: readonly NewComment[]): Promise<readonly Comment[]> {
+    return Promise.all(incoming.map(append));
+  }
+
   function head(branch: string): Promise<string | undefined> {
     return Promise.resolve(options.heads?.[branch]);
   }
@@ -122,6 +128,7 @@ export function memoryStore(options: MemoryStoreOptions = {}): StoreConnector {
     name: options.name ?? "memory",
     list,
     append,
+    ...(options.withoutBatch === true ? {} : { appendMany }),
     ...(options.appendOnly === true ? {} : { setStatus }),
     ...(options.heads === undefined ? {} : { head }),
     ...(options.withoutApprovals === true ? {} : { approvals, approve, unapprove }),

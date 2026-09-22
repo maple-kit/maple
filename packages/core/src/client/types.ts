@@ -147,6 +147,8 @@ export interface ClientState {
   readonly openCount: number;
   /** Unsent comments on this branch, newest first. */
   readonly drafts: readonly Draft[];
+  /** A publish is in flight, so the control says so rather than repeating it. */
+  readonly publishing: boolean;
   readonly composer: ComposerState;
   readonly pick: PickState;
   readonly theme: ThemeState;

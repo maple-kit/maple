@@ -74,6 +74,8 @@ export interface Transport {
   /** Every comment on the branch, following the store's cursor to the end. */
   list(signal?: AbortSignal): Promise<readonly Comment[]>;
   append(comment: PostedComment): Promise<Comment>;
+  /** Several at once, in one request, so one notification goes out. */
+  appendMany(comments: readonly PostedComment[]): Promise<readonly Comment[]>;
   setStatus(id: string, status: CommentStatus, resolution?: ResolutionClaim): Promise<Comment>;
   /** Null user when the host application has no session for this request. */
   me(): Promise<Identity>;
@@ -105,6 +107,13 @@ export function createTransport(options: TransportOptions): Transport {
     list: (signal) => listAll(call, options.branch, signal),
     append: (comment) =>
       call<Comment>("/comments", { method: "POST", body: JSON.stringify(comment) }),
+    appendMany: async (comments) => {
+      const answer = await call<{ comments?: Comment[] }>("/comments", {
+        method: "POST",
+        body: JSON.stringify(comments),
+      });
+      return answer.comments ?? [];
+    },
     setStatus: (id, status, resolution) =>
       call<Comment>(`/comments/${encodeURIComponent(id)}`, {
         method: "PATCH",

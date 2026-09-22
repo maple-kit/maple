@@ -16,6 +16,7 @@ describe("capability detection", () => {
     expect(capabilitiesOf("store", memoryStore())).toEqual({
       list: true,
       append: true,
+      appendMany: true,
       setStatus: true,
       head: false,
       watch: false,

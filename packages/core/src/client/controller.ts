@@ -10,6 +10,7 @@
 
 import { kindOf } from "../anchor/kind.js";
 import { labelFor } from "../anchor/label.js";
+import { exportDrafts } from "../export/drafts.js";
 import { pageIsTagged } from "../overlay/tagged.js";
 import { ASSIST_IDLE, createAssistRunner } from "./assist.js";
 import { createDraftKeeper, draftIdFor } from "./drafts.js";
@@ -88,7 +89,10 @@ export interface MapleClientOptions extends MapleProps {
   readonly root?: Element;
   /** What listeners attach to. Defaults to `globalThis.window`. */
   readonly view?: ClientView;
-  /** Let the browser ask before a hard exit. Off: the draft is already safe. */
+  /**
+   * Let the browser ask before a hard exit. On by default now that a comment
+   * is a draft until it is published: on disk is not the same as delivered.
+   */
   readonly confirmOnUnload?: boolean;
   /**
    * Already resolved by `readMapleConfig`, so the query string, the viewer's
@@ -158,10 +162,22 @@ export interface MapleClient {
   setBody(body: string): void;
   attach(ref: MediaRef): void;
   detach(key: string): void;
-  /** Leaves the draft where it is. Only a send clears one. */
+  /** Leaves the draft where it is, open. Only a publish clears one. */
   closeComposer(): void;
-  discardDraft(): void;
-  send(): Promise<Comment>;
+  /** Throws a draft away. With no id, the one the composer is writing into. */
+  discardDraft(id?: string): void;
+  /**
+   * Closes the composer, keeping what was written as a draft. A comment is a
+   * draft until it is published, and this is the end of writing one.
+   */
+  keepDraft(): void;
+  /**
+   * Publishes drafts to the store, oldest first, in one request. With no
+   * argument it publishes every kept one, the open composer's included.
+   */
+  publish(ids?: readonly string[]): Promise<readonly Comment[]>;
+  /** Every unsent comment as markdown, for a reviewer with nowhere to publish. */
+  draftsAsMarkdown(): string;
   /**
    * Whether a comment is judged as it is typed, remembered per origin. It
    * cannot switch on a deployment that configured no classifier.
@@ -268,9 +284,11 @@ export function createMapleClient(options: MapleClientOptions): MapleClient {
         attachments: runtime.state.composer.attachments.filter((ref) => ref.key !== key),
       }),
     closeComposer: () => closeComposer(runtime),
+    keepDraft: () => keepDraft(runtime),
+    publish: (ids) => publish(runtime, ids),
+    draftsAsMarkdown: () => copyable(runtime),
     setAssist: (on) => setAssist(runtime, on),
-    discardDraft: () => discardDraft(runtime),
-    send: () => send(runtime),
+    discardDraft: (id) => discardDraft(runtime, id),
 
     setStatus: (id, status, resolution) => setStatus(runtime, id, status, resolution),
 
@@ -322,6 +340,7 @@ function runtimeFor(options: MapleClientOptions): Runtime {
       peeked: null,
       openCount: 0,
       drafts: drafts.list(),
+      publishing: false,
       composer: CLOSED,
       pick: config.pick === undefined ? UNARMED : { armed: true, kind: config.pick },
       theme: themeFrom({}),
@@ -411,7 +430,7 @@ function start(runtime: Runtime): void {
 
   runtime.guard = navigationFor(runtime, view);
   runtime.guard.start();
-  runtime.guard.setDirty(runtime.state.composer.dirty);
+  reconsiderDirty(runtime);
 
   runtime.theme = watchTheme({
     view,
@@ -440,14 +459,27 @@ function navigationFor(runtime: Runtime, view: ClientView): NavigationGuard {
   return createNavigationGuard({
     view,
     save: () => runtime.drafts.flush(),
-    isDirty: () => runtime.state.composer.dirty,
-    ...(options.confirmOnUnload === undefined ? {} : { confirmOnUnload: options.confirmOnUnload }),
+    isDirty: () => unpublished(runtime),
+    confirmOnUnload: options.confirmOnUnload !== false,
     ...(options.askToLeave === undefined ? {} : { prompt: promptFor(runtime) }),
     onLeave: (reason) => {
       options.onLeave?.(reason);
       patch(runtime, { drafts: runtime.drafts.list() });
     },
   });
+}
+
+/**
+ * Anything nobody else can see yet: a draft being typed, or one kept. Safe
+ * from a reload is not delivered, and the guard says so before a tab closes.
+ */
+function unpublished(runtime: Runtime): boolean {
+  return runtime.state.composer.dirty || runtime.state.drafts.length > 0;
+}
+
+/** Told to the guard wherever a draft is made, kept, thrown away or published. */
+function reconsiderDirty(runtime: Runtime): void {
+  runtime.guard?.setDirty(unpublished(runtime));
 }
 
 /**
@@ -625,7 +657,7 @@ function openComposer(runtime: Runtime, target: ComposerTarget): void {
       contextOpen: true,
     },
   });
-  runtime.guard?.setDirty(runtime.state.composer.dirty);
+  reconsiderDirty(runtime);
 
   runtime.assist.cancel();
   if (runtime.state.assist && existing) runtime.assist.ask(existing.body);
@@ -700,7 +732,7 @@ function write(runtime: Runtime, change: Partial<ComposerState>): void {
   const next = { ...current, ...change, dirty: true };
   runtime.drafts.save(draftFrom(runtime, next));
   patch(runtime, { composer: next, drafts: runtime.drafts.list() });
-  runtime.guard?.setDirty(true);
+  reconsiderDirty(runtime);
 
   if (change.body !== undefined && runtime.state.assist) runtime.assist.ask(change.body);
 }
@@ -756,53 +788,121 @@ function draftFrom(runtime: Runtime, state: WritableComposer): Draft {
   };
 }
 
-function discardDraft(runtime: Runtime): void {
-  const { draftId } = runtime.state.composer;
-  if (draftId !== undefined) runtime.drafts.discard(draftId);
-  runtime.assist.cancel();
+/**
+ * Throws a draft away. One the composer is not on is dropped where it sits,
+ * so a row on the unsent list never has to open a panel to be rid of one.
+ */
+function discardDraft(runtime: Runtime, id?: string): void {
+  const open = runtime.state.composer.draftId;
+  const wanted = id ?? open;
+  if (wanted === undefined) return;
 
-  patch(runtime, { composer: CLOSED, drafts: runtime.drafts.list() });
-  runtime.guard?.setDirty(false);
+  runtime.drafts.discard(wanted);
+  const closes = wanted === open;
+  if (closes) runtime.assist.cancel();
+
+  patch(runtime, {
+    drafts: runtime.drafts.list(),
+    ...(closes ? { composer: CLOSED } : {}),
+  });
+  reconsiderDirty(runtime);
 }
 
-async function send(runtime: Runtime): Promise<Comment> {
+/**
+ * Closes the composer on a draft worth keeping. Every keystroke is already in
+ * storage, so this writes nothing new: it ends the writing, not the comment.
+ */
+function keepDraft(runtime: Runtime): void {
   const state = runtime.state.composer;
-  if (!isWritable(state)) throw new Error("There is no composer to send.");
-  if (state.body.trim() === "") throw new Error("A comment needs a body before it is sent.");
+  if (!isWritable(state) || state.body.trim() === "") {
+    discardDraft(runtime);
+    return;
+  }
 
-  composer(runtime, { sending: true });
+  runtime.drafts.save(draftFrom(runtime, state));
+  runtime.drafts.flush();
+  runtime.assist.cancel();
+  patch(runtime, { composer: CLOSED, drafts: runtime.drafts.list(), hidden: false });
+  reconsiderDirty(runtime);
+}
+
+/**
+ * Publishes drafts, newest last, in one request. A store that can take a
+ * batch spends one write on them, so five comments are one notification.
+ */
+async function publish(runtime: Runtime, ids?: readonly string[]): Promise<readonly Comment[]> {
+  const chosen = publishable(runtime, ids);
+  if (chosen.length === 0) return [];
+
+  patch(runtime, { publishing: true });
   try {
-    const comment = await runtime.transport.append(postedFrom(runtime, state));
-    runtime.drafts.markSent(state.draftId);
+    const comments = await runtime.transport.appendMany(
+      chosen.map((draft) => postedFromDraft(runtime, draft)),
+    );
+    for (const draft of chosen) runtime.drafts.markSent(draft.id);
 
     patch(runtime, {
-      comments: [comment, ...runtime.state.comments],
-      composer: CLOSED,
+      comments: [...comments].reverse().concat(runtime.state.comments),
+      composer: composerAfter(runtime, chosen),
       drafts: runtime.drafts.list(),
+      publishing: false,
       hidden: false,
       error: null,
     });
-    runtime.guard?.setDirty(false);
-    return comment;
+    reconsiderDirty(runtime);
+    return comments;
   } catch (error) {
-    composer(runtime, { sending: false });
+    patch(runtime, { publishing: false });
     fail(runtime, error, "send");
     throw error;
   }
 }
 
-/** The author is the route's to decide, so nothing here claims one. */
-function postedFrom(runtime: Runtime, state: WritableComposer): PostedComment {
+/**
+ * What a publish will send: the named drafts, or every kept one. Oldest
+ * first, so the numbers on the pull request read in the order they were left.
+ */
+function publishable(runtime: Runtime, ids: readonly string[] | undefined): readonly Draft[] {
+  const open = runtime.state.composer;
+  if (isWritable(open) && open.dirty) runtime.drafts.save(draftFrom(runtime, open));
+  runtime.drafts.flush();
+
+  const all = oldestFirst(runtime.drafts.list());
+  const wanted = ids === undefined ? all : all.filter((draft) => ids.includes(draft.id));
+  return wanted.filter((draft) => draft.body.trim() !== "");
+}
+
+/** Oldest first, so the numbers on the pull request read in writing order. */
+function oldestFirst(drafts: readonly Draft[]): readonly Draft[] {
+  return [...drafts].sort((a, b) => a.updatedAt.localeCompare(b.updatedAt));
+}
+
+/** The composer survives a publish unless what it was writing has just gone. */
+function composerAfter(runtime: Runtime, sent: readonly Draft[]): ComposerState {
+  const { draftId } = runtime.state.composer;
+  const gone = draftId !== undefined && sent.some((draft) => draft.id === draftId);
+  return gone ? CLOSED : runtime.state.composer;
+}
+
+function postedFromDraft(runtime: Runtime, draft: Draft): PostedComment {
   return {
     branch: runtime.options.branch,
     ...(runtime.options.label === undefined ? {} : { label: runtime.options.label }),
     ...(runtime.options.commit === undefined ? {} : { commit: runtime.options.commit }),
-    body: state.body,
-    anchor: state.target.anchor,
-    createdAt: new Date(runtime.now()).toISOString(),
-    ...(state.target.context === undefined ? {} : { context: state.target.context }),
-    ...(state.attachments.length === 0 ? {} : { attachments: state.attachments }),
+    body: draft.body,
+    anchor: draft.anchor,
+    createdAt: draft.updatedAt,
+    ...(draft.context === undefined ? {} : { context: draft.context }),
+    ...(draft.attachments === undefined ? {} : { attachments: draft.attachments }),
   };
+}
+
+/** Everything unsent, as markdown to paste. The way out with no store. */
+function copyable(runtime: Runtime): string {
+  return exportDrafts(runtime.drafts.list(), {
+    branch: runtime.options.branch,
+    ...(runtime.options.label === undefined ? {} : { label: runtime.options.label }),
+  }).markdown;
 }
 
 /** Records the approval and takes the verdict the route publishes with it. */

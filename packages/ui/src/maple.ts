@@ -33,6 +33,7 @@ import {
   NewComment,
   PickButton,
   Settings,
+  Unsent,
 } from "./island/index.js";
 import { PICK_ORDER } from "./island/language.js";
 import { MapleMarkLayer } from "./marks/index.js";
@@ -104,6 +105,7 @@ function inventory(branch: string, label: string | undefined, defaultOpen: boole
       createElement(MapleNotice, { during: LOAD_CALLS }),
       createElement(Filters),
       createElement(List, { children: (comment: Comment) => createElement(Item, { comment }) }),
+      createElement(Unsent),
       createElement(Approve),
       createElement(
         NewComment,
