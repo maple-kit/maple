@@ -104,26 +104,24 @@ avatar onto **Upload a logo**, click **Set new avatar**, and set **Badge
 background colour** to `#fdf8e8`.
 
 **The badge colour is the plate, not the leaf.** GitHub puts the square logo
-inside a circle filled with that colour, and the leaf is already `#465a2b`,
-so setting the plate to the same green makes the leaf disappear into it —
-which is exactly what it looks like in the corner of a reviewer's avatar on
-every comment, at sixteen pixels. Cream is the contrast the mark was drawn
-for. The field only appears once a logo is uploaded.
+inside a circle filled with that colour, and the leaf is green throughout, so
+setting the plate to a green makes the leaf disappear into it — which is
+exactly what it looks like in the corner of a reviewer's avatar on every
+comment, at sixteen pixels. Cream is the contrast the mark was drawn for. The
+field only appears once a logo is uploaded.
 
-The avatar is `docs/assets/app-logo.png` in the Maple repository — the leaf
-filling the square edge to edge, outlined in cream, with a lowercase `m` cut
-out of it, 1024 square on a transparent ground, well inside GitHub's 1 MB
-limit. It is drawn
-to survive being shrunk: the whole square is leaf, because a margin is the
-one thing a sixteen-pixel badge cannot afford. Download it without cloning:
+The avatar is `docs/assets/app-logo.png` in the Maple repository — the pixel
+leaf, 1024 square on a transparent ground, well inside GitHub's 1 MB limit. It
+is drawn to survive being shrunk: the whole square is leaf, because a margin
+is the one thing a sixteen-pixel badge cannot afford. Download it without
+cloning:
 
 ```
 curl -O https://raw.githubusercontent.com/maple-kit/maple/main/docs/assets/app-logo.png
 ```
 
-`docs/branding.md` records the settings it was drawn at and the lab it was
-drawn in, `tools/logo-lab/index.html`, for an organisation that would rather
-render its own.
+`docs/branding.md` records what it is drawn from and how to enlarge it, for an
+organisation that would rather render its own.
 
 **There is no other way to do this.** GitHub's App manifest has no logo field
 and its REST API has no endpoint for an App's avatar, so it is a browser step

@@ -39,7 +39,10 @@ caller sizing by height gets the width for free.
 
 ## In the island
 
-![The island's header before and after, in light and dark: the leaf beside the word "Comments", and the leaf beside the word "maple".](assets/island-wordmark.png)
+![The island's header: the pixel leaf beside the word "maple", the branch pill, the filters row, and below them a comment row whose own mark is the outlined comment leaf carrying the number 6.](assets/island-wordmark.png)
+
+Both leaves are in that one picture. The lockup carries the brand mark and the
+row carries the comment mark, and they are not the same drawing.
 
 ## The pixel leaf
 
@@ -92,18 +95,27 @@ that fills 0.93 of its box.
 
 ## In the README
 
-`docs/assets/wordmark.svg` and `wordmark-dark.svg` are the same drawing with
-the token colours resolved to hex, paired in a `<picture>`. GitHub strips
-inline SVG from Markdown and does not evaluate `oklch()` in a linked image, so
-the two files exist rather than one that adapts.
+`docs/assets/wordmark.svg` and `wordmark-dark.svg` are the lockup on one grid,
+paired in a `<picture>`. GitHub strips inline SVG from Markdown and does not
+evaluate `oklch()` in a linked image, so the two files exist rather than one
+that adapts. Only the word differs between them: `#1a1d23` (`--mk-fg`) light
+and `#f6f7f9` dark. The leaf is the same in both, because it is artwork and
+has no light and dark.
 
-|       | leaf                      | word                  |
-| ----- | ------------------------- | --------------------- |
-| light | `#465a2b` (`--mk-accent`) | `#1a1d23` (`--mk-fg`) |
-| dark  | `#a6bb72` (`--mk-accent`) | `#f6f7f9` (`--mk-fg`) |
+The structure is the one thing to get right. The leaf is 33 `<path>` elements
+in the root `<svg>`, which carries `shape-rendering="crispEdges"`, and the word
+is a nested `<svg>` of its own that sets `shape-rendering="auto"` back. Letting
+`crispEdges` reach the word is the easy mistake: the curves go to stairs.
 
-Regenerate them from the token values in `packages/ui/src/tokens.ts` whenever
-those change; nothing checks that they still agree.
+The grid is the leaf's own 28 cells. The view box is `0 0 87.145 28`: the leaf
+at 28, a gap of 5.6, then the word at 53.545 by 25.2, nested at `y` 0.6285,
+which is the box centre less the rise. Those are the lockup's numbers from
+`island/wordmark.ts` at `size` 28, and they are the only thing that keeps the
+file and the component agreeing. The README draws it at `height="56"`, which
+is two device pixels a cell.
+
+Regenerate it whenever the lockup's numbers or `--mk-fg` change; nothing checks
+that they still agree.
 
 ## On a pull request
 
@@ -158,56 +170,25 @@ branded would be a flag nobody sets.
 
 ## The App's logo
 
-`docs/assets/app-logo.png` is the avatar both GitHub Apps wear: the solid leaf
-filling a transparent square edge to edge, tilted its own 20 degrees, outlined
-in cream, with a lowercase `m` in Caveat Brush cut out of it in the same cream.
-The outline is what holds the leaf off a dark surface behind it, and it
-disappears harmlessly into a cream badge plate. Lowercase,
-because the wordmark's word is lowercase and a capital reads as a different
-mark; cut out rather than laid on, because at 20 pixels in a checks list the
-counter is the only thing that says the leaf is a letter at all.
+`docs/assets/app-logo.png` is the avatar both GitHub Apps wear: the pixel leaf
+on its own, 1024 square on a transparent ground, well inside GitHub's 1 MB
+limit. It is the 28-cell drawing enlarged by nearest neighbour and nothing
+else, so a cell is a cell and the mark is the same mark at every size it is
+shrunk to.
 
-It is a manual upload under **Display information** — GitHub has no manifest
-field for a logo and no REST endpoint for an App's avatar — so the
+Regenerate it by painting `PIXEL_LEAF_SHADES` into a 28 by 28 RGBA grid, one
+cell per unit with the view box's leading row accounted for, and resampling to
+1024 with a nearest-neighbour filter. Any other filter smooths the cells and
+the drawing is gone.
+
+It is a manual upload under **Display information**, because GitHub has no
+manifest field for a logo and no REST endpoint for an App's avatar, so the
 `setup-maple-org` skill asks for it at the step where a person is already on
-that page. The badge background beside it is `#fdf8e8`, the cream, and not the
-accent: GitHub fills a circle behind the square logo with that colour, so the
-accent would be the leaf's own green and the leaf would vanish into its plate.
-At sixteen pixels, in the corner of a reviewer's avatar, that is the whole
-mark gone.
+that page. The badge background beside it stays `#fdf8e8`, the cream: GitHub
+fills a circle behind the square logo with that colour, and the accent would
+put the leaf's own green behind the leaf. At sixteen pixels, in the corner of
+a reviewer's avatar, that is the whole mark gone.
 
-`leafSize` is a percentage of the **ink**, not of the view box: the leaf's box
-is padded so its tips cannot clip when it rotates, and the ink inside it is
-only about 68% of that box, by a different amount at every tilt. The lab
-measures the ink and fits to it, so `100` means the leaf touches all four
-edges and `92` used to mean 63%. The `m` is anchored on the leaf's centre of
-**mass** rather than on its box, because the stem hangs off one corner: a
-letter centred in the box reads off centre in the leaf, which is the only
-centre a reader sees. `mX` and `mY` are offsets from that, and both are zero.
-
-Regenerate it from `tools/logo-lab/index.html`, which draws `LEAF_SOLID` and
-the letter onto a canvas at any size and previews the result down to 20
-pixels. Open it, load the **Cut-out** preset, and these are the settings the
-file was rendered at, at 1024:
-
-```json
-{
-  "leafStyle": "solid",
-  "leafColor": "#465a2b",
-  "leafSize": 100,
-  "leafTilt": 20,
-  "strokeWidth": 3.5,
-  "strokeColor": "#fdf8e8",
-  "mColor": "#fdf8e8",
-  "mSize": 34,
-  "mX": 0,
-  "mY": 0,
-  "mTilt": 0,
-  "mCase": "m",
-  "bgAlpha": 0
-}
-```
-
-```
-
-```
+`tools/logo-lab/index.html` drew the avatar this replaced, from `LEAF_SOLID`
+and a cut-out `m`. It still draws the comment mark, which is what it was built
+for; it does not draw this one, and the pixel leaf is not a shape it can take.
