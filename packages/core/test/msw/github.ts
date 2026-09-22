@@ -26,6 +26,10 @@ export interface GitHubFake {
   reset(): void;
   /** Comments currently on a pull request, for asserting on what was written. */
   commentsOn(pull: number): readonly StoredComment[];
+  /** Puts a comment on a pull request without going through the connector. */
+  post(pull: number, body: string): StoredComment;
+  /** Every write the connector made, in order, as `METHOD /path`. */
+  writes(): readonly string[];
   /** The branches `GET /pulls?state=open` lists, newest first. */
   open(...branches: readonly string[]): void;
   /** Says which branch a commit is on, for `GET /commits/{sha}/pulls`. */
@@ -45,6 +49,7 @@ export function createGitHubFake(owner = "maple-kit", repo = "app"): GitHubFake 
   let opened: readonly string[] = [];
   let lookups = 0;
   let nextId = 1000;
+  const writes: string[] = [];
 
   const commentsFor = (pull: number): StoredComment[] => {
     const existing = comments.get(pull);
@@ -109,6 +114,7 @@ export function createGitHubFake(owner = "maple-kit", repo = "app"): GitHubFake 
         nextId += 1;
         const created = { id: nextId, body };
 
+        writes.push(`POST /issues/${String(pull)}/comments`);
         commentsFor(pull).push(created);
         return HttpResponse.json(created, { status: 201 });
       },
@@ -125,8 +131,22 @@ export function createGitHubFake(owner = "maple-kit", repo = "app"): GitHubFake 
       if (!found) return HttpResponse.json({ message: "Not Found" }, { status: 404 });
 
       const { body } = (await request.json()) as { body: string };
+      writes.push(`PATCH /issues/comments/${String(found.id)}`);
       found.body = body;
       return HttpResponse.json(found);
+    }),
+
+    http.delete(`${API}/repos/${owner}/${repo}/issues/comments/:id`, ({ params }) => {
+      const id = Number(params["id"]);
+      for (const list of comments.values()) {
+        const at = list.findIndex((comment) => comment.id === id);
+        if (at < 0) continue;
+
+        writes.push(`DELETE /issues/comments/${String(id)}`);
+        list.splice(at, 1);
+        return new HttpResponse(null, { status: 204 });
+      }
+      return HttpResponse.json({ message: "Not Found" }, { status: 404 });
     }),
   ];
 
@@ -137,8 +157,16 @@ export function createGitHubFake(owner = "maple-kit", repo = "app"): GitHubFake 
       commits.clear();
       opened = [];
       lookups = 0;
+      writes.length = 0;
     },
     commentsOn: (pull) => [...commentsFor(pull)],
+    post: (pull, body) => {
+      nextId += 1;
+      const created = { id: nextId, body };
+      commentsFor(pull).push(created);
+      return created;
+    },
+    writes: () => [...writes],
     open: (...branches) => (opened = branches),
     commit: (sha, branch) => {
       commits.set(sha, branch);

@@ -82,7 +82,7 @@ below the table.
 
 | Connector            | list | append | setStatus | head | watch | approvals | approve | unapprove | putBlob | getUrl | getReplayLink | fetchEvents | resolveUser | publish | read | score | classify |
 | -------------------- | ---- | ------ | --------- | ---- | ----- | --------- | ------- | --------- | ------- | ------ | ------------- | ----------- | ----------- | ------- | ---- | ----- | -------- |
-| `github` (store)     | ✓    | ✓      | ✓         | ✓    | —     | —         | —       | —         | —       | —      | —             | —           | —           | —       | —    | —     | —        |
+| `github` (store)     | ✓    | ✓      | ✓         | ✓    | —     | ✓         | ✓       | ✓         | —       | —      | —             | —           | —           | —       | —    | —     | —        |
 | `github` (gate)      | —    | —      | —         | —    | —     | —         | —       | —         | —       | —      | —             | —           | —           | ✓       | ✓    | —     | —        |
 | `memory` (reference) | ✓    | ✓      | ✓         | ✓    | —     | ✓         | ✓       | ✓         | —       | —      | —             | —           | —           | ✓       | ✓    | ✓     | ✓        |
 | `keyword` (baseline) | —    | —      | —         | —    | —     | —         | —       | —         | —       | —      | —             | —           | —           | —       | —    | ✓     | ✓        |
@@ -102,29 +102,56 @@ pull request is already branch identity, authentication, durability, threading,
 resolve semantics and notifications; a SQLite file in a preview pod is none of
 those and loses comments exactly when people write them.
 
-One Maple comment is one issue comment, carrying the table above its fence. That
-is what buys GitHub's own threading, reactions and notifications, and it is why
-the fence has a byte budget.
+### One ledger, reposted
 
-**A second fence on the same pull request is a second comment.** `list` reads
-every issue comment that carries one, so a summary that repeats them all is read
-back as one more comment — with an id nothing can resolve, because it points at
-the summary rather than at what a reviewer clicked. It would hold the gate for
-ever. Anything summarising a pull request passes `fence: false` to
-`exportMarkdown` and writes the table alone; the fences on the individual
-comments are what an agent reads.
+**Everything Maple keeps on a pull request lives in one issue comment.** It
+carries a table of every visual comment, the sign-offs under it, and one fence
+holding all of them. It was one issue comment _per comment_ until #100, which
+bought GitHub's own threading and cost the thing people actually noticed: ten
+visual comments were ten comments on the pull request, and the review was
+unreadable underneath them.
+
+The cost of collapsing them is that **editing a comment notifies nobody**. So a
+write that is news — a new visual comment, a new approval — does not edit. It
+posts the rebuilt ledger and then deletes the old one, so the pull request has
+exactly one Maple comment, always at the bottom, and every new comment reaches
+whoever is subscribed. A write that is not news — a resolve, a withdrawal —
+edits in place, because moving the whole thread to announce that something a
+reviewer just clicked is done is noise.
+
+**The new one is created before the old one is deleted.** The other order loses
+every comment on the pull request if the process dies between the two calls.
+This order leaves two ledgers, which `list` survives: it takes the newest and
+ignores the rest, and the next write deletes them. A `DELETE` that fails is
+swallowed for the same reason.
+
+The ceiling is GitHub's 65,536-character body. The fence is held under 40,000
+of it and sheds detail in the usual order to get there; the table above it is
+not budgeted, so a pull request with hundreds of visual comments will overflow
+before Maple complains. That is a limit worth knowing and not one worth
+engineering around yet.
+
+**A fence anywhere else on the pull request is read as a ledger.** Anything
+summarising a pull request therefore passes `fence: false` to `exportMarkdown`
+and writes the table alone — otherwise the summary shadows the real ledger and
+the comments in it become unreachable.
 
 ### What it costs
 
-| Method      | How                                                                   | Cost                                                                 |
-| ----------- | --------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| `list`      | `GET /issues/{pull}/comments`, paged by GitHub's `Link` header.       | One extra call to find the pull request, unless a `cache` holds it.  |
-| `append`    | `POST` the comment, then `PATCH` it with the id GitHub just assigned. | Two writes. The id cannot be known before the comment exists.        |
-| `setStatus` | `GET` the comment, rewrite its fence, `PATCH` it back.                | Two calls, and it preserves fields a newer Maple may have written.   |
-| `head`      | `GET /pulls/{pull}` for its head sha.                                 | One call per gate publish. The sha is never cached; a push moves it. |
+| Method      | How                                                      | Cost                                                                 |
+| ----------- | -------------------------------------------------------- | -------------------------------------------------------------------- |
+| `list`      | `GET /issues/{pull}/comments` until the ledger is found. | One extra call to find the pull request, unless a `cache` holds it.  |
+| `append`    | Read the ledger, `POST` the new one, `DELETE` the old.   | A read plus two writes. The read is what makes the append additive.  |
+| `setStatus` | Read the ledger, rewrite its fence, `PATCH` it back.     | A read plus one write, and no notification.                          |
+| `approve`   | Read the ledger, `POST`, `DELETE`, as an append.         | Same as `append`: a sign-off is news.                                |
+| `unapprove` | Read the ledger, `PATCH` it back.                        | Same as `setStatus`.                                                 |
+| `head`      | `GET /pulls/{pull}` for its head sha.                    | One call per gate publish. The sha is never cached; a push moves it. |
 
-A comment id is `gh_<pull>_<commentId>`, so `setStatus` needs nothing it was not
-given: no index, no cache, and it works in a process that never ran `list`.
+A comment id is `gh_<pull>_<n>` and an approval id `gha_<pull>_<n>`, where `n`
+is one past the highest the ledger has used. The id carries its pull request,
+so a write needs no index and no cache and works in a process that never ran
+`list`. `n` is **not** the issue comment's id any more: the ledger's own id
+changes on every repost, and an id that moved would break every link to it.
 
 ### What it cannot do
 

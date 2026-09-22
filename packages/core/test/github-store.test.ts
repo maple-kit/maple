@@ -64,12 +64,125 @@ describe("what gets written to the pull request", () => {
     expect(parseFence(posted!.body)?.comments[0]?.id).toBe(stored.id);
   });
 
-  it("uses one issue comment per comment, so GitHub's own threading works", async () => {
+  it("keeps one issue comment however many visual comments there are", async () => {
     const branch = "feature/many";
     await store().append(sampleComment({ branch, body: "first" }));
     await store().append(sampleComment({ branch, body: "second" }));
+    await store().append(sampleComment({ branch, body: "third" }));
 
-    expect(github.commentsOn(pullFor(branch))).toHaveLength(2);
+    const on = github.commentsOn(pullFor(branch));
+    expect(on).toHaveLength(1);
+    expect(parseFence(on[0]!.body)?.comments.map((one) => one.body)).toEqual([
+      "first",
+      "second",
+      "third",
+    ]);
+  });
+
+  it("reposts at the bottom, because an edit notifies nobody", async () => {
+    const branch = "feature/repost";
+    await store().append(sampleComment({ branch, body: "first" }));
+    const [first] = github.commentsOn(pullFor(branch));
+
+    await store().append(sampleComment({ branch, body: "second" }));
+    const [second] = github.commentsOn(pullFor(branch));
+
+    expect(second?.id).not.toBe(first?.id);
+    expect(github.writes()).toEqual([
+      `POST /issues/${String(pullFor(branch))}/comments`,
+      `POST /issues/${String(pullFor(branch))}/comments`,
+      `DELETE /issues/comments/${String(first!.id)}`,
+    ]);
+  });
+
+  it("creates the new comment before deleting the old, so a failure loses nothing", async () => {
+    const branch = "feature/order";
+    await store().append(sampleComment({ branch, body: "first" }));
+    const [first] = github.commentsOn(pullFor(branch));
+    await store().append(sampleComment({ branch, body: "second" }));
+
+    const writes = github.writes();
+    const posted = writes.lastIndexOf(`POST /issues/${String(pullFor(branch))}/comments`);
+    expect(posted).toBeLessThan(writes.indexOf(`DELETE /issues/comments/${String(first!.id)}`));
+  });
+
+  it("edits in place on a resolve, which is nobody's news", async () => {
+    const branch = "feature/resolve";
+    const stored = await store().append(sampleComment({ branch }));
+    const [posted] = github.commentsOn(pullFor(branch));
+
+    await setStatus(stored.id, "resolved");
+
+    expect(github.commentsOn(pullFor(branch))[0]?.id).toBe(posted?.id);
+    expect(github.writes().at(-1)).toBe(`PATCH /issues/comments/${String(posted!.id)}`);
+  });
+
+  it("leaves a comment somebody else wrote exactly where it is", async () => {
+    const branch = "feature/theirs";
+    const pull = pullFor(branch);
+    const theirs = github.post(pull, "Looks good to me, shipping Friday.");
+
+    await store().append(sampleComment({ branch, body: "first" }));
+    await store().append(sampleComment({ branch, body: "second" }));
+
+    const on = github.commentsOn(pull);
+    expect(on).toHaveLength(2);
+    expect(on[0]).toEqual(theirs);
+  });
+
+  it("takes the newest ledger and clears the duplicate a failed repost left", async () => {
+    const branch = "feature/healing";
+    const pull = pullFor(branch);
+    await store().append(sampleComment({ branch, body: "first" }));
+    const orphaned = github.post(pull, github.commentsOn(pull)[0]!.body);
+
+    expect((await store().list({ branch })).comments.map((one) => one.body)).toEqual(["first"]);
+
+    await store().append(sampleComment({ branch, body: "second" }));
+    const on = github.commentsOn(pull);
+    expect(on).toHaveLength(1);
+    expect(on.map((one) => one.id)).not.toContain(orphaned.id);
+  });
+});
+
+describe("approvals on the ledger", () => {
+  it("rides in the same comment as the visual comments", async () => {
+    const branch = "feature/signed";
+    const connector = store();
+    await connector.append(sampleComment({ branch, body: "first" }));
+    await connector.approve!({
+      branch,
+      commit: "1f3c9ab",
+      author: { id: "u_7", name: "Dana", provenance: "server" },
+      at: "2026-09-22T09:00:00.000Z",
+    });
+
+    const on = github.commentsOn(pullFor(branch));
+    expect(on).toHaveLength(1);
+    expect(parseFence(on[0]!.body)?.approvals.map((one) => one.author.name)).toEqual(["Dana"]);
+    expect(on[0]!.body).toContain("Approved:");
+  });
+
+  it("reposts on an approval and edits in place when one is withdrawn", async () => {
+    const branch = "feature/withdrawn";
+    const connector = store();
+    await connector.append(sampleComment({ branch }));
+    const approval = await connector.approve!({
+      branch,
+      commit: "1f3c9ab",
+      author: { id: "u_7", name: "Dana", provenance: "server" },
+      at: "2026-09-22T09:00:00.000Z",
+    });
+
+    const afterApproval = github.commentsOn(pullFor(branch))[0]!.id;
+    await connector.unapprove!(approval.id);
+
+    expect(github.commentsOn(pullFor(branch))[0]?.id).toBe(afterApproval);
+    expect(await connector.approvals!(branch)).toEqual([]);
+  });
+
+  it("refuses an id that is not one of its own", async () => {
+    await expect(store().unapprove!("not-an-id")).rejects.toThrow(/approval id/i);
   });
 });
 
@@ -163,8 +276,8 @@ describe("changing a status", () => {
     await expect(setStatus("mem_1", "resolved")).rejects.toThrow(/not a github comment id/i);
   });
 
-  it("rejects an id for a comment that is gone", async () => {
-    await expect(setStatus("gh_1_999999", "resolved")).rejects.toThrow(/404/);
+  it("rejects an id the ledger does not hold", async () => {
+    await expect(setStatus("gh_1_999999", "resolved")).rejects.toThrow(/No Maple record/);
   });
 });
 

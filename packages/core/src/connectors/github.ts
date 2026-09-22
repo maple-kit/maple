@@ -1,16 +1,26 @@
 /**
  * GitHub pull-request store connector, and Maple's default store.
  *
- * Consistency: read-your-writes. GitHub's REST API is strongly consistent for
- * a comment's own repository.
+ * Consistency: read-your-writes, strongly consistent within a repository.
  * Retention: as long as the pull request exists.
  * Credentials: one token, server-side only. It never reaches the overlay.
+ *
+ * Everything Maple keeps on a pull request lives in one issue comment — the
+ * ledger — and news reposts it rather than editing it. `docs/connectors.md`.
  */
 
 import { exportMarkdown, parseFence } from "../export/markdown.js";
 import { findPull } from "./github-pull.js";
 
-import type { Comment, CommentResolution, CommentStatus, MediaRef, NewComment } from "../types.js";
+import type {
+  Approval,
+  Comment,
+  CommentResolution,
+  CommentStatus,
+  MediaRef,
+  NewApproval,
+  NewComment,
+} from "../types.js";
 import type { PullCache, PullLookup, PullReader } from "./github-pull.js";
 import type { CommentPage, ListQuery, MediaConnector, StoreConnector } from "./types.js";
 
@@ -47,6 +57,13 @@ export interface GitHubStoreOptions {
 const DEFAULT_BASE = "https://api.github.com";
 const PAGE_SIZE = 100;
 const ID = /^gh_(\d+)_(\d+)$/;
+const APPROVAL_ID = /^gha_(\d+)_(\d+)$/;
+
+/**
+ * Bytes the fence is held under: one ledger carries a whole pull request, and
+ * the table above it is unbudgeted out of GitHub's 65,536 characters.
+ */
+const LEDGER_BUDGET = 40_000;
 
 /** Creates a store connector backed by a pull request's comments. */
 export function githubStore(options: GitHubStoreOptions): StoreConnector {
@@ -58,6 +75,9 @@ export function githubStore(options: GitHubStoreOptions): StoreConnector {
     append: (comment) => append(api, comment),
     setStatus: (id, status, resolution) => setStatus(api, id, status, resolution),
     head: (branch) => head(api, branch),
+    approvals: (branch) => approvalsOn(api, branch),
+    approve: (approval) => approve(api, approval),
+    unapprove: (id) => unapprove(api, id),
   };
 }
 
@@ -158,53 +178,133 @@ async function head(api: Client, branch: string): Promise<string | undefined> {
   return body.head.sha;
 }
 
+/**
+ * Everything Maple keeps on one pull request, and the comment it is in.
+ * `stale` is every older ledger a half-finished repost left behind.
+ */
+interface Ledger {
+  readonly branch: string;
+  readonly pull: number;
+  readonly issueId: number | undefined;
+  readonly stale: readonly number[];
+  readonly comments: readonly Comment[];
+  readonly approvals: readonly Approval[];
+}
+
+/** Reads the ledger for the pull request a surface identifier resolves to. */
+async function readLedger(api: Client, branch: string): Promise<Ledger | undefined> {
+  const pull = await pullFor(api, branch);
+  return pull === undefined ? undefined : await readLedgerAt(api, pull, branch);
+}
+
+/**
+ * Reads the ledger of a known pull request; the newest Maple comment wins.
+ * Without a branch the fence's own is taken: an id never names one.
+ */
+async function readLedgerAt(api: Client, pull: number, branch?: string): Promise<Ledger> {
+  const found: { id: number; body: string }[] = [];
+  for (let page = 1; page <= PAGE_SIZE; page += 1) {
+    const path = `/repos/${api.options.owner}/${api.options.repo}/issues/${String(pull)}/comments?per_page=${String(PAGE_SIZE)}&page=${String(page)}`;
+    const { body, hasNext } = await api.request<IssueComment[]>(path);
+    for (const issue of body) {
+      if (parseFence(issue.body)) found.push({ id: issue.id, body: issue.body });
+    }
+    if (!hasNext) break;
+  }
+
+  const newest = found.at(-1);
+  const fence = newest === undefined ? undefined : parseFence(newest.body);
+  const surface = branch ?? fence?.branch ?? "";
+
+  return {
+    branch: surface,
+    pull,
+    issueId: newest?.id,
+    stale: found.slice(0, -1).map((one) => one.id),
+    comments: fence?.comments.map((comment) => ({ ...comment, branch: surface })) ?? [],
+    approvals: fence?.approvals ?? [],
+  };
+}
+
+/**
+ * Writes the ledger back. `repost` creates the new comment before deleting the
+ * old one, so an interrupted write leaves two Maple comments rather than none.
+ */
+async function writeLedger(api: Client, ledger: Ledger, repost: boolean): Promise<void> {
+  const body = await bodyFor(api, ledger);
+  const { owner, repo } = api.options;
+  const gone = [...ledger.stale];
+
+  if (repost || ledger.issueId === undefined) {
+    await api.request<IssueComment>(
+      `/repos/${owner}/${repo}/issues/${String(ledger.pull)}/comments`,
+      { method: "POST", body: JSON.stringify({ body }) },
+    );
+    if (ledger.issueId !== undefined) gone.push(ledger.issueId);
+  } else {
+    await api.request<IssueComment>(
+      `/repos/${owner}/${repo}/issues/comments/${String(ledger.issueId)}`,
+      { method: "PATCH", body: JSON.stringify({ body }) },
+    );
+  }
+
+  for (const id of gone) await remove(api, id);
+}
+
+/** A comment that will not delete is a duplicate, not a failed write. */
+async function remove(api: Client, issueId: number): Promise<void> {
+  const { owner, repo } = api.options;
+  try {
+    await api.request<unknown>(`/repos/${owner}/${repo}/issues/comments/${String(issueId)}`, {
+      method: "DELETE",
+    });
+  } catch {
+    // Left in place. `readLedger` takes the newest, so it shadows rather than wins.
+  }
+}
+
 async function list(api: Client, query: ListQuery): Promise<CommentPage> {
   if (query.limit !== undefined && query.limit <= 0) {
     throw new RangeError(`limit must be positive, received ${String(query.limit)}`);
   }
 
-  const pull = await pullFor(api, query.branch);
-  if (pull === undefined) return { comments: [] };
+  const ledger = await readLedger(api, query.branch);
+  if (!ledger) return { comments: [] };
 
-  const page = query.cursor === undefined ? 1 : pageOf(query.cursor);
-  const perPage = Math.min(query.limit ?? PAGE_SIZE, PAGE_SIZE);
-  const path = `/repos/${api.options.owner}/${api.options.repo}/issues/${String(pull)}/comments?per_page=${String(perPage)}&page=${String(page)}`;
+  const matching = ledger.comments.filter(
+    (comment) => query.statuses === undefined || query.statuses.includes(comment.status),
+  );
+  const offset = query.cursor === undefined ? 0 : offsetOf(query.cursor);
+  const page = matching.slice(offset, offset + (query.limit ?? matching.length));
+  const next = offset + page.length;
 
-  const { body, hasNext } = await api.request<IssueComment[]>(path);
-  const comments = body
-    .map((issue) => commentIn(issue, pull, query.branch))
-    .filter((comment): comment is Comment => comment !== undefined)
-    .filter((comment) => query.statuses === undefined || query.statuses.includes(comment.status));
-
-  return { comments, ...(hasNext ? { cursor: String(page + 1) } : {}) };
-}
-
-/** Reads Maple's fence out of an issue comment, ignoring everyone else's. */
-function commentIn(issue: IssueComment, pull: number, branch: string): Comment | undefined {
-  const fence = parseFence(issue.body);
-  const stored = fence?.comments[0];
-  if (!stored) return undefined;
-
-  return { ...stored, id: idOf(pull, issue.id), branch };
+  return { comments: page, ...(next < matching.length ? { cursor: String(next) } : {}) };
 }
 
 async function append(api: Client, comment: NewComment): Promise<Comment> {
-  const pull = await pullFor(api, comment.branch);
-  if (pull === undefined) {
+  const ledger = await readLedger(api, comment.branch);
+  if (!ledger) {
     throw new Error(`No pull request for branch ${comment.branch}; Maple has nowhere to post.`);
   }
 
-  const draft: Comment = { ...comment, id: "", status: comment.status ?? "open" };
-  const created = await api.request<IssueComment>(
-    `/repos/${api.options.owner}/${api.options.repo}/issues/${String(pull)}/comments`,
-    { method: "POST", body: JSON.stringify({ body: await bodyFor(api, draft) }) },
-  );
-
-  const stored: Comment = { ...draft, id: idOf(pull, created.body.id) };
-  await patch(api, created.body.id, await bodyFor(api, stored));
+  const stored: Comment = {
+    ...comment,
+    id: `gh_${String(ledger.pull)}_${String(
+      nextSeq(
+        ledger.comments.map((one) => one.id),
+        ID,
+      ),
+    )}`,
+    status: comment.status ?? "open",
+  };
+  await writeLedger(api, { ...ledger, comments: [...ledger.comments, stored] }, true);
   return stored;
 }
 
+/**
+ * A status change edits the ledger in place. Nobody needs telling that a
+ * comment they resolved is resolved, and a repost would move the whole thread.
+ */
 async function setStatus(
   api: Client,
   id: string,
@@ -214,62 +314,110 @@ async function setStatus(
   const located = ID.exec(id);
   if (!located) throw new Error(`Not a GitHub comment id: ${id}`);
 
-  const issueId = Number(located[2]);
-  const { body } = await api.request<IssueComment>(
-    `/repos/${api.options.owner}/${api.options.repo}/issues/comments/${String(issueId)}`,
+  const ledger = await ledgerHolding(api, Number(located[1]), id, (one) =>
+    one.comments.some((held) => held.id === id),
   );
+  const existing = ledger.comments.find((one) => one.id === id);
+  if (!existing) throw new Error(`No comment ${id} on this pull request.`);
 
-  const stored = parseFence(body.body)?.comments[0];
-  if (!stored) throw new Error(`Comment ${id} carries no Maple fence.`);
-
-  const updated: Comment = { ...stored, id, status, ...(resolution ? { resolution } : {}) };
-  await patch(api, issueId, await bodyFor(api, updated));
+  const updated: Comment = { ...existing, status, ...(resolution ? { resolution } : {}) };
+  const comments = ledger.comments.map((one) => (one.id === id ? updated : one));
+  await writeLedger(api, { ...ledger, comments }, false);
   return updated;
 }
 
-async function patch(api: Client, issueId: number, body: string): Promise<void> {
-  await api.request<IssueComment>(
-    `/repos/${api.options.owner}/${api.options.repo}/issues/comments/${String(issueId)}`,
-    { method: "PATCH", body: JSON.stringify({ body }) },
-  );
+function approvalsOn(api: Client, branch: string): Promise<readonly Approval[]> {
+  return readLedger(api, branch).then((ledger) => ledger?.approvals ?? []);
 }
 
-/** One comment per issue comment, so GitHub's own threading and notifications work. */
-async function bodyFor(api: Client, comment: Comment): Promise<string> {
-  const shot = await shotFor(api, comment);
-  const screenshots = shot === undefined ? undefined : new Map([[comment.id, shot]]);
+/** An approval reposts: it is news, and an edit sends nobody a notification. */
+async function approve(api: Client, approval: NewApproval): Promise<Approval> {
+  const ledger = await readLedger(api, approval.branch);
+  if (!ledger) {
+    throw new Error(`No pull request for branch ${approval.branch}; Maple has nowhere to post.`);
+  }
 
-  return exportMarkdown([comment], {
-    branch: comment.branch,
-    ...(screenshots ? { screenshots } : {}),
+  const seq = nextSeq(
+    ledger.approvals.map((one) => one.id),
+    APPROVAL_ID,
+  );
+  const stored: Approval = { ...approval, id: `gha_${String(ledger.pull)}_${String(seq)}` };
+  await writeLedger(api, { ...ledger, approvals: [...ledger.approvals, stored] }, true);
+  return stored;
+}
+
+/** Withdrawing edits in place: it removes a line rather than adding news. */
+async function unapprove(api: Client, id: string): Promise<void> {
+  const located = APPROVAL_ID.exec(id);
+  if (!located) throw new Error(`Not a GitHub approval id: ${id}`);
+
+  const ledger = await ledgerHolding(api, Number(located[1]), id, (one) =>
+    one.approvals.some((approval) => approval.id === id),
+  );
+  const approvals = ledger.approvals.filter((one) => one.id !== id);
+  await writeLedger(api, { ...ledger, approvals }, false);
+}
+
+/**
+ * The ledger an id belongs to, read straight off its pull request. No lookup:
+ * the number is in the id, and the branch comes back out of the fence.
+ */
+async function ledgerHolding(
+  api: Client,
+  pull: number,
+  id: string,
+  holds: (ledger: Ledger) => boolean,
+): Promise<Ledger> {
+  const ledger = await readLedgerAt(api, pull);
+  if (!holds(ledger)) throw new Error(`No Maple record ${id} on this repository.`);
+  return ledger;
+}
+
+/** One past the highest sequence any id has used, so a deleted one never returns. */
+function nextSeq(ids: readonly string[], shape: RegExp): number {
+  const used = ids.map((id) => Number(shape.exec(id)?.[2] ?? 0));
+  return Math.max(0, ...used) + 1;
+}
+
+/** The whole pull request in one body: the table, the sign-offs and the fence. */
+async function bodyFor(api: Client, ledger: Ledger): Promise<string> {
+  const screenshots = await shotsFor(api, ledger.comments);
+
+  return exportMarkdown(ledger.comments, {
+    branch: ledger.branch,
+    budget: LEDGER_BUDGET,
+    ...(ledger.approvals.length === 0 ? {} : { approvals: ledger.approvals }),
+    ...(screenshots.size === 0 ? {} : { screenshots }),
   }).markdown;
 }
 
 /**
- * The comment's first image, as a URL. A connector that cannot answer costs
- * the table its link and nothing else; docs/screenshots.md says why.
+ * Each comment's first image, as a URL. A connector that cannot answer costs
+ * that row its link and nothing else; docs/screenshots.md says why.
  */
-async function shotFor(api: Client, comment: Comment): Promise<string | undefined> {
-  const ref = comment.attachments?.find(isImage);
-  if (!ref || !api.options.media) return undefined;
+async function shotsFor(api: Client, comments: readonly Comment[]): Promise<Map<string, string>> {
+  const shots = new Map<string, string>();
+  const media = api.options.media;
+  if (!media) return shots;
 
-  try {
-    return await api.options.media.getUrl(ref);
-  } catch {
-    return undefined;
+  for (const comment of comments) {
+    const ref = comment.attachments?.find(isImage);
+    if (!ref) continue;
+    try {
+      shots.set(comment.id, await media.getUrl(ref));
+    } catch {
+      // No link on that row. The comment itself is unaffected.
+    }
   }
+  return shots;
 }
 
 function isImage(ref: MediaRef): boolean {
   return ref.contentType.startsWith("image/");
 }
 
-function idOf(pull: number, issueId: number): string {
-  return `gh_${String(pull)}_${String(issueId)}`;
-}
-
-function pageOf(cursor: string): number {
-  const page = Number(cursor);
-  if (!Number.isInteger(page) || page < 1) throw new RangeError(`Invalid cursor: ${cursor}`);
-  return page;
+function offsetOf(cursor: string): number {
+  const offset = Number(cursor);
+  if (!Number.isInteger(offset) || offset < 0) throw new RangeError(`Invalid cursor: ${cursor}`);
+  return offset;
 }

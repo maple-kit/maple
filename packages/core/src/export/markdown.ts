@@ -11,7 +11,15 @@
 
 import { stableStringify } from "../lib/stable-stringify.js";
 
-import type { Comment, CommentAnchor, CommentContext, RegionContext, TextQuote } from "../types.js";
+import type {
+  Approval,
+  Comment,
+  CommentAnchor,
+  CommentContext,
+  CommentStatus,
+  RegionContext,
+  TextQuote,
+} from "../types.js";
 
 /** The fence's schema version. A reader seeing a higher one must stop, not guess. */
 export const FENCE_VERSION = 1;
@@ -47,6 +55,8 @@ export interface ExportOptions {
    * request reads back as a second comment; `docs/connectors.md` says why.
    */
   readonly fence?: boolean;
+  /** Sign-offs on this surface. They ride in the fence and under the table. */
+  readonly approvals?: readonly Approval[];
 }
 
 /** The markdown, and what it cost to fit. */
@@ -84,16 +94,34 @@ export function exportMarkdown(
   comments: readonly Comment[],
   options: ExportOptions,
 ): MarkdownExport {
+  const approvals = options.approvals ?? [];
   const head = [introduce(comments), "", table(comments, hostedOnly(options.screenshots))];
-  const foot = ["", footer(comments)];
+  const foot = [...signatures(approvals), "", footer(comments)];
   if (options.fence === false) {
     return { markdown: [...head, ...foot].join("\n"), bytes: 0, reduced: [], overBudget: false };
   }
 
   const budget = options.budget ?? FENCE_BUDGET;
-  const { fence, bytes, reduced } = fit(comments, options.branch, budget);
+  const { fence, bytes, reduced } = fit(comments, options.branch, approvals, budget);
   const body = [...head, "", FENCE_LEAD, "", "```maple", fence, "```", ...foot];
   return { markdown: body.join("\n"), bytes, reduced, overBudget: bytes > budget };
+}
+
+/**
+ * Who said they looked, above the footer. A table of resolved comments and a
+ * table nobody opened read the same; this is the line that tells them apart.
+ */
+function signatures(approvals: readonly Approval[]): readonly string[] {
+  if (approvals.length === 0) return [];
+
+  const lines = approvals.map(
+    (one) => `- **${cell(one.author.name)}** at \`${one.commit.slice(0, 7)}\`${noted(one.note)}`,
+  );
+  return ["", "Approved:", "", ...lines];
+}
+
+function noted(note: string | undefined): string {
+  return note === undefined ? "" : ` — ${cell(note)}`;
 }
 
 /** What a reader gets back out of a fence, including fields Maple does not know. */
@@ -101,6 +129,8 @@ export interface ParsedFence {
   readonly version: number;
   readonly branch: string;
   readonly comments: readonly Comment[];
+  /** Sign-offs the fence carried. Empty where it carried none. */
+  readonly approvals: readonly Approval[];
   /** The object exactly as parsed, so a rewrite preserves unknown fields. */
   readonly raw: Readonly<Record<string, unknown>>;
 }
@@ -135,6 +165,7 @@ export function parseFence(markdown: string): ParsedFence | undefined {
     version,
     branch: typeof document["branch"] === "string" ? document["branch"] : "",
     comments: Array.isArray(document["comments"]) ? (document["comments"] as Comment[]) : [],
+    approvals: Array.isArray(document["approvals"]) ? (document["approvals"] as Approval[]) : [],
     raw: document,
   };
 }
@@ -146,28 +177,36 @@ interface Fitted {
 }
 
 /** Sheds detail until the fence fits, or reports that it never did. */
-function fit(comments: readonly Comment[], branch: string, budget: number): Fitted {
+function fit(
+  comments: readonly Comment[],
+  branch: string,
+  approvals: readonly Approval[],
+  budget: number,
+): Fitted {
   const applied: Reduction[] = [];
-  let fence = encode(comments, branch, applied);
+  let fence = encode(comments, branch, approvals, applied);
 
   for (const reduction of REDUCTIONS) {
     if (size(fence) <= budget) break;
     applied.push(reduction);
-    fence = encode(comments, branch, applied);
+    fence = encode(comments, branch, approvals, applied);
   }
 
   return { fence, bytes: size(fence), reduced: applied };
 }
 
+/** An approval never sheds: it is four short fields and it is what a gate reads. */
 function encode(
   comments: readonly Comment[],
   branch: string,
+  approvals: readonly Approval[],
   reduced: readonly Reduction[],
 ): string {
   return stableStringify({
     version: FENCE_VERSION,
     branch,
     comments: comments.map((comment) => reduce(comment, reduced)),
+    ...(approvals.length === 0 ? {} : { approvals }),
   });
 }
 
@@ -259,11 +298,26 @@ function conjoin(names: readonly string[]): string {
   return new Intl.ListFormat("en", { style: "long", type: "conjunction" }).format(names);
 }
 
+/**
+ * One table for the whole surface. The status column appears only once
+ * something is not open: a column that never varies is a column nobody reads.
+ */
 function table(comments: readonly Comment[], screenshots: ReadonlyMap<string, string>): string {
   const withShots = comments.some((comment) => screenshots.has(comment.id));
-  const head = ["#", "Where", "Comment", "Viewport", ...(withShots ? ["Shot"] : [])];
+  const withStatus = comments.some((comment) => comment.status !== "open");
+  const head = [
+    "#",
+    "Where",
+    "Comment",
+    ...(withStatus ? ["Status"] : []),
+    "Viewport",
+    ...(withShots ? ["Shot"] : []),
+  ];
   const rows = comments.map((comment, index) =>
-    row(comment, index + 1, withShots ? screenshots.get(comment.id) : undefined),
+    row(comment, index + 1, {
+      withStatus,
+      ...(withShots ? { shot: screenshots.get(comment.id) ?? "" } : {}),
+    }),
   );
 
   return [`| ${head.join(" | ")} |`, `| ${head.map(() => "---").join(" | ")} |`, ...rows].join(
@@ -271,16 +325,31 @@ function table(comments: readonly Comment[], screenshots: ReadonlyMap<string, st
   );
 }
 
-function row(comment: Comment, number: number, shot: string | undefined): string {
+/** What a row shows beyond the comment itself, decided once for the table. */
+interface RowShape {
+  readonly withStatus: boolean;
+  readonly shot?: string;
+}
+
+function row(comment: Comment, number: number, shape: RowShape): string {
   const cells = [
     String(number),
     where(comment.anchor),
     cell(comment.body),
+    ...(shape.withStatus ? [STATUS_WORDS[comment.status]] : []),
     `${comment.context.viewportWidth}×${comment.context.viewportHeight}`,
-    ...(shot === undefined ? [] : [shot ? `[view](${shot})` : ""]),
+    ...(shape.shot === undefined ? [] : [shape.shot ? `[view](${shape.shot})` : ""]),
   ];
   return `| ${cells.join(" | ")} |`;
 }
+
+/** `orphaned` is never the word shown; the overlay calls it unpinned too. */
+const STATUS_WORDS: Readonly<Record<CommentStatus, string>> = {
+  open: "Open",
+  resolved: "Resolved",
+  needs_reverify: "Re-verify",
+  orphaned: "Unpinned",
+};
 
 function where(anchor: CommentAnchor): string {
   const name = anchor.component ?? anchor.source ?? anchor.selector;
