@@ -54,13 +54,34 @@ The client starts an MCP server with no arguments, so the environment is the
 only channel there is. A missing value fails at startup rather than on the first
 tool call, where a client would show it as a tool error and bury it.
 
-| Variable                                  |                                                             |
-| ----------------------------------------- | ----------------------------------------------------------- |
-| `MAPLE_STORE`                             | `github`, the default and so far the only one.              |
-| `MAPLE_GITHUB_OWNER`, `MAPLE_GITHUB_REPO` | The repository.                                             |
-| `GITHUB_TOKEN`                            | Server-side only. Never in a file; use `op run --env-file`. |
-| `MAPLE_GITHUB_API`                        | For Enterprise Server.                                      |
-| `MAPLE_BRANCH`                            | The branch under review. Read by the Stop hook.             |
+| Variable                                  |                                                                    |
+| ----------------------------------------- | ------------------------------------------------------------------ |
+| `MAPLE_STORE`                             | `github`, the default and so far the only one.                     |
+| `MAPLE_GITHUB_OWNER`, `MAPLE_GITHUB_REPO` | The repository.                                                    |
+| `GITHUB_TOKEN`                            | Server-side only. Never in a file; use `op run --env-file`.        |
+| `MAPLE_GITHUB_API`                        | For Enterprise Server.                                             |
+| `MAPLE_BRANCH`                            | The branch under review. Read by the Stop hook.                    |
+| `MAPLE_GATE_TOKEN`                        | The gate App's own installation token. Without it, see below.      |
+| `MAPLE_GATE_APP_ID`                       | Which App the runs belong to. `docs/gate.md` has the 403 it saves. |
+| `MAPLE_REQUIRE_APPROVAL`                  | `true` where the gate is held until somebody approves the preview. |
+
+## Resolving tells the gate
+
+`resolve_comment` used to write the status and stop. The route already
+published a verdict after a resolve for the reason `docs/gate.md` gives — a
+reviewer who clears the last comment should not wait for a commit nobody needs
+to make — and the agent, doing the same thing through a different door, did
+not. An agent that resolved the last comment and then had nothing left to push
+left `maple/visual-review` holding on work that was done.
+
+It publishes now, through the same `publishGate`, and never throws: the status
+is already recorded by the time it runs, and a gate that fails a resolve is
+worse than a stale one.
+
+Without `MAPLE_GATE_TOKEN` nothing is published and the behaviour is what it
+was. The token is the gate App's own and never the store's, because the store's
+is a reviewer's — `docs/github-auth.md` is the argument for keeping the two
+credentials apart.
 
 ## What is not here yet
 

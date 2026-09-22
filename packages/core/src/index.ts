@@ -47,8 +47,8 @@ export {
   UnknownPillarError,
 } from "./connectors/index.js";
 export { MapleStoreError } from "./errors.js";
-export { BLOCKING_STATUSES, decideGate } from "./gate/index.js";
-export type { GateOptions } from "./gate/index.js";
+export { BLOCKING_STATUSES, decideGate, publishGate } from "./gate/index.js";
+export type { GateContext, GateOptions } from "./gate/index.js";
 export { CyclicValueError, stableStringify } from "./lib/stable-stringify.js";
 export { consoleSink, createLogger, LEVEL_RANK, memorySink } from "./logger/index.js";
 export type {

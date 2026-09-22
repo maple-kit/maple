@@ -8,11 +8,12 @@
  */
 
 import { MapleStoreError } from "../errors.js";
+import { publishGate } from "../gate/publish.js";
 import { fnv1a32 } from "../lib/fnv1a.js";
 import { handleApprovals } from "./approvals.js";
 import { createAssist } from "./assist.js";
 import { endLink, finishLink, githubState, linkFailure, startLink } from "./auth.js";
-import { gateFor, publishGate } from "./gate.js";
+import { gateFor } from "./gate.js";
 
 import type {
   GateConnector,

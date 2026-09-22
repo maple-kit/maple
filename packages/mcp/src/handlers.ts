@@ -6,6 +6,8 @@
  * than in minutes.
  */
 
+import { publishGate } from "@maple-kit/core";
+
 import { clampWaitMs } from "./timeout.js";
 
 import type {
@@ -14,12 +16,20 @@ import type {
   WaitForCommentsArgs,
   WaitResult,
 } from "./tools.js";
-import type { StoreConnector } from "@maple-kit/core";
-import type { Comment } from "@maple-kit/core";
+import type { Comment, GateConnector, Logger, StoreConnector } from "@maple-kit/core";
 
 /** How the handlers reach the comments. */
 export interface HandlerOptions {
   readonly store: StoreConnector;
+  /**
+   * Where the verdict goes after the agent resolves something. Without one the
+   * check keeps holding until a push, which is what the route's publish avoids.
+   */
+  readonly gate?: GateConnector;
+  /** True when the gate is held until somebody approves the preview. */
+  readonly requireApproval?: boolean;
+  /** Where a failed publish is reported. Silent when absent. */
+  readonly logger?: Logger;
   /** How long to leave between polls while waiting. Defaults to two seconds. */
   readonly pollIntervalMs?: number;
   /** Injected in tests, so a wait does not really wait. */
@@ -111,11 +121,14 @@ export function createToolHandlers(options: HandlerOptions): ToolHandlers {
           `The ${options.store.name} store cannot change a status; resolve the comment where it lives.`,
         );
       }
-      return setStatus(args.id, "resolved", {
+      const updated = await setStatus(args.id, "resolved", {
         sha: args.sha,
         ...(args.note === undefined ? {} : { note: args.note }),
         at: new Date(now()).toISOString(),
       });
+
+      await report(options, updated.branch);
+      return updated;
     },
 
     async getCommentContext(args): Promise<CommentContext> {
@@ -125,6 +138,26 @@ export function createToolHandlers(options: HandlerOptions): ToolHandlers {
       return { comment, anchors: anchorsOf(comment), conditions: conditionsOf(comment) };
     },
   };
+}
+
+/**
+ * Says what the resolve means for the merge. Never throws: the status is
+ * already recorded, and a gate that fails a resolve is worse than a stale one.
+ */
+async function report(options: HandlerOptions, branch: string): Promise<void> {
+  if (!options.gate) return;
+
+  await publishGate(
+    {
+      store: options.store,
+      gate: options.gate,
+      ...(options.logger === undefined ? {} : { logger: options.logger }),
+      ...(options.requireApproval === undefined
+        ? {}
+        : { requireApproval: options.requireApproval }),
+    },
+    branch,
+  );
 }
 
 /** The cascade as a reader should walk it: stop at the first rung present. */

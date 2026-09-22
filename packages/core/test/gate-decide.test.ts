@@ -216,3 +216,43 @@ describe("an approval that could not be looked for", () => {
     expect(verdict).toMatchObject({ conclusion: "blocked", reason: "comments-open" });
   });
 });
+
+describe("a comment resolved against a commit that has moved on", () => {
+  function resolvedAt(sha: string) {
+    return storedComment({
+      id: "c_done",
+      status: "resolved",
+      body: "Fix the spacing",
+      resolution: { sha, at: "2026-09-22T09:00:00.000Z" },
+    });
+  }
+
+  it("stays resolved unless the caller asked for re-verifying", () => {
+    const verdict = decideGate([resolvedAt("older11")], { commit: COMMIT });
+    expect(verdict).toMatchObject({ conclusion: "clear", reason: "all-resolved" });
+  });
+
+  it("needs re-verifying once it is asked for", () => {
+    const verdict = decideGate([resolvedAt("older11")], {
+      commit: COMMIT,
+      reverifyResolved: true,
+    });
+    expect(verdict).toMatchObject({ conclusion: "blocked", reason: "comments-open" });
+    expect(verdict.summary).toContain("needs re-checking");
+  });
+
+  it("leaves one resolved against this very commit alone", () => {
+    const verdict = decideGate([resolvedAt(COMMIT)], { commit: COMMIT, reverifyResolved: true });
+    expect(verdict.conclusion).toBe("clear");
+  });
+
+  it("leaves one nothing claimed to resolve alone, having no commit to compare", () => {
+    const bare = storedComment({ id: "c_bare", status: "resolved" });
+    expect(decideGate([bare], { commit: COMMIT, reverifyResolved: true }).conclusion).toBe("clear");
+  });
+
+  it("does nothing at all when nothing names the commit under judgement", () => {
+    const verdict = decideGate([resolvedAt("older11")], { reverifyResolved: true });
+    expect(verdict.conclusion).toBe("clear");
+  });
+});

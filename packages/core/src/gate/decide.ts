@@ -40,6 +40,25 @@ export interface GateOptions {
   readonly approvals?: readonly Approval[];
   /** The commit under judgement. An approval of another commit is not one. */
   readonly commit?: string;
+  /**
+   * Treat a comment resolved against an older commit as `needs_reverify`.
+   * Nothing else ever writes that status, so this is what makes it reachable.
+   */
+  readonly reverifyResolved?: boolean;
+}
+
+/**
+ * Resolved against a commit that is no longer the head is resolved against a
+ * page no longer on show. Off by default: `docs/gate.md` says why.
+ */
+function reverified(comment: Comment, options: GateOptions): Comment {
+  if (options.reverifyResolved !== true || options.commit === undefined) return comment;
+  if (comment.status !== "resolved") return comment;
+
+  const against = comment.resolution?.sha;
+  if (against === undefined || against === options.commit) return comment;
+
+  return { ...comment, status: "needs_reverify" };
 }
 
 /** How many comments a summary lists before it stops naming them. */
@@ -58,7 +77,7 @@ export function decideGate(
   if (cannotTell) return cannotTell;
 
   const blockOn = options.blockOn ?? BLOCKING_STATUSES;
-  const all = comments ?? [];
+  const all = (comments ?? []).map((comment) => reverified(comment, options));
   const blocking = all.filter((comment) => blockOn.includes(comment.status));
   const counts = { open: blocking.length, total: all.length };
 

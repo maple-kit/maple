@@ -6,9 +6,9 @@
  * than on the first tool call, where a client would show it as a tool error.
  */
 
-import { githubStore } from "@maple-kit/core/connectors";
+import { githubGate, githubStore } from "@maple-kit/core/connectors";
 
-import type { StoreConnector } from "@maple-kit/core";
+import type { GateConnector, StoreConnector } from "@maple-kit/core";
 
 /** Builds the store named by `MAPLE_STORE`, or the default. */
 export function storeFromEnvironment(
@@ -23,6 +23,35 @@ export function storeFromEnvironment(
     token: required(env, "GITHUB_TOKEN"),
     ...(env["MAPLE_GITHUB_API"] === undefined ? {} : { baseUrl: env["MAPLE_GITHUB_API"] }),
   });
+}
+
+/**
+ * The gate to publish to after a resolve, or undefined where none is
+ * configured. The token is the gate App's own, never the store's: the store's
+ * is a reviewer's and `docs/github-auth.md` argues at length for keeping the
+ * two apart.
+ */
+export function gateFromEnvironment(
+  env: Readonly<Record<string, string | undefined>>,
+): GateConnector | undefined {
+  const token = env["MAPLE_GATE_TOKEN"];
+  if (!token) return undefined;
+
+  const appId = env["MAPLE_GATE_APP_ID"];
+  return githubGate({
+    owner: required(env, "MAPLE_GITHUB_OWNER"),
+    repo: required(env, "MAPLE_GITHUB_REPO"),
+    token,
+    ...(appId === undefined ? {} : { appId }),
+    ...(env["MAPLE_GITHUB_API"] === undefined ? {} : { baseUrl: env["MAPLE_GITHUB_API"] }),
+  });
+}
+
+/** Whether the gate is held until somebody approves the preview. */
+export function requireApprovalFromEnvironment(
+  env: Readonly<Record<string, string | undefined>>,
+): boolean {
+  return env["MAPLE_REQUIRE_APPROVAL"] === "true";
 }
 
 /** The branch the agent is reviewing. */

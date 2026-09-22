@@ -1,3 +1,9 @@
+export {
+  branchFromEnvironment,
+  gateFromEnvironment,
+  requireApprovalFromEnvironment,
+  storeFromEnvironment,
+} from "./config.js";
 export { createToolHandlers } from "./handlers.js";
 export type { CommentContext, HandlerOptions, ToolHandlers } from "./handlers.js";
 export { decideStop, MAX_BLOCKS } from "./stop-hook.js";

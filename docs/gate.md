@@ -48,6 +48,38 @@ comment silently clears the gate**, which is the failure mode to design against
 rather than the convenience to optimise for. `blockOn` narrows it where a team
 decides otherwise.
 
+### Two of those three need something to write them
+
+`open` is written on every append. The other two are a policy the decision
+applies, not a state the store keeps, and one of them is not written at all.
+
+**`needs_reverify`** is what `reverifyResolved` produces. A comment resolved
+against a commit that is no longer the head was resolved against a page that is
+no longer on show, so the decision treats it as needing another look. It is off
+by default, because on a branch with many pushes it reopens everything, and how
+much re-checking a team wants is a team's decision.
+
+```ts
+decideGate(comments, { commit: sha, reverifyResolved: true });
+```
+
+**`orphaned` is written by nothing at all, and that is a real hole.** The
+overlay works out that an anchor no longer resolves — `resolveAnchor` is called
+on every render and the marks depend on it — and never reports it to the store.
+So the paragraph above describes a guarantee the code does not yet keep: a
+layout change that orphans a comment leaves its status `open`, which still
+blocks, but a layout change that orphans a comment somebody had already
+resolved clears the gate silently.
+
+The reason it is not simply written from the page is that **the page cannot
+tell an orphaned anchor from a reviewer standing on a different route.** A
+comment left on `/dashboard` resolves against nothing at all while somebody is
+looking at `/settings`, and reporting that as orphaned would unpin half a
+review every time anyone navigated. Any fix has to compare
+`comment.context.url` against where the reviewer actually is, and decide what
+to do about the comments it cannot speak for. That is a design decision rather
+than a missing line, and it is the next thing the gate needs.
+
 ### Neutral is "I cannot tell", never "fine"
 
 `decideGate(undefined)` is a store that could not be read. A store with no
