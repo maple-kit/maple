@@ -117,6 +117,22 @@ is two device pixels a cell.
 Regenerate it whenever the lockup's numbers or `--mk-fg` change; nothing checks
 that they still agree.
 
+`docs/assets/card.svg` and `card-dark.svg` are the README's opening card, and
+they are the same card `maple-kit.org` puts "Open source" in: a 10 pixel
+radius, a `--mk-line-firm` hairline, a `--mk-accent-sub` field, 30 of padding,
+and the leaf bleeding out of the bottom right corner at 16 per cent. The
+lockup is its title and the product's one sentence is its body, so the card
+carries the name and the description together and the README's own first line
+is the link row under it.
+
+Two things about it are not obvious. The body is live text in a system font
+stack rather than outlines, because outlining a sentence that will be reworded
+is a trap, and the `<img>` alt repeats it for anyone the image does not reach.
+The bleeding leaf takes `fill-opacity` on each path rather than `opacity` on
+the group: a group opacity composites the drawing through one offscreen buffer
+and softens every cell, and the cells never overlap, so the two are the same
+picture.
+
 ## On a pull request
 
 Every body `exportMarkdown` writes is assembled in the same order: one line
