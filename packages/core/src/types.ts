@@ -14,10 +14,12 @@ export type GateConclusion = "blocked" | "clear" | "neutral";
 
 /**
  * Why the gate reached its conclusion. A reason can be branched on; a summary
- * sentence cannot, and the three neutrals need different answers from a person.
+ * sentence cannot, and each neutral needs a different answer from a person.
  */
 export type GateReason =
   | "all-resolved"
+  | "approval-untracked"
+  | "awaiting-approval"
   | "comments-open"
   | "no-comments"
   | "no-review"
@@ -37,6 +39,32 @@ export interface GateVerdict {
   /** Comments on the surface, whatever their status. */
   readonly total: number;
 }
+
+/**
+ * A reviewer saying they looked at a preview and found nothing to say.
+ *
+ * It is the other half of the gate. A surface with no comments on it is
+ * indistinguishable from a surface nobody opened, and a check that cannot tell
+ * those apart reports green on both. An approval is what makes them different.
+ */
+export interface Approval {
+  readonly id: string;
+  /** Branch or pull request the approval is about, as a store lists them. */
+  readonly branch: string;
+  /**
+   * The exact commit that was looked at. A push is a new preview, and an
+   * approval outliving its commit is one that lies; `docs/gate.md` says more.
+   */
+  readonly commit: string;
+  readonly author: CommentAuthor;
+  /** ISO 8601, always UTC. Stamped where the write happens, never by a client. */
+  readonly at: string;
+  /** Whatever the reviewer wanted to say while approving. */
+  readonly note?: string;
+}
+
+/** An approval on its way into a store, before the store assigns an id. */
+export type NewApproval = Omit<Approval, "id">;
 
 /** How confident Maple is that the author is who the comment says they are. */
 export type IdentityProvenance = "server" | "client" | "guest";

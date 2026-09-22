@@ -126,6 +126,23 @@ export const ACCOUNT_COPY = {
   unlinkHint: "Forgets the token here. GitHub keeps the authorisation until you revoke it.",
 } as const;
 
+/**
+ * The sign-off row. It says why before it says what: "Approve" alone reads as
+ * a button with no stakes, and the stakes are the whole point of the row.
+ */
+export const APPROVE_COPY = {
+  offered: "Looked and found nothing wrong? Say so here.",
+  wanted: "This pull request is held until somebody approves the preview.",
+  yours: "You approved this preview.",
+  others: (name: string | undefined, count: number) =>
+    count > 1
+      ? `Approved by ${name ?? "somebody"} and ${String(count - 1)} more.`
+      : `Approved by ${name ?? "somebody"}.`,
+  approve: "Approve",
+  withdraw: "Withdraw",
+  signIn: "Sign in first: an approval nobody can be named for is not one.",
+} as const;
+
 /** Copy with no better home than a name. */
 export const ISLAND_COPY = {
   title: "Comments",

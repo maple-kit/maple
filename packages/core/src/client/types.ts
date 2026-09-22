@@ -11,7 +11,7 @@
 import type { Anchor } from "../anchor/types.js";
 import type { CommentKind, KindGuess, Pillar, PillarScore } from "../connectors/types.js";
 import type { Draft } from "../overlay/drafts.js";
-import type { Comment, CommentContext, MapleUser, MediaRef, PickKind } from "../types.js";
+import type { Approval, Comment, CommentContext, MapleUser, MediaRef, PickKind } from "../types.js";
 import type { MapleFailure } from "./failure.js";
 
 /** The picker's word. Declared with the domain vocabulary, because the anchor
@@ -176,6 +176,29 @@ export interface ClientState {
    * classifier is configured, or when the viewer switched the tier off.
    */
   readonly assist: AssistConfig | null;
+  /**
+   * Whether this deployment takes an approval, and whether the gate is
+   * waiting for one. Null until `GET /me` has answered.
+   */
+  readonly approval: ApprovalConfig | null;
+  /** Every approval on this surface, newest first. Empty when none was left. */
+  readonly approvals: readonly Approval[];
+  /** This reviewer's own approval of the commit on show, when they left one. */
+  readonly myApproval: Approval | null;
+}
+
+/**
+ * What a surface needs before it can offer an approval.
+ *
+ * Two fields rather than one, because a deployment with nowhere to keep an
+ * approval and one that keeps them but does not insist are different things:
+ * the first draws nothing, the second draws an offer.
+ */
+export interface ApprovalConfig {
+  /** The store keeps approvals and this reviewer could leave one. */
+  readonly supported: boolean;
+  /** The merge gate is held until somebody does. */
+  readonly required: boolean;
 }
 
 /** What a surface needs before it can draw a judgement. */

@@ -20,6 +20,7 @@ import {
   MapleTarget,
 } from "./composer/index.js";
 import {
+  Approve,
   Branch,
   Filters,
   Header,
@@ -103,6 +104,7 @@ function inventory(branch: string, label: string | undefined, defaultOpen: boole
       createElement(MapleNotice, { during: LOAD_CALLS }),
       createElement(Filters),
       createElement(List, { children: (comment: Comment) => createElement(Item, { comment }) }),
+      createElement(Approve),
       createElement(
         NewComment,
         null,

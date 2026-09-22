@@ -28,14 +28,16 @@ A `GateVerdict` carries a conclusion, a **reason**, a title, a markdown summary,
 and the two counts. The reason is there because a summary sentence cannot be
 branched on and the two neutrals need different answers from a person.
 
-| Reason             | Conclusion | What happened                                      |
-| ------------------ | ---------- | -------------------------------------------------- |
-| `comments-open`    | `blocked`  | Somebody's comment is unaddressed                  |
-| `all-resolved`     | `clear`    | Every comment was resolved                         |
-| `no-comments`      | `clear`    | Nobody commented                                   |
-| `unreadable`       | `neutral`  | The store could not be read at all                 |
-| `status-untracked` | `neutral`  | The store cannot record that anything was resolved |
-| `no-review`        | `neutral`  | Maple was never reviewing this pull request        |
+| Reason               | Conclusion | What happened                                           |
+| -------------------- | ---------- | ------------------------------------------------------- |
+| `comments-open`      | `blocked`  | Somebody's comment is unaddressed                       |
+| `awaiting-approval`  | `blocked`  | Nothing is open and nobody has said they looked         |
+| `all-resolved`       | `clear`    | Every comment was resolved                              |
+| `no-comments`        | `clear`    | Nobody commented                                        |
+| `unreadable`         | `neutral`  | The store could not be read at all                      |
+| `status-untracked`   | `neutral`  | The store cannot record that anything was resolved      |
+| `approval-untracked` | `neutral`  | An approval was wanted and there is nowhere to find one |
+| `no-review`          | `neutral`  | Maple was never reviewing this pull request             |
 
 ### Everything but `resolved` blocks
 
@@ -53,7 +55,7 @@ decides otherwise.
 mean resolved, and blocking on it would be blocking on a guess. Both are
 neutral, and both say which one they are.
 
-`hasReview: false` is the third neutral, and it is not an "I cannot tell" at
+`hasReview: false` is the last neutral, and it is not an "I cannot tell" at
 all: a fork, a bot's version bump, a branch with no preview deployment. Nothing
 is broken and nothing is expected. It is a separate reason rather than a flavour
 of `unreadable` because the check would otherwise tell a person that Maple
@@ -61,6 +63,57 @@ failed to read comments on a pull request Maple was never installed for — and
 because the gate must report on every pull request, so this is the case it
 reports most often. The caller decides it, since only the caller knows whether a
 preview exists; the sentence a reviewer reads is written once, here.
+
+## Green is not the same as reviewed
+
+`decideGate([])` is `clear`, and that is the right default and a real gap. A
+pull request nobody opened the preview for reads exactly like one a designer
+looked over and liked: both are green, both for the reason "no comments". The
+gate is honest about comments and says nothing at all about whether anybody
+looked, because until an approval exists there is nothing for it to say.
+
+`requireApproval` is the opt-in that changes it.
+
+```ts
+const verdict = decideGate(comments, {
+  requireApproval: true,
+  approvals: await store.approvals(branch),
+  commit: sha,
+  statusTracked: supports(store, "setStatus"),
+});
+```
+
+On, a surface with nothing open blocks with `awaiting-approval` until somebody
+presses **Approve** in the overlay. Off — the default — nothing about the
+verdict changes, because turning a quiet pull request red is a decision a team
+makes rather than one a tool makes for them.
+
+Four rules hold it together.
+
+- **An approval is about a commit**, for the reason a `GateTarget` is. A push
+  is a new preview, so an approval of the commit before it is not an approval
+  of this one and does not count toward it. `commit` is what an approval is
+  matched against, and the route reads it from `store.head`, never from the
+  browser — the same argument as [below](#where-the-commit-comes-from).
+- **An open comment outranks a missing approval.** `comments-open` is checked
+  first: what a reviewer should do about it is read the comment, not sign
+  something off on top of it.
+- **An approval nobody can be named for is not an approval.** `POST /approvals`
+  answers 401 without a resolved reviewer, so `requireApproval` needs an
+  identity connector. Otherwise anyone holding the preview URL could clear a
+  required check as "Guest", which is worse than no gate at all.
+- **Only the reviewer who approved can withdraw it.** Somebody else removing a
+  signature is the one thing a sign-off has to be safe from.
+
+A store with no `approvals` method is the fourth neutral rather than a gate
+that blocks for ever: an approval that could not be looked for is "I cannot
+tell", exactly as an unreadable comment list is. So is a surface whose commit
+nothing can name — an approval matched against a guessed commit reads as an
+answer.
+
+The clear verdict names the approver in its title, so the check says
+`Approved by Dana` rather than `No visual review comments`. That is the whole
+point of the tier: the check now distinguishes the two greens.
 
 ## Publishing it
 
@@ -124,7 +177,10 @@ which is the exact failure `runGateContract` exists to protect against. So the
 route publishes too, after a status changes.
 
 `RouteOptions.gate` takes a `GateConnector` or a resolver, chosen per request
-the way `store` and `media` already are. The logic lives in `src/route/gate.ts`
+the way `store` and `media` already are. `RouteOptions.requireApproval` rides
+with it, and the three `/approvals` endpoints publish a verdict the same way a
+resolve does — recording a sign-off that nothing reports would leave the gate
+holding on a pull request somebody already approved. The logic lives in `src/route/gate.ts`
 rather than inside `handler.ts`, because a dispatch function is not where a
 second subject belongs.
 

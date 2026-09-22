@@ -25,7 +25,7 @@ import { createTransport } from "./transport.js";
 import type { CommentKind } from "../connectors/types.js";
 import type { Logger } from "../logger/types.js";
 import type { Draft } from "../overlay/drafts.js";
-import type { Comment, CommentStatus, MediaRef } from "../types.js";
+import type { Approval, Comment, CommentStatus, MediaRef } from "../types.js";
 import type { AssistRunner } from "./assist.js";
 import type { DraftKeeper } from "./drafts.js";
 import type { MapleFailure } from "./failure.js";
@@ -43,6 +43,7 @@ import type { MapleConfig, MapleProps } from "./preferences.js";
 import type { ThemeView, ThemeWatch } from "./theme.js";
 import type { Transport } from "./transport.js";
 import type {
+  ApprovalConfig,
   AssistConfig,
   AssistState,
   ClientState,
@@ -174,6 +175,14 @@ export interface MapleClient {
   setStatus(id: string, status: CommentStatus, resolution?: ResolutionClaim): Promise<Comment>;
 
   /**
+   * Records that this reviewer looked and found nothing to say. The route
+   * names the commit: a page choosing one could approve what it never showed.
+   */
+  approve(note?: string): Promise<Approval>;
+  /** Takes back this reviewer's own approval. Nobody else's is reachable. */
+  unapprove(): Promise<void>;
+
+  /**
    * Starts a GitHub link and resolves once there is a code to show. The
    * polling carries on after it resolves; watch `state.github` for the rest.
    */
@@ -265,6 +274,9 @@ export function createMapleClient(options: MapleClientOptions): MapleClient {
 
     setStatus: (id, status, resolution) => setStatus(runtime, id, status, resolution),
 
+    approve: (note) => approve(runtime, note),
+    unapprove: () => unapprove(runtime),
+
     linkGitHub: () => linkGitHub(runtime),
     unlinkGitHub: () => unlinkGitHub(runtime),
   };
@@ -320,6 +332,9 @@ function runtimeFor(options: MapleClientOptions): Runtime {
       tagged: true,
       media: false,
       assist: null,
+      approval: null,
+      approvals: [],
+      myApproval: null,
     }),
   };
 
@@ -357,7 +372,18 @@ function derive(state: ClientState): ClientState {
     ...state,
     visible: visibleComments(state.comments, state.filter, state.showResolved),
     openCount: openCount(state.comments),
+    myApproval: mine(state),
   };
+}
+
+/**
+ * This reviewer's own approval, which is what the control toggles. Matched on
+ * the author alone: a page comparing commits would compare against a guess.
+ */
+function mine(state: ClientState): Approval | null {
+  const id = state.user?.id;
+  if (id === undefined) return null;
+  return state.approvals.find((approval) => approval.author.id === id) ?? null;
 }
 
 function patch(runtime: Runtime, change: Partial<ClientState>): void {
@@ -479,12 +505,14 @@ async function load(runtime: Runtime): Promise<void> {
 
   try {
     const comments = await runtime.transport.list();
+    const who = await identity;
     patch(runtime, {
       phase: "ready",
       comments,
       hidden: runtime.state.hidden && comments.length <= runtime.state.comments.length,
       drafts: runtime.drafts.list(),
-      ...(await identity),
+      ...who,
+      ...(await approvalsFor(runtime, who.approval)),
       error: null,
     });
   } catch (error) {
@@ -497,7 +525,7 @@ async function load(runtime: Runtime): Promise<void> {
 /** A route that cannot say who this is means a guest, not a failed load. */
 async function whoAmI(
   runtime: Runtime,
-): Promise<Pick<ClientState, "assist" | "github" | "media" | "user">> {
+): Promise<Pick<ClientState, "approval" | "assist" | "github" | "media" | "user">> {
   try {
     const identity = await runtime.transport.me();
     runtime.judges = identity.assist ? { pillars: identity.assist.pillars } : null;
@@ -506,12 +534,40 @@ async function whoAmI(
       github: linkOf(identity.github),
       media: identity.media === true,
       assist: assistFrom(runtime),
+      approval: { supported: false, required: identity.approval?.required === true },
     };
   } catch (error) {
     runtime.options.logger?.warn("Could not identify the reviewer; offering the guest flow.", {
       error: String(error),
     });
-    return { user: null, github: { state: "unsupported" }, media: false, assist: null };
+    return {
+      user: null,
+      github: { state: "unsupported" },
+      media: false,
+      assist: null,
+      approval: null,
+    };
+  }
+}
+
+/**
+ * Whether approvals are kept here, and the ones that are. `/me` cannot say,
+ * so the store is asked: "nowhere to keep one" is no offer, not a failure.
+ */
+async function approvalsFor(
+  runtime: Runtime,
+  approval: ApprovalConfig | null,
+): Promise<Pick<ClientState, "approval" | "approvals">> {
+  const required = approval?.required === true;
+  try {
+    const approvals = await runtime.transport.approvals();
+    if (approvals === undefined) return { approval: { supported: false, required }, approvals: [] };
+    return { approval: { supported: true, required }, approvals };
+  } catch (error) {
+    runtime.options.logger?.warn("Could not read the approvals on this surface.", {
+      error: String(error),
+    });
+    return { approval: { supported: false, required }, approvals: [] };
   }
 }
 
@@ -747,6 +803,39 @@ function postedFrom(runtime: Runtime, state: WritableComposer): PostedComment {
     ...(state.target.context === undefined ? {} : { context: state.target.context }),
     ...(state.attachments.length === 0 ? {} : { attachments: state.attachments }),
   };
+}
+
+/** Records the approval and takes the verdict the route publishes with it. */
+async function approve(runtime: Runtime, note?: string): Promise<Approval> {
+  try {
+    const approval = await runtime.transport.approve(note);
+    patch(runtime, {
+      approvals: [approval, ...runtime.state.approvals.filter((one) => one.id !== approval.id)],
+      hidden: false,
+      error: null,
+    });
+    return approval;
+  } catch (error) {
+    fail(runtime, error, "approve");
+    throw error;
+  }
+}
+
+/** Takes back this reviewer's own. There is no other one to reach from here. */
+async function unapprove(runtime: Runtime): Promise<void> {
+  const held = runtime.state.myApproval;
+  if (!held) return;
+
+  try {
+    await runtime.transport.unapprove(held.id);
+    patch(runtime, {
+      approvals: runtime.state.approvals.filter((one) => one.id !== held.id),
+      error: null,
+    });
+  } catch (error) {
+    fail(runtime, error, "approve");
+    throw error;
+  }
 }
 
 async function setStatus(

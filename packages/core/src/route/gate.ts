@@ -13,7 +13,7 @@ import { decideGate } from "../gate/decide.js";
 
 import type { GateConnector, IdentityRequest, StoreConnector } from "../connectors/types.js";
 import type { Logger } from "../logger/types.js";
-import type { Comment } from "../types.js";
+import type { Approval, Comment } from "../types.js";
 
 /**
  * Chooses the gate for one request, for the same reason a store is chosen per
@@ -53,14 +53,23 @@ export interface GateContext {
   readonly store: StoreConnector;
   readonly gate: GateConnector;
   readonly logger?: Logger;
+  /**
+   * True when a quiet surface still needs somebody to say they looked at it.
+   * `docs/gate.md` covers why that is off by default.
+   */
+  readonly requireApproval?: boolean;
 }
 
 async function publish(context: GateContext, branch: string, reviewUrl?: string): Promise<void> {
   const sha = await headOf(context, branch);
   if (sha === undefined) return;
 
+  const approvals = await approvalsOn(context, branch);
   const verdict = decideGate(await commentsOn(context.store, branch), {
     statusTracked: supports(context.store, "setStatus"),
+    commit: sha,
+    ...(context.requireApproval === undefined ? {} : { requireApproval: context.requireApproval }),
+    ...(approvals === undefined ? {} : { approvals }),
   });
 
   await context.gate.publish({
@@ -69,6 +78,18 @@ async function publish(context: GateContext, branch: string, reviewUrl?: string)
     verdict,
     ...(reviewUrl === undefined ? {} : { reviewUrl }),
   });
+}
+
+/**
+ * Undefined is a store with nowhere to keep one, which the verdict reports as
+ * neutral. Asked for even when none is required: the summary names who signed.
+ */
+async function approvalsOn(
+  context: GateContext,
+  branch: string,
+): Promise<readonly Approval[] | undefined> {
+  const ask = context.store.approvals?.bind(context.store);
+  return ask ? await ask(branch) : undefined;
 }
 
 /**

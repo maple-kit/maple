@@ -19,6 +19,9 @@ describe("capability detection", () => {
       setStatus: true,
       head: false,
       watch: false,
+      approvals: true,
+      approve: true,
+      unapprove: true,
     });
   });
 

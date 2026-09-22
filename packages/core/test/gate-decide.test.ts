@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { BLOCKING_STATUSES, decideGate } from "../src/gate/decide.js";
 import { storedComment } from "../src/testing/fixtures.js";
 
-import type { CommentStatus, GateReason } from "../src/types.js";
+import type { Approval, CommentStatus, GateReason } from "../src/types.js";
 
 function at(status: CommentStatus, body = "Fix the spacing") {
   return storedComment({ id: `c_${status}`, status, body });
@@ -35,7 +35,7 @@ describe("what holds the gate", () => {
   });
 });
 
-describe("the three ways of having nothing to say", () => {
+describe("the four ways of having nothing to say", () => {
   it.each<[string, GateReason, ReturnType<typeof decideGate>]>([
     ["comments that could not be read", "unreadable", decideGate(undefined)],
     [
@@ -109,5 +109,110 @@ describe("what a person reads", () => {
     const verdict = decideGate(many);
     expect(verdict.summary).toContain("…and 3 more.");
     expect(verdict.open).toBe(13);
+  });
+});
+
+const COMMIT = "9f2c1ab";
+
+function approval(overrides: Partial<Approval> = {}): Approval {
+  return {
+    id: "app_1",
+    branch: "feat/x",
+    commit: COMMIT,
+    author: { id: "u1", name: "Dana", provenance: "server" },
+    at: "2026-09-22T10:00:00.000Z",
+    ...overrides,
+  };
+}
+
+describe("a gate that wants somebody to have looked", () => {
+  it("clears a quiet pull request when no approval is asked for", () => {
+    expect(decideGate([]).conclusion).toBe("clear");
+  });
+
+  it("blocks a quiet pull request nobody approved", () => {
+    const verdict = decideGate([], { requireApproval: true, approvals: [], commit: COMMIT });
+    expect(verdict).toMatchObject({ conclusion: "blocked", reason: "awaiting-approval" });
+  });
+
+  it("blocks a fully resolved pull request nobody approved", () => {
+    const verdict = decideGate([at("resolved")], {
+      requireApproval: true,
+      approvals: [],
+      commit: COMMIT,
+    });
+    expect(verdict.reason).toBe("awaiting-approval");
+    expect(verdict.summary).toContain("nobody has approved");
+  });
+
+  it("clears once somebody approved this commit", () => {
+    const verdict = decideGate([], {
+      requireApproval: true,
+      approvals: [approval()],
+      commit: COMMIT,
+    });
+    expect(verdict).toMatchObject({ conclusion: "clear", reason: "no-comments" });
+    expect(verdict.title).toBe("Approved by Dana");
+  });
+
+  it("does not let an approval of another commit clear this one", () => {
+    const verdict = decideGate([], {
+      requireApproval: true,
+      approvals: [approval({ commit: "deadbee" })],
+      commit: COMMIT,
+    });
+    expect(verdict.reason).toBe("awaiting-approval");
+  });
+
+  it("carries the note a reviewer left with the approval", () => {
+    const verdict = decideGate([], {
+      requireApproval: true,
+      approvals: [approval({ note: "Checked at 375px\ntoo" })],
+      commit: COMMIT,
+    });
+    expect(verdict.summary).toContain("> Checked at 375px too");
+  });
+
+  it("says who approved it even when comments were resolved first", () => {
+    const verdict = decideGate([at("resolved")], {
+      requireApproval: true,
+      approvals: [approval()],
+      commit: COMMIT,
+    });
+    expect(verdict).toMatchObject({ conclusion: "clear", reason: "all-resolved" });
+    expect(verdict.summary).toContain("Dana approved this preview.");
+  });
+
+  it("reports an open comment rather than the missing approval", () => {
+    const verdict = decideGate([at("open")], {
+      requireApproval: true,
+      approvals: [],
+      commit: COMMIT,
+    });
+    expect(verdict.reason).toBe("comments-open");
+  });
+
+  it("stays quiet about approval on a pull request Maple never reviewed", () => {
+    const verdict = decideGate(undefined, { requireApproval: true, hasReview: false });
+    expect(verdict.reason).toBe("no-review");
+  });
+});
+
+describe("an approval that could not be looked for", () => {
+  it("is neutral when the store keeps no approvals", () => {
+    const verdict = decideGate([], { requireApproval: true, commit: COMMIT });
+    expect(verdict).toMatchObject({ conclusion: "neutral", reason: "approval-untracked" });
+    expect(verdict.summary).toContain("cannot record");
+  });
+
+  it("is neutral when nothing names the commit under judgement", () => {
+    const verdict = decideGate([], { requireApproval: true, approvals: [approval()] });
+    expect(verdict).toMatchObject({ conclusion: "neutral", reason: "approval-untracked" });
+    expect(verdict.summary).toContain("names the commit");
+  });
+
+  it("still blocks on an open comment rather than going neutral", () => {
+    const verdict = decideGate([at("open")], { requireApproval: true });
+    expect(verdict).toMatchObject({ conclusion: "blocked", reason: "comments-open" });
   });
 });

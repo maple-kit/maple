@@ -29,7 +29,8 @@ second place to declare them, so the two cannot disagree.
 import { capabilitiesOf } from "@maple-kit/core/connectors";
 
 capabilitiesOf("store", myStore(options));
-// { list: true, append: true, setStatus: false, head: false, watch: false }
+// { list: true, append: true, setStatus: false, head: false, watch: false,
+//   approvals: false, approve: false, unapprove: false }
 ```
 
 Maple degrades around a missing optional method rather than failing. A store
@@ -42,6 +43,13 @@ an agent says addressed the comment, an optional note, and the time the write
 happened. A store that cannot keep it records the status alone; it never refuses
 the call, because the status is the part the gate reads.
 
+`approvals` and `approve` are a pair, and a store implements both or neither: one
+that can record a sign-off it cannot read back has recorded nothing the gate can
+act on. `unapprove` is separate, because an append-only backend can hold an
+approval and not take it away. A store with none of the three makes a gate that
+was told to require an approval report `neutral` rather than block for ever —
+`docs/gate.md` has the reasoning.
+
 Omitting a **required** method is an error, raised at construction time by
 `createCommentStore` rather than on the first request.
 
@@ -49,14 +57,14 @@ Omitting a **required** method is an error, raised at construction time by
 
 Run `maple connectors` to print this from the code.
 
-| Kind            | Required            | Optional                     |
-| --------------- | ------------------- | ---------------------------- |
-| `store`         | `list`, `append`    | `setStatus`, `head`, `watch` |
-| `media`         | `putBlob`, `getUrl` | `remove`                     |
-| `observability` | `getReplayLink`     | `fetchEvents`                |
-| `identity`      | `resolveUser`       | —                            |
-| `gate`          | `publish`           | `read`                       |
-| `classifier`    | —                   | `score`, `classify`          |
+| Kind            | Required            | Optional                                                          |
+| --------------- | ------------------- | ----------------------------------------------------------------- |
+| `store`         | `list`, `append`    | `setStatus`, `head`, `watch`, `approvals`, `approve`, `unapprove` |
+| `media`         | `putBlob`, `getUrl` | `remove`                                                          |
+| `observability` | `getReplayLink`     | `fetchEvents`                                                     |
+| `identity`      | `resolveUser`       | —                                                                 |
+| `gate`          | `publish`           | `read`                                                            |
+| `classifier`    | —                   | `score`, `classify`                                               |
 
 `classifier` is the one kind that requires nothing: both of its methods are
 optional, so one defining neither is inert rather than invalid. `docs/assist.md`
@@ -72,13 +80,13 @@ it is filling it in.
 `✓` implemented · `—` not implemented · `~` implemented with a caveat, explained
 below the table.
 
-| Connector            | list | append | setStatus | head | watch | putBlob | getUrl | getReplayLink | fetchEvents | resolveUser | publish | read | score | classify |
-| -------------------- | ---- | ------ | --------- | ---- | ----- | ------- | ------ | ------------- | ----------- | ----------- | ------- | ---- | ----- | -------- |
-| `github` (store)     | ✓    | ✓      | ✓         | ✓    | —     | —       | —      | —             | —           | —           | —       | —    | —     | —        |
-| `github` (gate)      | —    | —      | —         | —    | —     | —       | —      | —             | —           | —           | ✓       | ✓    | —     | —        |
-| `memory` (reference) | ✓    | ✓      | ✓         | ✓    | —     | —       | —      | —             | —           | —           | ✓       | ✓    | ✓     | ✓        |
-| `keyword` (baseline) | —    | —      | —         | —    | —     | —       | —      | —             | —           | —           | —       | —    | ✓     | ✓        |
-| `datadog`            | ~    | ✓      | ~         | —    | —     | —       | —      | ~             | ✓           | ~           | —       | —    | —     | —        |
+| Connector            | list | append | setStatus | head | watch | approvals | approve | unapprove | putBlob | getUrl | getReplayLink | fetchEvents | resolveUser | publish | read | score | classify |
+| -------------------- | ---- | ------ | --------- | ---- | ----- | --------- | ------- | --------- | ------- | ------ | ------------- | ----------- | ----------- | ------- | ---- | ----- | -------- |
+| `github` (store)     | ✓    | ✓      | ✓         | ✓    | —     | —         | —       | —         | —       | —      | —             | —           | —           | —       | —    | —     | —        |
+| `github` (gate)      | —    | —      | —         | —    | —     | —         | —       | —         | —       | —      | —             | —           | —           | ✓       | ✓    | —     | —        |
+| `memory` (reference) | ✓    | ✓      | ✓         | ✓    | —     | ✓         | ✓       | ✓         | —       | —      | —             | —           | —           | ✓       | ✓    | ✓     | ✓        |
+| `keyword` (baseline) | —    | —      | —         | —    | —     | —         | —       | —         | —       | —      | —             | —           | —           | —       | —    | ✓     | ✓        |
+| `datadog`            | ~    | ✓      | ~         | —    | —     | —         | —       | —         | —       | —      | ~             | ✓           | ~           | —       | —    | —     | —        |
 
 The reference connector lives in `@maple-kit/core/testing` and exists so the
 contract suite has something to run against. It is not for production.

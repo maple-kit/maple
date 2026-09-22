@@ -9,6 +9,7 @@
  */
 
 import type {
+  Approval,
   Comment,
   CommentResolution,
   CommentStatus,
@@ -16,6 +17,7 @@ import type {
   MapleUser,
   MediaBlob,
   MediaRef,
+  NewApproval,
   NewComment,
 } from "../types.js";
 
@@ -67,6 +69,15 @@ export interface StoreConnector extends ConnectorMeta {
   head?(branch: string): Promise<string | undefined>;
   /** Long-poll for comments newer than `cursor`. Resolves empty on timeout. */
   watch?(query: ListQuery, signal: AbortSignal): Promise<CommentPage>;
+  /**
+   * Approvals on a surface, newest first. Present together with `approve`: one
+   * that records what it cannot read back records nothing a gate can act on.
+   */
+  approvals?(branch: string): Promise<readonly Approval[]>;
+  /** Records one. The store assigns the id; everything else is given. */
+  approve?(approval: NewApproval): Promise<Approval>;
+  /** Takes one back. Optional even where `approve` is present. */
+  unapprove?(id: string): Promise<void>;
 }
 
 /** Stores screenshots and other binary evidence. */

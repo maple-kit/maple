@@ -9,6 +9,7 @@
 
 import { MapleStoreError } from "../errors.js";
 import { fnv1a32 } from "../lib/fnv1a.js";
+import { handleApprovals } from "./approvals.js";
 import { createAssist } from "./assist.js";
 import { endLink, finishLink, githubState, linkFailure, startLink } from "./auth.js";
 import { gateFor, publishGate } from "./gate.js";
@@ -22,7 +23,14 @@ import type {
   StoreConnector,
 } from "../connectors/types.js";
 import type { Logger } from "../logger/types.js";
-import type { Comment, CommentResolution, CommentStatus, NewComment } from "../types.js";
+import type {
+  Comment,
+  CommentAuthor,
+  CommentResolution,
+  CommentStatus,
+  MapleUser,
+  NewComment,
+} from "../types.js";
 import type { Assist, AssistOptions } from "./assist.js";
 import type { GitHubAuthOptions } from "./auth.js";
 import type { GateResolver } from "./gate.js";
@@ -70,6 +78,11 @@ export interface RouteOptions {
    * about the composer changes: the whole tier is off unless switched on.
    */
   readonly assist?: AssistOptions;
+  /**
+   * True when a quiet surface still needs somebody to say they looked. Needs a
+   * store that keeps approvals and an identity to name who left one.
+   */
+  readonly requireApproval?: boolean;
   /** Defaults to `/api/maple`. */
   readonly basePath?: string;
   /** Where failures are reported. Silent when absent. */
@@ -128,6 +141,9 @@ async function dispatch(
   if (route === "/assist") return judge(mount, request);
   if (route === "/auth/github") return link(options, request);
   if (route === "/media" || route.startsWith("/media/")) return media(options, request, route, url);
+  if (route === "/approvals" || route.startsWith("/approvals/")) {
+    return approvals(options, request, route, url);
+  }
 
   const one = /^\/comments\/([^/]+)$/.exec(route);
   if (route !== "/comments" && route !== "/me" && !one) return json({ error: "Not found" }, 404);
@@ -143,6 +159,39 @@ async function dispatch(
   return request.method === "GET"
     ? listComments(store, url)
     : appendComment(options, store, request);
+}
+
+/**
+ * The approval arm. It resolves its own reviewer as well as its store: an
+ * approval is the one write whose author decides whether it is accepted.
+ */
+async function approvals(
+  options: RouteOptions,
+  request: Request,
+  route: string,
+  url: URL,
+): Promise<Response> {
+  const store = await storeFor(options, request);
+  if (!store) return json({ error: "This reviewer has no store to write to" }, 401);
+
+  const id = route === "/approvals" ? undefined : decodeURIComponent(route.slice(11));
+  const user = (await options.identity?.resolveUser(identityRequest(request))) ?? null;
+  const answer = await handleApprovals({ store, user, authorFor }, request, id, url);
+
+  const branch = request.method === "GET" ? undefined : await branchOf(answer);
+  if (branch !== undefined) await reportGate(options, store, request, branch);
+  return answer;
+}
+
+/**
+ * The branch a write was about, off the answer rather than the request: a
+ * `DELETE` names an id. Undefined when nothing was written, so no publish.
+ */
+async function branchOf(answer: Response): Promise<string | undefined> {
+  if (answer.status !== 200 && answer.status !== 201) return undefined;
+
+  const body = (await answer.clone().json()) as { branch?: unknown };
+  return typeof body.branch === "string" ? body.branch : undefined;
 }
 
 /** `POST /media` takes the bytes and hands back the reference a comment keeps;
@@ -282,12 +331,21 @@ async function appendComment(
   const user = await options.identity?.resolveUser(identityRequest(request));
   const comment: NewComment = {
     ...draft,
-    author: user
-      ? { id: user.id, name: user.name, provenance: "server", colorSlot: colorSlotFor(user.id) }
-      : { id: "guest", name: "Guest", provenance: "guest" },
+    author: user ? authorFor(user) : { id: "guest", name: "Guest", provenance: "guest" },
   };
 
   return json(await store.append(comment), 201);
+}
+
+/** A resolved reviewer, as a comment or an approval records them. */
+function authorFor(user: MapleUser): CommentAuthor {
+  return {
+    id: user.id,
+    name: user.name,
+    provenance: "server",
+    colorSlot: colorSlotFor(user.id),
+    ...(user.avatarUrl === undefined ? {} : { avatarUrl: user.avatarUrl }),
+  };
 }
 
 /**
@@ -343,6 +401,7 @@ async function reportGate(
     store,
     gate,
     ...(options.logger === undefined ? {} : { logger: options.logger }),
+    ...(options.requireApproval === undefined ? {} : { requireApproval: options.requireApproval }),
   };
   await publishGate(context, branch, new URL(request.url).origin);
 }
@@ -381,12 +440,18 @@ async function whoAmI(mount: Mount, request: Request): Promise<Response> {
     {
       user: user ?? null,
       media,
+      approval: { required: options.requireApproval === true },
       ...(github === undefined ? {} : { github }),
       ...(assist === undefined ? {} : { assist: { pillars: assist.pillars } }),
     },
     200,
   );
 }
+
+/**
+ * `/me` says whether the gate wants an approval, never whether one could be
+ * left: answering that means resolving a store. `GET /approvals` answers that.
+ */
 
 /**
  * The comment being typed, judged. The session it is counted against is the

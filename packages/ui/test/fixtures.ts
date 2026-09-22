@@ -170,6 +170,8 @@ export const PAGE_HTML = `
 export function fixtureFetch(comments: readonly Comment[] = COMMENTS): typeof globalThis.fetch {
   return (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input instanceof Request ? input.url : input);
+    if (url.includes("/approvals")) return Promise.resolve(noApprovals());
+
     const patch = (init?.method ?? "GET") === "PATCH";
     const body = patch && init ? patched(url, comments, init) : listing(url, comments);
 
@@ -180,6 +182,14 @@ export function fixtureFetch(comments: readonly Comment[] = COMMENTS): typeof gl
       }),
     );
   };
+}
+
+/** The default deployment keeps no approvals, so the row is never drawn. */
+function noApprovals(): Response {
+  return new Response(JSON.stringify({ error: "This store keeps no approvals" }), {
+    status: 501,
+    headers: { "content-type": "application/json" },
+  });
 }
 
 function listing(url: string, comments: readonly Comment[]): unknown {

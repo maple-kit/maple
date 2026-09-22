@@ -64,6 +64,7 @@ export { createCommentStore } from "./store.js";
 export type { CommentStore } from "./store.js";
 export type {
   AnchorRegion,
+  Approval,
   Comment,
   CommentAnchor,
   CommentAuthor,
@@ -78,6 +79,7 @@ export type {
   MediaBlob,
   MediaRef,
   MediaSource,
+  NewApproval,
   NewComment,
   PickKind,
   RegionContext,

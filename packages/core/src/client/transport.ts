@@ -10,7 +10,7 @@
 
 import type { Pillar } from "../connectors/types.js";
 import type { AssistAnswer } from "../route/assist.js";
-import type { Comment, CommentStatus, MapleUser, MediaRef } from "../types.js";
+import type { Approval, Comment, CommentStatus, MapleUser, MediaRef } from "../types.js";
 import type { PostedComment, ResolutionClaim } from "./types.js";
 
 /** The default mount point, matched by the route, the Vite plugin and the codemod. */
@@ -65,6 +65,8 @@ export interface Identity {
   readonly media?: boolean;
   /** Absent when nothing judges a comment. The pillars a card renders. */
   readonly assist?: { readonly pillars: readonly Pillar[] };
+  /** Whether the merge gate is held until somebody approves the preview. */
+  readonly approval?: { readonly required: boolean };
 }
 
 /** The route, as the controller sees it. */
@@ -81,6 +83,12 @@ export interface Transport {
   putMedia(blob: Blob, contentType: string): Promise<MediaRef>;
   /** A URL for an `img`, which the route redirects from. Builds no request. */
   mediaUrl(ref: MediaRef): string;
+  /** Every approval on the branch, or undefined where the store keeps none. */
+  approvals(): Promise<readonly Approval[] | undefined>;
+  /** Records that this reviewer looked. The route names the commit. */
+  approve(note?: string): Promise<Approval>;
+  /** Takes back an approval this reviewer left. */
+  unapprove(id: string): Promise<void>;
   /** Asks GitHub for a code to show the reviewer. */
   linkStart(): Promise<LinkStart>;
   /** One exchange attempt. The caller does the waiting between them. */
@@ -112,6 +120,27 @@ export function createTransport(options: TransportOptions): Transport {
         headers: { "content-type": contentType },
       }),
     mediaUrl: (ref) => mediaUrl(options.basePath ?? DEFAULT_BASE_PATH, ref),
+    approvals: async () => {
+      const query = new URLSearchParams({ branch: options.branch });
+      try {
+        const answer = await call<{ approvals?: Approval[] }>(`/approvals?${query.toString()}`, {});
+        return answer.approvals ?? [];
+      } catch (error) {
+        if (error instanceof MapleRequestError && error.status === 501) return undefined;
+        throw error;
+      }
+    },
+    approve: (note) =>
+      call<Approval>("/approvals", {
+        method: "POST",
+        body: JSON.stringify({ branch: options.branch, ...(note === undefined ? {} : { note }) }),
+      }),
+    unapprove: async (id) => {
+      const query = new URLSearchParams({ branch: options.branch });
+      await call<unknown>(`/approvals/${encodeURIComponent(id)}?${query.toString()}`, {
+        method: "DELETE",
+      });
+    },
     linkStart: () => call<LinkStart>("/auth/github", { method: "POST" }),
     linkAttempt: () => call<LinkAttempt>("/auth/github", { method: "PATCH" }),
     linkEnd: async () => {

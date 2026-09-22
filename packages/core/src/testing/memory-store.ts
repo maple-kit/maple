@@ -8,7 +8,14 @@
  */
 
 import type { CommentPage, ListQuery, StoreConnector } from "../connectors/types.js";
-import type { Comment, CommentResolution, CommentStatus, NewComment } from "../types.js";
+import type {
+  Approval,
+  Comment,
+  CommentResolution,
+  CommentStatus,
+  NewApproval,
+  NewComment,
+} from "../types.js";
 
 /** Options for {@link memoryStore}. */
 export interface MemoryStoreOptions {
@@ -21,6 +28,11 @@ export interface MemoryStoreOptions {
    * one the method is absent, which is the case a gate publish has to survive.
    */
   readonly heads?: Readonly<Record<string, string>>;
+  /**
+   * Omit the three approval methods, to exercise the store a gate asked for an
+   * approval from and found nowhere to look. Defaults to false.
+   */
+  readonly withoutApprovals?: boolean;
 }
 
 /** Cursors are just the offset, encoded so callers cannot do arithmetic on them. */
@@ -38,7 +50,9 @@ function decodeCursor(cursor: string): number {
 /** Creates an in-memory store connector. */
 export function memoryStore(options: MemoryStoreOptions = {}): StoreConnector {
   const comments = new Map<string, Comment>();
+  const approved = new Map<string, Approval>();
   let nextId = 1;
+  let nextApproval = 1;
 
   function list(query: ListQuery): Promise<CommentPage> {
     if (query.limit !== undefined && query.limit <= 0) {
@@ -85,11 +99,31 @@ export function memoryStore(options: MemoryStoreOptions = {}): StoreConnector {
     return Promise.resolve(options.heads?.[branch]);
   }
 
+  function approvals(branch: string): Promise<readonly Approval[]> {
+    return Promise.resolve(
+      [...approved.values()]
+        .filter((approval) => approval.branch === branch)
+        .sort((a, b) => b.at.localeCompare(a.at)),
+    );
+  }
+
+  function approve(approval: NewApproval): Promise<Approval> {
+    const stored: Approval = { ...approval, id: `app_${nextApproval++}` };
+    approved.set(stored.id, stored);
+    return Promise.resolve(stored);
+  }
+
+  function unapprove(id: string): Promise<void> {
+    if (!approved.delete(id)) return Promise.reject(new Error(`No approval with id ${id}`));
+    return Promise.resolve();
+  }
+
   return {
     name: options.name ?? "memory",
     list,
     append,
     ...(options.appendOnly === true ? {} : { setStatus }),
     ...(options.heads === undefined ? {} : { head }),
+    ...(options.withoutApprovals === true ? {} : { approvals, approve, unapprove }),
   };
 }

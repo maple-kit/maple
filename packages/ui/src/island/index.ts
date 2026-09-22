@@ -9,6 +9,8 @@
 
 export { Account } from "./account.js";
 export type { AccountProps } from "./account.js";
+export { Approve } from "./approve.js";
+export type { ApproveProps } from "./approve.js";
 export { countsFor, numbersFor, orphanReason, resolutionsFor } from "./comments.js";
 export type { FilterCounts } from "./comments.js";
 export { IslandContent } from "./content.js";
@@ -25,7 +27,14 @@ export { Island } from "./island.js";
 export type { IslandProps } from "./island.js";
 export { Item, TIME_DELAY_MS } from "./item.js";
 export type { ItemProps } from "./item.js";
-export { FILTER_LABELS, ISLAND_COPY, kindPhrase, openLabel, SETTINGS_COPY } from "./language.js";
+export {
+  APPROVE_COPY,
+  FILTER_LABELS,
+  ISLAND_COPY,
+  kindPhrase,
+  openLabel,
+  SETTINGS_COPY,
+} from "./language.js";
 export { List } from "./list.js";
 export type { ListProps } from "./list.js";
 export { NewComment, PickButton } from "./new-comment.js";

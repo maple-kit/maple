@@ -994,6 +994,46 @@ function newComment(): string {
 /* One row, not a label over a row: the label is two syllables and the three
    picks it introduces are beside it, which is half the height for the same
    sentence. */
+.mk-approve {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-top: 1px solid var(--mk-line);
+  background: var(--mk-sunk);
+}
+
+.mk-approve-said {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--mk-muted);
+  font-size: 11.5px;
+  line-height: 1.35;
+}
+
+.mk-approve[data-mk-approved="yes"] .mk-approve-said {
+  color: var(--mk-fg);
+}
+
+.mk-approve-do {
+  flex: none;
+  padding: 3px 11px;
+  border: 1px solid var(--mk-line);
+  border-radius: 999px;
+  background: var(--mk-bg);
+  color: var(--mk-fg);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mk-approve-do:disabled {
+  color: var(--mk-faint);
+  cursor: not-allowed;
+}
+
 .mk-new {
   flex: none;
   display: flex;

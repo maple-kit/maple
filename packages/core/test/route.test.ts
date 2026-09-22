@@ -301,12 +301,17 @@ describe("identity", () => {
     expect((await response.json()) as unknown).toEqual({
       user: { id: "u_7", name: "Reviewer" },
       media: false,
+      approval: { required: false },
     });
   });
 
   it("reports nobody rather than failing when there is no identity connector", async () => {
     const response = await handler()(request("GET", "/api/maple/me"));
-    expect((await response.json()) as unknown).toEqual({ user: null, media: false });
+    expect((await response.json()) as unknown).toEqual({
+      user: null,
+      media: false,
+      approval: { required: false },
+    });
   });
 });
 

@@ -13,7 +13,7 @@ import { describe, expect, it } from "vitest";
 import { sampleComment } from "./fixtures.js";
 
 import type { StoreConnector } from "../connectors/types.js";
-import type { Comment, CommentStatus } from "../types.js";
+import type { Approval, Comment, CommentStatus, NewApproval } from "../types.js";
 
 /** What the suite needs in order to exercise a connector. */
 export interface StoreContractOptions {
@@ -32,6 +32,20 @@ export interface StoreContractOptions {
 export interface StoreContractSubject {
   readonly connector: StoreConnector;
   cleanup?(): Promise<void>;
+}
+
+/** Runs a body against a fresh connector and a fresh branch, and cleans up. */
+function subjectRunner(
+  options: StoreContractOptions,
+): (body: (connector: StoreConnector, branch: string) => Promise<void>) => Promise<void> {
+  return async (body) => {
+    const subject = await options.create();
+    try {
+      await body(subject.connector, uniqueBranch(options.name));
+    } finally {
+      await subject.cleanup?.();
+    }
+  };
 }
 
 /** Unique branch per test, so a shared backend does not leak between them. */
@@ -59,19 +73,9 @@ async function eventually<T>(
 export function runStoreContract(options: StoreContractOptions): void {
   const budget = options.eventualConsistencyMs ?? 0;
 
-  describe(`store contract: ${options.name}`, () => {
-    /** Runs `body` against a fresh connector and always cleans up. */
-    async function withSubject(
-      body: (connector: StoreConnector, branch: string) => Promise<void>,
-    ): Promise<void> {
-      const subject = await options.create();
-      try {
-        await body(subject.connector, uniqueBranch(options.name));
-      } finally {
-        await subject.cleanup?.();
-      }
-    }
+  const withSubject = subjectRunner(options);
 
+  describe(`store contract: ${options.name}`, () => {
     /** Lists `branch`, waiting out eventual consistency until `want` comments show. */
     async function listUntil(
       connector: StoreConnector,
@@ -216,5 +220,110 @@ export function runStoreContract(options: StoreContractOptions): void {
         });
       });
     });
+
+    approvalContract(options, budget);
   });
+}
+
+/** Kept apart so `runStoreContract` stays inside its own length limit. */
+function approvalContract(options: StoreContractOptions, budget: number): void {
+  const withSubject = subjectRunner(options);
+
+  describe("approvals", () => {
+    it("reads back an approval it recorded, when supported", async () => {
+      await withSubject(async (connector, branch) => {
+        const pair = approving(connector);
+        if (!pair) return;
+
+        const stored = await pair.approve(sampleApproval(branch));
+        expect(stored.id).toBeTruthy();
+        expect(stored.commit).toBe(COMMIT);
+
+        const found = await eventually(
+          () => pair.approvals(branch),
+          (list) => list.length >= 1,
+          budget,
+        );
+        expect(found.map((one) => one.id)).toContain(stored.id);
+      });
+    });
+
+    it("keeps the commit and the author, which are what a gate reads", async () => {
+      await withSubject(async (connector, branch) => {
+        const pair = approving(connector);
+        if (!pair) return;
+
+        const input = sampleApproval(branch, { note: "Looks right on mobile too." });
+        const stored = await pair.approve(input);
+
+        const found = await eventually(
+          () => pair.approvals(branch),
+          (list) => list.some((one) => one.id === stored.id),
+          budget,
+        );
+        const read = found.find((one) => one.id === stored.id);
+        expect(read?.commit).toBe(input.commit);
+        expect(read?.author.id).toBe(input.author.id);
+        expect(read?.note).toBe(input.note);
+      });
+    });
+
+    it("keeps one branch's approvals out of another's", async () => {
+      await withSubject(async (connector, branch) => {
+        const pair = approving(connector);
+        if (!pair) return;
+
+        await pair.approve(sampleApproval(branch));
+        const elsewhere = await pair.approvals(`${branch}-other`);
+        expect(elsewhere).toEqual([]);
+      });
+    });
+
+    it("stops reporting an approval that was taken back, when supported", async () => {
+      await withSubject(async (connector, branch) => {
+        const pair = approving(connector);
+        const unapprove = connector.unapprove?.bind(connector);
+        if (!pair || !unapprove) return;
+
+        const stored = await pair.approve(sampleApproval(branch));
+        await unapprove(stored.id);
+
+        const found = await eventually(
+          () => pair.approvals(branch),
+          (list) => !list.some((one) => one.id === stored.id),
+          budget,
+        );
+        expect(found.map((one) => one.id)).not.toContain(stored.id);
+      });
+    });
+  });
+}
+
+/** The commit every contract approval is about, so a gate has one to match. */
+const COMMIT = "0123456789abcdef0123456789abcdef01234567";
+
+/** The two methods a gate needs together, bound, or nothing to exercise. */
+interface Approving {
+  approvals(branch: string): Promise<readonly Approval[]>;
+  approve(approval: NewApproval): Promise<Approval>;
+}
+
+/**
+ * A store with one and not the other has recorded what nothing can read, so
+ * the suite skips rather than half-exercising it.
+ */
+function approving(connector: StoreConnector): Approving | undefined {
+  const approvals = connector.approvals?.bind(connector);
+  const approve = connector.approve?.bind(connector);
+  return approvals && approve ? { approvals, approve } : undefined;
+}
+
+function sampleApproval(branch: string, overrides: Partial<NewApproval> = {}): NewApproval {
+  return {
+    branch,
+    commit: COMMIT,
+    author: { id: "contract-reviewer", name: "Contract Reviewer", provenance: "server" },
+    at: new Date().toISOString(),
+    ...overrides,
+  };
 }

@@ -14,7 +14,7 @@ import { MapleRequestError } from "./transport.js";
 export type FailureKind = "offline" | "store" | "unauthorized" | "unknown";
 
 /** Which call failed, so a retry knows what to run again. */
-export type FailedCall = "link" | "load" | "send" | "status";
+export type FailedCall = "approve" | "link" | "load" | "send" | "status";
 
 /** A failure, in the words a reviewer reads and the shape a surface reads. */
 export interface MapleFailure {
@@ -29,24 +29,28 @@ export interface MapleFailure {
 /** The sentence for each kind, per call, so no surface writes its own. */
 const SAID: Readonly<Record<FailureKind, Readonly<Record<FailedCall, string>>>> = {
   unauthorized: {
+    approve: "Sign in before you can approve this preview.",
     load: "Sign in before this deployment can show you its comments.",
     send: "Sign in before this deployment can post your comment.",
     status: "Sign in before this deployment can change a comment.",
     link: "GitHub would not accept the sign-in.",
   },
   offline: {
+    approve: "Could not reach this deployment to approve the preview.",
     load: "Could not reach this deployment to load its comments.",
     send: "Could not reach this deployment. Your comment is kept here.",
     status: "Could not reach this deployment to change the comment.",
     link: "Could not reach this deployment to sign in.",
   },
   store: {
+    approve: "The comment store refused the approval.",
     load: "The comment store refused the request, so nothing could be loaded.",
     send: "The comment store refused your comment. It is kept here.",
     status: "The comment store refused the change.",
     link: "The comment store refused the sign-in.",
   },
   unknown: {
+    approve: "Something went wrong approving the preview.",
     load: "Something went wrong loading the comments.",
     send: "Something went wrong sending your comment. It is kept here.",
     status: "Something went wrong changing the comment.",
