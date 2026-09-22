@@ -1,5 +1,16 @@
 # @maple-kit/react
 
+## 0.7.0
+
+### Patch Changes
+
+- Updated dependencies [42f6077]
+- Updated dependencies [24adb84]
+- Updated dependencies [9d3df1b]
+- Updated dependencies [f2132fc]
+- Updated dependencies [101dd3b]
+  - @maple-kit/core@0.7.0
+
 ## 0.6.0
 
 ### Patch Changes

@@ -1,5 +1,117 @@
 # @maple-kit/core
 
+## 0.7.0
+
+### Minor Changes
+
+- 42f6077: A reviewer can approve a preview, and a gate can require one.
+
+  `decideGate([])` clears, which means a pull request nobody opened the preview
+  for reads exactly like one a designer looked over and liked. `requireApproval`
+  is the opt-in that separates them: on, a surface with nothing open blocks with
+  the new `awaiting-approval` reason until somebody presses **Approve** in the
+  overlay, and the clear verdict then names who signed off.
+
+  **Breaking:** `StoreConnector` gains three optional methods — `approvals`,
+  `approve` and `unapprove` — so `CONNECTOR_METHODS.store` and anything asserting
+  on `capabilitiesOf("store", …)` now report them. `GateReason` gains
+  `awaiting-approval` and `approval-untracked`, so an exhaustive switch over it
+  needs two more arms. `GET /me` answers with an `approval` field.
+
+  An approval is about a commit, never a branch: the route reads the sha from
+  `store.head` rather than from the browser, for the reason `docs/gate.md` gives
+  about the gate App's `Checks: write`. An approval nobody can be named for is
+  refused with a 401, so `requireApproval` needs an identity connector.
+
+- 24adb84: The gate hears about a resolve whoever did it, and `needs_reverify` is reachable.
+
+  `resolve_comment` wrote the status and stopped. The route has published a
+  verdict after a resolve since 0.6.0 — a reviewer who clears the last comment
+  should not wait for a commit nobody needs to make — and the agent, doing the
+  same thing through a different door, did not. An agent that resolved the last
+  comment and had nothing left to push left `maple/visual-review` holding on work
+  that was done.
+
+  `publishGate` therefore moves from `src/route/gate.ts` to `@maple-kit/core/gate`
+  beside the decision, and the MCP server takes an optional `gate` built from
+  `MAPLE_GATE_TOKEN`. Without it nothing publishes and the behaviour is what it
+  was.
+
+  `decideGate` also gains `reverifyResolved`, which is what makes `needs_reverify`
+  reachable at all: nothing in the repository ever wrote that status, so a gate
+  that listed it among `BLOCKING_STATUSES` was blocking on a state that could not
+  occur. On, a comment resolved against a commit that is no longer the head needs
+  another look. Off by default.
+
+  `docs/gate.md` now also states plainly that **nothing writes `orphaned` either**,
+  and why the page cannot simply report it.
+
+- 9d3df1b: `githubGate` no longer tries to update a check run another GitHub App created.
+
+  The action publishes at push time as GitHub Actions and the route publishes at
+  resolve time as Maple's own App. A check run may only be modified by the App
+  that made it, so the second publisher was answered with
+  `403 Invalid app_id … check run can only be modified by the GitHub App that
+created it` — and because a gate publish must never fail a resolve, that failure
+  was caught, logged and invisible. The check simply never moved.
+
+  `GitHubGateOptions.appId` names this App. Given it, the gate considers only its
+  own runs and posts a new one to supersede anyone else's, leaving theirs
+  untouched. Without it the behaviour is unchanged, which is correct when a single
+  publisher owns the check.
+
+  Found by driving the loop by hand against a live repository, not by a test:
+  every test until now had exactly one publisher.
+
+- f2132fc: One Maple comment per pull request, reposted rather than edited.
+
+  `githubStore` wrote one issue comment per visual comment. Ten comments were ten
+  comments on the pull request, and the review underneath them was unreadable.
+  Everything Maple keeps now lives in one ledger comment: a table of every visual
+  comment, the sign-offs under it, and one fence holding all of them.
+
+  Collapsing them costs the notification an edit does not send, so a write that
+  is news — a new comment, a new approval — posts the rebuilt ledger and deletes
+  the old one, landing at the bottom of the thread. A resolve or a withdrawal
+  edits in place, because announcing what a reviewer just clicked is noise. The
+  new comment is created before the old one is deleted: the other order loses
+  every comment if the process dies between the two calls.
+
+  **Breaking:** a comment id is now `gh_<pull>_<n>`, where `n` is a per-pull
+  sequence rather than the issue comment's own id — the ledger's id changes on
+  every repost, so an id built from it would not survive one. Ids written by an
+  earlier version no longer resolve. `ParsedFence` gains `approvals`,
+  `ExportOptions` gains `approvals`, and the markdown table gains a `Status`
+  column once any comment is not open.
+
+- 101dd3b: A comment is a draft until it is published.
+
+  Maple posted the moment a reviewer pressed the button. A review is a pass over
+  a page rather than a single remark, so four findings were four notifications
+  and — since the pull-request ledger — four reposts. The composer now offers
+  **Keep** and **Publish**, and the island grows an **Unsent** section: what is
+  waiting, one control that publishes all of it, and a **Copy** that puts every
+  unsent comment on the clipboard as markdown, which is the way out of a
+  deployment whose store is down or absent.
+
+  Batching only works if losing a batch is hard, so `beforeunload` is now
+  attached whenever anything is unpublished rather than only while the composer
+  is dirty, and `confirmOnUnload` defaults to on.
+
+  **Breaking:**
+
+  - `MapleClient.send()` is gone. `publish(ids?)` replaces it and returns every
+    comment it stored; `keepDraft()` closes the composer without publishing.
+  - `discardDraft` takes an optional id, so a row can drop a draft the composer
+    is not on.
+  - `ClientState` gains `publishing`; `FailedCall` is unchanged, a failed publish
+    still reports `send`.
+  - `Maple.Actions` exports `KEEP_LABEL` and `PUBLISH_LABEL` in place of
+    `CANCEL_LABEL` and `SEND_LABEL`.
+  - `StoreConnector.appendMany` is a new optional method, so
+    `capabilitiesOf("store", …)` reports one more key.
+  - `POST /comments` accepts an array and answers `{ comments }` for one.
+
 ## 0.6.0
 
 ### Minor Changes
