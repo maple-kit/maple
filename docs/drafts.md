@@ -35,8 +35,8 @@ publishes as they go never sees it.
 
 `StoreConnector.appendMany` is the optional method behind **Publish all**. A
 store that implements it takes the whole set in one write; one that does not
-gets them one at a time from the route, which is the same result and more
-calls. `githubStore` implements it as a single ledger repost, so four comments
+gets them one at a time from `CommentStore.appendMany`, which is the same
+result and more calls. `githubStore` implements it as a single ledger repost, so four comments
 are one comment on the pull request and one notification.
 
 `POST /comments` therefore takes an object or an array. An array answers with

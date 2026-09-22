@@ -29,8 +29,8 @@ second place to declare them, so the two cannot disagree.
 import { capabilitiesOf } from "@maple-kit/core/connectors";
 
 capabilitiesOf("store", myStore(options));
-// { list: true, append: true, setStatus: false, head: false, watch: false,
-//   approvals: false, approve: false, unapprove: false }
+// { list: true, append: true, appendMany: false, setStatus: false, head: false,
+//   watch: false, approvals: false, approve: false, unapprove: false }
 ```
 
 Maple degrades around a missing optional method rather than failing. A store
@@ -52,6 +52,68 @@ was told to require an approval report `neutral` rather than block for ever —
 
 Omitting a **required** method is an error, raised at construction time by
 `createCommentStore` rather than on the first request.
+
+## The wrapper carries all nine
+
+`createCommentStore(connector)` is what Maple itself holds. The SDK route, the
+gate publish and the MCP server all take a `CommentStore`, never a raw
+connector, because that wrapper is where the retries, the ten-second timeout
+and `MapleStoreError` live. A connector reached any other way is reached
+without them.
+
+**Every method of `StoreConnector` has one on `CommentStore`.** Six of them
+once did not: `appendMany`, `head`, `watch`, `approvals`, `approve` and
+`unapprove` were each added to the connector contract after the wrapper was
+written and none was added to it, so two thirds of the contract ran with no
+retry and no timeout and the one external caller had to reach past the wrapper
+to get at a capability. Nothing said they had to be added, so this table is the
+rule: **a method added to `StoreConnector` is added to `CommentStore` in the
+same commit, with a row here.**
+
+| `StoreConnector` | On `CommentStore` | Where the connector has no such method |
+| ---------------- | ----------------- | -------------------------------------- |
+| `list`           | `list`            | required; construction throws          |
+| `append`         | `append`          | required; construction throws          |
+| `appendMany`     | `appendMany`      | one `append` per comment, in order     |
+| `setStatus`      | `setStatus`       | resolves `null`                        |
+| `head`           | `head`            | resolves `undefined`                   |
+| `watch`          | `watch`           | resolves `undefined`                   |
+| `approvals`      | `approvals`       | resolves `undefined`                   |
+| `approve`        | `approve`         | resolves `null`                        |
+| `unapprove`      | `unapprove`       | resolves `false`                       |
+
+### A missing capability is never an empty answer
+
+Every method is present on a `CommentStore` whatever the connector implements,
+so **`capabilities` is what says what the connector can do and the return value
+is what says what happened.** Neither impersonates the other.
+
+That split is not tidiness. `decideGate` reads absent approvals as _"I could
+not look"_ and returns the `approval-untracked` neutral; it reads an empty
+array as _"nobody approved"_. If the wrapper resolved `approvals` to `[]` for a
+store that keeps none, every such store would report `awaiting-approval` —
+blocked, on every pull request, for ever, with no way to clear it, because the
+store that would record the approval is the one that cannot. So `approvals`
+resolves to `undefined`, and `keepsApprovals` reads the capability report.
+
+### What the wrapper does not do uniformly
+
+- **`watch` is neither timed out nor retried.** It is a long poll documented to
+  resolve empty when its own window closes, so the ten-second timeout would
+  turn a quiet period into a `MapleStoreError`, and a retry would re-enter it
+  on an `AbortSignal` the caller already spent. The caller's signal is the only
+  bound on it.
+- **`head` is wrapped and never memoised.** A pull request's number lasts its
+  whole life and its head lasts until the next push, so a cached head lands a
+  check run on the commit before last. `docs/gate.md` argues this at length.
+- **A write is retried like a read, and neither `append` nor `approve` is
+  idempotent.** A write the backend committed just before the timeout is
+  written a second time on the retry. Maple prefers that to leaving the two
+  calls a reviewer notices with no retry at all; a connector that can dedupe
+  its own writes — GitHub's ledger does, by id — should.
+- **A `RangeError` is never retried.** A negative limit or a malformed cursor
+  is the caller's argument, not the backend, and it is refused identically
+  however many times it is sent.
 
 ## The six kinds
 
@@ -277,3 +339,8 @@ runStoreContract({
 
 If it passes, Maple can use the connector. If it fails, the failure names the
 promise that was broken.
+
+The suite runs against the connector itself, not against a `CommentStore`: a
+contributor implements the plain contract, and the wrapper is Maple's side of
+it. Adding an optional method to `StoreConnector` is a change to both — see
+**The wrapper carries all nine** above.
