@@ -5,7 +5,8 @@
  * survive a flaky network — typed errors, a retry schedule, a timeout — lives
  * here, once, instead of in every connector.
  *
- * Every export returns a Promise, so no caller of this module imports Effect.
+ * Every export returns a Promise, so no caller imports Effect. An optional
+ * method the connector omits resolves to the absent value its export names.
  */
 
 import { Cause, Effect, Exit, Option, Schedule } from "effect";
@@ -14,7 +15,14 @@ import { MapleStoreError } from "../../errors.js";
 import { StoreRejected, StoreUnavailable } from "./errors.js";
 
 import type { CommentPage, ListQuery, StoreConnector } from "../../connectors/types.js";
-import type { Comment, CommentStatus, NewComment } from "../../types.js";
+import type {
+  Approval,
+  Comment,
+  CommentResolution,
+  CommentStatus,
+  NewApproval,
+  NewComment,
+} from "../../types.js";
 
 /** Three tries, 100ms apart, doubling, with jitter so retries do not synchronise. */
 const RETRY_POLICY = Schedule.jittered(
@@ -30,8 +38,8 @@ function isRetryable(cause: unknown): boolean {
   return !/\b(4\d\d|invalid|unauthori[sz]ed|forbidden|not found)\b/i.test(cause.message);
 }
 
-/** Wraps one connector call with typed failure, a timeout and the retry policy. */
-function call<A>(
+/** One connector call as a typed failure, with neither a timeout nor a retry. */
+function attempt<A>(
   connector: StoreConnector,
   operation: string,
   run: () => Promise<A>,
@@ -42,7 +50,19 @@ function call<A>(
       isRetryable(cause)
         ? new StoreUnavailable({ connector: connector.name, operation, cause })
         : new StoreRejected({ connector: connector.name, operation, cause }),
-  }).pipe(
+  });
+}
+
+/**
+ * Typed failure, a timeout and the retry policy. A write is retried like a
+ * read, and `docs/connectors.md` records what that costs a non-idempotent one.
+ */
+function call<A>(
+  connector: StoreConnector,
+  operation: string,
+  run: () => Promise<A>,
+): Effect.Effect<A, StoreRejected | StoreUnavailable> {
+  return attempt(connector, operation, run).pipe(
     Effect.timeoutFail({
       duration: CALL_TIMEOUT,
       onTimeout: () =>
@@ -84,13 +104,91 @@ export function appendComment(connector: StoreConnector, comment: NewComment): P
   return run(call(connector, "append", () => connector.append(comment)));
 }
 
+/**
+ * Appends several. One write where the connector takes a batch, one call each
+ * where it does not, so a caller never has to ask which kind it has.
+ */
+export async function appendComments(
+  connector: StoreConnector,
+  comments: readonly NewComment[],
+): Promise<readonly Comment[]> {
+  const many = connector.appendMany?.bind(connector);
+  if (many) return await run(call(connector, "appendMany", () => many(comments)));
+
+  const stored: Comment[] = [];
+  for (const comment of comments) stored.push(await appendComment(connector, comment));
+  return stored;
+}
+
 /** Sets a comment's status. Resolves to null when the connector cannot do it. */
 export function setCommentStatus(
   connector: StoreConnector,
   id: string,
   status: CommentStatus,
+  resolution?: CommentResolution,
 ): Promise<Comment | null> {
   const setStatus = connector.setStatus?.bind(connector);
   if (!setStatus) return Promise.resolve(null);
-  return run(call(connector, "setStatus", () => setStatus(id, status)));
+  return run(call(connector, "setStatus", () => setStatus(id, status, resolution)));
+}
+
+/**
+ * The commit a surface points at now. Undefined for a connector that cannot
+ * say and for a branch with no head; the capability report tells them apart.
+ * Never memoised: a push moves the head and a cached one gates the wrong commit.
+ */
+export function headCommit(connector: StoreConnector, branch: string): Promise<string | undefined> {
+  const head = connector.head?.bind(connector);
+  if (!head) return Promise.resolve(undefined);
+  return run(call(connector, "head", () => head(branch)));
+}
+
+/**
+ * Long-polls for new comments, or undefined where the connector cannot.
+ *
+ * Neither timed out nor retried: the poll is documented to resolve empty when
+ * its own window closes, so CALL_TIMEOUT would turn a quiet period into a
+ * failure, and a retry would re-enter it on a signal the caller already spent.
+ */
+export function watchComments(
+  connector: StoreConnector,
+  query: ListQuery,
+  signal: AbortSignal,
+): Promise<CommentPage | undefined> {
+  const watch = connector.watch?.bind(connector);
+  if (!watch) return Promise.resolve(undefined);
+  return run(attempt(connector, "watch", () => watch(query, signal)));
+}
+
+/**
+ * Approvals on a surface. Undefined is a connector that keeps none, which the
+ * gate reports as neutral; an empty array is a connector that keeps them and
+ * holds none, which is "nobody approved". The two must never be conflated.
+ */
+export function listApprovals(
+  connector: StoreConnector,
+  branch: string,
+): Promise<readonly Approval[] | undefined> {
+  const approvals = connector.approvals?.bind(connector);
+  if (!approvals) return Promise.resolve(undefined);
+  return run(call(connector, "approvals", () => approvals(branch)));
+}
+
+/** Records an approval. Resolves to null when the connector keeps none. */
+export function approveSurface(
+  connector: StoreConnector,
+  approval: NewApproval,
+): Promise<Approval | null> {
+  const approve = connector.approve?.bind(connector);
+  if (!approve) return Promise.resolve(null);
+  return run(call(connector, "approve", () => approve(approval)));
+}
+
+/** Takes one back. Resolves false when the connector cannot withdraw one. */
+export async function unapproveSurface(connector: StoreConnector, id: string): Promise<boolean> {
+  const unapprove = connector.unapprove?.bind(connector);
+  if (!unapprove) return false;
+
+  await run(call(connector, "unapprove", () => unapprove(id)));
+  return true;
 }
