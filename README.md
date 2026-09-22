@@ -21,8 +21,9 @@ Maple captures where they pointed, what they were looking at and who they are,
 hands it to a coding agent in a form it can act on, and holds the merge until
 every comment is resolved.
 
-**Status: pre-release.** Nothing is published yet. The contracts below are
-stable and implemented; the reviewer-facing interface is still being built.
+**Status: 0.x.** All six packages are published, with provenance, through a
+trusted publisher. 0.x makes no compatibility promise: a public interface is
+broken when breaking it is the right shape, and the changeset says what broke.
 
 ## Why another one
 
@@ -34,7 +35,8 @@ this. None combines all four of:
   so anyone with the link can comment — a designer, a product manager, a client.
   Tools like Agentation run against `localhost`, which means the only person who
   can leave a comment is the person running the build.
-- **A merge gate** — CI blocks while a visual comment is unresolved.
+- **A merge gate** — CI blocks while a visual comment is unresolved, and
+  optionally until somebody says they looked. See [`docs/gate.md`](docs/gate.md).
 - **An agent loop** — the agent reads comments, fixes, and resolves them.
 
 ## Vendor-agnostic by construction
@@ -58,17 +60,21 @@ export function myStore(options: MyOptions): StoreConnector {
 }
 ```
 
-There are four kinds — store, media, observability and identity — and a
-connector's capabilities are exactly the methods it defines. See
+There are six kinds — store, media, observability, identity, gate and
+classifier — and a connector's capabilities are exactly the methods it defines.
+Run `maple connectors` to print the matrix from the code, or see
 [`docs/connectors.md`](docs/connectors.md).
 
 ## Packages
 
-| Package           | What it is                                   |
-| ----------------- | -------------------------------------------- |
-| `@maple-kit/core` | Server SDK, overlay and connector contracts. |
-| `@maple-kit/cli`  | The `maple` command.                         |
-| `@maple-kit/mcp`  | The MCP server an agent talks to.            |
+| Package                 | What it is                                              |
+| ----------------------- | ------------------------------------------------------- |
+| `@maple-kit/core`       | Server SDK, overlay controller and connector contracts. |
+| `@maple-kit/react`      | Hooks over the controller. No styles, no components.    |
+| `@maple-kit/ui`         | The marks, the island and the composer.                 |
+| `@maple-kit/cli`        | The `maple` command.                                    |
+| `@maple-kit/mcp`        | The MCP server an agent talks to.                       |
+| `@maple-kit/classifier` | Scores a comment as it is written.                      |
 
 ## Documentation
 
