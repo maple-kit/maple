@@ -280,3 +280,7 @@ build, so the gate is enforced rather than remembered.
 There is deliberately no `MAPLE_GITHUB_CLIENT_SECRET` and no
 `MAPLE_GITHUB_TOKEN` in a preview environment. If a deployment has either, the
 design has been worked around and the whole argument above stops applying.
+
+The gate App's three variables are not in that table for the same reason they
+are not on this App: they belong to the other one. `docs/configuration.md` has
+every variable a host sets, and which of them are secrets.

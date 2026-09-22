@@ -176,7 +176,9 @@ publishes no mapping between the two.
 Set `MAPLE_GITHUB_CLIENT_ID` in the preview environment, and set
 `MAPLE_COOKIE_KEY` to a random 32-byte value if you want the reviewer's cookie
 encrypted at rest. Both go in your host's preview environment variables, not in
-a file in the repository.
+a file in the repository. The client id is public and the cookie key is a
+secret; `docs/configuration.md` names every variable Maple's halves need and
+which side of that line each falls on.
 
 Mount the route behind your preview flag so it never exists in production:
 
@@ -278,6 +280,18 @@ repositories, and give it the same `app-logo.png` and `#fdf8e8` badge colour
 from section 1a: the gate App's avatar is what sits beside
 `maple/visual-review` in the checks list on every pull request, at about
 twenty pixels, which is the size the mark was drawn to survive. `docs/gate.md` covers the rest.
+
+It configures the route through `MAPLE_GATE_APP_ID`,
+`MAPLE_GATE_INSTALLATION_ID` and `MAPLE_GATE_PRIVATE_KEY` — the last a real
+secret, unlike anything the comment App needs.
+
+**Run the gate in CI first, and register this App only if you want more.**
+`maple-action` publishes `maple/visual-review` on the workflow's own
+`GITHUB_TOKEN` with `checks: write`, so the merge is gated with no App
+registered and nobody's rights needed. What the second App adds is the other
+direction: a reviewer resolving the last comment clears the check there and
+then, instead of waiting for a commit nobody needs to make. Worth having, and
+worth having second.
 
 The reason the permissions cannot simply be added to the App you just made is
 the one sentence this whole design rests on: **a user-to-server token carries

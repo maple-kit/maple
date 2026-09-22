@@ -212,9 +212,17 @@ route publishes too, after a status changes.
 the way `store` and `media` already are. `RouteOptions.requireApproval` rides
 with it, and the three `/approvals` endpoints publish a verdict the same way a
 resolve does — recording a sign-off that nothing reports would leave the gate
-holding on a pull request somebody already approved. The logic lives in `src/route/gate.ts`
-rather than inside `handler.ts`, because a dispatch function is not where a
-second subject belongs.
+holding on a pull request somebody already approved.
+
+It is built from the gate App's own credentials — `MAPLE_GATE_APP_ID`,
+`MAPLE_GATE_INSTALLATION_ID` and `MAPLE_GATE_PRIVATE_KEY`, the last a secret
+and the first two not; `docs/configuration.md` has the table. A deployment
+running the gate only in CI sets none of them: the action publishes on the
+workflow's own `GITHUB_TOKEN`, and `require-approval` is then the input that
+has to agree with `requireApproval` here.
+
+The logic lives in `src/route/gate.ts` rather than inside `handler.ts`, because
+a dispatch function is not where a second subject belongs.
 
 ### Where the commit comes from
 

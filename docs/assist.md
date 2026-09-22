@@ -221,6 +221,12 @@ already aborted.
 `baseUrl` is the API root, defaulting to TypeSafe's own. Request-compatible
 reimplementations exist, so hosted or local stays a configuration choice.
 
+The key is `TYPESAFE_API_KEY` and it keeps the provider's name rather than
+taking a `MAPLE_` one, so a rejected key says where to go. `MAPLE_AI_MODEL` and
+`MAPLE_AI_API` are Maple's two knobs over it. `docs/configuration.md` has the
+table, and the whole tier is optional: no key, no `assist` option, no change to
+the composer.
+
 ## The surface
 
 The card sits in the slot the context card folds out of, and everything it
