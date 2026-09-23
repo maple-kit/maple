@@ -1,9 +1,12 @@
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/card-dark.svg">
-  <img src="docs/assets/card.svg" alt="Maple: visual review comments on deployed previews, written for people and read by agents." width="760">
-</picture>
+<a href="https://blog.nitzan.fyi/introducing-maple"><picture>
+<source media="(prefers-color-scheme: dark)" srcset="docs/assets/card-dark.svg">
+<img src="docs/assets/card.svg" alt="Maple: visual review comments on deployed previews, written for people and read by agents. Read the intro post." width="100%">
+</picture></a>
 
-### [Introducing Maple →](https://blog.nitzan.fyi/introducing-maple) · [maple-kit.org](https://maple-kit.org)
+<a href="https://maple-kit.org"><img src="https://img.shields.io/badge/site-maple--kit.org-465a2b?style=flat-square&labelColor=1a1d23" alt="maple-kit.org"></a>
+<a href="https://github.com/maple-kit/maple/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/maple-kit/maple/ci.yml?branch=main&label=CI&style=flat-square&color=465a2b&labelColor=1a1d23" alt="CI"></a>
+<a href="https://www.npmjs.com/package/@maple-kit/core"><img src="https://img.shields.io/npm/v/@maple-kit/core?style=flat-square&label=%40maple-kit%2Fcore&color=465a2b&labelColor=1a1d23" alt="@maple-kit/core on npm"></a>
+<a href="LICENSE"><img src="https://img.shields.io/github/license/maple-kit/maple?style=flat-square&color=465a2b&labelColor=1a1d23" alt="Apache-2.0"></a>
 
 ![The Maple overlay on a preview deployment of maple-kit.org: a reviewer has selected a line of the headline and is writing a comment on it, with the viewport width recorded alongside, and numbered pins sit on the demo page below.](docs/assets/overlay.png)
 

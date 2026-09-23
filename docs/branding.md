@@ -121,17 +121,31 @@ that they still agree.
 they are the same card `maple-kit.org` puts "Open source" in: a 10 pixel
 radius, a `--mk-line-firm` hairline, a `--mk-accent-sub` field, 30 of padding,
 and the leaf bleeding out of the bottom right corner at 16 per cent. The
-lockup is its title and the product's one sentence is its body, so the card
-carries the name and the description together and the README's own first line
-is the link row under it.
+lockup is its title, the product's one sentence is its body, and the site's
+own primary button is under them, so the card says the name, the description
+and the first thing to do in one object. It is 960 wide and the README draws
+it at `width="100%"`, which fills the column on a wide screen and scales down
+on a narrow one.
 
-Two things about it are not obvious. The body is live text in a system font
-stack rather than outlines, because outlining a sentence that will be reworded
-is a trap, and the `<img>` alt repeats it for anyone the image does not reach.
-The bleeding leaf takes `fill-opacity` on each path rather than `opacity` on
-the group: a group opacity composites the drawing through one offscreen buffer
-and softens every cell, and the cells never overlap, so the two are the same
-picture.
+**The button inside it is paint, and the card is the link.** An SVG loaded
+through an `<img>` renders in a restricted mode where a link inside it cannot
+be activated, and GitHub strips `style`, so nothing can be positioned over the
+image either. The whole card is wrapped in one `<a>` to the intro post
+instead, the drawn button names where that goes, and the `alt` ends with the
+same words. One card is therefore one destination: everywhere else the README
+needs to point is a badge, which is also why there is no second button.
+
+Two more things are not obvious. Every string in both files is live text in a
+system font stack rather than outlines, because outlining a sentence that will
+be reworded is a trap. And the bleeding leaf takes `fill-opacity` on each path
+rather than `opacity` on the group: a group opacity composites the drawing
+through one offscreen buffer and softens every cell, and the cells never
+overlap, so the two are the same picture.
+
+The badges under it are shields.io, in the accent over `--mk-fg`, and they are
+the only images in the README fetched from somewhere else. They say what a
+reader cannot see from the page: where the site is, whether `main` is green,
+what version is on npm, and the licence.
 
 ## On a pull request
 
