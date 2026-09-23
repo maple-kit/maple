@@ -126,6 +126,9 @@ importers:
 
   examples/vite-app:
     dependencies:
+      '@maple-kit/classifier':
+        specifier: workspace:*
+        version: link:../../packages/classifier
       '@maple-kit/core':
         specifier: workspace:*
         version: link:../../packages/core

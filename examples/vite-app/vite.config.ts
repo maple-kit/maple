@@ -1,10 +1,11 @@
 import { fileURLToPath } from "node:url";
 
+import { jevClassifier } from "@maple-kit/classifier";
 import { createCommentStore } from "@maple-kit/core";
 import { memoryMedia, memoryStore } from "@maple-kit/core/testing";
 import { maple } from "@maple-kit/core/vite";
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 
 import { SEEDED_FRAMES } from "./src/app/frames.js";
 import { seedComments } from "./src/app/seed.js";
@@ -47,7 +48,16 @@ async function seeded(branch: string): Promise<{ store: CommentStore; media: Med
 
 const BRANCH = process.env["VITE_MAPLE_BRANCH"] ?? "feat/example";
 
-export default defineConfig(async ({ command }) => {
+export default defineConfig(async ({ command, mode }) => {
+  // Read here, in the config, which runs in Node. The empty prefix is what
+  // makes `loadEnv` return unprefixed names, and only `VITE_` ones reach
+  // client code, so the key cannot land in the bundle. Absent, `/assist`
+  // answers 404 and the composer is what it is today.
+  const env = loadEnv(mode, import.meta.dirname, "");
+  const apiKey = env["TYPESAFE_API_KEY"];
+  const model = env["MAPLE_AI_MODEL"];
+  const classifier = apiKey ? jevClassifier({ apiKey, ...(model ? { model } : {}) }) : undefined;
+
   // The tagger is on for a preview build and off everywhere else, so a
   // production build is correct even when the flag is forgotten. `vite dev`
   // is a preview of a preview, so it tags too — without the attributes there
@@ -66,7 +76,7 @@ export default defineConfig(async ({ command }) => {
         // Only the dev and preview servers mount this; a static build has no
         // server, so a deployed copy hosts the route elsewhere. In memory and
         // seeded, so a restart is a clean slate with something in it.
-        route: { store, media },
+        route: { store, media, ...(classifier ? { assist: { classifier } } : {}) },
       }),
     ],
     build: { outDir: process.env["MAPLE_PREVIEW"] === "1" ? "dist-preview" : "dist" },
