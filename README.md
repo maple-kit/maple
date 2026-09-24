@@ -8,7 +8,11 @@
 <a href="https://www.npmjs.com/package/@maple-kit/core"><img src="https://img.shields.io/npm/v/@maple-kit/core?style=flat-square&label=%40maple-kit%2Fcore&color=465a2b&labelColor=1a1d23" alt="@maple-kit/core on npm"></a>
 <a href="LICENSE"><img src="https://img.shields.io/github/license/maple-kit/maple?style=flat-square&color=465a2b&labelColor=1a1d23" alt="Apache-2.0"></a>
 
-![The Maple overlay on a preview deployment of maple-kit.org: a reviewer has selected a line of the headline and is writing a comment on it, with the viewport width recorded alongside, and numbered pins sit on the demo page below.](docs/assets/overlay.png)
+<p align="center">
+  <img src="docs/assets/demo.gif" alt="A reviewer opens Maple on a dashboard that already carries nine comments, picks the date range in the top bar, and writes that it reads as a label rather than a control. As they type, the assist tier scores the comment against five pillars and calls it a request. They publish it, a new pin lands on the date range, and the count reads ten open." width="100%">
+  <br>
+  <sub><a href="docs/assets/demo.mp4">Watch it as video</a> · recorded from <a href="examples/vite-app">the Vite example</a> by <a href="tools/demo-recorder">tools/demo-recorder</a></sub>
+</p>
 
 A reviewer points at something on a preview deployment and says what is wrong.
 Maple captures where they pointed, what they were looking at and who they are,
