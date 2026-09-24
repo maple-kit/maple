@@ -24,15 +24,55 @@ export interface Row {
   readonly open: number;
   readonly state: "blocked" | "clear" | "waiting";
   readonly reviewer: string;
+  /** Which of the page's avatar tints the reviewer is drawn in. */
+  readonly tint: number;
 }
 
 export const ROWS: readonly Row[] = [
-  { repo: "maple-kit/maple", branch: "feat/ui-picker", open: 3, state: "blocked", reviewer: "Ada" },
-  { repo: "maple-kit/maple", branch: "fix/anchor-quote", open: 0, state: "clear", reviewer: "Ada" },
-  { repo: "maple-kit/site", branch: "feat/pricing", open: 1, state: "waiting", reviewer: "Grace" },
-  { repo: "maple-kit/site", branch: "chore/deps", open: 0, state: "clear", reviewer: "Alan" },
-  { repo: "maple-kit/action", branch: "feat/gate", open: 2, state: "blocked", reviewer: "Grace" },
+  {
+    repo: "maple-kit/maple",
+    branch: "feat/ui-picker",
+    open: 3,
+    state: "blocked",
+    reviewer: "Ada",
+    tint: 0,
+  },
+  {
+    repo: "maple-kit/maple",
+    branch: "fix/anchor-quote",
+    open: 0,
+    state: "clear",
+    reviewer: "Ada",
+    tint: 0,
+  },
+  {
+    repo: "maple-kit/site",
+    branch: "feat/pricing",
+    open: 1,
+    state: "waiting",
+    reviewer: "Grace",
+    tint: 1,
+  },
+  {
+    repo: "maple-kit/site",
+    branch: "chore/deps",
+    open: 0,
+    state: "clear",
+    reviewer: "Alan",
+    tint: 2,
+  },
+  {
+    repo: "maple-kit/action",
+    branch: "feat/gate",
+    open: 2,
+    state: "blocked",
+    reviewer: "Grace",
+    tint: 1,
+  },
 ];
 
 /** Twelve weeks of merged reviews, for the chart's bars. */
 export const WEEKS: readonly number[] = [12, 18, 14, 22, 26, 21, 30, 28, 35, 31, 38, 42];
+
+/** The week the gate landed, zero-based, which the chart marks. */
+export const GATE_WEEK = 6;

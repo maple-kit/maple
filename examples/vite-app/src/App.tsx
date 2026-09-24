@@ -7,6 +7,7 @@ import {
   SettingsForm,
   SideNav,
   ThroughputChart,
+  TopBar,
 } from "./app/components.js";
 // The branch under review. A real deployment reads this from whatever its CI
 // stamped into the build; the example takes it from the env or falls back.
@@ -17,9 +18,10 @@ export function App() {
     <div className="shell">
       <SideNav />
       <main>
+        <TopBar />
         <header className="page-head">
           <h1>Review overview</h1>
-          <p>Everything on this page is a named component, so every pick has something to say.</p>
+          <p>Every repository with a preview, over the last 28 days.</p>
         </header>
         <MetricRow />
         <div className="split" data-maple-label="the chart and the gate notice">
