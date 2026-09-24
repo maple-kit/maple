@@ -45,3 +45,6 @@ evals/.evalite/
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# The recorder's raw screencast; the encoded GIF and MP4 are what is kept.
+tools/demo-recorder/.frames/
