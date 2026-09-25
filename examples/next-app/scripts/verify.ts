@@ -61,13 +61,13 @@ function assert(condition: boolean, message: string): void {
 /** Written only in the generated schema, which the route reads from disk and no bundle may carry. */
 const SCHEMA_MARK = "#/components/schemas/Project";
 
-// The preview build artifact, written as a host writes it: before the build.
+// The preview build artifact, written as a host writes it: before the build. By
+// path, not by bin: a fresh install links no bin for a workspace package not yet built.
+const CLI = join(HERE, "..", "..", "packages", "cli", "dist", "bin.js");
 await run(
-  "maple",
-  ["mock", "schema", "server/router.ts", "--out=.maple/schema.json", "--superjson"],
-  {
-    cwd: HERE,
-  },
+  process.execPath,
+  [CLI, "mock", "schema", "server/router.ts", "--out=.maple/schema.json", "--superjson"],
+  { cwd: HERE },
 );
 const schema = await readFile(join(HERE, ".maple", "schema.json"), "utf8");
 assert(schema.includes(SCHEMA_MARK), "maple mock schema should describe Project, and does not.");
