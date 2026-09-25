@@ -113,6 +113,9 @@ importers:
       '@maple-kit/mock':
         specifier: workspace:*
         version: link:../../packages/mock
+      '@maple-kit/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       '@trpc/client':
         specifier: 11.19.0
         version: 11.19.0(@trpc/server@11.19.0(typescript@6.0.3))(typescript@6.0.3)

@@ -31,6 +31,12 @@ function baseFor(phase: string): NextConfig {
     turbopack: {
       resolveAlias: {
         "@maple-kit/mock": "../../packages/mock/dist/index.js",
+        "@maple-kit/mock/client": "../../packages/mock/dist/client/index.js",
+        "@maple-kit/core/client": "../../packages/core/dist/client/index.js",
+        "@maple-kit/core/overlay": "../../packages/core/dist/overlay/index.js",
+        "@maple-kit/react": "../../packages/react/dist/index.js",
+        "@maple-kit/react/mock": "../../packages/react/dist/mock/index.js",
+        "@maple-kit/ui/mock": "../../packages/ui/dist/mock/index.js",
         "@maple-kit/core/connectors": "../../packages/core/dist/connectors/index.js",
         "@maple-kit/core/mock": "../../packages/core/dist/mock/index.js",
         "@maple-kit/core/route": "../../packages/core/dist/route/index.js",
