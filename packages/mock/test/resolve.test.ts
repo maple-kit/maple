@@ -186,6 +186,55 @@ describe("resolve", () => {
     await expect(response?.json()).resolves.toEqual({ message: "upstream timed out" });
   });
 
+  /** The DoD's case: nothing recorded, the server failing, and the schema enough. */
+  it("mocks a call with no sample from its schema alone", async () => {
+    api.fail("/api/projects");
+    const shape = {
+      source: "supplied" as const,
+      schema: {
+        type: "object",
+        properties: {
+          items: {
+            type: "array",
+            items: { type: "object", properties: { id: { type: "integer" } } },
+          },
+          total: { type: "integer" },
+          nextCursor: { type: "string" },
+        },
+        required: ["items", "total", "nextCursor"],
+      },
+    };
+    const response = await resolve(
+      new Request(`${API}/projects`),
+      recipe("rest:GET /api/projects", "many"),
+      createInventory(),
+      { ...options, shape: (key) => (key === "rest:GET /api/projects" ? shape : undefined) },
+    );
+
+    expect(response?.status).toBe(200);
+    const body = (await response?.json()) as { items: { id: number }[]; nextCursor: string };
+    expect(body.items).toHaveLength(MANY);
+    expect(new Set(body.items.map((item) => item.id)).size).toBe(MANY);
+    expect(body.nextCursor).toBe("text");
+  });
+
+  it("asks for no shape for a call it does not reshape", async () => {
+    const asked: string[] = [];
+    await resolve(
+      new Request(`${API}/projects`),
+      recipe("rest:GET /api/projects", "error"),
+      createInventory(),
+      {
+        ...options,
+        shape: (key) => {
+          asked.push(key);
+          return undefined;
+        },
+      },
+    );
+    expect(asked).toEqual([]);
+  });
+
   it("returns a response it cannot read untouched", async () => {
     const response = await run("/page", recipe("rest:GET /api/page", "empty"));
     await expect(response?.text()).resolves.toBe("<p>hi</p>");

@@ -240,6 +240,42 @@ describe("resolve, through tRPC's own client", () => {
     });
   });
 
+  it("answers a call the server refuses from its shape, with real Dates", async () => {
+    const shape = {
+      source: "router" as const,
+      superjson: true,
+      schema: {
+        type: "object",
+        properties: {
+          items: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: { id: { type: "integer" }, at: { type: "string", format: "date-time" } },
+            },
+          },
+        },
+      },
+    };
+    const options = {
+      codecs: [trpcCodec()],
+      forward: fetch,
+      route: "/p",
+      shape: (key: string) => (key === "trpc:secret" ? shape : undefined),
+    };
+    const fetcher: Fetcher = async (input, init) => {
+      const request = new Request(input, init as RequestInit);
+      const active = recipe(["trpc:secret", "one"]);
+      return (await resolve(request.clone(), active, createInventory(), options)) ?? fetch(request);
+    };
+
+    const answer = (await client("batch", fetcher).secret.query()) as unknown as {
+      items: { id: number; at: Date }[];
+    };
+    expect(answer.items).toHaveLength(1);
+    expect(answer.items[0]?.at).toBeInstanceOf(Date);
+  });
+
   it("lets a mutation through unless the recipe names it", async () => {
     const trpc = client("batch", mockedFetch(recipe(["trpc:project.list", "empty"])));
     await expect(trpc.project.create.mutate()).resolves.toEqual({ id: 3 });

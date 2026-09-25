@@ -35,7 +35,24 @@ export type { RecipeSources } from "./link.js";
 export { resolve } from "./resolve.js";
 export type { ResolveOptions } from "./resolve.js";
 export { isJson, pathPattern, restCodec, restKey } from "./rest.js";
-export { deflate, inflate, isWrapped, prefixMeta, extractMeta } from "./superjson.js";
+export {
+  allowsNull,
+  arrayOf,
+  branches,
+  deref,
+  enumOf,
+  properties,
+  property,
+  requiredOf,
+  typesOf,
+  valueBranch,
+} from "./schema/json-schema.js";
+export type { JsonSchema, Located } from "./schema/json-schema.js";
+export { sampleSchema } from "./schema/sample.js";
+export type { SampleOptions } from "./schema/sample.js";
+export { SHAPE_SOURCES } from "./schema/shape.js";
+export type { Shape, ShapeLookup, ShapeSource } from "./schema/shape.js";
+export { annotate, deflate, inflate, isWrapped, prefixMeta, extractMeta } from "./superjson.js";
 export type { TypeMeta } from "./superjson.js";
 export { MANY, reshape, reshapeTyped } from "./transform.js";
 export type { BodyState } from "./transform.js";

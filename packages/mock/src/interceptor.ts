@@ -19,6 +19,7 @@ import { trpcCodec } from "./trpc.js";
 
 import type { Codec } from "./codec.js";
 import type { Inventory } from "./inventory.js";
+import type { ShapeLookup } from "./schema/shape.js";
 import type { Logger } from "@maple-kit/core/logger";
 import type { Recipe } from "@maple-kit/core/mock";
 
@@ -34,6 +35,8 @@ export interface InstallOptions {
   readonly codecs?: readonly Codec[];
   /** The real `fetch` a mocked request is forwarded through. */
   readonly fetch?: typeof fetch;
+  /** Each call's response schema. Without one, a call never seen cannot take a body state. */
+  readonly shape?: ShapeLookup;
 }
 
 /** The installed transport. */
@@ -75,6 +78,7 @@ export function installMock(options: InstallOptions = {}): MockHandle {
         codecs,
         forward,
         route: route(),
+        ...(options.shape === undefined ? {} : { shape: options.shape }),
       });
       if (response !== undefined) controller.respondWith(response);
     }),

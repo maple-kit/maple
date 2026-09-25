@@ -7,10 +7,13 @@
  */
 
 import { isData } from "./codec.js";
+import { sampleSchema } from "./schema/sample.js";
+import { deflate } from "./superjson.js";
 import { reshape, reshapeTyped } from "./transform.js";
 
 import type { Answer, Call, Codec } from "./codec.js";
 import type { Inventory, Sample } from "./inventory.js";
+import type { Shape, ShapeLookup } from "./schema/shape.js";
 import type { BodyState } from "./transform.js";
 import type { MockState, Recipe } from "@maple-kit/core/mock";
 
@@ -24,6 +27,8 @@ export interface ResolveOptions {
   readonly route: string;
   /** Milliseconds since the epoch, for a recorded sample. */
   readonly now?: () => number;
+  /** Each call's response schema, which bounds a reshape and answers a call never seen. */
+  readonly shape?: ShapeLookup;
 }
 
 /** A request taken apart: its codec, its calls, and each call's state. */
@@ -75,8 +80,14 @@ export async function resolve(
   if (real !== undefined && live === undefined) return real;
 
   record(inventory, split.calls, live, options);
+  const shapes = await shapesOf(split, options.shape);
   const answers = split.calls.map((call, index) =>
-    answer(split.states[index], live?.[index], inventory.sample(call.key, options.route)),
+    answer(
+      split.states[index],
+      live?.[index],
+      inventory.sample(call.key, options.route),
+      shapes[index],
+    ),
   );
   return split.codec.join(split.calls, answers, real);
 }
@@ -97,26 +108,51 @@ export function record(
   });
 }
 
+/** The shapes of the calls a body state reshapes. Nothing is looked up for the rest. */
+async function shapesOf(split: Split, lookup: ShapeLookup | undefined) {
+  return Promise.all(
+    split.calls.map((call, index) => {
+      const state = split.states[index];
+      const wanted = lookup !== undefined && state !== undefined && BODY_STATES.has(state);
+      return Promise.resolve(wanted ? lookup(call.key) : undefined);
+    }),
+  );
+}
+
 /**
  * One call's answer. A failure borrows the envelope the call was last seen in,
  * so a superjson client can read a failure nothing was fetched for.
  */
-function answer(state: MockState | undefined, live: Answer | undefined, sample?: Sample): Answer {
+function answer(
+  state: MockState | undefined,
+  live: Answer | undefined,
+  sample?: Sample,
+  shape?: Shape,
+): Answer {
   if (state === "error" || state === "forbidden") {
     const meta = live?.meta ?? sample?.meta;
-    return { kind: "failure", state, ...(meta === undefined ? {} : { meta: {} }) };
+    const enveloped = meta !== undefined || shape?.superjson === true;
+    return { kind: "failure", state, ...(enveloped ? { meta: {} } : {}) };
   }
   if (state === undefined || !BODY_STATES.has(state)) return live ?? failure();
-  const source = isData(live) ? live : sample;
+  const source = isData(live) ? live : (sample ?? sampled(shape));
   if (source === undefined) return live ?? failure();
+  const schema = shape?.schema;
   if (source.meta === undefined) {
-    return { kind: "data", status: 200, body: reshape(state as BodyState, source.body) };
+    return { kind: "data", status: 200, body: reshape(state as BodyState, source.body, schema) };
   }
   return {
     kind: "data",
     status: 200,
-    ...reshapeTyped(state as BodyState, source.body, source.meta),
+    ...reshapeTyped(state as BodyState, source.body, source.meta, schema),
   };
+}
+
+/** A body for a call nothing has answered, drawn from its schema alone. */
+function sampled(shape: Shape | undefined): Pick<Sample, "body" | "meta"> | undefined {
+  if (shape === undefined) return undefined;
+  const value = sampleSchema(shape.schema, { superjson: shape.superjson === true });
+  return shape.superjson === true ? deflate(value) : { body: value };
 }
 
 function failure(): Answer {

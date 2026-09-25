@@ -233,9 +233,40 @@ Lists are looked for three objects deep, which covers `{ data: { items } }`,
 and never inside an item. An envelope key changes only when its value already
 has the right type, so a `total` that is a sentence is left alone.
 
-**The limit is the schema.** Without one, nothing says a field may be null or
-which field a list is keyed by. A list keyed by a field outside the five names
-above repeats its keys under `many`. Shape sources (#169) lift both.
+**Without a schema** nothing says a field may be null or which field a list is
+keyed by, so a cursor is nulled on faith, and a list keyed by a field outside
+the five names above repeats its keys under `many`.
+
+## Shapes
+
+A call's **shape** is one JSON Schema over what its data decodes to, and the
+rung it came from: `supplied`, `router`, `validator`, `introspection` or
+`sample`. `resolve` and `installMock` take a `shape(key)` lookup, asked only for
+a call a body state reshapes. Where the shapes come from is the next slice of
+#169; this is what they change.
+
+**A transform stays inside the schema.** A key is nulled only where it is
+nullable (a type list with `null`, OpenAPI 3.0's `nullable`, a union with
+`null`), dropped only where it is optional, and otherwise left as it was: an
+empty page whose cursor is a required string keeps its cursor. `empty` and
+`one` keep `minItems`, `many` stops at `maxItems`, and a repeated item takes
+each enumerated field's next value, so `many` shows every status.
+
+**A call nothing has answered is sampled from its schema.** When there is no
+live answer and nothing recorded, the shape alone makes one, and the body
+state reshapes it. The sample is deterministic, so a screenshot of it is the
+same on every reload: `const`, then the first enum value, then an example or
+a default, then the lower bound, one item, `"text"`, and fixed dates and
+addresses by `format`. It ends a recursive schema eight levels down.
+
+**It is not a dependency.** The sampler and the schema readers are about two
+hundred lines in `src/schema/`, against openapi-sampler's whole surface, of
+which this needs one function.
+
+**A shape can say the call travels in superjson.** A sampled `date-time` is
+then written as a `Date` in the envelope's `meta`, and tRPC's own client
+decodes it to one. A failure on such a call is written in the envelope even
+when nothing was ever recorded for it.
 
 ## The inventory
 

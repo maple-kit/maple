@@ -145,6 +145,11 @@ interface Marker {
   readonly value: unknown;
 }
 
+/** `value` carrying a superjson annotation, such as `["Date"]`, for {@link deflate}. */
+export function annotate(annotation: unknown, value: unknown): unknown {
+  return { [MARK]: annotation, value } satisfies Marker;
+}
+
 /** `fn` applied to a value, through its marker if it has one. */
 export function throughMarker(value: unknown, fn: (value: unknown) => unknown): unknown {
   if (typeof value !== "object" || value === null || !(MARK in value)) return fn(value);
