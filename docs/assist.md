@@ -89,15 +89,16 @@ export interface ClassifierConnector extends ConnectorMeta {
   readonly pillars: readonly Pillar[];
   score?(request: ScoreRequest): Promise<readonly PillarScore[]>;
   classify?(request: ClassifierRequest): Promise<KindGuess>;
+  plan?(request: MockPlanRequest): Promise<MockPlan>;
 }
 ```
 
-Both methods are optional, so a backend that can only do one of the two is used
-for that one. `pillars` is configuration rather than a capability claim: what
+Every method is optional, so a backend that can only do one is used for that
+one. `plan` reads a mock request rather than a comment; `docs/mock.md` has it. `pillars` is configuration rather than a capability claim: what
 the connector _can do_ is still, only, its methods.
 
 It is the one kind that requires no method at all. A classifier defining
-neither is inert rather than invalid — it reports no capabilities and is never
+none is inert rather than invalid — it reports no capabilities and is never
 called. The contract suite refuses it; construction does not.
 
 **An unknown pillar is an error.** `score({ pillars: ["tone"] })` against a

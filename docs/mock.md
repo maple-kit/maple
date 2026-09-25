@@ -312,6 +312,47 @@ then written as a `Date` in the envelope's `meta`, and tRPC's own client
 decodes it to one. A failure on such a call is written in the envelope even
 when nothing was ever recorded for it.
 
+## The plan
+
+A sentence becomes a recipe through `ClassifierConnector.plan`, an optional
+method like `score` and `classify`: a classifier that can plan defines it, and
+nothing else says so.
+
+```ts
+plan({ request, route, calls: [{ key, summary }] });
+// → { state, distribution, confidence, calls: [{ key, concerned, p }] }
+```
+
+- **It picks, it writes nothing.** The answer is one of the six states or
+  `none`, and a verdict per call. The transforms and the sampler do the rest.
+- **`none` is an answer.** "Make the header blue" names no state a page's data
+  can be in, and a plan that says so is more use than a guessed `empty`.
+- **A distribution, not a verdict**, as in `docs/assist.md`: a sentence
+  between two states really is between them, and `confidence` says how much.
+- **`concerned` is `p` at or above one half**, derived rather than chosen, so
+  the two cannot disagree. Every call in the request gets exactly one verdict,
+  in the request's order.
+- **A summary is what the call returns**, in schema names and descriptions
+  where a schema exists. A planner is given the calls' keys and summaries and
+  never their bodies.
+
+`MOCK_PLAN_STATES`, `stateFromWeights` and `plannedCall` in
+`@maple-kit/core/connectors` are for a planner with no probabilities of its
+own. `runClassifierContract` checks a plan's shape for any connector that
+defines one.
+
+**The keyword planner** is `keywordClassifier().plan`, the floor the plan eval
+measures against. State words pick the state (`no roasts`, `500`, `skeleton`,
+`hundreds of`), and nothing matched is `none`. Words the sentence shares with
+a call's key and summary pick the calls, a plural folded onto its singular and
+a camel-cased key split into words. A sentence sharing no word with any call
+is about the whole page, and concerns every call except a REST write and one
+whose summary says `mutation`.
+
+It reads no grammar: "no errors" is `empty` and `error` at once, and two
+states named equally come out torn between them, which is the honest answer
+for a word list.
+
 ## The inventory
 
 The last real 2xx answer of every call, per route pattern, in memory and in
@@ -371,7 +412,8 @@ answer 404 without one.
   answers its default error shape.
 - A delay for `loading`. It holds until the page reloads, and a held call in a
   batch holds the whole batch.
-- The plan (#170). The box's field filters; it does not read a sentence.
+- The plan's route, its model and its place in the box (#170). The box's
+  field filters; it does not read a sentence yet.
 - A second box on the same page. Each claims `m`, and the first to hear it
   opens.
 - A streamed procedure whose data is itself a promise or an async iterable.

@@ -126,12 +126,13 @@ Run `maple connectors` to print this from the code.
 | `observability` | `getReplayLink`     | `fetchEvents`                                                     |
 | `identity`      | `resolveUser`       | —                                                                 |
 | `gate`          | `publish`           | `read`                                                            |
-| `classifier`    | —                   | `score`, `classify`                                               |
+| `classifier`    | —                   | `score`, `classify`, `plan`                                       |
 
-`classifier` is the one kind that requires nothing: both of its methods are
-optional, so one defining neither is inert rather than invalid. `docs/assist.md`
+`classifier` is the one kind that requires nothing: all of its methods are
+optional, so one defining none is inert rather than invalid. `docs/assist.md`
 is its design record, and it is the only kind whose answers a reviewer reads
 rather than acts on — a score never blocks, gates, delays or rewrites a send.
+`plan` reads a mock request; `docs/mock.md` has its half.
 
 A backend can be more than one kind. One object may implement `StoreConnector`
 and `IdentityConnector` at once; Maple checks the methods it needs for the role
@@ -142,13 +143,13 @@ it is filling it in.
 `✓` implemented · `—` not implemented · `~` implemented with a caveat, explained
 below the table.
 
-| Connector            | list | append | setStatus | head | watch | approvals | approve | unapprove | putBlob | getUrl | getReplayLink | fetchEvents | resolveUser | publish | read | score | classify |
-| -------------------- | ---- | ------ | --------- | ---- | ----- | --------- | ------- | --------- | ------- | ------ | ------------- | ----------- | ----------- | ------- | ---- | ----- | -------- |
-| `github` (store)     | ✓    | ✓      | ✓         | ✓    | —     | ✓         | ✓       | ✓         | —       | —      | —             | —           | —           | —       | —    | —     | —        |
-| `github` (gate)      | —    | —      | —         | —    | —     | —         | —       | —         | —       | —      | —             | —           | —           | ✓       | ✓    | —     | —        |
-| `memory` (reference) | ✓    | ✓      | ✓         | ✓    | —     | ✓         | ✓       | ✓         | —       | —      | —             | —           | —           | ✓       | ✓    | ✓     | ✓        |
-| `keyword` (baseline) | —    | —      | —         | —    | —     | —         | —       | —         | —       | —      | —             | —           | —           | —       | —    | ✓     | ✓        |
-| `datadog`            | ~    | ✓      | ~         | —    | —     | —         | —       | —         | —       | —      | ~             | ✓           | ~           | —       | —    | —     | —        |
+| Connector            | list | append | setStatus | head | watch | approvals | approve | unapprove | putBlob | getUrl | getReplayLink | fetchEvents | resolveUser | publish | read | score | classify | plan |
+| -------------------- | ---- | ------ | --------- | ---- | ----- | --------- | ------- | --------- | ------- | ------ | ------------- | ----------- | ----------- | ------- | ---- | ----- | -------- | ---- |
+| `github` (store)     | ✓    | ✓      | ✓         | ✓    | —     | ✓         | ✓       | ✓         | —       | —      | —             | —           | —           | —       | —    | —     | —        | —    |
+| `github` (gate)      | —    | —      | —         | —    | —     | —         | —       | —         | —       | —      | —             | —           | —           | ✓       | ✓    | —     | —        | —    |
+| `memory` (reference) | ✓    | ✓      | ✓         | ✓    | —     | ✓         | ✓       | ✓         | —       | —      | —             | —           | —           | ✓       | ✓    | ✓     | ✓        | ✓    |
+| `keyword` (baseline) | —    | —      | —         | —    | —     | —         | —       | —         | —       | —      | —             | —           | —           | —       | —    | ✓     | ✓        | ✓    |
+| `datadog`            | ~    | ✓      | ~         | —    | —     | —         | —       | —         | —       | —      | ~             | ✓           | ~           | —       | —    | —     | —        | —    |
 
 The reference connector lives in `@maple-kit/core/testing` and exists so the
 contract suite has something to run against. It is not for production.

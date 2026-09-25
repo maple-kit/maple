@@ -63,6 +63,10 @@ describe("assertUsable", () => {
     const inert = { name: "inert", pillars: [] } as ClassifierConnector;
 
     expect(() => assertUsable("classifier", inert)).not.toThrow();
-    expect(capabilitiesOf("classifier", inert)).toEqual({ classify: false, score: false });
+    expect(capabilitiesOf("classifier", inert)).toEqual({
+      classify: false,
+      plan: false,
+      score: false,
+    });
   });
 });

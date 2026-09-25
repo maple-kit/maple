@@ -1,6 +1,6 @@
 /**
  * The zero-configuration classifier: length and sentence shape for the
- * pillars, keywords for the kind. No network, no model, no options.
+ * pillars, keywords for the kind and the plan. No network, no model, no options.
  *
  * It is what the assist tier does with the model tier switched off, and it is
  * the floor every eval measures against — a model that cannot beat a word
@@ -15,12 +15,15 @@ import {
   scoreAtPosition,
   selectPillars,
 } from "./classifier.js";
+import { keywordPlan } from "./keyword-plan.js";
 
 import type {
   ClassifierConnector,
   ClassifierRequest,
   CommentKind,
   KindGuess,
+  MockPlan,
+  MockPlanRequest,
   Pillar,
   PillarScore,
   ScoreRequest,
@@ -60,6 +63,10 @@ export function keywordClassifier(): ClassifierConnector {
       for (const kind of COMMENT_KINDS) weights[kind] = hits(body, KIND_PATTERNS[kind]);
 
       return Promise.resolve(kindFromWeights(weights));
+    },
+
+    plan(request: MockPlanRequest): Promise<MockPlan> {
+      return Promise.resolve(keywordPlan(request));
     },
   };
 

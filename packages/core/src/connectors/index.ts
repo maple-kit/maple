@@ -25,6 +25,8 @@ export type { PullCache, PullLookup } from "./github-pull.js";
 export { githubStore } from "./github.js";
 export type { GitHubStoreOptions } from "./github.js";
 export { keywordClassifier } from "./keyword.js";
+export { MOCK_PLAN_STATES, plannedCall, stateFromWeights } from "./plan.js";
+export type { StateGuess } from "./plan.js";
 export type {
   AnyConnector,
   ClassifierConnector,
@@ -41,10 +43,15 @@ export type {
   KindGuess,
   ListQuery,
   MediaConnector,
+  MockPlan,
+  MockPlanCall,
+  MockPlanRequest,
+  MockPlanState,
   ObservabilityConnector,
   Pillar,
   PillarLevel,
   PillarScore,
+  PlannedCall,
   ReplayEvent,
   ReplayQuery,
   ScoreRequest,

@@ -3,16 +3,23 @@
  *
  * Every classifier runs this suite. It asserts the semantics a surface relies
  * on, never an implementation: that a judgement carries its own uncertainty,
- * that a pillar nobody configured is refused rather than scored nought, and
- * that a comment mid-sentence is answered rather than rejected.
+ * that a pillar nobody configured is refused rather than scored nought, that a
+ * comment mid-sentence is answered, and that a plan answers every call once.
  */
 
 import { describe, expect, it } from "vitest";
 
 import { supports } from "../connectors/capabilities.js";
 import { COMMENT_KINDS } from "../connectors/classifier.js";
+import { MOCK_PLAN_STATES } from "../connectors/plan.js";
 
-import type { ClassifierConnector, KindGuess, PillarScore } from "../connectors/types.js";
+import type {
+  ClassifierConnector,
+  KindGuess,
+  MockPlan,
+  MockPlanRequest,
+  PillarScore,
+} from "../connectors/types.js";
 
 /** What the suite needs in order to exercise a connector. */
 export interface ClassifierContractOptions {
@@ -32,6 +39,17 @@ export interface ClassifierContractSubject {
 const WRITTEN = "The Save button's label is cut off at 320px in the settings header.";
 const MID_SENTENCE = "the sav";
 
+/** A sentence a reviewer types into the mock box, against a route's calls. */
+const MOCK_REQUEST: MockPlanRequest = {
+  request: "show the roast list empty",
+  route: "/roasts",
+  calls: [
+    { key: "trpc:roast.list", summary: "Roast[]: every roast, newest first" },
+    { key: "trpc:user.me", summary: "User: who is signed in" },
+    { key: "rest:POST /api/roasts", summary: "Roast: creates a roast (mutation)" },
+  ],
+};
+
 /** Nothing may be scored against a pillar with this id, in any configuration. */
 const NO_SUCH_PILLAR = "definitely-not-a-configured-pillar";
 
@@ -50,9 +68,10 @@ export function runClassifierContract(options: ClassifierContractOptions): void 
       }
     }
 
-    it("does at least one of the two things a classifier is for", async () => {
+    it("does at least one of the things a classifier is for", async () => {
       await withSubject((connector) => {
-        expect(supports(connector, "score") || supports(connector, "classify")).toBe(true);
+        const methods = ["score", "classify", "plan"];
+        expect(methods.some((method) => supports(connector, method))).toBe(true);
         return Promise.resolve();
       });
     });
@@ -146,7 +165,54 @@ export function runClassifierContract(options: ClassifierContractOptions): void 
         expectGuess(await connector.classify({ body: WRITTEN }));
       });
     });
+
+    it("plans a state Maple recognises, and spends one unit across all of them", async () => {
+      await withSubject(async (connector) => {
+        if (!connector.plan) return;
+
+        expectPlan(await connector.plan(MOCK_REQUEST), MOCK_REQUEST);
+      });
+    });
+
+    it("answers every call once, in order, and only the calls it was given", async () => {
+      await withSubject(async (connector) => {
+        if (!connector.plan) return;
+        const plan = await connector.plan(MOCK_REQUEST);
+
+        expect(plan.calls.map((call) => call.key)).toEqual(MOCK_REQUEST.calls.map((c) => c.key));
+      });
+    });
+
+    it("plans a sentence still being typed, an empty one, and a route with no calls", async () => {
+      await withSubject(async (connector) => {
+        if (!connector.plan) return;
+
+        for (const request of ["show the ro", ""]) {
+          expectPlan(await connector.plan({ ...MOCK_REQUEST, request }), MOCK_REQUEST);
+        }
+        const bare = { ...MOCK_REQUEST, calls: [] };
+        expectPlan(await connector.plan(bare), bare);
+      });
+    });
   });
+}
+
+/** A plan is a distribution over every state, and one honest verdict per call. */
+function expectPlan(plan: MockPlan, request: MockPlanRequest): void {
+  expect(MOCK_PLAN_STATES).toContain(plan.state);
+  expect(Object.keys(plan.distribution).toSorted(byName)).toEqual(
+    [...MOCK_PLAN_STATES].toSorted(byName),
+  );
+  expectDistribution(Object.values(plan.distribution));
+  expect(plan.confidence).toBeGreaterThanOrEqual(0);
+  expect(plan.confidence).toBeLessThanOrEqual(1);
+
+  expect(plan.calls).toHaveLength(request.calls.length);
+  for (const call of plan.calls) {
+    expect(call.p).toBeGreaterThanOrEqual(0);
+    expect(call.p).toBeLessThanOrEqual(1);
+    expect(call.concerned).toBe(call.p >= 0.5);
+  }
 }
 
 /** Probabilities are probabilities: each in range, and one unit in total. */

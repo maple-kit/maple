@@ -76,15 +76,33 @@ describe("a kind guess", () => {
 });
 
 describe("the in-memory classifier", () => {
-  it("reports both capabilities, and only the one a half-capable stub kept", () => {
+  it("reports every capability, and only the one a partly capable stub kept", () => {
     expect(capabilitiesOf("classifier", memoryClassifier())).toEqual({
       classify: true,
+      plan: true,
       score: true,
     });
     expect(capabilitiesOf("classifier", memoryClassifier({ methods: ["classify"] }))).toEqual({
       classify: true,
+      plan: false,
       score: false,
     });
+  });
+
+  it("plans the state and the calls its options name, and records the sentence", async () => {
+    const classifier = memoryClassifier({ state: "empty", concerns: ["rest:GET /api/beans"] });
+    const plan = await classifier.plan?.({
+      request: "no beans",
+      route: "/beans",
+      calls: [
+        { key: "rest:GET /api/beans", summary: "" },
+        { key: "rest:GET /api/me", summary: "" },
+      ],
+    });
+
+    expect(plan?.state).toBe("empty");
+    expect(plan?.calls.map((call) => call.concerned)).toEqual([true, false]);
+    expect(classifier.asked()).toEqual(["no beans"]);
   });
 
   it("remembers what it was asked, and forgets on reset", async () => {

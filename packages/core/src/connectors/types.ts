@@ -8,6 +8,7 @@
  * capabilities twice.
  */
 
+import type { MockState } from "../mock/recipe.js";
 import type {
   Approval,
   Comment,
@@ -155,8 +156,8 @@ export interface IdentityRequest {
 
 /**
  * Judges a comment as it is written: how well it reads against each pillar,
- * and what kind of comment it looks like. Both methods are optional, so a
- * backend that can only do one of the two is used for that one.
+ * and what kind of comment it looks like; and reads a mock request as a plan.
+ * Every method is optional, so a backend that can only do one is used for it.
  *
  * Every judgement is advice. Nothing here blocks, gates, delays or rewrites a
  * send, and `docs/assist.md` is the design record for why.
@@ -171,6 +172,11 @@ export interface ClassifierConnector extends ConnectorMeta {
   score?(request: ScoreRequest): Promise<readonly PillarScore[]>;
   /** Guesses what kind of comment this is, from the text alone. */
   classify?(request: ClassifierRequest): Promise<KindGuess>;
+  /**
+   * Reads a reviewer's sentence as a mock: which state it names and which of
+   * the route's calls it concerns. It picks; it never writes a response body.
+   */
+  plan?(request: MockPlanRequest): Promise<MockPlan>;
 }
 
 /**
@@ -245,6 +251,56 @@ export interface ClassifierRequest {
 export interface ScoreRequest extends ClassifierRequest {
   /** Which pillars to score, by id. Defaults to every configured pillar. */
   readonly pillars?: readonly string[];
+}
+
+/**
+ * What a planner is given: the sentence, the route it was typed on, and the
+ * calls that route has made. `docs/mock.md` says why it is never more.
+ */
+export interface MockPlanRequest {
+  /** The reviewer's words, which while typing are usually mid-sentence. */
+  readonly request: string;
+  /** The route pattern the calls were recorded on, such as `/projects/:id`. */
+  readonly route: string;
+  /** Every call the route has made, in the order a surface lists them. */
+  readonly calls: readonly MockPlanCall[];
+  /** Abandons the plan when the next keystroke makes it stale. */
+  readonly signal?: AbortSignal;
+}
+
+/** One call a route has made, as a planner reads it. */
+export interface MockPlanCall {
+  /** The call's key, as the recipe names it: `trpc:project.list`. */
+  readonly key: string;
+  /** What the call returns, in schema names and descriptions where there is a schema. */
+  readonly summary: string;
+}
+
+/** A state a sentence can name, or `none` when it names no state at all. */
+export type MockPlanState = MockState | "none";
+
+/**
+ * A sentence read as a mock. Like a score, it carries its distribution and its
+ * confidence, so a surface can say when it is torn between two states.
+ */
+export interface MockPlan {
+  /** The state that took the most probability. */
+  readonly state: MockPlanState;
+  /** Probability per state, `none` included. Sums to one. */
+  readonly distribution: Readonly<Record<MockPlanState, number>>;
+  /** How concentrated that distribution is, from zero to one. */
+  readonly confidence: number;
+  /** One verdict per call in the request, in the request's order. */
+  readonly calls: readonly PlannedCall[];
+}
+
+/** Whether the sentence concerns one call, and how likely that is. */
+export interface PlannedCall {
+  readonly key: string;
+  /** True exactly when `p` is at least one half. */
+  readonly concerned: boolean;
+  /** The probability the sentence concerns this call. */
+  readonly p: number;
 }
 
 /** Any connector, whatever its kind. */

@@ -13,12 +13,16 @@ import {
   scoreAtPosition,
   selectPillars,
 } from "../connectors/classifier.js";
+import { plannedCall, stateFromWeights } from "../connectors/plan.js";
 
 import type {
   ClassifierConnector,
   ClassifierRequest,
   CommentKind,
   KindGuess,
+  MockPlan,
+  MockPlanRequest,
+  MockPlanState,
   Pillar,
   PillarScore,
   ScoreRequest,
@@ -34,13 +38,17 @@ export interface MemoryClassifierOptions {
   readonly at?: number;
   /** The kind every comment is classified as. Defaults to `"other"`. */
   readonly kind?: CommentKind;
-  /** Which methods to define, to exercise a half-capable connector. Defaults to both. */
-  readonly methods?: readonly ("classify" | "score")[];
+  /** The state every sentence is planned as. Defaults to `"none"`. */
+  readonly state?: MockPlanState;
+  /** The call keys every plan concerns. Defaults to every call it is given. */
+  readonly concerns?: readonly string[];
+  /** Which methods to define, to exercise a partly capable connector. Defaults to all. */
+  readonly methods?: readonly ("classify" | "plan" | "score")[];
 }
 
 /** A classifier connector plus the history a test asserts on. */
 export interface MemoryClassifier extends ClassifierConnector {
-  /** Every body it was asked about, oldest first. */
+  /** Every body or mock request it was asked about, oldest first. */
   asked(): readonly string[];
   /** Forgets everything, so one test cannot see another's. */
   reset(): void;
@@ -48,7 +56,7 @@ export interface MemoryClassifier extends ClassifierConnector {
 
 /** Creates an in-memory classifier connector. */
 export function memoryClassifier(options: MemoryClassifierOptions = {}): MemoryClassifier {
-  const methods = options.methods ?? ["score", "classify"];
+  const methods = options.methods ?? ["score", "classify", "plan"];
   const at = options.at ?? 0.5;
   const bodies: string[] = [];
 
@@ -79,6 +87,19 @@ export function memoryClassifier(options: MemoryClassifierOptions = {}): MemoryC
       bodies.push(request.body);
 
       return Promise.resolve(kindFromWeights({ [options.kind ?? "other"]: 2 }));
+    };
+  }
+
+  if (methods.includes("plan")) {
+    connector.plan = (request: MockPlanRequest): Promise<MockPlan> => {
+      bodies.push(request.request);
+      const state = options.state ?? "none";
+      const concerned = (key: string): boolean => options.concerns?.includes(key) ?? true;
+
+      return Promise.resolve({
+        ...stateFromWeights(state === "none" ? {} : { [state]: 2 }),
+        calls: request.calls.map((call) => plannedCall(call.key, concerned(call.key) ? 1 : 0)),
+      });
     };
   }
 
