@@ -63,7 +63,7 @@ function handle(recipe?: Recipe): MockHandle {
 }
 
 const recipe = (route?: string): Recipe => ({
-  version: 1,
+  version: 2,
   calls: [{ key: LIST, state: "empty" }],
   ...(route === undefined ? {} : { route }),
 });
@@ -104,7 +104,7 @@ describe("what the box shows", () => {
   });
 
   it("lists a call the draft names that this route never recorded", () => {
-    const mocked: Recipe = { version: 1, calls: [{ key: "trpc:user.me", state: "error" }] };
+    const mocked: Recipe = { version: 2, calls: [{ key: "trpc:user.me", state: "error" }] };
     const client = createMockClient({ view: page().view, handle: handle(mocked) });
     expect(client.getState().calls.at(-1)).toEqual({
       key: "trpc:user.me",

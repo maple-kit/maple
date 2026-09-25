@@ -58,7 +58,7 @@ describe("what gets written to the pull request", () => {
   it("gives back the recipe a comment was written under, identical", async () => {
     const branch = "feature/mocked";
     const mock = {
-      version: 1 as const,
+      version: 2 as const,
       calls: [{ key: "trpc:roast.list", state: "empty" as const }],
       route: "/roasts",
       request: "no roasts yet",

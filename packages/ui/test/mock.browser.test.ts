@@ -185,7 +185,7 @@ describe("picking and applying", () => {
 
     const next = new URL(assign.mock.calls[0]?.[0] as string);
     expect(decodeRecipe(next.searchParams.get("maple-mock") ?? "")).toEqual({
-      version: 1,
+      version: 2,
       calls: [{ key: LIST, state: "empty" }],
       route: HERE,
     });
@@ -231,7 +231,7 @@ describe("where each call's shape came from", () => {
 });
 
 describe("the banner", () => {
-  const active: Recipe = { version: 1, calls: [{ key: LIST, state: "empty" }], route: HERE };
+  const active: Recipe = { version: 2, calls: [{ key: LIST, state: "empty" }], route: HERE };
 
   it("is on while a mock is, with Turn off and no dismiss", async () => {
     const { assign, view } = fakePage();
@@ -358,7 +358,7 @@ describe("the box, reading a sentence", () => {
 
     const applied = new URL(String(fake.assign.mock.calls[0]?.[0]));
     expect(decodeRecipe(applied.searchParams.get("maple-mock") ?? "")).toEqual({
-      version: 1,
+      version: 2,
       calls: [{ key: LIST, state: "empty" }],
       route: HERE,
       request: "no reviews yet",

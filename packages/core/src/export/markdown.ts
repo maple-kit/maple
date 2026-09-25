@@ -10,7 +10,7 @@
  */
 
 import { stableStringify } from "../lib/stable-stringify.js";
-import { parseRecipe } from "../mock/recipe.js";
+import { describeIdentity, parseRecipe } from "../mock/recipe.js";
 
 import type { Recipe } from "../mock/recipe.js";
 import type {
@@ -362,10 +362,17 @@ function row(comment: Comment, number: number, shape: RowShape): string {
     where(comment.anchor),
     cell(comment.body),
     ...(shape.withStatus ? [STATUS_WORDS[comment.status]] : []),
-    `${comment.context.viewportWidth}×${comment.context.viewportHeight}${comment.context.mock ? " · mocked" : ""}`,
+    `${comment.context.viewportWidth}×${comment.context.viewportHeight}${mockedWords(comment.context.mock)}`,
     ...(shape.shot === undefined ? [] : [shape.shot ? `[view](${shape.shot})` : ""]),
   ];
   return `| ${cells.join(" | ")} |`;
+}
+
+/** ` · mocked`, then who the page was told the reviewer was: ` · mocked as admin`. */
+function mockedWords(recipe: Recipe | undefined): string {
+  if (recipe === undefined) return "";
+  const as = describeIdentity(recipe.as);
+  return as === undefined ? " · mocked" : ` · mocked as ${as}`;
 }
 
 /** `orphaned` is never the word shown; the overlay calls it unpinned too. */

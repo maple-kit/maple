@@ -10,8 +10,8 @@ import { describe, expect, it } from "vitest";
 
 import type { Recipe } from "@maple-kit/core/mock";
 
-const empty: Recipe = { version: 1, calls: [{ key: "trpc:project.list", state: "empty" }] };
-const error: Recipe = { version: 1, calls: [{ key: "rest:GET /api/me", state: "error" }] };
+const empty: Recipe = { version: 2, calls: [{ key: "trpc:project.list", state: "empty" }] };
+const error: Recipe = { version: 2, calls: [{ key: "rest:GET /api/me", state: "error" }] };
 
 /** A `Storage` over a map, so a node test needs no DOM. */
 function memoryStorage(entries: Record<string, string> = {}): Storage & Map<string, string> {
@@ -31,7 +31,7 @@ describe("encodeRecipe and decodeRecipe", () => {
   it.each([
     ["a plain recipe", empty],
     ["a request with non-ASCII text", { ...empty, request: "état vide — 空の状態" }],
-    ["no calls", { version: 1, calls: [] }],
+    ["no calls", { version: 2, calls: [] }],
   ] as const)("round-trips %s", (_, recipe) => {
     expect(decodeRecipe(encodeRecipe(recipe))).toEqual(recipe);
   });
@@ -42,7 +42,7 @@ describe("encodeRecipe and decodeRecipe", () => {
   });
 
   it("refuses to encode something that is not a recipe", () => {
-    expect(() => encodeRecipe({ version: 1, calls: "all" } as unknown as Recipe)).toThrow(
+    expect(() => encodeRecipe({ version: 2, calls: "all" } as unknown as Recipe)).toThrow(
       InvalidRecipeError,
     );
   });

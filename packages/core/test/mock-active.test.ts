@@ -5,7 +5,7 @@ import { activeRecipe, MOCK_HANDLE_KEY } from "../src/mock/active.js";
 import type { Recipe } from "../src/mock/recipe.js";
 
 const RECIPE: Recipe = {
-  version: 1,
+  version: 2,
   calls: [{ key: "trpc:roast.list", state: "empty" }],
   route: "/roasts",
   request: "no roasts yet",
@@ -32,7 +32,7 @@ describe("the recipe in force on the page", () => {
     ["a handle whose recipe does not apply here", { current: () => undefined }],
     [
       "an unreadable recipe",
-      { current: () => ({ version: 1, calls: [{ key: "x", state: "gone" }] }) },
+      { current: () => ({ version: 2, calls: [{ key: "x", state: "gone" }] }) },
     ],
     [
       "a current() that throws",

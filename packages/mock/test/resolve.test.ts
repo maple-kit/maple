@@ -23,7 +23,7 @@ const options = {
 };
 
 function recipe(key: string, state: MockState): Recipe {
-  return { version: 1, calls: [{ key, state }] };
+  return { version: 2, calls: [{ key, state }] };
 }
 
 async function run(

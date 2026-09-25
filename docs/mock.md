@@ -46,8 +46,10 @@ that read a newer format and passed.
 
 ```ts
 {
-  version: 1,
+  version: 2,
   calls: [{ key: "trpc:project.list", state: "empty" }],
+  flags: { "new-dashboard": false },
+  as: { role: "billing-manager", permissions: { "invoice:void": false } },
   route: "/projects",
   request: "mock this page with an empty state",
 }
@@ -66,6 +68,17 @@ that read a newer format and passed.
   later layer be added to the record without an older reader rejecting it.
   Refusing a newer version stops a reader half-applying a format it does not
   know.
+- **`flags` answers flags with the values named**, any JSON value, keyed by
+  the flag's own key. A flag not named keeps its real value.
+- **`as` is who the page is told the reviewer is**: a `role`, and
+  `permissions` granted (`true`) or taken away (`false`) beside the ones the
+  reviewer has. Both are the host's words; Maple has no list of roles, since
+  every app has its own. The server still acts as the reviewer, so a mutation
+  sent under `as` really happens.
+- **Version 2 is always written, and version 1 is still read.** `flags` and
+  `as` change what a recipe does, and a reader that dropped them would mock
+  less than the recipe says. A released build refuses a version 2 recipe
+  rather than showing half of it.
 - **`route` scopes it to one route pattern**, such as `/projects/:id`. A
   recipe kept for the tab would otherwise follow the reviewer to every page,
   and empty a list they never asked to see empty. Absent, it applies
@@ -504,16 +517,22 @@ a page's real data in a public pull-request comment.
   quote's context: a replay is worth less than the words that locate a
   comment. Nothing is shed where no comment carries a recipe.
 - **The ledger row says `mocked`** beside the viewport, so a person reading the
-  pull request knows the page looked unlike the preview does now.
+  pull request knows the page looked unlike the preview does now, and
+  `mocked as billing-manager, without invoice:void` under `as`.
 - **An agent gets it back from `get_comment_context`** as `mock.recipe`, with
   `mock.replay`, the comment's page with the recipe in `?maple-mock=`, and a
-  `mocked: trpc:roast.list empty (…)` line in its conditions. The link's
+  `mocked: trpc:roast.list empty (…)` line in its conditions that names the
+  flags and the identity too, and says the server acted as the reviewer. The link's
   encoding, `encodeRecipe` and `linkRecipe`, is core's, beside the recipe.
 - **`maple-action` reads the fence through core's `githubStore`**, keeps
   fields it does not know, and the fence stays version 1: the field is
-  additive. It moves to the core that writes it in the same release.
+  additive. A `maple-action` on an older core drops a version 2 recipe from
+  the comment and keeps the comment. It moves to the core that writes it in the same release.
 
 ## What is not done
+
+- `flags` and `as` in the runtime. The recipe carries them and every reader
+  shows them, but nothing answers a flag or rewrites an identity yet (#173).
 
 - A recorded error body shape. REST `error` answers `{ message }`, and tRPC
   answers its default error shape.

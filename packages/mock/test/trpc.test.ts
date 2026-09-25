@@ -31,7 +31,7 @@ const codec = trpcCodec();
 const plainCodec = trpcCodec({ endpoint: PLAIN });
 
 function recipe(...calls: [string, MockState][]): Recipe {
-  return { version: 1, calls: calls.map(([key, state]) => ({ key, state })) };
+  return { version: 2, calls: calls.map(([key, state]) => ({ key, state })) };
 }
 
 /** A `fetch` that does what the interceptor does: resolve, or let through. */

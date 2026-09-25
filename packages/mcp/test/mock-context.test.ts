@@ -11,7 +11,7 @@ import { createToolHandlers } from "../src/handlers.js";
 import type { Recipe } from "@maple-kit/core/mock";
 
 const RECIPE: Recipe = {
-  version: 1,
+  version: 2,
   calls: [
     { key: "trpc:roast.list", state: "empty" },
     { key: "trpc:roast.count", state: "empty" },
@@ -44,6 +44,27 @@ describe("get_comment_context, for a comment written under a mock", () => {
     expect(decodeRecipe(replay.searchParams.get(RECIPE_PARAM) ?? "")).toEqual(RECIPE);
     expect(context.conditions).toContain(
       'mocked: trpc:roast.list empty, trpc:roast.count empty ("no roasts yet")',
+    );
+  });
+
+  it("names the flags and the identity it was written under", async () => {
+    const store = createCommentStore(memoryStore());
+    const mock: Recipe = {
+      ...RECIPE,
+      flags: { "new-roaster": true, tier: "gold" },
+      as: { role: "barista", permissions: { "roast:delete": false } },
+    };
+    const stored = await store.append(
+      sampleComment({ branch: "feature/as", context: { ...SAMPLE_CONTEXT, mock } }),
+    );
+
+    const context = await createToolHandlers({ store }).getCommentContext({
+      id: stored.id,
+      branch: "feature/as",
+    });
+    expect(context.conditions).toContain(
+      'mocked: trpc:roast.list empty, trpc:roast.count empty; flags new-roaster=true, tier="gold"; ' +
+        "as barista, without roast:delete (the page was told so; the server acted as the reviewer)",
     );
   });
 

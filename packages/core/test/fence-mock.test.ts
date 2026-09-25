@@ -8,7 +8,7 @@ import type { Recipe } from "../src/mock/recipe.js";
 
 const BRANCH = "feature/roasts";
 const RECIPE: Recipe = {
-  version: 1,
+  version: 2,
   calls: [
     { key: "trpc:roast.list", state: "empty" },
     { key: "trpc:roast.count", state: "empty" },
@@ -30,6 +30,21 @@ describe("a comment written under a mock", () => {
     const rows = markdown.split("\n").filter((line) => /^\| [12] \|/.test(line));
     expect(rows[0]).toContain("1440×900 · mocked");
     expect(rows[1]).not.toContain("mocked");
+  });
+
+  it("says in the ledger row who the page was told the reviewer was", () => {
+    const as = storedComment({
+      context: {
+        ...SAMPLE_CONTEXT,
+        mock: { ...RECIPE, as: { role: "owner", permissions: { "billing:write": false } } },
+      },
+    });
+    const { markdown } = exportMarkdown([as], { branch: BRANCH });
+    expect(markdown).toContain("1440×900 · mocked as owner, without billing:write");
+    expect(parseFence(markdown)?.comments[0]?.context.mock?.as).toEqual({
+      role: "owner",
+      permissions: { "billing:write": false },
+    });
   });
 
   it("drops a recipe this build cannot read, and keeps the comment", () => {

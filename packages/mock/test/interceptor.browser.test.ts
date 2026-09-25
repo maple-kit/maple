@@ -15,7 +15,7 @@ const page = location.href;
 let handle: MockHandle | undefined;
 
 function recipe(...calls: [string, MockState][]): Recipe {
-  return { version: 1, calls: calls.map(([key, state]) => ({ key, state })) };
+  return { version: 2, calls: calls.map(([key, state]) => ({ key, state })) };
 }
 
 /** Opens this page as a shared link would, then installs the interceptor. */

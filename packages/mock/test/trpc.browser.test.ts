@@ -25,7 +25,7 @@ const page = location.href;
 let handle: MockHandle | undefined;
 
 const EMPTY_LIST = {
-  version: 1 as const,
+  version: 2 as const,
   calls: [{ key: "trpc:project.list", state: "empty" as const }],
 };
 const PATHS = ["project.list", "user.me", "secret", "project.count"];

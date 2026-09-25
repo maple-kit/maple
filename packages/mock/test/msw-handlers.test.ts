@@ -12,7 +12,7 @@ const api = createApiFake();
 const inventory = createInventory();
 
 const recipe: Recipe = {
-  version: 1,
+  version: 2,
   calls: [
     { key: "rest:GET /api/projects", state: "empty" },
     { key: "rest:GET /api/count", state: "error" },

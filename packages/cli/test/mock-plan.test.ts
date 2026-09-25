@@ -34,7 +34,7 @@ describe("maple mock plan", () => {
 
     expect(result.exitCode).toBe(0);
     expect(JSON.parse(result.output)).toEqual({
-      version: 1,
+      version: 2,
       calls: [{ key: LIST, state: "empty" }],
       route: "/roasts",
       request: "no roasts yet",

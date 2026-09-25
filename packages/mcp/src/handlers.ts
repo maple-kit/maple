@@ -7,7 +7,7 @@
  */
 
 import { publishGate } from "@maple-kit/core";
-import { linkRecipe } from "@maple-kit/core/mock";
+import { describeIdentity, linkRecipe } from "@maple-kit/core/mock";
 
 import { clampWaitMs } from "./timeout.js";
 
@@ -203,9 +203,17 @@ function conditionsOf(comment: Comment): string {
   ].join(" · ");
 }
 
-/** `mocked: trpc:project.list empty, … ("no projects yet")`. */
+/** `mocked: trpc:project.list empty; flags beta=true; as admin (…) ("no projects yet")`. */
 function mocked(recipe: Recipe): string {
-  const calls = recipe.calls.map((call) => `${call.key} ${call.state}`).join(", ");
+  const flags = Object.entries(recipe.flags ?? {}).map(
+    ([key, value]) => `${key}=${JSON.stringify(value)}`,
+  );
+  const as = describeIdentity(recipe.as);
+  const layers = [
+    recipe.calls.map((call) => `${call.key} ${call.state}`).join(", "),
+    flags.length === 0 ? "" : `flags ${flags.join(", ")}`,
+    as === undefined ? "" : `as ${as} (the page was told so; the server acted as the reviewer)`,
+  ].filter((layer) => layer !== "");
   const request = recipe.request === undefined ? "" : ` (${JSON.stringify(recipe.request)})`;
-  return `mocked: ${calls}${request}`;
+  return `mocked: ${layers.join("; ")}${request}`;
 }

@@ -122,7 +122,7 @@ describe("the box, planning a sentence", () => {
     client.suggest(0);
 
     expect(client.recipe()).toEqual({
-      version: 1,
+      version: 2,
       calls: [{ key: LIST, state: "empty" }],
       route: ROUTE,
       request: "no roasts",
