@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createNavigationGuard } from "../src/client/index.js";
+import { createNavigationGuard, navigateOnPurpose } from "../src/client/index.js";
 
 import type { LeaveReason, NavigationView } from "../src/client/index.js";
 
@@ -9,6 +9,7 @@ function stub() {
   const listeners = new Map<string, Set<EventListener>>();
   const pushState = vi.fn();
   const replaceState = vi.fn();
+  const assign = vi.fn();
 
   const add = (type: string, fn: EventListener): void => {
     const held = listeners.get(type) ?? new Set<EventListener>();
@@ -20,7 +21,11 @@ function stub() {
   const view = {
     document: { addEventListener: add, removeEventListener: () => undefined },
     history,
-    location: { href: "https://preview.example.com/a", origin: "https://preview.example.com" },
+    location: {
+      href: "https://preview.example.com/a",
+      origin: "https://preview.example.com",
+      assign,
+    },
     addEventListener: add,
     removeEventListener: (type: string, fn: EventListener) => {
       listeners.get(type)?.delete(fn);
@@ -31,6 +36,7 @@ function stub() {
     view,
     history,
     pushState,
+    assign,
     attached: (type: string) => listeners.get(type)?.size ?? 0,
     emit: (type: string, event: Partial<Event> = {}) => {
       for (const fn of listeners.get(type) ?? []) fn(event as Event);
@@ -38,7 +44,7 @@ function stub() {
   };
 }
 
-function guard(dirty = true) {
+function guard(dirty = true, confirmOnUnload = false) {
   const page = stub();
   const save = vi.fn();
   const onLeave = vi.fn<(reason: LeaveReason) => void>();
@@ -47,6 +53,7 @@ function guard(dirty = true) {
     save,
     isDirty: () => dirty,
     onLeave,
+    confirmOnUnload,
   });
 
   return { ...page, save, onLeave, guarded };
@@ -96,6 +103,33 @@ describe("beforeunload", () => {
 
     expect(save).toHaveBeenCalledTimes(1);
     expect(preventDefault).not.toHaveBeenCalled();
+  });
+
+  it("asks when the caller wants the dialog and the reviewer did not choose to leave", () => {
+    const { guarded, emit } = guard(true, true);
+    guarded.start();
+    guarded.setDirty(true);
+    const preventDefault = vi.fn();
+    emit("beforeunload", { preventDefault });
+
+    expect(preventDefault).toHaveBeenCalledTimes(1);
+  });
+
+  it("saves but does not ask on a navigation the reviewer chose, and only that one", () => {
+    const { guarded, save, emit, view, assign } = guard(true, true);
+    guarded.start();
+    guarded.setDirty(true);
+    navigateOnPurpose(view, "https://preview.example.com/a?maple-mock=x");
+    const chosen = vi.fn();
+    emit("beforeunload", { preventDefault: chosen });
+
+    expect(assign).toHaveBeenCalledWith("https://preview.example.com/a?maple-mock=x");
+    expect(save).toHaveBeenCalledTimes(1);
+    expect(chosen).not.toHaveBeenCalled();
+
+    const next = vi.fn();
+    emit("beforeunload", { preventDefault: next });
+    expect(next).toHaveBeenCalledTimes(1);
   });
 });
 

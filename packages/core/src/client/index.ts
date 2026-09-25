@@ -23,7 +23,7 @@ export type { FailedCall, FailureKind, MapleFailure } from "./failure.js";
 export { matchesFilter, openCount, visibleComments } from "./filters.js";
 export { startLink } from "./link.js";
 export type { LinkOptions, LinkRun } from "./link.js";
-export { createNavigationGuard } from "./navigation.js";
+export { createNavigationGuard, navigateOnPurpose } from "./navigation.js";
 export type {
   LeaveAnswer,
   LeavePrompt,
