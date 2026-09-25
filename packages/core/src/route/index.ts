@@ -6,8 +6,9 @@
  * through an adapter, and a Worker.
  */
 
-export type { AssistAnswer, AssistOptions, AssistRate } from "./assist.js";
+export type { AssistAnswer, AssistOptions } from "./assist.js";
 export type { GitHubAuthOptions, GitHubState } from "./auth.js";
+export type { RateLimit } from "./budget.js";
 export type { GateResolver } from "./gate.js";
 export { createMapleHandler, DEFAULT_BASE_PATH } from "./handler.js";
 export type { MediaResolver, RouteOptions, StoreResolver } from "./handler.js";

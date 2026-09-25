@@ -9,11 +9,12 @@
  */
 
 import { selectPillars } from "../connectors/classifier.js";
-import { fnv1a32 } from "../lib/fnv1a.js";
 import { stableStringify } from "../lib/stable-stringify.js";
+import { createCache, createLimiter, json } from "./budget.js";
 
 import type { ClassifierConnector, KindGuess, Pillar, PillarScore } from "../connectors/types.js";
 import type { Logger } from "../logger/types.js";
+import type { RateLimit } from "./budget.js";
 
 /** How a deployment switches the assist tier on. */
 export interface AssistOptions {
@@ -24,13 +25,7 @@ export interface AssistOptions {
   /** Judgements kept, keyed by what was judged. Defaults to 200. */
   readonly cacheSize?: number;
   /** Per session, per window. Defaults to 40 calls a minute. */
-  readonly rate?: AssistRate;
-}
-
-/** A fixed window, counted per session. */
-export interface AssistRate {
-  readonly limit: number;
-  readonly windowMs: number;
+  readonly rate?: RateLimit;
 }
 
 /** What the endpoint answers with. */
@@ -51,13 +46,13 @@ export interface Assist {
 const MAX_BODY = 4000;
 
 const DEFAULT_CACHE = 200;
-const DEFAULT_RATE: AssistRate = { limit: 40, windowMs: 60_000 };
+const DEFAULT_RATE: RateLimit = { limit: 40, windowMs: 60_000 };
 
 /** Builds the endpoint. Nothing is requested until a comment is judged. */
 export function createAssist(options: AssistOptions): Assist {
   const { classifier } = options;
   const pillars = classifier.score ? selectPillars(classifier, options.pillars) : [];
-  const cache = createCache(options.cacheSize ?? DEFAULT_CACHE);
+  const cache = createCache<AssistAnswer>(options.cacheSize ?? DEFAULT_CACHE);
   const limiter = createLimiter(options.rate ?? DEFAULT_RATE);
 
   return {
@@ -117,72 +112,4 @@ async function bodyOf(request: Request): Promise<string | undefined> {
 
 function idOf(pillar: Pillar): string {
   return pillar.id;
-}
-
-/** What a cache holds: the answer, and what was judged to produce it. */
-interface Entry {
-  readonly key: string;
-  readonly answer: AssistAnswer;
-}
-
-/**
- * Keyed by a hash so an entry costs one number, and holding the string it
- * hashed so a collision is a miss rather than another comment's score.
- */
-function createCache(size: number): {
-  get(key: string): AssistAnswer | undefined;
-  set(key: string, answer: AssistAnswer): void;
-} {
-  const entries = new Map<number, Entry>();
-
-  return {
-    get(key) {
-      const found = entries.get(fnv1a32(key));
-      return found?.key === key ? found.answer : undefined;
-    },
-    set(key, answer) {
-      entries.set(fnv1a32(key), { key, answer });
-      evictOldest(entries, size);
-    },
-  };
-}
-
-/** A fixed window per session, so one stuck client cannot spend a budget. */
-function createLimiter(rate: AssistRate): { take(session: string): boolean } {
-  const windows = new Map<string, { count: number; until: number }>();
-
-  return {
-    take(session) {
-      const now = Date.now();
-      const open = windows.get(session);
-
-      if (!open || open.until <= now) {
-        windows.set(session, { count: 1, until: now + rate.windowMs });
-        evictOldest(windows, rate.limit * 64);
-        return true;
-      }
-
-      open.count += 1;
-      return open.count <= rate.limit;
-    },
-  };
-}
-
-/** Insertion order is eviction order: neither map is worth an LRU's bookkeeping. */
-function evictOldest(
-  map: Map<never, never> | Map<number, Entry> | Map<string, unknown>,
-  size: number,
-): void {
-  while (map.size > size) {
-    const oldest = map.keys().next();
-    if (oldest.done === true) return;
-    (map as Map<unknown, unknown>).delete(oldest.value);
-  }
-}
-
-function json(body: unknown, status: number): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "content-type": "application/json", "cache-control": "no-store" },
-  });
 }
