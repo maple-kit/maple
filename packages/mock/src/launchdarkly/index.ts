@@ -10,7 +10,9 @@ import type { FlagValue } from "@maple-kit/core/mock";
 
 /** Where the SDK is pointed, when it is not at LaunchDarkly's own hosts. */
 export interface LaunchDarklyOptions {
-  /** The SDK's `baseUri`. Defaults to `https://clientsdk.launchdarkly.com`. */
+  /**
+   * The SDK's `baseUri` (3.x: `baseUrl`). Absent, both SDKs' default hosts.
+   */
   readonly baseUri?: string;
   /** The SDK's `streamUri`. Defaults to `https://clientstream.launchdarkly.com`. */
   readonly streamUri?: string;
@@ -22,24 +24,30 @@ export interface LaunchDarklyOptions {
  */
 const HELD_VERSION = Number.MAX_SAFE_INTEGER;
 
+/** Where each SDK polls by default: 4.x (`@launchdarkly/js-client-sdk`), then 3.x. */
+const DEFAULT_BASES = ["https://clientsdk.launchdarkly.com", "https://app.launchdarkly.com"];
+
 const POLL = /\/sdk\/evalx\/[^/]+\/(?:contexts\/[^/]+|context)$/;
 const STREAM = /\/(?:eval\/[^/]+\/[^/]+|ping\/[^/]+)$/;
 
 /** LaunchDarkly's browser SDK as a flag source, for `installMock({ flags })`. */
 export function launchDarklyFlags(options: LaunchDarklyOptions = {}): FlagSource {
-  const base = new URL(options.baseUri ?? "https://clientsdk.launchdarkly.com");
+  const bases = (options.baseUri === undefined ? DEFAULT_BASES : [options.baseUri]).map(
+    (uri) => new URL(uri),
+  );
   const stream = new URL(options.streamUri ?? "https://clientstream.launchdarkly.com");
   return {
     name: "launchdarkly",
     claims(request) {
       const url = new URL(request.url);
-      return url.origin === base.origin && under(url, base) && POLL.test(url.pathname);
+      const at = bases.some((base) => url.origin === base.origin && under(url, base));
+      return at && POLL.test(url.pathname);
     },
     read: values,
     write,
     stream: {
       claims(href) {
-        const url = new URL(href, base);
+        const url = new URL(href, bases[0]);
         return url.origin === stream.origin && under(url, stream) && STREAM.test(url.pathname);
       },
       event,

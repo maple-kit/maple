@@ -23,6 +23,27 @@ describe("launchDarklyFlags, the poll", () => {
       "https://clientsdk.launchdarkly.com/sdk/evalx/e1/context",
       true,
     ],
+    [
+      "the 3.x SDK's GET, at its own default host",
+      defaults,
+      "GET",
+      "https://app.launchdarkly.com/sdk/evalx/e1/contexts/eyJr",
+      true,
+    ],
+    [
+      "the 3.x SDK's REPORT",
+      defaults,
+      "REPORT",
+      "https://app.launchdarkly.com/sdk/evalx/e1/context",
+      true,
+    ],
+    [
+      "the 3.x default host once a baseUri is given",
+      source,
+      "GET",
+      "https://app.launchdarkly.com/sdk/evalx/e1/contexts/eyJr",
+      false,
+    ],
     ["the goals", defaults, "GET", "https://clientsdk.launchdarkly.com/sdk/goals/e1", false],
     [
       "the page's own API",

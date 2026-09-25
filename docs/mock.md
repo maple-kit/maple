@@ -510,6 +510,15 @@ rewrite. Such a request is never recorded as one of the page's calls.
 source of `@launchdarkly/js-client-sdk` 4.10.3, and the tests run 4.10.2's
 real client against a fake poll.
 
+- **The 3.x SDK polls the same paths at another host.**
+  `launchdarkly-js-client-sdk` 3.x, which `launchdarkly-react-client-sdk`
+  3.x wraps, defaults `baseUrl` to `https://app.launchdarkly.com` where 4.x
+  uses `https://clientsdk.launchdarkly.com`. Read from
+  `launchdarkly-js-sdk-common` 5.8.0: the same `/sdk/evalx/…` GET and
+  REPORT, the same answer, over `XMLHttpRequest`, and the same stream host.
+  With no `baseUri`, both default hosts are claimed. A 3.x page that sets
+  `baseUrl` passes it as `baseUri`.
+
 - **The poll is `GET /sdk/evalx/{env}/contexts/{context}`**, or a `REPORT`
   to `…/context`, over `fetch`, answered by an object keyed by flag key. This
   is FDv1, the SDK's default. FDv2, which runs only when `dataSystem` is
