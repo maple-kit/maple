@@ -15,12 +15,18 @@ function emitted(attribute: string): string {
 }
 
 import { readdir, readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join, normalize } from "node:path";
 
 import { build } from "vite";
 
-/** Written into a bundle only by the recipe reader, so it marks Maple Mock's presence. */
-const RECIPE_PARAM = "maple-mock";
+/**
+ * Written only by `@mswjs/interceptors`, so it marks the transport. The box's
+ * own code is in both builds, since `<Maple />` carries it; the transport is not.
+ */
+const INTERCEPTOR = "fetch-interceptor";
+
+/** Rules only the island's, the composer's and the marks' stylesheets write. */
+const OTHER_PARTS = [".mk-island {", ".mk-composer {", ".mk-marks {"];
 
 /** The example itself, not this script's directory. */
 const HERE = join(import.meta.dirname, "..");
@@ -38,6 +44,24 @@ async function contentsOf(directory: string): Promise<string> {
   return (await Promise.all(read)).join("\n");
 }
 
+/** Every script a page loads, following each chunk's static imports. */
+async function pageScripts(directory: string, html: string): Promise<string> {
+  const page = await readFile(join(directory, html), "utf8");
+  const queue = [...page.matchAll(/(?:src|href)="\/([^"]+\.js)"/g)].map((match) => match[1]!);
+  const seen = new Set<string>();
+  while (queue.length > 0) {
+    const file = queue.pop()!;
+    if (seen.has(file)) continue;
+    seen.add(file);
+    const code = await readFile(join(directory, file), "utf8");
+    for (const [, specifier] of code.matchAll(/from\s*"(\.\/[^"]+\.js)"/g)) {
+      queue.push(normalize(join(dirname(file), specifier!)));
+    }
+  }
+  const read = [...seen].map((file) => readFile(join(directory, file), "utf8"));
+  return (await Promise.all(read)).join("\n");
+}
+
 function assert(condition: boolean, message: string): void {
   if (!condition) {
     process.exitCode = 1;
@@ -45,7 +69,8 @@ function assert(condition: boolean, message: string): void {
   }
 }
 
-const previewOutput = await contentsOf(await buildInto("dist-preview", true));
+const previewDirectory = await buildInto("dist-preview", true);
+const previewOutput = await contentsOf(previewDirectory);
 assert(
   previewOutput.includes(emitted("data-maple-src")),
   "A preview build should carry data-maple-src on a tagged element, and does not.",
@@ -60,9 +85,21 @@ assert(
 );
 
 assert(
-  previewOutput.includes(RECIPE_PARAM),
+  previewOutput.includes(INTERCEPTOR),
   "A preview build should carry Maple Mock's interceptor, and does not.",
 );
+
+const mockOnly = await pageScripts(previewDirectory, "mock.html");
+assert(
+  mockOnly.includes(".mk-mock-banner {") && mockOnly.includes(INTERCEPTOR),
+  "The mock-only page should carry the box and the interceptor, and does not.",
+);
+for (const part of OTHER_PARTS) {
+  assert(
+    !mockOnly.includes(part),
+    `The mock-only page must carry none of the review overlay, and carries ${part}.`,
+  );
+}
 
 const productionOutput = await contentsOf(await buildInto("dist", false));
 assert(
@@ -79,8 +116,10 @@ assert(
 );
 
 assert(
-  !productionOutput.includes(RECIPE_PARAM),
+  !productionOutput.includes(INTERCEPTOR),
   "A production build must carry no Maple Mock interceptor, and this one does.",
 );
 
-process.stdout.write("vite-app: tagged and mockable on preview, clean in production.\n");
+process.stdout.write(
+  "vite-app: tagged and mockable on preview, clean in production, and a mock-only page.\n",
+);

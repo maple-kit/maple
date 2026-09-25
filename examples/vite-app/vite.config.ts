@@ -28,7 +28,9 @@ const alias = [
   { find: /^@maple-kit\/core$/, replacement: here("../../packages/core/src/index.ts") },
   { find: /^@maple-kit\/core\/(.*)$/, replacement: here("../../packages/core/src/$1/index.ts") },
   { find: /^@maple-kit\/mock$/, replacement: here("../../packages/mock/src/index.ts") },
+  { find: /^@maple-kit\/mock\/(.*)$/, replacement: here("../../packages/mock/src/$1/index.ts") },
   { find: /^@maple-kit\/react$/, replacement: here("../../packages/react/src/index.ts") },
+  { find: /^@maple-kit\/react\/(.*)$/, replacement: here("../../packages/react/src/$1/index.ts") },
   { find: /^@maple-kit\/ui$/, replacement: here("../../packages/ui/src/index.ts") },
   { find: /^@maple-kit\/ui\/maple$/, replacement: here("../../packages/ui/src/maple.ts") },
   { find: /^@maple-kit\/ui\/(.*)$/, replacement: here("../../packages/ui/src/$1/index.ts") },
@@ -106,6 +108,10 @@ export default defineConfig(async ({ command, mode }) => {
         route: { store, media, ...(classifier ? { assist: { classifier } } : {}) },
       }),
     ],
-    build: { outDir: process.env["MAPLE_PREVIEW"] === "1" ? "dist-preview" : "dist" },
+    build: {
+      outDir: process.env["MAPLE_PREVIEW"] === "1" ? "dist-preview" : "dist",
+      // The overlay's page, and the same page with the mock box alone.
+      rolldownOptions: { input: { main: here("index.html"), mock: here("mock.html") } },
+    },
   };
 });

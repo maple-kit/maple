@@ -1,5 +1,3 @@
-import { Maple } from "@maple-kit/ui/maple";
-
 import {
   GateNotice,
   MetricRow,
@@ -9,11 +7,11 @@ import {
   ThroughputChart,
   TopBar,
 } from "./app/components.js";
-// The branch under review. A real deployment reads this from whatever its CI
-// stamped into the build; the example takes it from the env or falls back.
-const BRANCH = import.meta.env.VITE_MAPLE_BRANCH ?? "feat/example";
 
-export function App() {
+import type { ReactNode } from "react";
+
+/** The page, with whatever Maple mounts beside it: the overlay, or the mock box alone. */
+export function App({ overlay }: { readonly overlay: ReactNode }) {
   return (
     <div className="shell">
       <SideNav />
@@ -31,7 +29,7 @@ export function App() {
         <ReviewTable />
         <SettingsForm />
       </main>
-      <Maple branch={BRANCH} />
+      {overlay}
     </div>
   );
 }

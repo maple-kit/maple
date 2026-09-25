@@ -60,6 +60,13 @@ pnpm --filter @maple-kit/example-vite verify
    `SettingsForm` — and two carry `data-maple-label`, so a comment reads "on
    the gate notice" rather than naming a selector.
 
+7. **Maple Mock, with and without the overlay.** Press `m` on either page to
+   open the box, pick a state beside a call, and Apply: the page reloads into
+   it under a banner that only Turn off removes. `/mock.html` is the same page
+   with `<MapleMock />` and no `<Maple />`, and `verify` checks it carries none
+   of the island, the composer or the marks, and that a production build
+   carries no interceptor even with `<Maple />` mounted.
+
 ## What it does not prove yet
 
 The CSP contrast with the Next example: this one is not yet run under the same
