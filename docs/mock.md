@@ -376,10 +376,9 @@ plan({ request, route, calls: [{ key, summary }] });
 // → { state, distribution, confidence, calls: [{ key, concerned, p }] }
 ```
 
-- **It picks, it writes nothing.** The answer is one of the six states or
-  `none`, and a verdict per call. `long`, `sparse` and `mixed` are recipe
-  states the plan does not pick yet: a state joins the plan's vocabulary only
-  with eval cases that measure it. The transforms and the sampler do the rest.
+- **It picks, it writes nothing.** The answer is one of the nine states or
+  `none`, and a verdict per call. The transforms and the sampler do the rest.
+  A state joins the plan's vocabulary only with eval cases that measure it.
 - **`none` is an answer.** "Make the header blue" names no state a page's data
   can be in, and a plan that says so is more use than a guessed `empty`.
 - **A distribution, not a verdict**, as in `docs/assist.md`: a sentence
@@ -436,18 +435,26 @@ why it lives in core rather than beside the box.
 
 **The keyword planner** is `keywordClassifier().plan`, the floor the plan eval
 measures against. State words pick the state (`no roasts`, `500`, `skeleton`,
-`hundreds of`), and nothing matched is `none`. Words the sentence shares with
+`hundreds of`, `truncated`, `no avatar`, `every status`), and nothing matched
+is `none`. "No" before a field a record may lack (`avatar`, `description`,
+`owner`…) reads as `sparse`, before anything else as `empty`; "long" alone is
+`long`, and "a long list" is torn between `many` and `long`, `many` first.
+Every state starts with an equal share of a fixed prior, 1.4 in all, so adding
+a state does not drag one matched word's confidence under the gate's 0.4
+floor, as a fixed 0.2 each would have with nine. Words the sentence shares with
 a call's key and summary pick the calls, a plural folded onto its singular and
 a camel-cased key split into words. A sentence sharing no word with any call
 is about the whole page, and concerns every call except a REST write and one
 whose summary says `mutation`.
 
-**The eval** is `evals/mock-plan.eval.test.ts`: 94 sentences against seven
+**The eval** is `evals/mock-plan.eval.test.ts`: 130 sentences against seven
 pages' calls, scored on state accuracy, on the F1 of the calls a plan
 concerns, and, on the three pages with flags and roles, on whether the flags
 and role it sets are exactly the ones meant. It is scored per set: the 65
-data cases, where jev must beat the word list on state and calls, and 29
-cases written for flags and roles, where it must beat it on the layers.
+data cases, where jev must beat the word list on state and calls; 29
+cases written for flags and roles, where it must beat it on the layers; and
+36 written for `long`, `sparse` and `mixed`, where it must beat it on calls,
+since the word list's patterns for those three were tuned on them.
 `evals/cases/mock-plan/README.md` has the numbers, where the cases came from,
 and why that flatters the word list.
 

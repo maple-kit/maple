@@ -4,24 +4,22 @@
  * `docs/mock.md` says what it reads and where it stops.
  */
 
+import { MOCK_STATES } from "../mock/recipe.js";
 import { planFlags, planRole } from "./keyword-layers.js";
-import { MOCK_PLAN_STATES, plannedCall, stateFromWeights } from "./plan.js";
+import { plannedCall, stateFromWeights } from "./plan.js";
 
-import type {
-  MockPlan,
-  MockPlanCall,
-  MockPlanRequest,
-  MockPlanState,
-  PlannedCall,
-} from "./types.js";
+import type { MockState } from "../mock/recipe.js";
+import type { MockPlan, MockPlanCall, MockPlanRequest, PlannedCall } from "./types.js";
 
-type Planned = Exclude<MockPlanState, "none">;
-
-/** The states this planner reads a sentence for. */
-const PLANNED = MOCK_PLAN_STATES.filter((state): state is Planned => state !== "none");
+/**
+ * A field a record may lack, which "no avatar" means is missing rather than
+ * that a list is empty.
+ */
+const FIELD =
+  "(?:avatar|description|photo|image|picture|bio|logo|icon|thumbnail|note|tag|email|phone|address|title|subtitle|summary|owner|assignee|reviewer|due date)";
 
 /** Phrases per state. Presence counts, not repetition. */
-const STATE_PATTERNS: Readonly<Record<Planned, readonly RegExp[]>> = {
+const STATE_PATTERNS: Readonly<Record<MockState, readonly RegExp[]>> = {
   empty: [
     /\bempty\b/,
     /\bnothing\b/,
@@ -29,7 +27,7 @@ const STATE_PATTERNS: Readonly<Record<Planned, readonly RegExp[]>> = {
     /\bblank\b/,
     /\bnone\b/,
     /\bwithout any\b/,
-    /\bno (?!access|permission|rights)[a-z]+/,
+    new RegExp(String.raw`\bno (?!access|permission|rights|(?:[a-z]+ )?${FIELD})[a-z]+`),
     /\bfirst[- ]?(time|run)\b/,
   ],
   error: [
@@ -66,15 +64,53 @@ const STATE_PATTERNS: Readonly<Record<Planned, readonly RegExp[]>> = {
   one: [/\bone\b/, /\bsingle\b/, /\bjust 1\b/, /\bonly 1\b/, /\b1 [a-z]+[^s\s]\b/, /\blone\b/],
   many: [
     /\bmany\b/,
-    /\blots?\b/,
+    /\blots? of\b/,
     /\bhundreds?\b/,
     /\bthousands?\b/,
-    /\blong\b/,
+    /\blong (?:list|table|page|feed|queue|history)/,
+    /\blong enough to (?:scroll|paginate)\b/,
     /\bfull\b/,
-    /\boverflow/,
-    /\bhuge\b/,
+    /\boverflows? with\b/,
+    /\bhuge\b(?! numbers?)/,
     /\bpaginat/,
     /\b\d{2,} [a-z]+/,
+  ],
+  long: [
+    /\blong\b/,
+    /\blong (?:name|text|title|description|label|word|string|value|url|email)/,
+    /\boverflow/,
+    /\btruncat/,
+    /\bwrap/,
+    /\bellips/,
+    /\blengthy\b/,
+    /\b(?:widest|longest)\b/,
+    /\b(?:doesn'?t|don'?t|won'?t) fit\b/,
+    /\b(?:big|large|wide|huge) numbers?\b/,
+  ],
+  sparse: [
+    /\bmissing\b/,
+    /\bnulls?\b/,
+    /\bincomplete\b/,
+    /\boptional\b/,
+    /\bsparse/,
+    /\bhalf[- ](?:empty|filled)\b/,
+    /\b(?:not|un)[- ]?filled\b/,
+    /\bbare[- ]?bones\b/,
+    /\bhalf (?:of )?the fields\b/,
+    new RegExp(String.raw`\b(?:no|without an?|without) (?:[a-z]+ )?${FIELD}`),
+  ],
+  mixed: [
+    /\bmix(?:ed)?\b/,
+    /\bvariety\b/,
+    /\bvaried\b/,
+    /\bdiverse\b/,
+    /\bheterogen/,
+    /\bedge cases\b/,
+    /\bside by side\b/,
+    /\bevery (?:[a-z]+ )?(?:status|state|kind|type|variant|combination|case|option|colou?r|badge|tier|role)/,
+    /\ball (?:the )?(?:different )?(?:statuses|states|kinds|types|variants|combinations|options|badges|tiers|roles)\b/,
+    /\bdifferent (?:[a-z]+ )?[a-z]+s\b/,
+    /\b([a-z]+) and (?:dis|un|non-?)\1\b/,
   ],
 };
 
@@ -164,8 +200,8 @@ const PAGE_WIDE = 0.6;
 /** Plans one sentence. Pure: the same request always gets the same plan. */
 export function keywordPlan(request: MockPlanRequest): MockPlan {
   const text = request.request.toLowerCase();
-  const weights: Partial<Record<Planned, number>> = {};
-  for (const state of PLANNED) weights[state] = hits(text, STATE_PATTERNS[state]);
+  const weights: Partial<Record<MockState, number>> = {};
+  for (const state of MOCK_STATES) weights[state] = hits(text, STATE_PATTERNS[state]);
 
   const role = request.roles === undefined ? undefined : planRole(text, request.roles);
   return {
@@ -204,7 +240,7 @@ function overlap(words: ReadonlySet<string>, against: ReadonlySet<string>): numb
 /** The sentence's words, less its frame and every word that named a state. */
 function contentWords(text: string): Set<string> {
   const stated = (word: string): boolean =>
-    PLANNED.some((state) => hits(word, STATE_PATTERNS[state]) > 0);
+    MOCK_STATES.some((state) => hits(word, STATE_PATTERNS[state]) > 0);
   return new Set(tokens(text).filter((word) => !stated(word)));
 }
 

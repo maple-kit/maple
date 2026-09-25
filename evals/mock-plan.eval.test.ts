@@ -37,8 +37,11 @@ interface Inventory {
 interface Case {
   readonly id: string;
   readonly by: "agent" | "maintainer" | "reviewer";
-  /** `layers` for a case written for flags and roles; absent, the data set. */
-  readonly set?: "layers";
+  /**
+   * `layers` for a case written for flags and roles, `values` for one written
+   * for `long`, `sparse` and `mixed`; absent, the data set.
+   */
+  readonly set?: "layers" | "values";
   readonly inventory: string;
   readonly request: string;
   readonly state: MockPlanState;
@@ -67,17 +70,19 @@ const CASES = read<readonly Case[]>("cases.json");
  */
 const THRESHOLDS = {
   keyword: {
-    data: { state: 0.9, calls: 0.65, layers: 0.95 },
+    data: { state: 0.9, calls: 0.68, layers: 0.95 },
     layers: { state: 0.97, calls: 0.64, layers: 0.8 },
+    values: { state: 0.94, calls: 0.61, layers: 0.99 },
   },
   model: {
     data: { state: 0.92, calls: 0.74, layers: 0.97 },
     layers: { state: 0.8, calls: 0.68, layers: 0.9 },
+    values: { state: 0.87, calls: 0.8, layers: 0.9 },
   },
 } satisfies Record<string, Record<CaseSet, Report>>;
 
 /** The cases a threshold is measured over. */
-type CaseSet = "data" | "layers";
+type CaseSet = "data" | "layers" | "values";
 
 const ids = process.env["EVAL_IDS"]?.split(",").map((id) => id.trim());
 const chosen = ids === undefined ? CASES : CASES.filter((one) => ids.includes(one.id));
@@ -99,7 +104,7 @@ async function score(connector: ClassifierConnector): Promise<Record<CaseSet, Re
       set,
       results.filter((one) => (one.set ?? "data") === set),
     );
-  return { data: of("data"), layers: of("layers") };
+  return { data: of("data"), layers: of("layers"), values: of("values") };
 }
 
 function report(name: string, set: CaseSet, results: readonly Scored[]): Report {
@@ -134,7 +139,7 @@ async function pooled<T, R>(items: readonly T[], work: (item: T) => Promise<R>):
 
 interface Scored {
   readonly id: string;
-  readonly set?: "layers";
+  readonly set?: "layers" | "values";
   readonly state: number;
   readonly calls?: number;
   readonly layers?: number;
@@ -194,7 +199,7 @@ function mean(values: readonly number[]): number {
 
 const apiKey = process.env["TYPESAFE_API_KEY"] ?? "";
 
-const SETS: readonly CaseSet[] = ["data", "layers"];
+const SETS: readonly CaseSet[] = ["data", "layers", "values"];
 
 /** A set with no case chosen scores one everywhere, so a narrowed run never fails on it. */
 function expectAtLeast(report: Report, floor: Report): void {
@@ -224,9 +229,11 @@ describe.skipIf(apiKey === "")("mock plan · the model tier", () => {
       process.stdout.write(`jev ${JSON.stringify(tier)}\n`);
 
     for (const set of SETS) expectAtLeast(tier[set], THRESHOLDS.model[set]);
-    // On the data set it beats the word list at both; on the layers set, at the layers.
+    // On the data set it beats the word list at both; on the layers set, at the
+    // layers; on the values set, whose word list was tuned on it, at the calls.
     expect(tier.data.state).toBeGreaterThan(floor.data.state);
     expect(tier.data.calls).toBeGreaterThan(floor.data.calls);
     expect(tier.layers.layers).toBeGreaterThan(floor.layers.layers);
+    expect(tier.values.calls).toBeGreaterThan(floor.values.calls);
   }, 180_000);
 });

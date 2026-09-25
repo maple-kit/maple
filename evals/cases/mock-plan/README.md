@@ -37,12 +37,16 @@ inflated by it: it was written by someone who knew which words it matches.
 Cases typed by a maintainer or a reviewer, against these inventories or a real
 page, are what this set most needs, and they get their own `by`.
 
-**Sets.** A case with `set: "layers"` (29, `mockplan-066` on) was written for
-flags and roles; every other case is the data set. They are scored and
-gated apart, because the layer sentences mostly name no data state, which a
-word list gets right by matching nothing. The keyword planner's flag and role
-reading was tuned after these cases were written, by the same agent, so its
-layer score flatters it most of all.
+**Sets.** A case with `set: "layers"` (29, `mockplan-066` to `094`) was
+written for flags and roles; one with `set: "values"` (36, `mockplan-095` on)
+for `long`, `sparse` and `mixed`, with a few `many` and `empty` sentences that
+read like them ("a long list of orders", "no invites at all"). Every other case
+is the data set. The three are scored and gated apart. The layer sentences
+mostly name no data state, which a word list gets right by matching nothing.
+The keyword planner's flag and role reading was tuned after the layer cases
+were written, and its `long`, `sparse` and `mixed` patterns after the values
+cases were, by the same agent, so those two sets flatter it most of all: on
+the values set jev has to beat it only on calls.
 
 **Labels.** `state` is always labelled. `calls` lists the calls the sentence
 must concern, and is left out where that is arguable. `maybe` lists calls a
@@ -55,16 +59,26 @@ Per set, as state accuracy / call F1 / layer accuracy. Layers are scored on
 the three pages with flags and roles: exactly the flags, at exactly the
 values, and the role meant, nothing more.
 
-| Tier    | Data set (65)      | Layers set (29)    | Thresholds (data; layers)              | When                                       |
-| ------- | ------------------ | ------------------ | -------------------------------------- | ------------------------------------------ |
-| keyword | 92.3 / 67.6 / 97.0 | 100 / 66.7 / 82.8  | 0.90 / 0.65 / 0.95; 0.97 / 0.64 / 0.80 | every CI run                               |
-| jev     | 95.4 / 74.9 / 98.0 | 83.9 / 69.8 / 93.1 | 0.92 / 0.74 / 0.97; 0.80 / 0.68 / 0.90 | `jev-latest`, `EVAL_SAMPLES=3`, with a key |
+| Tier    | Data set (65)      | Layers set (29)    | Values set (36)    | When                                       |
+| ------- | ------------------ | ------------------ | ------------------ | ------------------------------------------ |
+| keyword | 92.3 / 69.0 / 97.0 | 100 / 66.7 / 82.8  | 94.4 / 61.8 / 100  | every CI run                               |
+| jev     | 94.4 / 76.6 / 98.0 | 87.4 / 69.8 / 93.1 | 88.9 / 81.7 / 92.2 | `jev-latest`, `EVAL_SAMPLES=3`, with a key |
+
+Thresholds, data; layers; values: keyword 0.90 / 0.68 / 0.95; 0.97 / 0.64 /
+0.80; 0.94 / 0.61 / 0.99. jev 0.92 / 0.74 / 0.97; 0.80 / 0.68 / 0.90; 0.87 /
+0.80 / 0.90.
 
 On the data set jev has to beat the keyword planner outright on state and
-calls; on the layers set, on the layers. Its data misses were mostly
-sentences a word list gets right by construction: "roast with no comments"
+calls; on the layers set, on the layers; on the values set, on calls. Its
+data misses were mostly sentences a word list gets right by construction: "roast with no comments"
 and "no comm" (read as something other than `empty` in some samples), and
 "what does a cafe see when it can't see its orders". Its layers-set state
 misses are sentences that mix a flag or a role with the data, such as
 "queue sorted by priority" (read as `many`) and "a roaster who can't see the
 cupping scores" (read as `none`).
+
+Its values-set state misses, each in at least one of three samples: "supplier
+name and contact email as long as they get", "lots from different harvest
+years", "labels in every colour", "no attachments on this roast" and "no
+cuppings yet". Its two values-set layer misses set a flag on a page with
+flags where the sentence named none.

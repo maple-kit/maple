@@ -876,5 +876,335 @@
     "state": "forbidden",
     "calls": ["trpc:cupping.listForRoast", "trpc:cupping.meanScore"],
     "as": "roaster"
+  },
+  {
+    "id": "mockplan-095",
+    "by": "agent",
+    "set": "values",
+    "inventory": "vite-overview",
+    "request": "really long repo and branch names",
+    "state": "long",
+    "calls": ["rest:GET /api/reviews"]
+  },
+  {
+    "id": "mockplan-096",
+    "by": "agent",
+    "set": "values",
+    "inventory": "next-projects",
+    "request": "project names long enough to wrap",
+    "state": "long",
+    "calls": ["trpc:project.list"]
+  },
+  {
+    "id": "mockplan-097",
+    "by": "agent",
+    "set": "values",
+    "inventory": "roastery-dashboard",
+    "request": "bean names so long they get truncated in the low stock card",
+    "state": "long",
+    "calls": ["trpc:bean.listLowStock"]
+  },
+  {
+    "id": "mockplan-098",
+    "by": "agent",
+    "set": "values",
+    "inventory": "order-queue",
+    "request": "a cafe name that overflows the header",
+    "state": "long",
+    "calls": ["rest:GET /api/cafes/:id"]
+  },
+  {
+    "id": "mockplan-099",
+    "by": "agent",
+    "set": "values",
+    "inventory": "team-settings",
+    "request": "member emails that don't fit the column",
+    "state": "long",
+    "calls": ["trpc:team.listMembers"]
+  },
+  {
+    "id": "mockplan-100",
+    "by": "agent",
+    "set": "values",
+    "inventory": "roast-detail",
+    "request": "a comment with a really lengthy body",
+    "state": "long",
+    "calls": ["trpc:comment.listForRoast"]
+  },
+  {
+    "id": "mockplan-101",
+    "by": "agent",
+    "set": "values",
+    "inventory": "bean-detail",
+    "request": "supplier name and contact email as long as they get",
+    "state": "long",
+    "calls": ["trpc:supplier.getForBean"]
+  },
+  {
+    "id": "mockplan-102",
+    "by": "agent",
+    "set": "values",
+    "inventory": "roast-detail",
+    "request": "huge numbers in the development stats",
+    "state": "long",
+    "calls": ["trpc:roast.developmentStats"],
+    "maybe": ["trpc:roast.developmentStatsSparkline"]
+  },
+  {
+    "id": "mockplan-103",
+    "by": "agent",
+    "set": "values",
+    "inventory": "team-settings",
+    "request": "invoice numbers and amounts at their widest",
+    "state": "long",
+    "calls": ["trpc:billing.listInvoices"]
+  },
+  {
+    "id": "mockplan-104",
+    "by": "agent",
+    "set": "values",
+    "inventory": "order-queue",
+    "request": "long order notes",
+    "state": "long",
+    "calls": ["rest:GET /api/orders/:id"],
+    "maybe": ["rest:GET /api/orders"]
+  },
+  {
+    "id": "mockplan-105",
+    "by": "agent",
+    "set": "values",
+    "inventory": "vite-overview",
+    "request": "reviews with no reviewer assigned",
+    "state": "sparse",
+    "calls": ["rest:GET /api/reviews"]
+  },
+  {
+    "id": "mockplan-106",
+    "by": "agent",
+    "set": "values",
+    "inventory": "bean-detail",
+    "request": "a supplier with no contact email",
+    "state": "sparse",
+    "calls": ["trpc:supplier.getForBean"]
+  },
+  {
+    "id": "mockplan-107",
+    "by": "agent",
+    "set": "values",
+    "inventory": "team-settings",
+    "request": "members missing their join date",
+    "state": "sparse",
+    "calls": ["trpc:team.listMembers"]
+  },
+  {
+    "id": "mockplan-108",
+    "by": "agent",
+    "set": "values",
+    "inventory": "roastery-dashboard",
+    "request": "orders with half the fields filled in",
+    "state": "sparse",
+    "calls": ["trpc:order.list"]
+  },
+  {
+    "id": "mockplan-109",
+    "by": "agent",
+    "set": "values",
+    "inventory": "roast-detail",
+    "request": "cuppings without notes",
+    "state": "sparse",
+    "calls": ["trpc:cupping.listForRoast"]
+  },
+  {
+    "id": "mockplan-110",
+    "by": "agent",
+    "set": "values",
+    "inventory": "order-queue",
+    "request": "shipments where carrier and tracking code are null",
+    "state": "sparse",
+    "calls": ["rest:GET /api/shipments"]
+  },
+  {
+    "id": "mockplan-111",
+    "by": "agent",
+    "set": "values",
+    "inventory": "next-projects",
+    "request": "projects with no owner",
+    "state": "sparse",
+    "calls": ["trpc:project.list"]
+  },
+  {
+    "id": "mockplan-112",
+    "by": "agent",
+    "set": "values",
+    "inventory": "roast-detail",
+    "request": "a roast profile with every optional field left out",
+    "state": "sparse",
+    "calls": ["trpc:profile.get"]
+  },
+  {
+    "id": "mockplan-113",
+    "by": "agent",
+    "set": "values",
+    "inventory": "bean-detail",
+    "request": "an incomplete bean record",
+    "state": "sparse",
+    "calls": ["trpc:bean.get"]
+  },
+  {
+    "id": "mockplan-114",
+    "by": "agent",
+    "set": "values",
+    "inventory": "team-settings",
+    "request": "integrations that never synced, no last sync time",
+    "state": "sparse",
+    "calls": ["trpc:integration.list"]
+  },
+  {
+    "id": "mockplan-115",
+    "by": "agent",
+    "set": "values",
+    "inventory": "vite-overview",
+    "request": "every review state at once",
+    "state": "mixed",
+    "calls": ["rest:GET /api/reviews"]
+  },
+  {
+    "id": "mockplan-116",
+    "by": "agent",
+    "set": "values",
+    "inventory": "roastery-dashboard",
+    "request": "orders in every status",
+    "state": "mixed",
+    "calls": ["trpc:order.list"]
+  },
+  {
+    "id": "mockplan-117",
+    "by": "agent",
+    "set": "values",
+    "inventory": "team-settings",
+    "request": "a mix of paid and unpaid invoices",
+    "state": "mixed",
+    "calls": ["trpc:billing.listInvoices"]
+  },
+  {
+    "id": "mockplan-118",
+    "by": "agent",
+    "set": "values",
+    "inventory": "team-settings",
+    "request": "members with all the different roles",
+    "state": "mixed",
+    "calls": ["trpc:team.listMembers"]
+  },
+  {
+    "id": "mockplan-119",
+    "by": "agent",
+    "set": "values",
+    "inventory": "roast-detail",
+    "request": "every kind of roast event on the timeline",
+    "state": "mixed",
+    "calls": ["trpc:roast.events"]
+  },
+  {
+    "id": "mockplan-120",
+    "by": "agent",
+    "set": "values",
+    "inventory": "team-settings",
+    "request": "connected and disconnected integrations side by side",
+    "state": "mixed",
+    "calls": ["trpc:integration.list"]
+  },
+  {
+    "id": "mockplan-121",
+    "by": "agent",
+    "set": "values",
+    "inventory": "order-queue",
+    "request": "a variety of orders, some with notes and some without",
+    "state": "mixed",
+    "calls": ["rest:GET /api/orders"],
+    "maybe": ["rest:GET /api/orders/:id"]
+  },
+  {
+    "id": "mockplan-122",
+    "by": "agent",
+    "set": "values",
+    "inventory": "roastery-dashboard",
+    "request": "roasts in all statuses",
+    "state": "mixed",
+    "calls": ["trpc:roast.list"],
+    "maybe": ["trpc:roast.countByStatus"]
+  },
+  {
+    "id": "mockplan-123",
+    "by": "agent",
+    "set": "values",
+    "inventory": "bean-detail",
+    "request": "lots from different harvest years",
+    "state": "mixed",
+    "calls": ["trpc:lot.listByBeanIds"]
+  },
+  {
+    "id": "mockplan-124",
+    "by": "agent",
+    "set": "values",
+    "inventory": "roast-detail",
+    "request": "labels in every colour",
+    "state": "mixed",
+    "calls": ["trpc:label.listForRoast"]
+  },
+  {
+    "id": "mockplan-125",
+    "by": "agent",
+    "set": "values",
+    "inventory": "roastery-dashboard",
+    "request": "a long list of orders",
+    "state": "many",
+    "calls": ["trpc:order.list"]
+  },
+  {
+    "id": "mockplan-126",
+    "by": "agent",
+    "set": "values",
+    "inventory": "next-projects",
+    "request": "the project list is long enough to scroll",
+    "state": "many",
+    "calls": ["trpc:project.list"],
+    "maybe": ["trpc:project.count"]
+  },
+  {
+    "id": "mockplan-127",
+    "by": "agent",
+    "set": "values",
+    "inventory": "order-queue",
+    "request": "fifty orders, all the same",
+    "state": "many",
+    "calls": ["rest:GET /api/orders"]
+  },
+  {
+    "id": "mockplan-128",
+    "by": "agent",
+    "set": "values",
+    "inventory": "team-settings",
+    "request": "no invites at all",
+    "state": "empty",
+    "calls": ["trpc:team.listInvites"]
+  },
+  {
+    "id": "mockplan-129",
+    "by": "agent",
+    "set": "values",
+    "inventory": "roast-detail",
+    "request": "no attachments on this roast",
+    "state": "empty",
+    "calls": ["trpc:attachment.listForRoast"]
+  },
+  {
+    "id": "mockplan-130",
+    "by": "agent",
+    "set": "values",
+    "inventory": "bean-detail",
+    "request": "no cuppings yet",
+    "state": "empty",
+    "calls": ["trpc:cupping.listForBean"],
+    "maybe": ["trpc:cupping.meanScore"]
   }
 ]

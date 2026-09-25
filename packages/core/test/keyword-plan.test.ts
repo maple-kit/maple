@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { keywordPlan } from "../src/connectors/keyword-plan.js";
 import { plannedCall, stateFromWeights } from "../src/connectors/plan.js";
+import { PLAN_FLOOR } from "../src/mock/reading.js";
 
 import type { MockPlanCall, MockPlanState } from "../src/connectors/types.js";
 
@@ -38,6 +39,14 @@ describe("the keyword planner's state", () => {
     { request: "a single bean", state: "one" },
     { request: "lots of roasts, enough to paginate", state: "many" },
     { request: "hundreds of beans", state: "many" },
+    { request: "a long list of roasts", state: "many" },
+    { request: "roast names long enough to wrap", state: "long" },
+    { request: "origins that get truncated", state: "long" },
+    { request: "beans with no description", state: "sparse" },
+    { request: "every optional field missing", state: "sparse" },
+    { request: "no beans at all", state: "empty" },
+    { request: "roasts in every status", state: "mixed" },
+    { request: "a mix of paid and unpaid orders", state: "mixed" },
     { request: "make the header blue", state: "none" },
     { request: "", state: "none" },
   ];
@@ -48,6 +57,10 @@ describe("the keyword planner's state", () => {
 
   it("is less sure of a sentence that names two states than of one naming one", () => {
     expect(plan("empty or error").confidence).toBeLessThan(plan("empty").confidence);
+  });
+
+  it("keeps one matched word above the gate's floor, however many states there are", () => {
+    expect(plan("empty").confidence).toBeGreaterThanOrEqual(PLAN_FLOOR);
   });
 
   it("is surer of a sentence that says a state twice over", () => {

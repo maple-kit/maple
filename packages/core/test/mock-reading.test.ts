@@ -14,6 +14,9 @@ const FLAT = {
   loading: 0.03,
   one: 0.03,
   many: 0.03,
+  long: 0.03,
+  sparse: 0.03,
+  mixed: 0.03,
   none: 0.03,
 };
 

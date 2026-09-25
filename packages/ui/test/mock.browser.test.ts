@@ -348,6 +348,9 @@ function planned(shares: Partial<Record<MockPlanState, number>>): MockPlan {
     loading: 0.02,
     one: 0.02,
     many: 0.02,
+    long: 0.02,
+    sparse: 0.02,
+    mixed: 0.02,
     none: 0.02,
     ...shares,
   };

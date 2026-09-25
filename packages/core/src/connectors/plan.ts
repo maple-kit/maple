@@ -5,23 +5,16 @@
  * probabilities of its own. `docs/mock.md` is the design record.
  */
 
-import type { FlagValue, MockState } from "../mock/recipe.js";
+import { MOCK_STATES } from "../mock/recipe.js";
+
+import type { FlagValue } from "../mock/recipe.js";
 import type { MockPlan, MockPlanFlag, MockPlanState, PlannedCall, PlannedFlag } from "./types.js";
 
 /**
  * Every state a plan can pick, `none` last. The order is the tie-break: two
- * states with equal evidence are read as the earlier one. A recipe state is
- * listed here only once the plan evals measure it.
+ * states with equal evidence are read as the earlier one.
  */
-export const MOCK_PLAN_STATES = [
-  "empty",
-  "error",
-  "forbidden",
-  "loading",
-  "one",
-  "many",
-  "none",
-] as const satisfies readonly (MockState | "none")[];
+export const MOCK_PLAN_STATES: readonly MockPlanState[] = [...MOCK_STATES, "none"];
 
 /**
  * What each state means, in the words a model is asked to judge against. It
@@ -33,15 +26,23 @@ export const MOCK_PLAN_STATE_DESCRIPTIONS: Readonly<Record<MockPlanState, string
   forbidden: "The reviewer may not see the data: no permission, no access, a 403.",
   loading: "The data has not arrived yet: a spinner, a skeleton, a slow answer.",
   one: "Exactly one item: a single result, a lone entry.",
-  many: "A great many items: a long list, pagination, overflow, hundreds of rows.",
+  many: "A great many items: a long list, pagination, hundreds of rows.",
+  long: "Every text as long as it can be: long names and titles that wrap, truncate or overflow their space, and the widest numbers.",
+  sparse:
+    "Items with every optional field missing: no avatar, no description, nulls, half-filled records. The list still has its items.",
+  mixed:
+    "A mix of every kind of item side by side: every status, type and variant, some fields set and some missing, short and long text.",
   none: "The request names no state the data can be in, or not yet: a style, copy or layout change.",
 };
 
 /** A plan's state and its spread, without the calls. */
 export type StateGuess = Pick<MockPlan, "confidence" | "distribution" | "state">;
 
-/** The probability every state holds before any evidence is weighed. */
-const BASE_SHARE = 0.2;
+/**
+ * The probability spread over all states before any evidence, a total so a new
+ * state does not thin one matched word's confidence below the gate's floor.
+ */
+const PRIOR = 1.4;
 
 /**
  * Turns per-state evidence into a guess. Every state keeps a share, so one
@@ -50,15 +51,16 @@ const BASE_SHARE = 0.2;
 export function stateFromWeights(
   weights: Readonly<Partial<Record<MockPlanState, number>>>,
 ): StateGuess {
-  const found = MOCK_PLAN_STATES.some((state) => state !== "none" && (weights[state] ?? 0) > 0);
+  const found = MOCK_STATES.some((state) => (weights[state] ?? 0) > 0);
+  const share = PRIOR / MOCK_PLAN_STATES.length;
   const evidence = MOCK_PLAN_STATES.map((state) =>
     state === "none" && !found ? 1 : Math.max(0, weights[state] ?? 0),
   );
-  const total = evidence.reduce((sum, weight) => sum + BASE_SHARE + weight, 0);
+  const total = evidence.reduce((sum, weight) => sum + share + weight, 0);
 
   const distribution = {} as Record<MockPlanState, number>;
   MOCK_PLAN_STATES.forEach((state, index) => {
-    distribution[state] = (BASE_SHARE + (evidence[index] ?? 0)) / total;
+    distribution[state] = (share + (evidence[index] ?? 0)) / total;
   });
 
   const state = MOCK_PLAN_STATES[argmax(evidence)] ?? "none";
