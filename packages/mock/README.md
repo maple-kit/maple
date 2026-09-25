@@ -40,7 +40,8 @@ page with the recipe in `sessionStorage` and in the `?maple-mock=` parameter, so
 a link reproduces it:
 
 ```ts
-import { linkRecipe, saveRecipe } from "@maple-kit/mock";
+import { linkRecipe } from "@maple-kit/core/mock";
+import { saveRecipe } from "@maple-kit/mock";
 
 saveRecipe(sessionStorage, recipe);
 location.assign(linkRecipe(location.href, recipe));

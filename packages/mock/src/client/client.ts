@@ -8,10 +8,10 @@
  */
 
 import { opensMock, watchEscape, watchTheme } from "@maple-kit/core/client";
-import { MOCK_STATES, readPlan, RECIPE_VERSION } from "@maple-kit/core/mock";
+import { linkRecipe, MOCK_STATES, readPlan, RECIPE_VERSION } from "@maple-kit/core/mock";
 
 import { installedMock } from "../handle.js";
-import { forgetRecipe, linkRecipe, saveRecipe } from "../link.js";
+import { forgetRecipe, saveRecipe } from "../link.js";
 import { pathPattern } from "../rest.js";
 import { PlanUnavailableError } from "../schema/plan.js";
 import { PLAN_DEBOUNCE_MS, PLAN_MIN_LENGTH, planCall } from "./plan.js";

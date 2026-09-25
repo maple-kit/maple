@@ -1,11 +1,10 @@
+import { decodeRecipe, RECIPE_PARAM } from "@maple-kit/core/mock";
 import { describe, expect, it, vi } from "vitest";
 
 import {
   createInventory,
   createMockClient,
-  decodeRecipe,
   MockClipboardError,
-  RECIPE_PARAM,
   RECIPE_STORAGE_KEY,
 } from "../src/index.js";
 

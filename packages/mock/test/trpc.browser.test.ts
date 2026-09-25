@@ -1,4 +1,5 @@
-import { installMock, linkRecipe } from "@maple-kit/mock";
+import { linkRecipe } from "@maple-kit/core/mock";
+import { installMock } from "@maple-kit/mock";
 import { createTRPCClient, httpBatchLink, httpBatchStreamLink } from "@trpc/client";
 import superjson from "superjson";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";

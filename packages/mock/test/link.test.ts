@@ -1,14 +1,11 @@
-import { InvalidRecipeError } from "@maple-kit/core/mock";
 import {
   decodeRecipe,
   encodeRecipe,
-  forgetRecipe,
+  InvalidRecipeError,
   linkRecipe,
-  readRecipe,
   RECIPE_PARAM,
-  RECIPE_STORAGE_KEY,
-  saveRecipe,
-} from "@maple-kit/mock";
+} from "@maple-kit/core/mock";
+import { forgetRecipe, readRecipe, RECIPE_STORAGE_KEY, saveRecipe } from "@maple-kit/mock";
 import { describe, expect, it } from "vitest";
 
 import type { Recipe } from "@maple-kit/core/mock";

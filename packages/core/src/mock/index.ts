@@ -7,6 +7,7 @@
  */
 
 export { activeRecipe, MOCK_HANDLE_KEY } from "./active.js";
+export { decodeRecipe, encodeRecipe, linkRecipe, RECIPE_PARAM } from "./link.js";
 export { PLAN_FLOOR, PLAN_TIE, readPlan } from "./reading.js";
 
 export type { MockSuggestion, PlanReading } from "./reading.js";

@@ -1,4 +1,5 @@
-import { createInventory, createMockClient, decodeRecipe, installMock } from "@maple-kit/mock";
+import { decodeRecipe } from "@maple-kit/core/mock";
+import { createInventory, createMockClient, installMock } from "@maple-kit/mock";
 import { createElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";

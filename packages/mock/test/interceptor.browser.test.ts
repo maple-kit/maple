@@ -1,5 +1,6 @@
 import { createLogger, memorySink } from "@maple-kit/core/logger";
-import { installMock, linkRecipe, pathPattern, RECIPE_STORAGE_KEY } from "@maple-kit/mock";
+import { linkRecipe } from "@maple-kit/core/mock";
+import { installMock, pathPattern, RECIPE_STORAGE_KEY } from "@maple-kit/mock";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { API, createApiFake, ME, PROJECTS } from "./msw/api.js";

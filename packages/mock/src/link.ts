@@ -6,40 +6,12 @@
  * tab form keeps it through client-side navigation that drops the query.
  */
 
-import { InvalidRecipeError, parseRecipe } from "@maple-kit/core/mock";
+import { decodeRecipe, InvalidRecipeError, parseRecipe, RECIPE_PARAM } from "@maple-kit/core/mock";
 
 import type { Recipe } from "@maple-kit/core/mock";
 
-/** The query parameter a shared link carries the recipe in. */
-export const RECIPE_PARAM = "maple-mock";
-
 /** The `sessionStorage` key the active recipe is kept under. */
 export const RECIPE_STORAGE_KEY = "maple-mock";
-
-/** Encodes a recipe as URL-safe text, validating it on the way out. */
-export function encodeRecipe(recipe: Recipe): string {
-  const bytes = new TextEncoder().encode(JSON.stringify(parseRecipe(recipe)));
-  let binary = "";
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
-}
-
-/**
- * Reads text written by {@link encodeRecipe}.
- *
- * @throws {InvalidRecipeError} when the text is not an encoded recipe.
- */
-export function decodeRecipe(text: string): Recipe {
-  let json: string;
-  try {
-    const binary = atob(text.replaceAll("-", "+").replaceAll("_", "/"));
-    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-    json = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
-  } catch {
-    throw new InvalidRecipeError(["the text is not an encoded recipe"]);
-  }
-  return parseRecipe(parseJson(json));
-}
 
 /** Where {@link readRecipe} looks. */
 export interface RecipeSources {
@@ -70,14 +42,6 @@ export function saveRecipe(storage: Pick<Storage, "setItem">, recipe: Recipe): v
 /** Forgets the tab's recipe. A link still carrying one is the caller's to drop. */
 export function forgetRecipe(storage: Pick<Storage, "removeItem">): void {
   storage.removeItem(RECIPE_STORAGE_KEY);
-}
-
-/** `url` with the recipe set as its query parameter, or removed when undefined. */
-export function linkRecipe(url: string | URL, recipe: Recipe | undefined): URL {
-  const next = new URL(url);
-  if (recipe === undefined) next.searchParams.delete(RECIPE_PARAM);
-  else next.searchParams.set(RECIPE_PARAM, encodeRecipe(recipe));
-  return next;
 }
 
 function parseJson(text: string): unknown {
