@@ -11,7 +11,8 @@
 import { useGitHubLink, useMapleClient } from "@maple-kit/react";
 import { createElement, forwardRef } from "react";
 
-import { cx, renderPart } from "../part.js";
+import { cx } from "../cx.js";
+import { renderPart } from "../part.js";
 import { ACCOUNT_COPY } from "./language.js";
 
 import type { PartProps } from "../part.js";

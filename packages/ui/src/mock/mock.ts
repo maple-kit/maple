@@ -22,7 +22,7 @@ import {
 import { createPortal } from "react-dom";
 
 import { MapleUiContext } from "../context.js";
-import { cx } from "../part.js";
+import { cx } from "../cx.js";
 import { SCHEME_ATTRIBUTE } from "../sheet-base.js";
 import {
   bannerSentence,

@@ -10,7 +10,7 @@
 
 import { createElement, forwardRef, useCallback, useId, useRef } from "react";
 
-import { cx } from "./part.js";
+import { cx } from "./cx.js";
 
 import type { ElementType, ReactNode } from "react";
 

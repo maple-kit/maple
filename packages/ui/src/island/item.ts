@@ -13,10 +13,11 @@ import { kindOf, labelFor } from "@maple-kit/core/anchor";
 import { useMapleClient } from "@maple-kit/react";
 import { createElement, forwardRef, useCallback, useRef, useState } from "react";
 
+import { cx } from "../cx.js";
 import { dataAttributes, formFor } from "../data.js";
 import { PROVENANCE_SENTENCES, STATUS_LABELS, STATUS_SENTENCES } from "../language.js";
 import { MapleLeaf } from "../marks/shape.js";
-import { cx, renderPart } from "../part.js";
+import { renderPart } from "../part.js";
 import { composeRefs } from "../slot.js";
 import { applyReviewerSlot } from "../slots.js";
 import { Tip } from "../tip.js";

@@ -11,8 +11,9 @@
 import { useMaple } from "@maple-kit/react";
 import { forwardRef } from "react";
 
+import { cx } from "../cx.js";
 import { dataAttributes } from "../data.js";
-import { cx, renderPart } from "../part.js";
+import { renderPart } from "../part.js";
 import { useIsland } from "./context.js";
 import { openLabel, triggerLabel } from "./language.js";
 import { Leaf } from "./leaf.js";

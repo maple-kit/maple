@@ -9,7 +9,8 @@
 import { useComments, useMaple } from "@maple-kit/react";
 import { createElement, forwardRef, Fragment } from "react";
 
-import { cx, renderPart } from "../part.js";
+import { cx } from "../cx.js";
+import { renderPart } from "../part.js";
 import { byReason } from "./comments.js";
 import { listId, reasonOf, useIsland } from "./context.js";
 import { FILTER_LABELS, ISLAND_COPY } from "./language.js";

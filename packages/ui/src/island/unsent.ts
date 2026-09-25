@@ -10,7 +10,8 @@
 import { useMaple, useMapleClient } from "@maple-kit/react";
 import { createElement, forwardRef, useState } from "react";
 
-import { cx, renderPart } from "../part.js";
+import { cx } from "../cx.js";
+import { renderPart } from "../part.js";
 import { UNSENT_COPY } from "./language.js";
 
 import type { PartProps } from "../part.js";

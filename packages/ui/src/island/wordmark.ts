@@ -10,9 +10,10 @@
 
 import { createElement, forwardRef } from "react";
 
+import { cx } from "../cx.js";
 import { PIXEL_LEAF_SHADES, PIXEL_LEAF_VIEW_BOX } from "../marks/pixel-leaf.js";
 import { WORDMARK_PATH, WORDMARK_RATIO, WORDMARK_VIEW_BOX } from "../marks/wordmark.js";
-import { cx, renderPart } from "../part.js";
+import { renderPart } from "../part.js";
 import { ISLAND_COPY } from "./language.js";
 
 import type { PartProps } from "../part.js";

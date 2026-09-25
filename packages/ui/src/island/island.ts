@@ -23,7 +23,8 @@ import {
 } from "react";
 
 import { useMapleUi } from "../context.js";
-import { cx, renderPart } from "../part.js";
+import { cx } from "../cx.js";
+import { renderPart } from "../part.js";
 import { composeRefs } from "../slot.js";
 import { numbersFor, resolutionsFor } from "./comments.js";
 import { IslandContext } from "./context.js";

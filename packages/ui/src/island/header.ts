@@ -8,7 +8,8 @@
 
 import { forwardRef } from "react";
 
-import { cx, renderPart } from "../part.js";
+import { cx } from "../cx.js";
+import { renderPart } from "../part.js";
 import { useIsland } from "./context.js";
 import { ISLAND_COPY } from "./language.js";
 import { Wordmark } from "./wordmark.js";

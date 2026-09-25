@@ -13,8 +13,9 @@ import { THEME_PREFERENCES } from "@maple-kit/core/client";
 import { useMaple, useMapleClient } from "@maple-kit/react";
 import { createElement, forwardRef, useId } from "react";
 
+import { cx } from "../cx.js";
 import { CogIcon } from "../icons/cog.js";
-import { cx, renderPart } from "../part.js";
+import { renderPart } from "../part.js";
 import { Account } from "./account.js";
 import { useIsland } from "./context.js";
 import {

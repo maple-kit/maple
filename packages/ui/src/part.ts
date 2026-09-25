@@ -19,11 +19,6 @@ export interface PartProps {
   readonly className?: string;
 }
 
-/** Joins the part's own class with whatever the caller passed. */
-export function cx(...names: readonly (false | string | undefined)[]): string {
-  return names.filter(Boolean).join(" ");
-}
-
 /**
  * Renders `tag`, or the caller's own element when `asChild` is set. Props are
  * merged by `Slot`, so handlers compose and both refs are called.

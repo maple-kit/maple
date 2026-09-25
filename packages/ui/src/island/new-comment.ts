@@ -10,11 +10,12 @@
 import { useMapleClient, usePicker } from "@maple-kit/react";
 import { createElement, forwardRef } from "react";
 
+import { cx } from "../cx.js";
 import { dataAttributes } from "../data.js";
 import { ElementIcon } from "../icons/element.js";
 import { RegionIcon } from "../icons/region.js";
 import { TextIcon } from "../icons/text.js";
-import { cx, renderPart } from "../part.js";
+import { renderPart } from "../part.js";
 import { useIsland } from "./context.js";
 import { ISLAND_COPY, PICK_LABELS, pickTitle } from "./language.js";
 
