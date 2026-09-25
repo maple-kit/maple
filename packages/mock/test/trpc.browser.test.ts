@@ -69,6 +69,27 @@ describe("installMock with tRPC, in a real browser", () => {
     expect(fake.reached).toHaveLength(1);
   });
 
+  it.each(["long", "sparse", "mixed"] as const)(
+    "puts one call of a streamed batch in %s, its Dates still Dates",
+    async (state) => {
+      handle?.dispose();
+      history.replaceState(
+        null,
+        "",
+        linkRecipe(page, { version: 2, calls: [{ key: "trpc:project.list", state }] }),
+      );
+      handle = installMock();
+      const trpc = createTRPCClient<AppRouter>({
+        links: [httpBatchStreamLink({ url: `${ORIGIN}${TYPED}`, transformer: superjson })],
+      });
+      const [list, me] = await Promise.all([trpc.project.list.query(), trpc.user.me.query()]);
+      expect(list.items.length).toBeGreaterThan(0);
+      expect(list.items.every((item) => item.createdAt instanceof Date)).toBe(true);
+      expect(me).toEqual({ id: "u_1", name: "Reviewer", since: CREATED });
+      if (state === "long") expect(list.items[0]?.name.length).toBeGreaterThanOrEqual(32);
+    },
+  );
+
   it("leaves every other call of a plain batch byte for byte as the server wrote it", async () => {
     const mocked = (await (await fetch(batchUrl(TYPED, PATHS))).json()) as unknown[];
     const real = (await (await serve(new Request(batchUrl(TYPED, PATHS)))).json()) as unknown[];

@@ -43,7 +43,14 @@ export interface Split {
   readonly states: readonly (MockState | undefined)[];
 }
 
-const BODY_STATES: ReadonlySet<MockState> = new Set<MockState>(["empty", "many", "one"]);
+const BODY_STATES: ReadonlySet<MockState> = new Set<MockState>([
+  "empty",
+  "many",
+  "one",
+  "long",
+  "sparse",
+  "mixed",
+]);
 
 /** The request's calls and the state the recipe gives each, or undefined when no codec owns it. */
 export async function splitRequest(

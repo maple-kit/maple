@@ -37,6 +37,15 @@ export function sampleSchema(schema: JsonSchema, options: SampleOptions = {}): u
   return sample(schema, schema, options, 0);
 }
 
+/** A value `node` accepts, its `$ref`s read against `root`. */
+export function sampleNode(
+  root: JsonSchema,
+  node: JsonSchema,
+  options: SampleOptions = {},
+): unknown {
+  return sample(root, node, options, 0);
+}
+
 function sample(
   root: JsonSchema,
   node: JsonSchema,

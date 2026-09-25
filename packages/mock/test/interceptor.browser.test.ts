@@ -77,6 +77,18 @@ describe("installMock, in a real browser", () => {
     expect(api.reached).toEqual(["GET /api/projects"]);
   });
 
+  it.each([
+    ["long", (items: { name: string }[]) => items.every((item) => item.name.length >= 32)],
+    ["sparse", (items: { name: string }[]) => items.length === PROJECTS.items.length],
+    ["mixed", (items: { name: string }[]) => items.some((item) => item.name.length >= 32)],
+  ] as const)("answers %s from the server's own list", async (state, holds) => {
+    install(recipe(["rest:GET /api/projects", state]));
+    const projects = (await (await fetch(`${API}/projects`)).json()) as typeof PROJECTS;
+    expect(holds(projects.items)).toBe(true);
+    expect(new Set(projects.items.map((item) => item.id)).size).toBe(projects.items.length);
+    expect(api.reached).toEqual(["GET /api/projects"]);
+  });
+
   it("keeps a linked recipe for the tab", () => {
     const active = recipe(["rest:GET /api/projects", "empty"]);
     install(active);

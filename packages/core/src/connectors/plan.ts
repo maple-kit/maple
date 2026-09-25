@@ -5,16 +5,23 @@
  * probabilities of its own. `docs/mock.md` is the design record.
  */
 
-import { MOCK_STATES } from "../mock/recipe.js";
-
-import type { FlagValue } from "../mock/recipe.js";
+import type { FlagValue, MockState } from "../mock/recipe.js";
 import type { MockPlan, MockPlanFlag, MockPlanState, PlannedCall, PlannedFlag } from "./types.js";
 
 /**
  * Every state a plan can pick, `none` last. The order is the tie-break: two
- * states with equal evidence are read as the earlier one.
+ * states with equal evidence are read as the earlier one. A recipe state is
+ * listed here only once the plan evals measure it.
  */
-export const MOCK_PLAN_STATES: readonly MockPlanState[] = [...MOCK_STATES, "none"];
+export const MOCK_PLAN_STATES = [
+  "empty",
+  "error",
+  "forbidden",
+  "loading",
+  "one",
+  "many",
+  "none",
+] as const satisfies readonly (MockState | "none")[];
 
 /**
  * What each state means, in the words a model is asked to judge against. It
@@ -43,7 +50,7 @@ const BASE_SHARE = 0.2;
 export function stateFromWeights(
   weights: Readonly<Partial<Record<MockPlanState, number>>>,
 ): StateGuess {
-  const found = MOCK_STATES.some((state) => (weights[state] ?? 0) > 0);
+  const found = MOCK_PLAN_STATES.some((state) => state !== "none" && (weights[state] ?? 0) > 0);
   const evidence = MOCK_PLAN_STATES.map((state) =>
     state === "none" && !found ? 1 : Math.max(0, weights[state] ?? 0),
   );

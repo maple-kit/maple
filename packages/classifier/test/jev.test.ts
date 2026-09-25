@@ -155,7 +155,7 @@ describe("jevClassifier", () => {
     const plan = await connector().plan?.({ request: "x", route: "/", calls: CALLS });
 
     expect(plan?.state).toBe(MOCK_PLAN_STATES[1]);
-    expect(plan?.distribution[MOCK_PLAN_STATES[1]!]).toBeCloseTo(0.7, 10);
+    expect(plan?.distribution[MOCK_PLAN_STATES[1]]).toBeCloseTo(0.7, 10);
     expect(plan?.confidence).toBeCloseTo(0.7, 10);
     expect(plan?.calls).toEqual([
       { key: "trpc:roast.list", concerned: true, p: 0.8 },

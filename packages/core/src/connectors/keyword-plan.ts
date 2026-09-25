@@ -4,15 +4,24 @@
  * `docs/mock.md` says what it reads and where it stops.
  */
 
-import { MOCK_STATES } from "../mock/recipe.js";
 import { planFlags, planRole } from "./keyword-layers.js";
-import { plannedCall, stateFromWeights } from "./plan.js";
+import { MOCK_PLAN_STATES, plannedCall, stateFromWeights } from "./plan.js";
 
-import type { MockState } from "../mock/recipe.js";
-import type { MockPlan, MockPlanCall, MockPlanRequest, PlannedCall } from "./types.js";
+import type {
+  MockPlan,
+  MockPlanCall,
+  MockPlanRequest,
+  MockPlanState,
+  PlannedCall,
+} from "./types.js";
+
+type Planned = Exclude<MockPlanState, "none">;
+
+/** The states this planner reads a sentence for. */
+const PLANNED = MOCK_PLAN_STATES.filter((state): state is Planned => state !== "none");
 
 /** Phrases per state. Presence counts, not repetition. */
-const STATE_PATTERNS: Readonly<Record<MockState, readonly RegExp[]>> = {
+const STATE_PATTERNS: Readonly<Record<Planned, readonly RegExp[]>> = {
   empty: [
     /\bempty\b/,
     /\bnothing\b/,
@@ -155,8 +164,8 @@ const PAGE_WIDE = 0.6;
 /** Plans one sentence. Pure: the same request always gets the same plan. */
 export function keywordPlan(request: MockPlanRequest): MockPlan {
   const text = request.request.toLowerCase();
-  const weights: Partial<Record<MockState, number>> = {};
-  for (const state of MOCK_STATES) weights[state] = hits(text, STATE_PATTERNS[state]);
+  const weights: Partial<Record<Planned, number>> = {};
+  for (const state of PLANNED) weights[state] = hits(text, STATE_PATTERNS[state]);
 
   const role = request.roles === undefined ? undefined : planRole(text, request.roles);
   return {
@@ -195,7 +204,7 @@ function overlap(words: ReadonlySet<string>, against: ReadonlySet<string>): numb
 /** The sentence's words, less its frame and every word that named a state. */
 function contentWords(text: string): Set<string> {
   const stated = (word: string): boolean =>
-    MOCK_STATES.some((state) => hits(word, STATE_PATTERNS[state]) > 0);
+    PLANNED.some((state) => hits(word, STATE_PATTERNS[state]) > 0);
   return new Set(tokens(text).filter((word) => !stated(word)));
 }
 

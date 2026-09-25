@@ -2,7 +2,7 @@
  * Every word the mock box and its banner say, in one module.
  *
  * The states are the recipe's closed set, in the order core lists them, and
- * each label is one word: a row carries six of them beside a call's name.
+ * each label is one word: a row carries nine of them beside a call's name.
  */
 
 import type { MockState, ShapeSource } from "@maple-kit/core/mock";
@@ -15,6 +15,9 @@ export const STATE_LABELS: Readonly<Record<MockState, string>> = {
   loading: "Loading",
   one: "One",
   many: "Many",
+  long: "Long",
+  sparse: "Sparse",
+  mixed: "Mixed",
 };
 
 /** What the banner says a call now does, in a state's own grammar. */
@@ -25,6 +28,9 @@ export const STATE_SENTENCES: Readonly<Record<MockState, string>> = {
   loading: "never answers",
   one: "has one item",
   many: "has many items",
+  long: "has long text",
+  sparse: "has fields missing",
+  mixed: "has a mix of items",
 };
 
 /** Where a call's shape came from, as the row's tag says it. */

@@ -150,6 +150,11 @@ export function annotate(annotation: unknown, value: unknown): unknown {
   return { [MARK]: annotation, value } satisfies Marker;
 }
 
+/** Whether `value` carries a superjson annotation: a `Date`, a `bigint`, a `Map`. */
+export function isMarked(value: unknown): boolean {
+  return typeof value === "object" && value !== null && MARK in value;
+}
+
 /** `fn` applied to a value, through its marker if it has one. */
 export function throughMarker(value: unknown, fn: (value: unknown) => unknown): unknown {
   if (typeof value !== "object" || value === null || !(MARK in value)) return fn(value);

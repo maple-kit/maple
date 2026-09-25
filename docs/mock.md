@@ -63,8 +63,13 @@ that read a newer format and passed.
   real server, never a replacement for it. Mutations are no different: one is
   mocked only if the recipe names it.
 - **The states are a closed set**: `empty`, `error`, `forbidden`, `loading`,
-  `one`, `many`. A state outside it is refused rather than ignored, since a
-  recipe that silently mocks less than it says is worse than one that fails.
+  `one`, `many`, `long`, `sparse`, `mixed`. A state outside it is refused
+  rather than ignored, since a recipe that silently mocks less than it says is
+  worse than one that fails. A new state is appended, so the order a box lists
+  and a plan breaks ties in holds. `long`, `sparse` and `mixed` came after
+  0.9.0 without a version bump: no released reader has seen a version-2
+  recipe, and a 0.9.0 reader refuses the unknown state, which is that same
+  preferred failure.
 - **Unknown fields are dropped, a newer version is refused.** Dropping lets a
   later layer be added to the record without an older reader rejecting it.
   Refusing a newer version stops a reader half-applying a format it does not
@@ -160,6 +165,8 @@ the server's answer:
 | `error`, `forbidden`   | nothing                    | 500 or 403, in the protocol's own error shape |
 | `loading`              | nothing                    | nothing, until the request is abandoned       |
 | `empty`, `one`, `many` | the request, as it was     | the server's own answer, reshaped             |
+| `long`, `sparse`       | the request, as it was     | the server's own answer, reshaped             |
+| `mixed`                | the request, as it was     | the server's own answer, reshaped             |
 
 - **A body state reshapes the live answer**, so the mock is as fresh as the
   page. When the server fails, the last recorded answer is reshaped instead;
@@ -238,7 +245,10 @@ stream copied and left open cannot be closed by the page.
 
 ## Transforms
 
-Code, with no model. Every value in the output was in the input.
+Code, with no model. Every value in the output is derived from the input,
+never invented. Until `long`, every value in the output was in the input; a
+longer text is built from its own characters, so the promise became
+"derived", and nothing a transform writes is a word it made up.
 
 - **`empty`** turns each list into `[]` and the envelope keys beside it into an
   empty page: a count to `0`, a next cursor to `null`, a has-more to `false`.
@@ -246,13 +256,39 @@ Code, with no model. Every value in the output was in the input.
 - **`many`** repeats the items to fifty and raises a count to match. A repeated
   item gets a unique `id`, `_id`, `uuid`, `key` or `slug`.
 
+- **`long`** makes every text as long as the page could really receive: to its
+  `maxLength` exactly, else four times over (at least 32 characters), half of
+  it the value's own words repeated so it wraps, half one unbroken run of its
+  characters for `overflow-wrap`. An address grows its local part (at most 64
+  characters) and a URL a path segment after its origin, so both still parse.
+  A number goes to 1,234,567, never past its schema's bound. Identifiers,
+  references (`ownerId`), cursors, enums, `const`, `pattern`, dates, UUIDs
+  and colours are left alone, as is every superjson-typed value. Lists keep
+  their length.
+- **`sparse`** makes everything that may be missing missing. With a schema, a
+  nullable field is `null` and an optional one is gone. Without one, only what
+  the recording proves is dropped: a key one item of a list lacks is dropped
+  from every item, a key one item holds `null` is `null` in every item. A lone
+  object has nothing to prove anything with, and is left alone.
+- **`mixed`** covers every combination that matters instead of adding items.
+  Each field rotates through what it may be (every enum value, both booleans,
+  null and set, absent and present, short and long text), the rotations side
+  by side, so the list grows only to the longest rotation, never to a cross
+  product, and at most to fifty or `maxItems`. A count is kept. A field set
+  where no item holds a value borrows another item's, else samples its schema.
+
 Lists are looked for three objects deep, which covers `{ data: { items } }`,
 and never inside an item. An envelope key changes only when its value already
 has the right type, so a `total` that is a sentence is left alone.
 
 **Without a schema** nothing says a field may be null or which field a list is
 keyed by, so a cursor is nulled on faith, and a list keyed by a field outside
-the five names above repeats its keys under `many`.
+the five names above repeats its keys under `many`. `long` also leaves alone a
+single lowercase word of up to sixteen characters, which may be an enum, and
+a fraction below one or a millisecond timestamp.
+
+`long` and `sparse` walk the whole body, sixteen levels deep; `mixed`, like the
+list states, looks for lists three objects deep.
 
 ## Shapes
 
@@ -341,7 +377,9 @@ plan({ request, route, calls: [{ key, summary }] });
 ```
 
 - **It picks, it writes nothing.** The answer is one of the six states or
-  `none`, and a verdict per call. The transforms and the sampler do the rest.
+  `none`, and a verdict per call. `long`, `sparse` and `mixed` are recipe
+  states the plan does not pick yet: a state joins the plan's vocabulary only
+  with eval cases that measure it. The transforms and the sampler do the rest.
 - **`none` is an answer.** "Make the header blue" names no state a page's data
   can be in, and a plan that says so is more use than a guessed `empty`.
 - **A distribution, not a verdict**, as in `docs/assist.md`: a sentence

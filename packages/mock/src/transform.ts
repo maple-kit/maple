@@ -1,13 +1,18 @@
 /**
  * Reshaping a JSON body into a state. Code, not a model: every value in the
- * output was in the input, so the app's own parser still accepts it.
+ * output is derived from the input, never invented, so the app's own parser
+ * still accepts it. `long` makes a text longer from its own characters.
  *
- * Only lists and the envelope keys beside them change. Given the call's
- * schema, a key is nulled only where it is nullable and dropped only where it
- * is optional, and a list keeps the length the schema requires.
+ * Given the call's schema, a key is nulled only where it is nullable and
+ * dropped only where it is optional, a list keeps the length the schema
+ * requires, and a text never passes its `maxLength`.
  */
 
-import { allowsNull, arrayOf, enumOf, properties, property } from "./schema/json-schema.js";
+import { allowsNull, arrayOf, property } from "./schema/json-schema.js";
+import { lengthen } from "./states/long.js";
+import { cover } from "./states/mixed.js";
+import { thin } from "./states/sparse.js";
+import { CURSOR_KEYS, enumerated, isRecord, uniqueCopy } from "./states/values.js";
 import { deflate, inflate, throughMarker } from "./superjson.js";
 
 import type { Located } from "./schema/json-schema.js";
@@ -15,7 +20,13 @@ import type { TypeMeta } from "./superjson.js";
 import type { JsonSchema } from "@maple-kit/core/mock";
 
 /** The states a body can be reshaped into. */
-export type BodyState = "empty" | "many" | "one";
+export type BodyState = "empty" | "long" | "many" | "mixed" | "one" | "sparse";
+
+/** How a body is reshaped, beside its state. */
+interface Reshaping {
+  /** The body is superjson's, so a value sampled for it is typed. */
+  readonly typed: boolean;
+}
 
 /** How many items `many` makes of a list. */
 export const MANY = 50;
@@ -33,23 +44,23 @@ const COUNT_KEYS = new Set([
   "totalResults",
   "total_results",
 ]);
-const CURSOR_KEYS = new Set([
-  "next",
-  "nextCursor",
-  "next_cursor",
-  "nextPage",
-  "next_page",
-  "nextPageToken",
-  "next_page_token",
-]);
 const MORE_KEYS = new Set(["hasMore", "has_more", "hasNext", "has_next", "hasNextPage"]);
-const ID_KEYS = ["id", "_id", "uuid", "key", "slug"];
-
 /** `body` reshaped into `state`. The input is never modified. */
 export function reshape(state: BodyState, body: unknown, schema?: JsonSchema): unknown {
+  return reshapeAs(state, body, schema, { typed: false });
+}
+
+function reshapeAs(
+  state: BodyState,
+  body: unknown,
+  schema: JsonSchema | undefined,
+  how: Reshaping,
+) {
   const at = schema === undefined ? undefined : { root: schema, node: schema };
+  if (state === "long") return lengthen(body, at);
+  if (state === "sparse") return thin(body, at);
   if (typeof body === "number") return count(state, body);
-  return walk(state, body, 0, at);
+  return walk(state, body, 0, { at, how });
 }
 
 /**
@@ -62,33 +73,41 @@ export function reshapeTyped(
   meta: TypeMeta,
   schema?: JsonSchema,
 ): { body: unknown; meta: TypeMeta } {
-  if (meta.values === undefined) return { body: reshape(state, body, schema), meta: {} };
-  return deflate(reshape(state, inflate(body, meta), schema), meta.v);
+  return deflate(reshapeAs(state, inflate(body, meta), schema, { typed: true }), meta.v);
 }
 
 /** Left out of an object: an optional key a schema forbids nulling. */
 const DROP = Symbol("drop");
 
-function walk(state: BodyState, value: unknown, depth: number, at?: Located): unknown {
-  return throughMarker(value, (unmarked) => walkUnmarked(state, unmarked, depth, at));
+/** Where a walk is: the schema node it is at, if any, and how it reshapes. */
+interface Place {
+  readonly at: Located | undefined;
+  readonly how: Reshaping;
 }
 
-function walkUnmarked(state: BodyState, value: unknown, depth: number, at?: Located): unknown {
-  if (Array.isArray(value)) return list(state, value, at);
+function walk(state: BodyState, value: unknown, depth: number, place: Place): unknown {
+  return throughMarker(value, (unmarked) => walkUnmarked(state, unmarked, depth, place));
+}
+
+function walkUnmarked(state: BodyState, value: unknown, depth: number, place: Place): unknown {
+  if (Array.isArray(value)) return list(state, value, place);
   if (!isRecord(value) || depth >= DEPTH) return value;
   return Object.fromEntries(
     Object.entries(value)
-      .map(([key, field]) => [key, entry(state, [key, field], depth, at)] as const)
+      .map(([key, field]) => [key, entry(state, [key, field], depth, place)] as const)
       .filter(([, field]) => field !== DROP),
   );
 }
 
-function entry(state: BodyState, [key, field]: [string, unknown], depth: number, at?: Located) {
+function entry(state: BodyState, [key, field]: [string, unknown], depth: number, place: Place) {
+  const { at } = place;
   const found = at === undefined ? undefined : property(at.root, at.node, key);
-  const inner =
-    found === undefined || at === undefined ? undefined : { root: at.root, node: found.schema };
+  const inner = {
+    at: found === undefined || at === undefined ? undefined : { root: at.root, node: found.schema },
+    how: place.how,
+  };
   if (typeof field === "number" && COUNT_KEYS.has(key)) return count(state, field);
-  if (state === "many") return walk(state, field, depth + 1, inner);
+  if (state === "many" || state === "mixed") return walk(state, field, depth + 1, inner);
   if (typeof field === "string" && CURSOR_KEYS.has(key)) return cursor(field, found, at);
   if (typeof field === "boolean" && MORE_KEYS.has(key)) return false;
   return walk(state, field, depth + 1, inner);
@@ -108,20 +127,32 @@ function cursor(
   return found.required ? field : DROP;
 }
 
+/** A count as the state says it. `mixed` is about kinds, not count, so it keeps it. */
 function count(state: BodyState, value: number): number {
   if (state === "empty") return 0;
-  return state === "one" ? Math.min(value, 1) : Math.max(value, MANY);
+  if (state === "one") return Math.min(value, 1);
+  return state === "many" ? Math.max(value, MANY) : value;
 }
 
-function list(state: BodyState, items: readonly unknown[], at?: Located): unknown[] {
+function list(state: BodyState, items: readonly unknown[], place: Place): unknown[] {
+  const { at } = place;
   const bounds = at === undefined ? undefined : arrayOf(at.root, at.node);
   const min = bounds?.min ?? 0;
-  if (state === "empty") return items.slice(0, min);
-  if (state === "one") return items.slice(0, Math.max(1, min));
-  const target = Math.min(MANY, bounds?.max ?? MANY);
-  if (items.length === 0 || items.length >= target) return items.slice(0, bounds?.max);
   const itemAt =
     bounds === undefined || at === undefined ? undefined : { root: at.root, node: bounds.items };
+  if (state === "empty") return items.slice(0, min);
+  if (state === "one") return items.slice(0, Math.max(1, min));
+  const max = bounds?.max ?? Number.POSITIVE_INFINITY;
+  if (state === "mixed") {
+    return cover(items, {
+      max,
+      grow: MANY,
+      typed: place.how.typed,
+      ...(itemAt ? { at: itemAt } : {}),
+    });
+  }
+  const target = Math.min(MANY, max);
+  if (items.length === 0 || items.length >= target) return items.slice(0, bounds?.max);
   return Array.from({ length: target }, (_, index) => {
     const item = items[index % items.length];
     return index < items.length ? item : copy(item, index, items, itemAt);
@@ -134,25 +165,10 @@ function list(state: BodyState, items: readonly unknown[], at?: Located): unknow
  */
 function copy(item: unknown, index: number, items: readonly unknown[], at?: Located): unknown {
   if (!isRecord(item)) return item;
-  const clone = structuredClone(item);
-  for (const key of ID_KEYS) {
-    const id = clone[key];
-    if (typeof id === "string") clone[key] = `${id}-${index}`;
-    if (typeof id === "number") clone[key] = highest(items, key) + index;
-  }
+  const clone = uniqueCopy(item, index, items);
   if (at === undefined) return clone;
-  for (const [key, schema] of properties(at.root, at.node)) {
-    const values = enumOf(at.root, schema);
-    if (values.length > 0 && key in clone) clone[key] = values[index % values.length];
+  for (const [key, values] of enumerated(at)) {
+    if (key in clone) clone[key] = values[index % values.length];
   }
   return clone;
-}
-
-function highest(items: readonly unknown[], key: string): number {
-  const ids = items.map((item) => (isRecord(item) ? item[key] : undefined));
-  return Math.max(0, ...ids.filter((id): id is number => typeof id === "number"));
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

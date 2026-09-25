@@ -8,7 +8,7 @@
  * capabilities twice.
  */
 
-import type { FlagValue, MockState } from "../mock/recipe.js";
+import type { FlagValue } from "../mock/recipe.js";
 import type {
   Approval,
   Comment,
@@ -21,6 +21,7 @@ import type {
   NewApproval,
   NewComment,
 } from "../types.js";
+import type { MOCK_PLAN_STATES } from "./plan.js";
 
 /** The six kinds of backend Maple knows how to talk to. */
 export type ConnectorKind =
@@ -289,7 +290,7 @@ export interface MockPlanFlag {
 }
 
 /** A state a sentence can name, or `none` when it names no state at all. */
-export type MockPlanState = MockState | "none";
+export type MockPlanState = (typeof MOCK_PLAN_STATES)[number];
 
 /**
  * A sentence read as a mock. Like a score, it carries its distribution and its

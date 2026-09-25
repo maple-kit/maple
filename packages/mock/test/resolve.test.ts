@@ -84,6 +84,17 @@ describe("resolve", () => {
     expect(body.items).toHaveLength(MANY);
   });
 
+  it.each([
+    ["long", { total: 1_234_567, nextCursor: "c2" }],
+    ["sparse", { total: 2, nextCursor: "c2" }],
+    ["mixed", { total: 2, nextCursor: "c2" }],
+  ] as const)("answers %s from the server's own envelope", async (state, envelope) => {
+    const response = await run("/projects", recipe("rest:GET /api/projects", state));
+    const body = (await response?.json()) as typeof PROJECTS;
+    expect(body).toMatchObject({ ...envelope, hasMore: true });
+    expect(body.items.map((item) => item.id).slice(0, 2)).toEqual([1, 2]);
+  });
+
   it("matches a call by its pattern, not its id", async () => {
     const response = await run("/projects/99", recipe("rest:GET /api/projects/:id", "forbidden"));
     expect(response?.status).toBe(403);

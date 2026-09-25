@@ -12,8 +12,21 @@
  */
 export const RECIPE_VERSION = 2;
 
-/** Every state a call can be put in, in the order a box lists them. */
-export const MOCK_STATES = ["empty", "error", "forbidden", "loading", "one", "many"] as const;
+/**
+ * Every state a call can be put in, in the order a box lists them. A new
+ * state is appended, so the order an older list and a tie-break read holds.
+ */
+export const MOCK_STATES = [
+  "empty",
+  "error",
+  "forbidden",
+  "loading",
+  "one",
+  "many",
+  "long",
+  "sparse",
+  "mixed",
+] as const;
 
 /** A state a call can be put in. */
 export type MockState = (typeof MOCK_STATES)[number];

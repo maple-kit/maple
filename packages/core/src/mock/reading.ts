@@ -4,10 +4,10 @@
  * recipe, because the page reads it and must not load the connectors.
  */
 
-import { MOCK_STATES } from "./recipe.js";
-
-import type { MockPlan } from "../connectors/types.js";
+import type { MockPlan, MockPlanState } from "../connectors/types.js";
 import type { FlagValue, MockIdentity, MockState } from "./recipe.js";
+
+type Planned = Exclude<MockPlanState, "none">;
 
 /**
  * One suggestion: a state and the calls it would put in it, and the flags and
@@ -61,12 +61,14 @@ export function readPlan(plan: MockPlan | null): PlanReading {
 }
 
 /** The state, or the two it is torn between; none when unsure or when no call is in it. */
-function statesOf(plan: MockPlan): MockState[] {
+function statesOf(plan: MockPlan): Planned[] {
   if (plan.confidence < PLAN_FLOOR || plan.state === "none") return [];
   if (!plan.calls.some((call) => call.concerned)) return [];
 
-  const others = MOCK_STATES.filter((state) => state !== plan.state);
-  const runnerUp = others.reduce<MockState | undefined>(
+  const others = (Object.keys(plan.distribution) as MockPlanState[]).filter(
+    (state): state is Planned => state !== plan.state && state !== "none",
+  );
+  const runnerUp = others.reduce<Planned | undefined>(
     (best, state) =>
       best === undefined || plan.distribution[state] > plan.distribution[best] ? state : best,
     undefined,
