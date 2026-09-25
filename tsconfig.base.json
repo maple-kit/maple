@@ -27,6 +27,7 @@
       "@maple-kit/core/export": ["./packages/core/src/export/index.ts"],
       "@maple-kit/core/loader": ["./packages/core/src/loader/index.ts"],
       "@maple-kit/core/logger": ["./packages/core/src/logger/index.ts"],
+      "@maple-kit/core/mock": ["./packages/core/src/mock/index.ts"],
       "@maple-kit/core/config": ["./packages/core/src/config/index.ts"],
       "@maple-kit/core/overlay": ["./packages/core/src/overlay/index.ts"],
       "@maple-kit/core/route": ["./packages/core/src/route/index.ts"],

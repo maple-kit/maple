@@ -12,6 +12,7 @@ export default defineConfig({
     "src/loader/index.ts",
     "src/next/index.ts",
     "src/logger/index.ts",
+    "src/mock/index.ts",
     "src/vite/index.ts",
     "src/config/index.ts",
     "src/overlay/index.ts",

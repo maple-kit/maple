@@ -29,6 +29,7 @@
     "./export": "./dist/export/index.js",
     "./gate": "./dist/gate/index.js",
     "./logger": "./dist/logger/index.js",
+    "./mock": "./dist/mock/index.js",
     "./loader": "./dist/loader/index.js",
     "./next": "./dist/next/index.js",
     "./config": "./dist/config/index.js",
