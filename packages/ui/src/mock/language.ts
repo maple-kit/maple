@@ -5,7 +5,7 @@
  * each label is one word: a row carries six of them beside a call's name.
  */
 
-import type { MockState } from "@maple-kit/core/mock";
+import type { MockState, ShapeSource } from "@maple-kit/core/mock";
 
 /** What each state is called on its button. */
 export const STATE_LABELS: Readonly<Record<MockState, string>> = {
@@ -27,6 +27,15 @@ export const STATE_SENTENCES: Readonly<Record<MockState, string>> = {
   many: "has many items",
 };
 
+/** Where a call's shape came from, as the row's tag says it. */
+export const SHAPE_LABELS: Readonly<Record<ShapeSource, string>> = {
+  supplied: "OpenAPI",
+  router: "Router types",
+  validator: "Validator",
+  introspection: "Introspection",
+  sample: "Recorded",
+};
+
 /** The box's fixed words. */
 export const MOCK_COPY = {
   label: "Mock this page",
@@ -36,6 +45,7 @@ export const MOCK_COPY = {
   nothingRecorded: "Nothing recorded on this page yet. Use the page, then open this again.",
   nothingMatches: "No recorded call matches that.",
   notSeen: "Named by the mock, not recorded on this page",
+  shapeFrom: "Shape from",
   copyLink: "Copy link",
   copyRecipe: "Copy recipe",
   copied: "Copied",

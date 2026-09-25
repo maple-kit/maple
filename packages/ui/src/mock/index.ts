@@ -10,6 +10,7 @@ export {
   callName,
   codecOf,
   MOCK_COPY,
+  SHAPE_LABELS,
   STATE_LABELS,
   STATE_SENTENCES,
 } from "./language.js";

@@ -209,6 +209,25 @@ describe("picking and applying", () => {
   });
 });
 
+describe("where each call's shape came from", () => {
+  it("tags a row with its rung once the shape is known, and leaves the rest bare", async () => {
+    const shaped: MockHandle = {
+      ...handle(),
+      shape: (key) =>
+        key === LIST ? Promise.resolve({ schema: {}, source: "router" as const }) : undefined,
+    };
+    const client = track(
+      createMockClient({ handle: shaped, view: fakePage().view, defaultOpen: true }),
+    );
+    client.start();
+    await render(createElement(MapleMock, { client }));
+
+    await vi.waitFor(() => expect(find(".mk-mock-rung")?.textContent).toBe("Router types"));
+    expect(find(".mk-mock-rung")?.closest(".mk-mock-call")?.textContent).toContain("/api/reviews");
+    expect(roots()[0]!.querySelectorAll(".mk-mock-rung")).toHaveLength(1);
+  });
+});
+
 describe("the banner", () => {
   const active: Recipe = { version: 1, calls: [{ key: LIST, state: "empty" }], route: HERE };
 

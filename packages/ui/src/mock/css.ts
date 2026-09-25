@@ -130,6 +130,16 @@ function calls(): string {
   text-transform: uppercase;
 }
 
+.mk-mock-rung {
+  flex: none;
+  padding: 0 6px;
+  border: 1px solid var(--mk-line);
+  border-radius: 999px;
+  color: var(--mk-faint);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
 .mk-mock-call[data-mk-seen="false"] .mk-mock-name {
   color: var(--mk-muted);
 }

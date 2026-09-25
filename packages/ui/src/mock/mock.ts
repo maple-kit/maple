@@ -24,7 +24,14 @@ import { createPortal } from "react-dom";
 import { MapleUiContext } from "../context.js";
 import { cx } from "../part.js";
 import { SCHEME_ATTRIBUTE } from "../sheet-base.js";
-import { bannerSentence, callName, codecOf, MOCK_COPY, STATE_LABELS } from "./language.js";
+import {
+  bannerSentence,
+  callName,
+  codecOf,
+  MOCK_COPY,
+  SHAPE_LABELS,
+  STATE_LABELS,
+} from "./language.js";
 import { MOCK_CSS } from "./sheet.js";
 
 import type { OverlayHost } from "@maple-kit/core/overlay";
@@ -193,6 +200,16 @@ function CallRow(props: { row: MockCallRow; client: MockClient }): ReactElement 
       createElement("span", { className: "mk-mock-codec" }, codecOf(row.key)),
       callName(row.key),
     ),
+    row.source === undefined
+      ? null
+      : createElement(
+          "span",
+          {
+            className: "mk-mock-rung",
+            title: `${MOCK_COPY.shapeFrom} ${SHAPE_LABELS[row.source]}`,
+          },
+          SHAPE_LABELS[row.source],
+        ),
     createElement(
       "div",
       { className: "mk-mock-states", role: "radiogroup", "aria-label": callName(row.key) },
