@@ -8,6 +8,7 @@ export default defineConfig({
     "src/icons/index.ts",
     "src/island/index.ts",
     "src/marks/index.ts",
+    "src/mock/index.ts",
     "src/notice/index.ts",
     "src/picker/index.ts",
   ],

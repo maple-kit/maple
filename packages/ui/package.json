@@ -22,11 +22,12 @@
   ],
   "exports": {
     ".": "./dist/index.js",
-    "./maple": "./dist/maple.js",
     "./composer": "./dist/composer/index.js",
     "./icons": "./dist/icons/index.js",
     "./island": "./dist/island/index.js",
+    "./maple": "./dist/maple.js",
     "./marks": "./dist/marks/index.js",
+    "./mock": "./dist/mock/index.js",
     "./notice": "./dist/notice/index.js",
     "./picker": "./dist/picker/index.js",
     "./package.json": "./package.json"
@@ -38,6 +39,7 @@
   },
   "dependencies": {
     "@maple-kit/core": "workspace:*",
+    "@maple-kit/mock": "workspace:*",
     "@maple-kit/react": "workspace:*"
   },
   "peerDependencies": {

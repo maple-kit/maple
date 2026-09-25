@@ -1,0 +1,286 @@
+import { createInventory, createMockClient, decodeRecipe, installMock } from "@maple-kit/mock";
+import { createElement } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { render } from "vitest-browser-react";
+import { page, userEvent } from "vitest/browser";
+
+import { Maple } from "../src/maple.js";
+import { MapleMock } from "../src/mock/index.js";
+import { offlineFetch } from "./offline.js";
+
+import type { Recipe } from "@maple-kit/core/mock";
+import type { MockClient, MockHandle, MockView } from "@maple-kit/mock";
+
+const LIST = "rest:GET /api/reviews";
+const USER = "rest:GET /api/session";
+const HERE = "/";
+
+interface Page {
+  readonly view: MockView;
+  readonly assign: ReturnType<typeof vi.fn>;
+  readonly writeText: ReturnType<typeof vi.fn>;
+}
+
+/** The real window, except that Apply is heard rather than followed. */
+function fakePage(): Page {
+  const assign = vi.fn();
+  const writeText = vi.fn(() => Promise.resolve());
+  const view: MockView = {
+    document,
+    matchMedia: (query) => window.matchMedia(query),
+    getComputedStyle: (element) => window.getComputedStyle(element),
+    location: { href: `${location.origin}${HERE}`, pathname: HERE, assign },
+    sessionStorage,
+    navigator: { clipboard: { writeText } },
+    addEventListener: (type, listener, options) => window.addEventListener(type, listener, options),
+  };
+  return { view, assign, writeText };
+}
+
+function handle(recipe?: Recipe): MockHandle {
+  const inventory = createInventory();
+  for (const key of [LIST, USER]) inventory.record(HERE, { key, status: 200, body: {}, at: 1 });
+  return { recipe, inventory, dispose: () => undefined };
+}
+
+function roots(): ShadowRoot[] {
+  return [...document.querySelectorAll<HTMLElement>("[data-maple-overlay]")].flatMap((host) =>
+    host.shadowRoot ? [host.shadowRoot] : [],
+  );
+}
+
+function find<T extends Element>(selector: string): T | null {
+  for (const root of roots()) {
+    const found = root.querySelector<T>(selector);
+    if (found) return found;
+  }
+  return null;
+}
+
+function buttonNamed(name: string, within: ParentNode | null = find(".mk-mock")) {
+  const found = [...(within?.querySelectorAll<HTMLButtonElement>("button") ?? [])].find(
+    (button) => button.textContent === name,
+  );
+  if (!found) throw new Error(`no button named ${name}`);
+  return found;
+}
+
+const clients: MockClient[] = [];
+
+/** A client the test owns, destroyed after it so no listener outlives it. */
+function track(client: MockClient): MockClient {
+  clients.push(client);
+  return client;
+}
+
+beforeEach(async () => {
+  sessionStorage.clear();
+  localStorage.clear();
+  await page.viewport(1100, 760);
+});
+
+afterEach(() => {
+  for (const client of clients.splice(0)) client.destroy();
+  for (const overlay of document.querySelectorAll("[data-maple-overlay]")) overlay.remove();
+});
+
+describe("MapleMock on a page with no <Maple />", () => {
+  it("draws nothing where no transport is installed", async () => {
+    await render(createElement(MapleMock, { defaultOpen: true }));
+    await userEvent.keyboard("m");
+
+    expect(document.querySelectorAll("[data-maple-overlay]")).toHaveLength(0);
+  });
+
+  it("mounts a shadow host of its own and lists the recorded calls", async () => {
+    const client = track(
+      createMockClient({ handle: handle(), view: fakePage().view, defaultOpen: true }),
+    );
+    await render(createElement(MapleMock, { client }));
+
+    await vi.waitFor(() => expect(find(".mk-mock")).not.toBeNull());
+    expect(roots()).toHaveLength(1);
+    const names = [...(find(".mk-mock-calls")?.querySelectorAll(".mk-mock-name") ?? [])];
+    expect(names.map((name) => name.textContent)).toEqual([
+      "restGET /api/session",
+      "restGET /api/reviews",
+    ]);
+  });
+
+  it("adopts the box's rules and the tokens, and not the island's", async () => {
+    const client = track(
+      createMockClient({ handle: handle(), view: fakePage().view, defaultOpen: true }),
+    );
+    await render(createElement(MapleMock, { client }));
+    await vi.waitFor(() => expect(find(".mk-mock")).not.toBeNull());
+
+    const rules = roots()[0]!.adoptedStyleSheets.flatMap((sheet) =>
+      [...sheet.cssRules].map((rule) => rule.cssText),
+    );
+    expect(rules.some((rule) => rule.startsWith(".mk-mock "))).toBe(true);
+    expect(rules.some((rule) => rule.includes("--mk-accent"))).toBe(true);
+    expect(rules.some((rule) => rule.startsWith(".mk-island"))).toBe(false);
+  });
+});
+
+/** The DoD's shortcut case: a key typed inside the shadow root is typing. */
+describe("the m shortcut inside the shadow root", () => {
+  async function mounted() {
+    const client = track(createMockClient({ handle: handle(), view: fakePage().view }));
+    client.start();
+    await render(createElement(MapleMock, { client }));
+    return client;
+  }
+
+  it("opens the box from the page, focused on its field", async () => {
+    await mounted();
+    await userEvent.keyboard("m");
+
+    await vi.waitFor(() => expect(find(".mk-mock")).not.toBeNull());
+    await vi.waitFor(() => expect(roots()[0]!.activeElement).toBe(find(".mk-mock-field")));
+  });
+
+  it("types an m into the box's own field rather than closing it", async () => {
+    const client = await mounted();
+    await userEvent.keyboard("m");
+    await vi.waitFor(() => expect(roots()[0]?.activeElement).toBe(find(".mk-mock-field")));
+
+    await userEvent.keyboard("mm");
+    expect(find(".mk-mock")).not.toBeNull();
+    expect(client.getState().query).toBe("mm");
+  });
+
+  it("closes on Escape, even from the field", async () => {
+    await mounted();
+    await userEvent.keyboard("m");
+    await vi.waitFor(() => expect(roots()[0]?.activeElement).toBe(find(".mk-mock-field")));
+
+    await userEvent.keyboard("{Escape}");
+    await vi.waitFor(() => expect(find(".mk-mock")).toBeNull());
+  });
+
+  it("ignores m with a modifier", async () => {
+    await mounted();
+    await userEvent.keyboard("{Meta>}m{/Meta}");
+    expect(find(".mk-mock")).toBeNull();
+  });
+});
+
+describe("picking and applying", () => {
+  it("applies a picked state by reloading into a link that carries it", async () => {
+    const { assign, view } = fakePage();
+    const client = track(createMockClient({ handle: handle(), view, defaultOpen: true }));
+    await render(createElement(MapleMock, { client }));
+    await vi.waitFor(() => expect(find(".mk-mock")).not.toBeNull());
+
+    expect(buttonNamed("Apply and reload").disabled).toBe(true);
+    const row = find<HTMLElement>(".mk-mock-call:last-child");
+    buttonNamed("Empty", row).click();
+    await vi.waitFor(() =>
+      expect(buttonNamed("Empty", row).getAttribute("aria-checked")).toBe("true"),
+    );
+    buttonNamed("Apply and reload").click();
+
+    const next = new URL(assign.mock.calls[0]?.[0] as string);
+    expect(decodeRecipe(next.searchParams.get("maple-mock") ?? "")).toEqual({
+      version: 1,
+      calls: [{ key: LIST, state: "empty" }],
+      route: HERE,
+    });
+  });
+
+  it("copies a link and a recipe, with no store to post to", async () => {
+    const { view, writeText } = fakePage();
+    const client = track(createMockClient({ handle: handle(), view, defaultOpen: true }));
+    await render(createElement(MapleMock, { client }));
+    await vi.waitFor(() => expect(find(".mk-mock")).not.toBeNull());
+
+    buttonNamed("Error", find(".mk-mock-call")).click();
+    await vi.waitFor(() => expect(buttonNamed("Copy link").disabled).toBe(false));
+    buttonNamed("Copy link").click();
+    await vi.waitFor(() => expect(buttonNamed("Copied")).toBeDefined());
+    buttonNamed("Copy recipe").click();
+
+    await vi.waitFor(() => expect(writeText).toHaveBeenCalledTimes(2));
+    expect(String(writeText.mock.calls[0]?.[0])).toContain("maple-mock=");
+    expect(JSON.parse(String(writeText.mock.calls[1]?.[0]))).toMatchObject({
+      calls: [{ key: USER, state: "error" }],
+    });
+  });
+});
+
+describe("the banner", () => {
+  const active: Recipe = { version: 1, calls: [{ key: LIST, state: "empty" }], route: HERE };
+
+  it("is on while a mock is, with Turn off and no dismiss", async () => {
+    const { assign, view } = fakePage();
+    const client = track(createMockClient({ handle: handle(active), view }));
+    await render(createElement(MapleMock, { client }));
+
+    await vi.waitFor(() => expect(find(".mk-mock-banner")).not.toBeNull());
+    const banner = find<HTMLElement>(".mk-mock-banner")!;
+    expect(banner.textContent).toContain("GET /api/reviews is empty");
+    const labels = [...banner.querySelectorAll("button")].map((button) => button.textContent);
+    expect(labels).toEqual(["Edit", "Turn off"]);
+
+    buttonNamed("Turn off", banner).click();
+    expect(new URL(assign.mock.calls[0]?.[0] as string).searchParams.has("maple-mock")).toBe(false);
+  });
+
+  it("opens the box from Edit, with the mock's calls already chosen", async () => {
+    const client = track(createMockClient({ handle: handle(active), view: fakePage().view }));
+    await render(createElement(MapleMock, { client }));
+    await vi.waitFor(() => expect(find(".mk-mock-banner")).not.toBeNull());
+
+    buttonNamed("Edit", find(".mk-mock-banner")).click();
+    await vi.waitFor(() => expect(find(".mk-mock")).not.toBeNull());
+    expect(find('.mk-mock-call[data-mk-mocked="true"]')?.textContent).toContain("/api/reviews");
+  });
+});
+
+describe("Maple.Mock inside <Maple />", () => {
+  let installed: MockHandle | undefined;
+
+  afterEach(() => {
+    installed?.dispose();
+    installed = undefined;
+  });
+
+  function maple() {
+    return createElement(Maple, {
+      branch: "feat/mock",
+      theme: "light",
+      options: { fetch: offlineFetch() },
+    });
+  }
+
+  it("is absent where mocking is off", async () => {
+    await render(maple());
+    await vi.waitFor(() => expect(roots()).toHaveLength(1));
+    await userEvent.keyboard("m");
+
+    expect(find(".mk-mock")).toBeNull();
+  });
+
+  it("shares the overlay's shadow root where a transport is installed", async () => {
+    installed = installMock({ ignore: () => true });
+    await render(maple());
+    await vi.waitFor(() => expect(find(".mk-pill")).not.toBeNull());
+
+    await userEvent.keyboard("m");
+    await vi.waitFor(() => expect(find(".mk-mock")).not.toBeNull());
+    expect(roots()).toHaveLength(1);
+  });
+
+  it("does not start a comment pick when c is typed into the box", async () => {
+    installed = installMock({ ignore: () => true });
+    await render(maple());
+    await vi.waitFor(() => expect(find(".mk-pill")).not.toBeNull());
+    await userEvent.keyboard("m");
+    await vi.waitFor(() => expect(roots()[0]?.activeElement).toBe(find(".mk-mock-field")));
+
+    await userEvent.keyboard("c");
+    expect(find(".mk-shield")).toBeNull();
+    expect(find<HTMLInputElement>(".mk-mock-field")?.value).toBe("c");
+  });
+});

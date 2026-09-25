@@ -17,8 +17,11 @@ npm install @maple-kit/ui
 ## What is in it
 
 `@maple-kit/ui/maple` is the whole overlay as one component. The parts are also
-exported on their own: `/marks`, `/island`, `/composer`, `/picker`, `/notice`
-and `/icons`.
+exported on their own: `/marks`, `/island`, `/composer`, `/picker`, `/notice`,
+`/mock` and `/icons`.
+
+`@maple-kit/ui/mock` is Maple Mock's box, `<MapleMock />`, for a page that
+mocks without the review overlay. Inside `<Maple />` it is already mounted.
 
 Everything renders inside one shadow root, styled only through
 `new CSSStyleSheet()` and `adoptedStyleSheets`, with positions set by

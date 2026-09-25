@@ -72,6 +72,7 @@ describe("the exports map", () => {
       "./island",
       "./maple",
       "./marks",
+      "./mock",
       "./notice",
       "./package.json",
       "./picker",

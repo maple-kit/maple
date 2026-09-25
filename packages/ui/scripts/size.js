@@ -16,13 +16,16 @@ import { gzipSync } from "node:zlib";
 
 const DIST = resolve(dirname(fileURLToPath(import.meta.url)), "..", "dist");
 
+/** The mock box alone, which is also what a page with no `<Maple />` carries. */
+const MOCK_MAX = 4 * 1024;
+
 /** Each budget is the gzipped size of the modules only that column reaches. */
 const BUDGETS = [
-  // 13 KB until the score card, which is a collapsible context card, five
-  // distribution bars and a kind chip. Its 0.7 KB is what a judgement drawn
-  // honestly costs: the bars are the distribution rather than a percentage,
-  // which is five rules instead of one and is why it needs no key beside it.
-  { name: "the adopted stylesheet", entries: ["stylesheet.js"], max: 14 * 1024 },
+  // 13 KB until the score card, 0.7 KB of distribution bars drawn honestly;
+  // 14 KB until the mock box, 0.6 KB whose rules ride in this sheet so
+  // Maple.Mock needs no second one inside <Maple />. A page that only mocks
+  // adopts MOCK_CSS instead, weighed with the box's own graph below.
+  { name: "the adopted stylesheet", entries: ["stylesheet.js"], max: 15 * 1024 },
   // 22 KB until the wordmark, 1.7 KB of path data the header always reaches;
   // 24 KB until the sign-off and the unsent list, 0.7 KB between them; 26 KB
   // until the pixel leaf, whose 263 rectangles are 1.3 KB the header reaches
@@ -38,10 +41,30 @@ const BUDGETS = [
   { name: "composer, on top", entries: ["composer/index.js"], max: 10 * 1024 },
   { name: "picker, on top", entries: ["picker/index.js"], max: 3 * 1024 },
   { name: "notice, on top", entries: ["notice/index.js"], max: 1024 },
+  { name: "the mock box, on top", entries: ["mock/index.js"], max: MOCK_MAX },
   { name: "the default composition, on top", entries: ["maple.js"], max: 1024 },
 ];
 
 const RELATIVE_IMPORT = /(?:from|import)[\s(]+["'](\.[^"']+)["']/g;
+const PACKAGE_IMPORT = /(?:from|import)[\s(]+["']([^."'][^"']*)["']/g;
+
+/**
+ * What an entry must never reach: the box carries no other part, and the
+ * composition, which carries the box, never imports the interceptor.
+ */
+const FORBIDDEN = [
+  {
+    entry: "mock/index.js",
+    modules: /^(island|composer|marks|picker)\//,
+    packages: /^$/,
+    max: 7 * 1024,
+  },
+  {
+    entry: "maple.js",
+    modules: /^$/,
+    packages: /^(@mswjs\/interceptors|@maple-kit\/mock|@maple-kit\/mock\/(install|msw|node))$/,
+  },
+];
 
 function read(id) {
   return readFileSync(join(DIST, id), "utf8");
@@ -71,7 +94,32 @@ function weigh(ids) {
   return gzipSync(sorted.map(read).join("\n"), { level: 9 }).byteLength;
 }
 
+/** Every bare specifier the modules import. */
+function packagesOf(ids) {
+  return new Set([...ids].flatMap((id) => [...read(id).matchAll(PACKAGE_IMPORT)].map((m) => m[1])));
+}
+
 let failed = false;
+
+for (const rule of FORBIDDEN) {
+  const modules = graph([rule.entry]);
+  const reached = [
+    ...[...modules].filter((id) => rule.modules.test(id)),
+    ...[...packagesOf(modules)].filter((name) => rule.packages.test(name)),
+  ];
+  const bytes = weigh(modules);
+  const kb = (bytes / 1024).toFixed(1);
+  if (reached.length > 0) {
+    failed = true;
+    process.stderr.write(`${rule.entry} reaches what it must not: ${reached.sort().join(", ")}\n`);
+  } else if (rule.max !== undefined && bytes > rule.max) {
+    failed = true;
+    process.stderr.write(`${rule.entry}: ${kb} KB gzipped alone, over ${rule.max / 1024} KB\n`);
+  } else {
+    process.stdout.write(`${rule.entry}: ${kb} KB gzipped with everything it reaches, clean\n`);
+  }
+}
+
 const counted = new Set();
 
 for (const budget of BUDGETS) {

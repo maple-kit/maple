@@ -37,6 +37,7 @@ import {
 } from "./island/index.js";
 import { PICK_ORDER } from "./island/language.js";
 import { MapleMarkLayer } from "./marks/index.js";
+import { MapleMock } from "./mock/index.js";
 import { MapleNotice } from "./notice/index.js";
 import { MaplePicker } from "./picker/index.js";
 import { MapleRoot } from "./root.js";
@@ -68,7 +69,8 @@ export interface MapleProps extends MapleRootProps {
 
 /**
  * The whole reviewer interface: the marks on the page, the picker, the
- * inventory and the composer, over one shadow root and one controller.
+ * inventory and the composer, over one shadow root and one controller, and the
+ * mock box on a page where Maple Mock's transport is installed.
  */
 export const Maple = /** @__PURE__ */ forwardRef<HTMLDivElement, MapleProps>(
   function Maple(props, ref) {
@@ -81,6 +83,7 @@ export const Maple = /** @__PURE__ */ forwardRef<HTMLDivElement, MapleProps>(
       createElement(MaplePicker, { key: "picker", ...(hint === undefined ? {} : { hint }) }),
       inventory(root.branch, root.label, defaultOpen === true),
       composer(leave, attachments),
+      createElement(MapleMock, { key: "mock" }),
       children,
     );
   },
