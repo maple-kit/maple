@@ -1,21 +1,28 @@
 /**
  * The jev classifier: Maple's assist tier backed by a System One model.
  *
- * One request carries every pillar's question and the kind's together, which
- * is what makes scoring a comment as it is typed affordable at all. jev reads
- * the comment once and answers each question against it in parallel.
+ * One request carries every pillar's question and the kind's together, and a
+ * mock's state and every call's together, which is what makes judging as it
+ * is typed affordable at all. jev reads the state once, answers in parallel.
  */
 
 import { DEFAULT_PILLARS, selectPillars } from "@maple-kit/core/connectors";
 
 import { openSystemOne } from "./internal/systemone.js";
 import {
+  callKey,
+  callQuestion,
   KIND_KEY,
   kindGuessFrom,
   kindQuestion,
   pillarKey,
   pillarQuestion,
   pillarScoreFrom,
+  PLAN_STATE_KEY,
+  plannedCallFrom,
+  planStateFor,
+  planStateFrom,
+  planStateQuestion,
   stateFor,
 } from "./questions.js";
 
@@ -24,6 +31,8 @@ import type {
   ClassifierConnector,
   ClassifierRequest,
   KindGuess,
+  MockPlan,
+  MockPlanRequest,
   Pillar,
   PillarScore,
   ScoreRequest,
@@ -42,10 +51,15 @@ export interface JevClassifierOptions {
   readonly model?: string | undefined;
   /** What to judge against. Defaults to Maple's five. */
   readonly pillars?: readonly Pillar[] | undefined;
+  /** How long one judgement may take before it is abandoned. Defaults to 8 s. */
+  readonly timeoutMs?: number | undefined;
 }
 
 /** The alias, not a pinned version: `typesafe/jev-1.13` is another listing's id. */
 const DEFAULT_MODEL = "jev-latest";
+
+/** Past this a keystroke's judgement is stale: the next one is on its way. */
+const DEFAULT_TIMEOUT_MS = 8000;
 
 /** Builds the connector. Nothing is requested until something is scored. */
 export function jevClassifier(options: JevClassifierOptions): ClassifierConnector {
@@ -67,6 +81,27 @@ export function jevClassifier(options: JevClassifierOptions): ClassifierConnecto
       const answers = await ask(connector, "score", request, questions);
       return asked.map((pillar) => pillarScoreFrom(pillar, answerAt(answers, pillarKey(pillar))));
     },
+
+    async plan(request: MockPlanRequest): Promise<MockPlan> {
+      const questions: Record<string, Question> = { [PLAN_STATE_KEY]: planStateQuestion() };
+      request.calls.forEach((call, index) => {
+        questions[callKey(index)] = callQuestion(index, call.key);
+      });
+
+      const answers = await open().ask({
+        connector: connector.name,
+        operation: "plan",
+        questions,
+        signal: request.signal,
+        state: planStateFor(request),
+      });
+      return {
+        ...planStateFrom(answerAt(answers, PLAN_STATE_KEY)),
+        calls: request.calls.map((call, index) =>
+          plannedCallFrom(call.key, answerAt(answers, callKey(index))),
+        ),
+      };
+    },
   };
 
   const open = once(() =>
@@ -74,6 +109,7 @@ export function jevClassifier(options: JevClassifierOptions): ClassifierConnecto
       apiKey: options.apiKey,
       baseUrl: options.baseUrl,
       model: options.model ?? DEFAULT_MODEL,
+      timeoutMs: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
     }),
   );
 

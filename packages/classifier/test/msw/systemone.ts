@@ -6,7 +6,7 @@
  * constant cannot say how many calls were made, or what was asked in them.
  */
 
-import { http, HttpResponse } from "msw";
+import { delay, http, HttpResponse } from "msw";
 
 import type { RequestHandler } from "msw";
 
@@ -26,6 +26,8 @@ export interface SystemOneFake {
   readonly asked: readonly Asked[];
   /** Answers the next request with this status and body instead. */
   failNext(status: number, body?: unknown): void;
+  /** Never answers the next request, so the caller's timeout is what ends it. */
+  stallNext(): void;
   /** Forgets every request, so one test cannot see another's. */
   reset(): void;
 }
@@ -34,9 +36,14 @@ export interface SystemOneFake {
 export function createSystemOneFake(url = ENDPOINT): SystemOneFake {
   const asked: Asked[] = [];
   let failure: { status: number; body: unknown } | undefined;
+  let stalling = false;
 
   const handlers: RequestHandler[] = [
     http.post(url, async ({ request }) => {
+      if (stalling) {
+        stalling = false;
+        await delay("infinite");
+      }
       if (failure !== undefined) {
         const { status, body } = failure;
         failure = undefined;
@@ -49,7 +56,10 @@ export function createSystemOneFake(url = ENDPOINT): SystemOneFake {
       return HttpResponse.json({
         model: "jev-1.13.0",
         answers: Object.fromEntries(
-          Object.entries(payload.questions).map(([key, question]) => [key, answerTo(question)]),
+          Object.entries(payload.questions).map(([key, question]) => [
+            key,
+            answerTo(key, question),
+          ]),
         ),
         usage: { input_tokens: 512, output_tokens: 64 },
       });
@@ -61,16 +71,26 @@ export function createSystemOneFake(url = ENDPOINT): SystemOneFake {
     failNext(status, body) {
       failure = { status, body };
     },
+    stallNext() {
+      stalling = true;
+    },
     handlers,
     reset() {
       asked.length = 0;
       failure = undefined;
+      stalling = false;
     },
   };
 }
 
-/** A lopsided but legal distribution, so a test can tell the levels apart. */
-function answerTo(question: { type: string; criteria: unknown }): unknown {
+/**
+ * A lopsided but legal distribution, so a test can tell the levels apart. A
+ * `noul` about an even-numbered call holds and an odd-numbered one does not.
+ */
+function answerTo(key: string, question: { type: string; criteria: unknown }): unknown {
+  if (question.type === "noul") {
+    return { type: "noul", noul: Number(key.split(":")[1] ?? 0) % 2 === 0 ? 0.8 : 0.2 };
+  }
   if (question.type === "choice") {
     const options = Object.keys(question.criteria as Record<string, string>);
     return {

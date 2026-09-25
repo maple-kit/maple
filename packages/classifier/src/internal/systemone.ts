@@ -13,16 +13,15 @@ import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
 
 import { ClassifierRequestError } from "../errors.js";
 
-import type { Answer, Question } from "../questions.js";
-
-/** How long one judgement may take before it is abandoned as stale. */
-const TIMEOUT = "8 seconds";
+import type { Answer, Json, Question } from "../questions.js";
 
 /** What the caller supplies once, when the connector is built. */
 export interface SystemOneOptions {
   readonly apiKey: string;
   readonly baseUrl?: string | undefined;
   readonly model: string;
+  /** How long one judgement may take before it is abandoned as stale. */
+  readonly timeoutMs: number;
 }
 
 /** What one question map is asked about. */
@@ -31,7 +30,7 @@ export interface SystemOneCall {
   readonly operation: string;
   readonly questions: Readonly<Record<string, Question>>;
   readonly signal: AbortSignal | undefined;
-  readonly state: { readonly comment: string };
+  readonly state: { readonly [key: string]: Json };
 }
 
 /** A live connection to one System One endpoint, reused across calls. */
@@ -55,7 +54,7 @@ export function openSystemOne(options: SystemOneOptions): SystemOne {
       const request = { model: options.model, questions: call.questions, state: call.state };
       const program = Effect.timeout(
         Effect.flatMap(TypeSafeClient.TypeSafeClient, (client) => client.systemOne(request)),
-        TIMEOUT,
+        options.timeoutMs,
       );
 
       const exit = await runtime.runPromiseExit(program, { signal: call.signal });

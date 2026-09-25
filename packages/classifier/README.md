@@ -34,12 +34,13 @@ A model credential in a preview bundle is the failure this architecture exists
 to prevent, and routing through the same origin is what leaves the host's
 `connect-src` unchanged.
 
-| Option    | Default                      | What it is                                                                    |
-| --------- | ---------------------------- | ----------------------------------------------------------------------------- |
-| `apiKey`  | —                            | The credential. Server-side only.                                             |
-| `baseUrl` | `https://api.typesafe.ai/v1` | The API root `/systemone` is appended to. A local reimplementation goes here. |
-| `model`   | `jev-latest`                 | An alias or a pinned version id.                                              |
-| `pillars` | `DEFAULT_PILLARS`            | What to judge against. The host configures these; a reviewer never does.      |
+| Option      | Default                      | What it is                                                                    |
+| ----------- | ---------------------------- | ----------------------------------------------------------------------------- |
+| `apiKey`    | —                            | The credential. Server-side only.                                             |
+| `baseUrl`   | `https://api.typesafe.ai/v1` | The API root `/systemone` is appended to. A local reimplementation goes here. |
+| `model`     | `jev-latest`                 | An alias or a pinned version id.                                              |
+| `pillars`   | `DEFAULT_PILLARS`            | What to judge against. The host configures these; a reviewer never does.      |
+| `timeoutMs` | `8000`                       | How long one judgement may take before it is abandoned as stale.              |
 
 ## What one request costs
 
@@ -47,6 +48,9 @@ Every pillar's question and the kind's travel in **one** request. jev reads the
 comment once and answers each question against it in parallel, which is what
 makes scoring on a keystroke affordable: five pillars plus the kind is a single
 call of roughly 1,300 input tokens.
+
+A mock plan is one request as well: the state as a `choice`, and one `noul`
+question per call the page made.
 
 There are no retries. This runs on a keystroke — a retry holds the request open
 past the moment its answer was wanted, and the next keystroke is a better retry

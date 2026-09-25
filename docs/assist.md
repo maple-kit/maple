@@ -200,6 +200,8 @@ those are what the answers mean:
 | `PillarScore.level`        | the level index that took the most probability         |
 | `PillarScore.distribution` | jev's own per-level probabilities                      |
 | `CommentKind`              | one option of the `choice` question's `criteria`       |
+| `MockPlan.state`           | one option of a second `choice`, over the plan states  |
+| `PlannedCall.p`            | the `noul` question asked about that call              |
 
 Two sentences are appended to every pillar's instruction, and both were arrived
 at by asking the model and reading the answers. Without the first, a model

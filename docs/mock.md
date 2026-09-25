@@ -376,6 +376,17 @@ It reads no grammar: "no errors" is `empty` and `error` at once, and two
 states named equally come out torn between them, which is the honest answer
 for a word list.
 
+**jev plans in one request.** `jevClassifier().plan` sends the sentence, the
+route and the calls as the `state`, and asks one `choice` over the seven plan
+states, described by `MOCK_PLAN_STATE_DESCRIPTIONS`, and one `noul` per call:
+does the sentence concern `calls[i]`? The probabilities are jev's own: the
+state's distribution is the choice's, and each call's `p` is its `noul`. A
+route with no calls asks only the state. The questions are keyed by index,
+`call:0`, since a call key is any text.
+
+A plan is a keystroke's judgement like a score, so there are no retries, and
+`timeoutMs` (8 s by default) abandons one the endpoint never answers.
+
 ## The inventory
 
 The last real 2xx answer of every call, per route pattern, in memory and in
@@ -435,7 +446,7 @@ answer 404 without one.
   answers its default error shape.
 - A delay for `loading`. It holds until the page reloads, and a held call in a
   batch holds the whole batch.
-- The plan's model and its place in the box (#170). The box's
+- The plan's place in the box (#170). The box's
   field filters; it does not read a sentence yet.
 - A second box on the same page. Each claims `m`, and the first to hear it
   opens.

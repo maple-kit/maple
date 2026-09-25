@@ -1,4 +1,4 @@
-import { DEFAULT_PILLARS } from "@maple-kit/core/connectors";
+import { DEFAULT_PILLARS, MOCK_PLAN_STATES } from "@maple-kit/core/connectors";
 import { runClassifierContract } from "@maple-kit/core/testing";
 import { delay, http, HttpResponse } from "msw";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -12,6 +12,13 @@ const server = createTestServer(...fake.handlers);
 
 useTestServer(server, { afterAll, afterEach, beforeAll });
 afterEach(() => fake.reset());
+
+/** Calls a page recorded, as a planner is given them. */
+const CALLS = [
+  { key: "trpc:roast.list", summary: "Roast[]: every roast" },
+  { key: "trpc:user.me", summary: "User: who is signed in" },
+  { key: "rest:POST /api/roasts", summary: "Roast: creates one" },
+];
 
 /** The connector every test here builds, against the fake endpoint. */
 function connector(options: Partial<Parameters<typeof jevClassifier>[0]> = {}) {
@@ -124,6 +131,63 @@ describe("jevClassifier", () => {
     controller.abort();
 
     await expect(judging).rejects.toThrow();
+  });
+
+  it("plans a sentence in one request: its state, and one question per call", async () => {
+    await connector().plan?.({ request: "no roasts", route: "/roasts", calls: CALLS });
+
+    expect(fake.asked).toHaveLength(1);
+    const questions = fake.asked[0]?.questions ?? {};
+    expect(Object.keys(questions)).toEqual(["state", "call:0", "call:1", "call:2"]);
+    expect(questions["state"]?.type).toBe("choice");
+    expect(Object.keys(questions["state"]?.criteria as object)).toEqual(MOCK_PLAN_STATES);
+    expect(questions["call:1"]?.type).toBe("noul");
+    expect(questions["call:1"]?.instructions).toContain("trpc:user.me");
+  });
+
+  it("sends the sentence, the route and the calls as the state, and nothing else", async () => {
+    await connector().plan?.({ request: "no roasts", route: "/roasts", calls: CALLS });
+
+    expect(fake.asked[0]?.state).toEqual({ request: "no roasts", route: "/roasts", calls: CALLS });
+  });
+
+  it("keeps jev's own probabilities for the state and for every call", async () => {
+    const plan = await connector().plan?.({ request: "x", route: "/", calls: CALLS });
+
+    expect(plan?.state).toBe(MOCK_PLAN_STATES[1]);
+    expect(plan?.distribution[MOCK_PLAN_STATES[1]!]).toBeCloseTo(0.7, 10);
+    expect(plan?.confidence).toBeCloseTo(0.7, 10);
+    expect(plan?.calls).toEqual([
+      { key: "trpc:roast.list", concerned: true, p: 0.8 },
+      { key: "trpc:user.me", concerned: false, p: 0.2 },
+      { key: "rest:POST /api/roasts", concerned: true, p: 0.8 },
+    ]);
+  });
+
+  it("asks only for the state when the route has made no calls", async () => {
+    const plan = await connector().plan?.({ request: "empty", route: "/", calls: [] });
+
+    expect(Object.keys(fake.asked[0]?.questions ?? {})).toEqual(["state"]);
+    expect(plan?.calls).toEqual([]);
+  });
+
+  it("reports an account out of credit as a plain error, without retrying", async () => {
+    fake.failNext(402, { detail: "PaymentRequired" });
+
+    await expect(connector().plan?.({ request: "x", route: "/", calls: CALLS })).rejects.toThrow(
+      /^Classifier "jev" could not plan/,
+    );
+    expect(fake.asked).toHaveLength(0);
+  });
+
+  it("abandons a plan the endpoint never answers, at its timeout", async () => {
+    fake.stallNext();
+    const started = Date.now();
+
+    await expect(
+      connector({ timeoutMs: 50 }).plan?.({ request: "x", route: "/", calls: CALLS }),
+    ).rejects.toThrow(/could not plan/);
+    expect(Date.now() - started).toBeLessThan(2000);
   });
 
   it("costs nothing until something is judged", () => {

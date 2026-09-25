@@ -2,18 +2,30 @@
  * The translation between Maple's vocabulary and jev's.
  *
  * Nothing here reaches a network. A pillar becomes a `score` question, the
- * kind becomes a `choice`, and each answer's own probabilities become the
- * distribution a surface renders. `docs/assist.md` says why a distribution is
- * carried rather than a level.
+ * kind and a mock's state become a `choice`, a call a mock concerns a `noul`,
+ * and each answer's own probabilities become the distribution a surface
+ * renders. `docs/assist.md` says why a distribution is carried, not a level.
  */
 
 import {
   COMMENT_KIND_DESCRIPTIONS,
   COMMENT_KINDS,
   FALLBACK_KIND,
+  MOCK_PLAN_STATE_DESCRIPTIONS,
+  MOCK_PLAN_STATES,
+  plannedCall,
 } from "@maple-kit/core/connectors";
 
-import type { CommentKind, KindGuess, Pillar, PillarScore } from "@maple-kit/core/connectors";
+import type {
+  CommentKind,
+  KindGuess,
+  MockPlanRequest,
+  MockPlanState,
+  Pillar,
+  PillarScore,
+  PlannedCall,
+  StateGuess,
+} from "@maple-kit/core/connectors";
 
 /** The key the kind question is asked and answered under. */
 export const KIND_KEY = "kind";
@@ -37,14 +49,22 @@ export interface ScoreQuestion {
   readonly type: "score";
 }
 
-/** Either, in the shape the System One endpoint takes. */
-export type Question = ChoiceQuestion | ScoreQuestion;
+/** A jev question answered with one probability that it holds. */
+export interface NoulQuestion {
+  readonly criteria?: { readonly false: string; readonly true: string };
+  readonly instructions: string;
+  readonly type: "noul";
+}
+
+/** Any of them, in the shape the System One endpoint takes. */
+export type Question = ChoiceQuestion | NoulQuestion | ScoreQuestion;
 
 /** A jev answer, in the shape the System One endpoint returns. */
 export interface Answer {
   readonly type: string;
   readonly choice?: string;
   readonly confidence?: number;
+  readonly noul?: number;
   readonly probabilities?: Readonly<Record<string, number>>;
 }
 
@@ -56,9 +76,77 @@ const FRAMING =
   "Judge the review comment in `comment` on how it is written, not on whether what" +
   " it describes is a real problem. It may be half-written; judge what is there.";
 
+/** What a request's `state` may hold: JSON, and nothing a model cannot read. */
+export type Json =
+  boolean | number | string | null | readonly Json[] | { readonly [key: string]: Json };
+
 /** The `state` one request carries: the comment, and nothing else. */
 export function stateFor(body: string): { readonly comment: string } {
   return { comment: body };
+}
+
+/** The key a mock's state is asked and answered under. */
+export const PLAN_STATE_KEY = "state";
+
+/** The key one call is asked about under: its index, since a key is any text. */
+export function callKey(index: number): string {
+  return `call:${index}`;
+}
+
+/** A mock request's `state`: the sentence, its route and the calls, as they came. */
+export function planStateFor(request: MockPlanRequest): { readonly [key: string]: Json } {
+  return {
+    request: request.request,
+    route: request.route,
+    calls: request.calls.map(({ key, summary }) => ({ key, summary })),
+  };
+}
+
+/** The state a mock request names, as a `choice` over every plan state. */
+export function planStateQuestion(): ChoiceQuestion {
+  return {
+    type: "choice",
+    instructions:
+      "A reviewer typed `request` to see the page at `route` in some state of its" +
+      " data; `calls` are the requests that page made. Which state does it ask for?" +
+      " It may be half-typed; judge what is there.",
+    criteria: Object.fromEntries(
+      MOCK_PLAN_STATES.map((state) => [state, MOCK_PLAN_STATE_DESCRIPTIONS[state]]),
+    ),
+  };
+}
+
+/** Whether the request concerns one call, as a `noul`. */
+export function callQuestion(index: number, key: string): NoulQuestion {
+  return {
+    type: "noul",
+    instructions:
+      `Does the reviewer's \`request\` concern \`calls[${index}]\` (${key})? A request` +
+      " about the whole page concerns every call that reads data, and none that writes it.",
+    criteria: {
+      true: "The request is about what this call returns, or about the whole page's data.",
+      false: "The request is about other calls, or names nothing this call returns.",
+    },
+  };
+}
+
+/** A `choice` answer over the plan states, as a guess. */
+export function planStateFrom(answer: Answer): StateGuess {
+  const shares = normalise(MOCK_PLAN_STATES.map((state) => at(answer.probabilities, state)));
+  const distribution = {} as Record<MockPlanState, number>;
+  MOCK_PLAN_STATES.forEach((state, index) => {
+    distribution[state] = shares[index] ?? 0;
+  });
+
+  const chosen = MOCK_PLAN_STATES.find((state) => state === answer.choice);
+  const state = chosen ?? MOCK_PLAN_STATES[argmax(shares)] ?? "none";
+  return { state, distribution, confidence: clamp01(answer.confidence ?? concentration(shares)) };
+}
+
+/** A `noul` answer as a call's verdict. A missing probability is no evidence either way. */
+export function plannedCallFrom(key: string, answer: Answer): PlannedCall {
+  const p = typeof answer.noul === "number" && Number.isFinite(answer.noul) ? answer.noul : 0;
+  return plannedCall(key, p);
 }
 
 /**
