@@ -6,11 +6,9 @@
  * a page that only mocks. Built from the token contract like every other part.
  */
 
-import { SHEET_BREAKPOINT_PX } from "../tokens.js";
-
 /** Every rule the box and the banner need, and nothing another part owns. */
 export function mockCss(): string {
-  return [box(), suggest(), calls(), states(), foot(), banner(), narrow()].join("\n\n");
+  return [box(), suggest(), calls(), states(), foot(), banner()].join("\n\n");
 }
 
 function box(): string {
@@ -138,8 +136,9 @@ function calls(): string {
 
 .mk-mock-call {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 4px 10px;
   padding: 6px;
   border-radius: var(--mk-r-sm);
 }
@@ -149,7 +148,7 @@ function calls(): string {
 }
 
 .mk-mock-name {
-  flex: 1 1 auto;
+  flex: 1 1 160px;
   min-width: 0;
   display: flex;
   align-items: baseline;
@@ -186,9 +185,12 @@ function calls(): string {
 function states(): string {
   return `
 .mk-mock-states {
-  flex: none;
+  flex: 0 1 auto;
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 2px;
+  margin-left: auto;
 }
 
 .mk-mock-state {
@@ -302,20 +304,6 @@ function banner(): string {
   flex: none;
   padding: 3px 10px;
   font-size: 11.5px;
-}
-`.trim();
-}
-
-function narrow(): string {
-  return `
-@media (max-width: ${String(SHEET_BREAKPOINT_PX - 1)}px) {
-  .mk-mock-call {
-    flex-wrap: wrap;
-  }
-
-  .mk-mock-states {
-    flex-wrap: wrap;
-  }
 }
 `.trim();
 }

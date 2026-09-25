@@ -620,8 +620,11 @@ leaves it working in memory.
 ## The box
 
 `<MapleMock />` from `@maple-kit/ui/mock` is how a reviewer picks a state. It
-lists the calls the page has made on this route and the six states beside each,
-and Apply reloads into the choice. `m` opens and closes it and Escape closes it.
+lists the calls the page has made on this route and the nine states beside each,
+and Apply reloads into the choice. A call's name keeps at least 160 px: where
+the nine buttons do not fit beside it they wrap onto their own line, and onto
+two at phone width, rather than going behind a menu, so every state stays one
+click away. `m` opens and closes it and Escape closes it.
 Inside `<Maple />` it is `Maple.Mock`, the same part, in the overlay's own
 shadow root.
 

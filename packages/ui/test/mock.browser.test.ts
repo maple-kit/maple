@@ -130,6 +130,34 @@ describe("MapleMock on a page with no <Maple />", () => {
   });
 });
 
+describe("nine states beside a call", () => {
+  it.each([
+    [1100, 1],
+    [390, 2],
+  ])("keeps every button inside its row at %i px, on %i lines", async (width, lines) => {
+    await page.viewport(width, 760);
+    const client = track(
+      createMockClient({ handle: handle(), view: fakePage().view, defaultOpen: true }),
+    );
+    await render(createElement(MapleMock, { client }));
+    await vi.waitFor(() => expect(find(".mk-mock-call")).not.toBeNull());
+
+    const row = find(".mk-mock-call")!;
+    const edge = row.getBoundingClientRect();
+    const buttons = [...row.querySelectorAll(".mk-mock-state")].map((button) =>
+      button.getBoundingClientRect(),
+    );
+    expect(buttons.map((button) => button.width)).toHaveLength(9);
+    for (const button of buttons) {
+      expect(button.left).toBeGreaterThanOrEqual(edge.left);
+      expect(button.right).toBeLessThanOrEqual(edge.right);
+    }
+    expect(new Set(buttons.map((button) => Math.round(button.top))).size).toBe(lines);
+    const name = row.querySelector(".mk-mock-name")!.getBoundingClientRect();
+    expect(name.width).toBeGreaterThanOrEqual(160);
+  });
+});
+
 /** The DoD's shortcut case: a key typed inside the shadow root is typing. */
 describe("the m shortcut inside the shadow root", () => {
   async function mounted() {
