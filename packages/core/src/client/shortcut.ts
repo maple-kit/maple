@@ -1,5 +1,5 @@
 /**
- * The one bare-key shortcut: `c` starts a comment.
+ * The two bare-key shortcuts: `c` starts a comment, `m` opens the mock box.
  *
  * A bare key has to check its modifiers. `Ctrl`+`C` is copy, and the first
  * build of this fired on the key alone, so copying a paragraph closed the
@@ -10,6 +10,9 @@
 /** The key, so a binding can name it in a tooltip without repeating the letter. */
 export const COMMENT_SHORTCUT = "c";
 
+/** The key that opens Maple Mock's box. */
+export const MOCK_SHORTCUT = "m";
+
 /** The parts of a keyboard event this decision needs. Structural, so it tests flat. */
 export interface ShortcutEvent {
   readonly key: string;
@@ -18,16 +21,36 @@ export interface ShortcutEvent {
   readonly altKey?: boolean;
   readonly defaultPrevented?: boolean;
   readonly target?: unknown;
+  /** A shadow root retargets `target` to its host; the path's head is what was typed into. */
+  readonly composedPath?: () => readonly unknown[];
 }
 
 const TYPING_TAGS = new Set(["INPUT", "SELECT", "TEXTAREA"]);
 
 /** True when this keystroke means "start a comment" and nothing else. */
 export function opensComposer(event: ShortcutEvent, key: string = COMMENT_SHORTCUT): boolean {
+  return pressed(event, key);
+}
+
+/** True when this keystroke means "open the mock box" and nothing else. */
+export function opensMock(event: ShortcutEvent, key: string = MOCK_SHORTCUT): boolean {
+  return pressed(event, key);
+}
+
+function pressed(event: ShortcutEvent, key: string): boolean {
   if (event.key.toLowerCase() !== key.toLowerCase()) return false;
   if (event.metaKey || event.ctrlKey || event.altKey) return false;
   if (event.defaultPrevented) return false;
-  return !isEditable(event.target);
+  return !isEditable(typedInto(event));
+}
+
+/**
+ * What the key landed on. A listener on the document sees a key typed into a
+ * shadow root as landing on its host, which is a `div` and not editable.
+ */
+function typedInto(event: ShortcutEvent): unknown {
+  const path = event.composedPath?.();
+  return path !== undefined && path.length > 0 ? path[0] : event.target;
 }
 
 /** How a surface asks to be told about Escape. */

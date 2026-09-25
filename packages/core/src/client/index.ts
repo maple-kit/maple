@@ -53,7 +53,14 @@ export type {
   PreferencesOptions,
   StoredPreferences,
 } from "./preferences.js";
-export { COMMENT_SHORTCUT, isEditable, opensComposer, watchEscape } from "./shortcut.js";
+export {
+  COMMENT_SHORTCUT,
+  isEditable,
+  MOCK_SHORTCUT,
+  opensComposer,
+  opensMock,
+  watchEscape,
+} from "./shortcut.js";
 export type { EscapeOptions, ShortcutEvent } from "./shortcut.js";
 export {
   hostScheme,

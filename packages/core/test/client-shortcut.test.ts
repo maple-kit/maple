@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isEditable, opensComposer } from "../src/client/index.js";
+import { isEditable, opensComposer, opensMock } from "../src/client/index.js";
 
 import type { ShortcutEvent } from "../src/client/index.js";
 
@@ -29,6 +29,47 @@ describe("the c shortcut", () => {
 
   it.each(cases)("%s: %o opens the composer = %s", (_name, event, expected) => {
     expect(opensComposer(event)).toBe(expected);
+  });
+});
+
+describe("the m shortcut", () => {
+  const cases: Array<[string, ShortcutEvent, boolean]> = [
+    ["a bare m", press({ key: "m" }), true],
+    ["an uppercase M", press({ key: "M" }), true],
+    ["c, which is the composer's", press(), false],
+    ["cmd+m, which minimises the window", press({ key: "m", metaKey: true }), false],
+    ["m typed into an input", press({ key: "m", target: { tagName: "INPUT" } }), false],
+  ];
+
+  it.each(cases)("%s: %o opens the mock box = %s", (_name, event, expected) => {
+    expect(opensMock(event)).toBe(expected);
+  });
+});
+
+/**
+ * A document listener sees a key typed into a shadow root as landing on its
+ * host. The host is a `div`, so the target alone says nobody is typing.
+ */
+describe("a key typed inside a shadow root", () => {
+  const host = { tagName: "DIV" };
+  const input = { tagName: "INPUT" };
+
+  it.each([
+    ["the composer", opensComposer, "c"],
+    ["the mock box", opensMock, "m"],
+  ])("does not open %s from a field inside one", (_name, opens, key) => {
+    expect(opens(press({ key, target: host, composedPath: () => [input, host] }))).toBe(false);
+  });
+
+  it("opens from plain text inside one", () => {
+    const text = { tagName: "SPAN" };
+    expect(opensMock(press({ key: "m", target: host, composedPath: () => [text, host] }))).toBe(
+      true,
+    );
+  });
+
+  it("falls back to the target when the path is empty", () => {
+    expect(opensMock(press({ key: "m", target: input, composedPath: () => [] }))).toBe(false);
   });
 });
 

@@ -156,4 +156,17 @@ describe("the c shortcut over a real page", () => {
     expect(maple.getState().pick.armed).toBe(false);
     field.remove();
   });
+
+  it("does nothing while the reviewer is typing in a field inside a shadow root", () => {
+    const maple = client();
+    const host = document.createElement("div");
+    const field = document.createElement("input");
+    host.attachShadow({ mode: "open" }).append(field);
+    document.body.append(host);
+    field.focus();
+    field.dispatchEvent(new KeyboardEvent("keydown", { key: "c", bubbles: true, composed: true }));
+
+    expect(maple.getState().pick.armed).toBe(false);
+    host.remove();
+  });
 });
