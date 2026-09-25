@@ -24,6 +24,9 @@ Nothing in the runtime calls a model.
 | The recipe type and its validator               | `@maple-kit/core/mock`    |
 | Interceptor, codecs, transforms, recipe storage | `@maple-kit/mock`         |
 | The one-line install                            | `@maple-kit/mock/install` |
+| The box's controller, framework-free            | `@maple-kit/mock/client`  |
+| `useMock()`                                     | `@maple-kit/react/mock`   |
+| `MapleMock`, the box and its banner             | `@maple-kit/ui/mock`      |
 
 **A package, not a core subpath.** The interceptor is imported from a host's
 entry before its first request, and a host that does not mock should not carry
@@ -242,11 +245,59 @@ is never recorded. It is bounded to twenty routes, fifty calls a route, and
 keeps a body over 64 KB of JSON in memory only. A full or blocked storage
 leaves it working in memory.
 
+## The box
+
+`<MapleMock />` from `@maple-kit/ui/mock` is how a reviewer picks a state. It
+lists the calls the page has made on this route and the six states beside each,
+and Apply reloads into the choice. `m` opens and closes it and Escape closes it.
+Inside `<Maple />` it is `Maple.Mock`, the same part, in the overlay's own
+shadow root.
+
+It is three layers, split as the overlay is:
+
+- **`createMockClient()`** in `@maple-kit/mock/client` holds every rule: the
+  draft, the filter, what is in force on this route, Apply, Turn off and the
+  two copies. It touches no DOM until `start()`.
+- **`useMock()`** in `@maple-kit/react/mock` is one subscription over it.
+- **`MapleMock`** draws it, and touches no storage: persistence is the
+  client's.
+
+**The box finds the transport rather than importing it.** `installMock` leaves
+its handle on the page, and the client reads it there. `<Maple />` therefore
+carries the box's code on every page but the interceptor only where the host
+installed it; with none installed the box draws nothing and does not bind `m`.
+The Vite example's `verify` checks both halves: a production build with
+`<Maple />` mounted carries no interceptor, and its mock-only page carries none
+of the island, the composer or the marks.
+
+**On its own it has its own shadow host** and adopts `MOCK_CSS`: the tokens,
+the base rules and the box's, which `scripts/size.js` keeps under 7 KB with
+everything it reaches. Its scheme is the opposite of the page's, as the
+overlay's is by default.
+
+**A banner is on while a mock is**, naming the first call and counting the
+rest. It has Edit and Turn off and no dismiss: a reviewer who forgets a mock is
+on reads mocked data as real.
+
+**Until a plan exists, the field filters the calls**, every word matching the
+key. The typed words are not kept in the recipe: `request` records a sentence
+that produced a recipe, and none did. A call the recipe names that this route
+never recorded is listed after the rest, since a mocked answer is never
+recorded.
+
+**Without a store, the box shares a mock by copying**: Copy link writes the
+page's URL with the recipe in `?maple-mock=`, and Copy recipe writes the JSON.
+`RouteOptions.store` is optional for such a host, and the comment endpoints
+answer 404 without one.
+
 ## What is not done
 
 - A recorded error body shape. REST `error` answers `{ message }`, and tRPC
   answers its default error shape.
 - A delay for `loading`. It holds until the page reloads, and a held call in a
   batch holds the whole batch.
+- The plan (#170). The box's field filters; it does not read a sentence.
+- A second box on the same page. Each claims `m`, and the first to hear it
+  opens.
 - A streamed procedure whose data is itself a promise or an async iterable.
   Such a stream is not read, so it is neither recorded nor reshaped.
