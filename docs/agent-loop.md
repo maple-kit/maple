@@ -5,12 +5,12 @@ the overlay. Neither knows about the other; they meet in the store.
 
 ## The four tools
 
-| Tool                  | Reads | What it is for                           |
-| --------------------- | ----- | ---------------------------------------- |
-| `list_comments`       | ✓     | Everything on a branch, newest first.    |
-| `wait_for_comments`   | ✓     | Block until something new arrives.       |
-| `get_comment_context` | ✓     | Everything needed to act on one comment. |
-| `resolve_comment`     |       | Mark one addressed, naming the commit.   |
+| Tool                  | Reads | What it is for                                                                                 |
+| --------------------- | ----- | ---------------------------------------------------------------------------------------------- |
+| `list_comments`       | ✓     | Everything on a branch, newest first.                                                          |
+| `wait_for_comments`   | ✓     | Block until something new arrives.                                                             |
+| `get_comment_context` | ✓     | Everything needed to act on one comment, and the mock it was written under with a replay link. |
+| `resolve_comment`     |       | Mark one addressed, naming the commit.                                                         |
 
 ### A timeout is a result
 

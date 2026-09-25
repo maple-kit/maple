@@ -505,6 +505,10 @@ a page's real data in a public pull-request comment.
   comment. Nothing is shed where no comment carries a recipe.
 - **The ledger row says `mocked`** beside the viewport, so a person reading the
   pull request knows the page looked unlike the preview does now.
+- **An agent gets it back from `get_comment_context`** as `mock.recipe`, with
+  `mock.replay`, the comment's page with the recipe in `?maple-mock=`, and a
+  `mocked: trpc:roast.list empty (…)` line in its conditions. The link's
+  encoding, `encodeRecipe` and `linkRecipe`, is core's, beside the recipe.
 - **`maple-action` reads the fence through core's `githubStore`**, keeps
   fields it does not know, and the fence stays version 1: the field is
   additive. It moves to the core that writes it in the same release.

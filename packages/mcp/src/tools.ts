@@ -89,7 +89,8 @@ export const TOOLS: readonly ToolDescriptor[] = [
     title: "Get a comment's context",
     description:
       "Return everything needed to act on one comment: anchor, viewport, " +
-      "surrounding markup and any replay link.",
+      "surrounding markup and any replay link. A comment written under a Maple " +
+      "Mock carries `mock.recipe` and `mock.replay`, a link to the page in that state.",
     readOnly: true,
   },
 ];

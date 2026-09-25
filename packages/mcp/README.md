@@ -16,12 +16,12 @@ an agent from calling itself finished while comments are still open.
 
 ## Tools
 
-| Tool                                 | What it does                                                      |
-| ------------------------------------ | ----------------------------------------------------------------- |
-| `list_comments`                      | Every open comment on the branch                                  |
-| `wait_for_comments(cursor, timeout)` | Blocks for up to 55s, then returns `timeout` rather than an error |
-| `get_comment_context(id)`            | The anchor, the viewport and what the reviewer was looking at     |
-| `resolve_comment(id, sha, note)`     | Closes a thread against the commit that closed it                 |
+| Tool                                 | What it does                                                                                                                |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| `list_comments`                      | Every open comment on the branch                                                                                            |
+| `wait_for_comments(cursor, timeout)` | Blocks for up to 55s, then returns `timeout` rather than an error                                                           |
+| `get_comment_context(id)`            | The anchor, the viewport and what the reviewer was looking at, and the mock they wrote it under with a link that replays it |
+| `resolve_comment(id, sha, note)`     | Closes a thread against the commit that closed it                                                                           |
 
 `wait_for_comments` is clamped to 55 seconds because every coding client cuts a
 tool call off at 60, and it emits `notifications/progress` every 15 seconds.

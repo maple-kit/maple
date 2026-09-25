@@ -7,6 +7,7 @@
  */
 
 import { publishGate } from "@maple-kit/core";
+import { linkRecipe } from "@maple-kit/core/mock";
 
 import { clampWaitMs } from "./timeout.js";
 
@@ -17,6 +18,7 @@ import type {
   WaitResult,
 } from "./tools.js";
 import type { Comment, CommentStore, GateConnector, Logger } from "@maple-kit/core";
+import type { Recipe } from "@maple-kit/core/mock";
 
 /** How the handlers reach the comments. */
 export interface HandlerOptions {
@@ -48,6 +50,15 @@ export interface CommentContext {
   readonly anchors: readonly string[];
   /** The conditions the comment was written under, in one line. */
   readonly conditions: string;
+  /** Present when it was written under a mock: open `replay` to see what the reviewer saw. */
+  readonly mock?: MockedContext;
+}
+
+/** The mock a comment was written under, and the link that puts it back on. */
+export interface MockedContext {
+  readonly recipe: Recipe;
+  /** The comment's page with the recipe in `?maple-mock=`. */
+  readonly replay: string;
 }
 
 /** The tool implementations. */
@@ -134,7 +145,15 @@ export function createToolHandlers(options: HandlerOptions): ToolHandlers {
       const comment = (await all({ branch: args.branch })).find((one) => one.id === args.id);
       if (!comment) throw new Error(`No comment ${args.id} on ${args.branch}.`);
 
-      return { comment, anchors: anchorsOf(comment), conditions: conditionsOf(comment) };
+      const { mock } = comment.context;
+      return {
+        comment,
+        anchors: anchorsOf(comment),
+        conditions: conditionsOf(comment),
+        ...(mock === undefined
+          ? {}
+          : { mock: { recipe: mock, replay: linkRecipe(comment.context.url, mock).href } }),
+      };
     },
   };
 }
@@ -180,5 +199,13 @@ function conditionsOf(comment: Comment): string {
     `${String(context.devicePixelRatio)}× density`,
     context.colorScheme,
     context.url,
+    ...(context.mock === undefined ? [] : [mocked(context.mock)]),
   ].join(" · ");
+}
+
+/** `mocked: trpc:project.list empty, … ("no projects yet")`. */
+function mocked(recipe: Recipe): string {
+  const calls = recipe.calls.map((call) => `${call.key} ${call.state}`).join(", ");
+  const request = recipe.request === undefined ? "" : ` (${JSON.stringify(recipe.request)})`;
+  return `mocked: ${calls}${request}`;
 }
