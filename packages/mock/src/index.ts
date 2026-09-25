@@ -11,15 +11,10 @@ export {
   installedMock,
   MockClipboardError,
   PLAN_DEBOUNCE_MS,
-  PLAN_FLOOR,
   PLAN_MIN_LENGTH,
-  PLAN_TIE,
   planCall,
-  readPlan,
 } from "./client/index.js";
 export type {
-  MockSuggestion,
-  PlanReading,
   MockCallRow,
   MockClient,
   MockClientOptions,

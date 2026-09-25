@@ -8,17 +8,17 @@
  */
 
 import { opensMock, watchEscape, watchTheme } from "@maple-kit/core/client";
-import { MOCK_STATES, RECIPE_VERSION } from "@maple-kit/core/mock";
+import { MOCK_STATES, readPlan, RECIPE_VERSION } from "@maple-kit/core/mock";
 
 import { installedMock } from "../handle.js";
 import { forgetRecipe, linkRecipe, saveRecipe } from "../link.js";
 import { pathPattern } from "../rest.js";
 import { PlanUnavailableError } from "../schema/plan.js";
-import { PLAN_DEBOUNCE_MS, PLAN_MIN_LENGTH, planCall, readPlan } from "./plan.js";
+import { PLAN_DEBOUNCE_MS, PLAN_MIN_LENGTH, planCall } from "./plan.js";
 
 import type { MockHandle } from "../interceptor.js";
-import type { MockSuggestion, PlanReading } from "./plan.js";
 import type { Scheme, ThemeView } from "@maple-kit/core/client";
+import type { MockSuggestion, PlanReading } from "@maple-kit/core/mock";
 import type { MockCall, MockState, Recipe, ShapeSource } from "@maple-kit/core/mock";
 
 /** What the client attaches to. `window` satisfies it. */

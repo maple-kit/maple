@@ -6,8 +6,10 @@
  * `@maple-kit/mock`, which a host installs only when it mocks.
  */
 
-export { InvalidRecipeError, MOCK_STATES, parseRecipe, RECIPE_VERSION } from "./recipe.js";
+export { PLAN_FLOOR, PLAN_TIE, readPlan } from "./reading.js";
 
+export type { MockSuggestion, PlanReading } from "./reading.js";
+export { InvalidRecipeError, MOCK_STATES, parseRecipe, RECIPE_VERSION } from "./recipe.js";
 export type { MockCall, MockState, Recipe } from "./recipe.js";
 export {
   createShapeIndex,
