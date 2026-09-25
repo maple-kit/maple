@@ -195,7 +195,10 @@ arrives in about 10 ms unmocked and in about 1.5 s with a mock on the batch.
 
 **A stream the page receives unmocked is read without holding it.** Recording
 reads a copy of the response after the page has it, because the interceptor
-would otherwise wait for the whole stream before handing it over.
+would otherwise wait for the whole stream before handing it over. The copy is
+read from the moment it arrives, and kept as far as it got when the page
+aborts: tRPC's stream link aborts its request once its last call has answered,
+before the stream ends, and a copy still waiting to be read errored with it.
 
 **superjson is read from the answers**, as the `{ json, meta }` envelope.
 `meta` says which values were a `Date`, a `bigint` or a `Map`, by path, and a

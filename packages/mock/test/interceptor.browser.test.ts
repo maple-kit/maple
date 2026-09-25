@@ -82,8 +82,10 @@ describe("installMock, in a real browser", () => {
     await fetch(`${API}/me`);
     await fetch(`${API}/projects`);
 
-    const keys = inventory.calls(pathPattern(location.pathname)).map((sample) => sample.key);
-    expect(keys).toEqual(["rest:GET /api/projects", "rest:GET /api/me"]);
+    const keys = () => inventory.calls(pathPattern(location.pathname)).map((sample) => sample.key);
+    await expect
+      .poll(() => keys().toSorted((left, right) => left.localeCompare(right)))
+      .toEqual(["rest:GET /api/me", "rest:GET /api/projects"]);
     expect(
       inventory.sample("rest:GET /api/projects", pathPattern(location.pathname))?.body,
     ).toEqual(PROJECTS);

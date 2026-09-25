@@ -14,7 +14,7 @@ import { installedMock, keepInstalled } from "./handle.js";
 import { createInventory } from "./inventory.js";
 import { forgetRecipe, readRecipe, saveRecipe } from "./link.js";
 import { record, resolve, splitRequest } from "./resolve.js";
-import { pathPattern, restCodec } from "./rest.js";
+import { isJson, pathPattern, restCodec } from "./rest.js";
 import { routeShapes } from "./schema/route.js";
 import { trpcCodec } from "./trpc.js";
 
@@ -95,9 +95,10 @@ export function installMock(options: InstallOptions = {}): MockHandle {
   // Not awaited: the interceptor holds the page's response until a listener
   // settles, and reading a streamed batch to its end would hold it that long.
   interceptor.on("response", ({ isMockedResponse, request, response }) => {
-    if (isMockedResponse || ignored(request.url)) return release(response);
+    const copy = isMockedResponse || ignored(request.url) ? undefined : buffered(response);
+    if (copy === undefined) return release(response);
     const at = route();
-    remember(request, response, codecs)
+    remember(request, copy, codecs)
       .then(
         (found) => found && record(inventory, found.calls, found.answers, { route: at }),
         (error: unknown) =>
@@ -136,9 +137,40 @@ function shapeLookup(options: InstallOptions, forward: typeof fetch): ShapeLooku
     : routeShapes({ basePath: options.route, fetch: forward });
 }
 
+/**
+ * A JSON copy, read from the moment it arrives: tRPC's stream link aborts once
+ * its last call answers, before the stream ends. The codec judges what is kept.
+ */
+function buffered(response: Response): Promise<Response> | undefined {
+  const { body, headers, status, statusText } = response;
+  if (body === null || !isJson(headers.get("content-type"))) return undefined;
+  return drain(body).then((bytes) => new Response(bytes, { headers, status, statusText }));
+}
+
+/** Every byte until the end, or until the stream errors. */
+async function drain(body: ReadableStream<Uint8Array>): Promise<Uint8Array<ArrayBuffer>> {
+  const reader = body.getReader();
+  const chunks: Uint8Array[] = [];
+  try {
+    for (let next = await reader.read(); !next.done; next = await reader.read()) {
+      chunks.push(next.value);
+    }
+  } catch {
+    // Aborted by the page: keep what arrived.
+  }
+  const bytes = new Uint8Array(chunks.reduce((sum, chunk) => sum + chunk.length, 0));
+  let at = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, at);
+    at += chunk.length;
+  }
+  return bytes;
+}
+
 /** A passthrough response, read into the answers worth recording. */
-async function remember(request: Request, response: Response, codecs: readonly Codec[]) {
+async function remember(request: Request, copy: Promise<Response>, codecs: readonly Codec[]) {
   const split = await splitRequest(request, undefined, codecs);
+  const response = await copy;
   if (split === undefined) return undefined;
   const answers = await split.codec.read(response, split.calls);
   return { calls: split.calls, answers };
