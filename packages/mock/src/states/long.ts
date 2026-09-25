@@ -1,8 +1,9 @@
 /**
  * `long`: every text as long as the page could really receive, and every
- * number at its widest. Each longer text is built from its own value, half of
- * it wrapping words and half one unbroken run, so both wrapping and
- * `overflow-wrap` are exercised. Lists keep their length.
+ * number at its widest. Each longer text is built from its own value in the
+ * shape it already has: words wrap, and only a name that is already one
+ * unbroken run (a slug, a branch, an address, a URL) grows as one, for
+ * `overflow-wrap`. Lists keep their length.
  */
 
 import { arrayOf, enumOf, property, typesOf, valueBranch } from "../schema/json-schema.js";
@@ -36,6 +37,7 @@ const UUID = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i;
 const COLOR = /^#[\da-f]{3,8}$/i;
 const TOKEN = /^[a-z][\d_a-z-]{0,15}$/;
 const URL_LIKE = /^https?:\/\/\S+$/i;
+const JOINED = /\w[./_-]\w/;
 
 /** `value` with every text lengthened and every number widened. */
 export function lengthen(value: unknown, at?: Located, depth = 0): unknown {
@@ -73,7 +75,7 @@ export function longText(text: string, at?: Located): string {
     return longEmail(text, target);
   }
   if (format === "uri" || format === "url" || URL_LIKE.test(text)) return longUrl(text, target);
-  return longWords(text, target);
+  return longWords(text, target, max !== undefined);
 }
 
 function isFixed(text: string, node: Node | undefined, at: Located | undefined): boolean {
@@ -84,14 +86,27 @@ function isFixed(text: string, node: Node | undefined, at: Located | undefined):
   return "const" in node || "pattern" in node || enumOf(at.root, at.node).length > 0;
 }
 
-/** Half wrapping words, half one unbroken run of the text's own characters. */
-function longWords(text: string, target: number): string {
-  const run = text.replaceAll(/\s+/g, "");
+/**
+ * The text's own words repeated so it wraps, never glued into a run, which
+ * reads as the page breaking. Unless exact, it ends on a whole word.
+ */
+function longWords(text: string, target: number, exact: boolean): string {
+  if (!/\s/.test(text) && JOINED.test(text)) return longSlug(text, target, exact);
   let out = text;
-  while (out.length < target / 2) out += ` ${text}`;
-  out += " ";
-  while (out.length < target) out += run;
-  return out.slice(0, target);
+  while (out.length < target) out += ` ${text}`;
+  return exact ? out.slice(0, target) : out;
+}
+
+/** A slug or a branch, still one unbroken run, grown by its own words after a dash. */
+function longSlug(text: string, target: number, exact: boolean): string {
+  const words = text.split(/[./_-]+/).filter((word) => word !== "");
+  let out = text;
+  let index = 0;
+  while (out.length < target) {
+    out += `-${words[index % words.length] ?? ""}`;
+    index += 1;
+  }
+  return exact ? trimEnd(out.slice(0, target), "-") : out;
 }
 
 function longEmail(text: string, target: number): string {
@@ -108,7 +123,7 @@ function longEmail(text: string, target: number): string {
 /** A path segment made of the URL's own words, inserted after its origin. */
 function longUrl(text: string, target: number): string {
   const url = URL.canParse(text) ? new URL(text) : undefined;
-  if (url === undefined || url.origin === "null") return longWords(text, target);
+  if (url === undefined || url.origin === "null") return longWords(text, target, true);
   const words = `${url.hostname}${url.pathname}`.replaceAll(/[^\dA-Za-z]/g, "-");
   const source = trimEnd(words, "-").replace(/^-*/, "");
   const tail = `${url.pathname === "/" ? "" : url.pathname}${url.search}${url.hash}`;

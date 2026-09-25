@@ -71,11 +71,24 @@ describe("long", () => {
     expect(String(item["title"]).startsWith("Fix the roast chart Fix the roast chart")).toBe(true);
   });
 
-  it("lengthens a text with no bound four times, with one unbroken run", () => {
+  it("repeats a text's own words with a space between, never glued into a run", () => {
+    const words = new Set(REVIEW.title.split(" "));
+    const tokens = String(item["title"]).split(" ");
+    expect(tokens.slice(0, -1).every((token) => words.has(token))).toBe(true);
+  });
+
+  it("grows a name that is already one run, like a branch, as one longer name", () => {
     const branch = String(item["branch"]);
-    expect(branch).toHaveLength(Math.max(32, "fix/chart".length * 4));
-    expect(branch.startsWith("fix/chart fix/chart")).toBe(true);
-    expect(branch).toMatch(/\S{16}$/);
+    expect(branch.length).toBeGreaterThanOrEqual(Math.max(32, "fix/chart".length * 4));
+    expect(branch.startsWith("fix/chart-fix-chart-")).toBe(true);
+    expect(branch.endsWith("-chart")).toBe(true);
+    expect(branch).not.toMatch(/\s/);
+  });
+
+  it("grows a name as whole words, not as a run of its letters", () => {
+    const reviewer = String(item["reviewer"]);
+    expect(reviewer.split(" ").every((word) => word === "Ana")).toBe(true);
+    expect(reviewer.length).toBeGreaterThanOrEqual(32);
   });
 
   it.each([

@@ -257,10 +257,13 @@ longer text is built from its own characters, so the promise became
   item gets a unique `id`, `_id`, `uuid`, `key` or `slug`.
 
 - **`long`** makes every text as long as the page could really receive: to its
-  `maxLength` exactly, else four times over (at least 32 characters), half of
-  it the value's own words repeated so it wraps, half one unbroken run of its
-  characters for `overflow-wrap`. An address grows its local part (at most 64
-  characters) and a URL a path segment after its origin, so both still parse.
+  `maxLength` exactly, else four times over (at least 32 characters), in the
+  shape the value already has, so the page looks like it received a long
+  value rather than like it broke. Words repeat with a space between, so they
+  wrap, and without a `maxLength` a text ends on a whole word. Only a value that is already one unbroken run grows as one, for
+  `overflow-wrap`: a slug or a branch (`fix/chart`) by its own words after a
+  dash, an address by its local part (at most 64 characters) and a URL by a
+  path segment after its origin, so both still parse.
   A number goes to 1,234,567, never past its schema's bound. Identifiers,
   references (`ownerId`), cursors, enums, `const`, `pattern`, dates, UUIDs
   and colours are left alone, as is every superjson-typed value. Lists keep
