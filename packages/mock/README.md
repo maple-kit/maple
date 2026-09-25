@@ -8,8 +8,8 @@ a reviewer asked to see — empty, error, forbidden, loading, one item or many.
 ## Status
 
 The recipe, the in-page interceptor, the REST and tRPC codecs (batches,
-streams and superjson included), the transforms and the inventory exist.
-`@maple-kit/mock/msw` and `@maple-kit/mock/node` are still empty entries.
+streams and superjson included), the transforms, the inventory, and MSW
+handlers for a host that already runs MSW.
 
 ## Install
 
@@ -44,6 +44,14 @@ import { linkRecipe, saveRecipe } from "@maple-kit/mock";
 
 saveRecipe(sessionStorage, recipe);
 location.assign(linkRecipe(location.href, recipe));
+```
+
+For Storybook or a test that already runs MSW, put the handlers first:
+
+```ts
+import { mockHandlers } from "@maple-kit/mock/node";
+
+const server = setupServer(...mockHandlers(recipe), ...handlers);
 ```
 
 ## Entries

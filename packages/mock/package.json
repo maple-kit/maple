@@ -37,12 +37,21 @@
     "@maple-kit/core": "workspace:*",
     "@mswjs/interceptors": "0.41.9"
   },
-  "publishConfig": {
-    "access": "public"
+  "peerDependencies": {
+    "msw": "^2.0.0"
+  },
+  "peerDependenciesMeta": {
+    "msw": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@trpc/client": "11.19.0",
     "@trpc/server": "11.19.0",
+    "msw": "2.15.0",
     "superjson": "2.2.6"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

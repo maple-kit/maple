@@ -107,6 +107,21 @@ that are not the page's data, such as Maple's own route.
 - **With no recipe it changes nothing.** Every request goes through untouched,
   and its answer is recorded.
 
+## The MSW transport
+
+`mockHandlers(recipe)` from `@maple-kit/mock/msw`, or `/node`, is the same
+resolver as MSW request handlers, for a host that already runs MSW: Storybook,
+Vitest, Playwright. It is one `http.all("*")` handler that answers the named
+calls and falls through for the rest, so it goes first and the host's own
+handlers after it still answer everything else. A forwarded request goes out
+through `fetch(bypass(request))`.
+
+It is opt-in, and `msw` is an optional peer. In a browser it needs
+`mockServiceWorker.js` on the host's origin, which is the host's CSP decision;
+Maple's own path never needs a worker. It records the answers it reshapes but,
+seeing no passthrough response, not the ones it lets through. The recipe comes
+from the caller, since nobody types into a test.
+
 ## Resolving a request
 
 A **codec** takes one HTTP exchange apart into logical calls and puts it back
