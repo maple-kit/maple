@@ -8,8 +8,9 @@ import { Maple } from "../src/maple.js";
 import { MapleMock } from "../src/mock/index.js";
 import { offlineFetch } from "./offline.js";
 
+import type { MockPlan, MockPlanState } from "@maple-kit/core/connectors";
 import type { Recipe } from "@maple-kit/core/mock";
-import type { MockClient, MockHandle, MockView } from "@maple-kit/mock";
+import type { MockClient, MockHandle, MockView, PlanLookup } from "@maple-kit/mock";
 
 const LIST = "rest:GET /api/reviews";
 const USER = "rest:GET /api/session";
@@ -301,5 +302,102 @@ describe("Maple.Mock inside <Maple />", () => {
     await userEvent.keyboard("c");
     expect(find(".mk-shield")).toBeNull();
     expect(find<HTMLInputElement>(".mk-mock-field")?.value).toBe("c");
+  });
+});
+
+/** A plan every call is concerned in, with the given shares. */
+function planned(shares: Partial<Record<MockPlanState, number>>): MockPlan {
+  const distribution = {
+    empty: 0.02,
+    error: 0.02,
+    forbidden: 0.02,
+    loading: 0.02,
+    one: 0.02,
+    many: 0.02,
+    none: 0.02,
+    ...shares,
+  };
+  const state = (Object.keys(shares)[0] ?? "none") as MockPlanState;
+  return {
+    state,
+    distribution,
+    confidence: distribution[state],
+    calls: [
+      { key: LIST, concerned: true, p: 0.9 },
+      { key: USER, concerned: false, p: 0.1 },
+    ],
+  };
+}
+
+describe("the box, reading a sentence", () => {
+  async function typed(sentence: string, plan: MockPlan) {
+    const fake = fakePage();
+    const lookup = vi.fn<PlanLookup>(() => Promise.resolve(plan));
+    const client = track(
+      createMockClient({
+        handle: { ...handle(), plan: lookup },
+        view: fake.view,
+        defaultOpen: true,
+        planDebounceMs: 10,
+      }),
+    );
+    await render(createElement(MapleMock, { client }));
+    await vi.waitFor(() => expect(find(".mk-mock-field")).not.toBeNull());
+    await userEvent.type(find<HTMLInputElement>(".mk-mock-field")!, sentence);
+    return { client, fake, lookup };
+  }
+
+  it("offers a chip for a clear state, and Apply carries the sentence", async () => {
+    const { fake } = await typed("no reviews yet", planned({ empty: 0.8 }));
+
+    await vi.waitFor(() => expect(find(".mk-mock-chip")).not.toBeNull());
+    buttonNamed("Empty · 1 call").click();
+    await vi.waitFor(() => expect(buttonNamed("Apply and reload").disabled).toBe(false));
+    buttonNamed("Apply and reload").click();
+
+    const applied = new URL(String(fake.assign.mock.calls[0]?.[0]));
+    expect(decodeRecipe(applied.searchParams.get("maple-mock") ?? "")).toEqual({
+      version: 1,
+      calls: [{ key: LIST, state: "empty" }],
+      route: HERE,
+      request: "no reviews yet",
+    });
+  });
+
+  it("offers two chips when the sentence is torn between two states", async () => {
+    await typed("no reviews or broken", planned({ empty: 0.45, error: 0.35 }));
+
+    await vi.waitFor(() =>
+      expect(find(".mk-mock-suggest")?.textContent).toBe("Empty · 1 callorError · 1 call"),
+    );
+  });
+
+  it("says so when the sentence names no state, and offers nothing", async () => {
+    await typed("make the header blue", planned({ none: 0.7 }));
+
+    await vi.waitFor(() =>
+      expect(find(".mk-mock-unnamed")?.textContent).toBe(
+        "That doesn't name a state this page's data can be in.",
+      ),
+    );
+    expect(find(".mk-mock-chip")).toBeNull();
+  });
+
+  it("shows nothing at all for a plan it is unsure of", async () => {
+    const { lookup } = await typed("hmm reviews", planned({ empty: 0.3, error: 0.25 }));
+
+    await vi.waitFor(() => expect(lookup).toHaveBeenCalled());
+    await new Promise((settle) => setTimeout(settle, 50));
+    expect(find(".mk-mock-chip")).toBeNull();
+    expect(find(".mk-mock-unnamed")).toBeNull();
+  });
+
+  it("keeps every call listed while it reads a sentence rather than filtering", async () => {
+    await typed("no reviews yet", planned({ empty: 0.8 }));
+
+    expect(find(".mk-mock-calls")?.querySelectorAll(".mk-mock-call")).toHaveLength(2);
+    expect(find<HTMLInputElement>(".mk-mock-field")?.placeholder).toBe(
+      "Say a state, like “no items yet”",
+    );
   });
 });

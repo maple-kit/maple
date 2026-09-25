@@ -10,7 +10,7 @@ import { SHEET_BREAKPOINT_PX } from "../tokens.js";
 
 /** Every rule the box and the banner need, and nothing another part owns. */
 export function mockCss(): string {
-  return [box(), calls(), states(), foot(), banner(), narrow()].join("\n\n");
+  return [box(), suggest(), calls(), states(), foot(), banner(), narrow()].join("\n\n");
 }
 
 function box(): string {
@@ -84,6 +84,43 @@ function box(): string {
   padding: 14px 12px 16px;
   color: var(--mk-muted);
   text-wrap: pretty;
+}
+`.trim();
+}
+
+function suggest(): string {
+  return `
+.mk-mock-suggest {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px 0;
+  color: var(--mk-faint);
+  font-size: 11px;
+}
+
+.mk-mock-chip {
+  padding: 3px 10px;
+  border: 1px solid var(--mk-line-firm);
+  border-radius: 999px;
+  background: var(--mk-bg);
+  color: var(--mk-fg);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.mk-mock-chip:hover {
+  background: var(--mk-sunk);
+}
+
+.mk-mock-unnamed {
+  flex: none;
+  margin: 0;
+  padding: 8px 12px 0;
+  color: var(--mk-muted);
+  font-size: 12px;
 }
 `.trim();
 }

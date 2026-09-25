@@ -40,6 +40,9 @@ export const SHAPE_LABELS: Readonly<Record<ShapeSource, string>> = {
 export const MOCK_COPY = {
   label: "Mock this page",
   field: "Find a call",
+  sentence: "Say a state, like “no items yet”",
+  unnamed: "That doesn't name a state this page's data can be in.",
+  or: "or",
   escape: "Esc",
   routePrefix: "Calls on",
   nothingRecorded: "Nothing recorded on this page yet. Use the page, then open this again.",
@@ -54,6 +57,11 @@ export const MOCK_COPY = {
   turnOff: "Turn off",
   edit: "Edit",
 } as const;
+
+/** A chip's words: the state, and how many calls it would put in it. */
+export function suggestionLabel(state: MockState, calls: number): string {
+  return `${STATE_LABELS[state]} · ${String(calls)} ${calls === 1 ? "call" : "calls"}`;
+}
 
 /** The banner's sentence, which names the first call and counts the rest. */
 export function bannerSentence(calls: readonly { key: string; state: MockState }[]): string {

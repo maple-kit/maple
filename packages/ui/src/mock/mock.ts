@@ -31,6 +31,7 @@ import {
   MOCK_COPY,
   SHAPE_LABELS,
   STATE_LABELS,
+  suggestionLabel,
 } from "./language.js";
 import { MOCK_CSS } from "./sheet.js";
 
@@ -152,8 +153,8 @@ function Box(props: SurfaceProps): ReactElement {
       createElement("input", {
         className: "mk-mock-field",
         type: "text",
-        placeholder: MOCK_COPY.field,
-        "aria-label": MOCK_COPY.field,
+        placeholder: state.planning ? MOCK_COPY.sentence : MOCK_COPY.field,
+        "aria-label": state.planning ? MOCK_COPY.sentence : MOCK_COPY.field,
         value: state.query,
         ref: field,
         onChange: (event: { currentTarget: HTMLInputElement }) =>
@@ -161,6 +162,7 @@ function Box(props: SurfaceProps): ReactElement {
       }),
       createElement("kbd", { className: "mk-mock-key-hint" }, MOCK_COPY.escape),
     ),
+    suggestions(state, client),
     createElement(
       "p",
       { className: "mk-mock-route" },
@@ -169,6 +171,29 @@ function Box(props: SurfaceProps): ReactElement {
     ),
     calls(state, client),
     createElement(Foot, { client, state }),
+  );
+}
+
+/** At most two chips, or the one line for a sentence that names no state. */
+function suggestions(state: MockClientState, client: MockClient): ReactNode {
+  if (state.unnamed) return createElement("p", { className: "mk-mock-unnamed" }, MOCK_COPY.unnamed);
+  if (state.suggestions.length === 0) return null;
+  return createElement(
+    "div",
+    { className: "mk-mock-suggest mk-live" },
+    state.suggestions.flatMap((suggestion, index) => [
+      index === 0 ? null : createElement("span", { key: `or${String(index)}` }, MOCK_COPY.or),
+      createElement(
+        "button",
+        {
+          key: suggestion.state,
+          type: "button",
+          className: "mk-mock-chip mk-press",
+          onClick: () => client.suggest(index),
+        },
+        suggestionLabel(suggestion.state, suggestion.calls.length),
+      ),
+    ]),
   );
 }
 
