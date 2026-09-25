@@ -460,6 +460,11 @@ tbody tr:last-child td {
   gap: 8px;
 }
 
+.unassigned {
+  color: var(--muted);
+  font-style: italic;
+}
+
 .avatar {
   display: inline-grid;
   place-items: center;

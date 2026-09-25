@@ -141,12 +141,16 @@ function ReviewRow({ row }: { readonly row: Row }) {
         <span className={`pip ${row.state}`} /> {row.open}
       </td>
       <td>
-        <span className="person">
-          <span className={`avatar tint-${String(row.tint)}`} aria-hidden="true">
-            {row.reviewer.charAt(0)}
+        {row.reviewer === null ? (
+          <span className="unassigned">Unassigned</span>
+        ) : (
+          <span className="person">
+            <span className={`avatar tint-${String(row.tint)}`} aria-hidden="true">
+              {row.reviewer.charAt(0)}
+            </span>
+            {row.reviewer}
           </span>
-          {row.reviewer}
-        </span>
+        )}
       </td>
     </tr>
   );

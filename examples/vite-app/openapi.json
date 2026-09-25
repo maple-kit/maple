@@ -54,7 +54,7 @@
                     "tint": {
                       "type": "integer",
                       "minimum": 0,
-                      "maximum": 5
+                      "maximum": 2
                     },
                     "role": {
                       "type": "string",
@@ -136,12 +136,12 @@
             "enum": ["blocked", "clear", "waiting"]
           },
           "reviewer": {
-            "type": "string"
+            "type": ["string", "null"]
           },
           "tint": {
             "type": "integer",
             "minimum": 0,
-            "maximum": 5
+            "maximum": 2
           }
         },
         "required": ["id", "repo", "branch", "open", "state", "reviewer", "tint"]

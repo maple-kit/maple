@@ -25,7 +25,8 @@ export interface Row {
   readonly branch: string;
   readonly open: number;
   readonly state: "blocked" | "clear" | "waiting";
-  readonly reviewer: string;
+  /** Nobody has picked the review up yet when this is `null`. */
+  readonly reviewer: string | null;
   /** Which of the page's avatar tints the reviewer is drawn in. */
   readonly tint: number;
 }
