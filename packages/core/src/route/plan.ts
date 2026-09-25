@@ -9,10 +9,11 @@
 import { stableStringify } from "../lib/stable-stringify.js";
 import { createCache, createLimiter, json } from "./budget.js";
 import { MOCK_SCHEMA_KEYS } from "./mock.js";
+import { summarise } from "./summary.js";
 
 import type { ClassifierConnector, MockPlan, MockPlanCall } from "../connectors/types.js";
 import type { Logger } from "../logger/types.js";
-import type { JsonSchema, ShapeIndex } from "../mock/shape.js";
+import type { ShapeIndex } from "../mock/shape.js";
 import type { RateLimit } from "./budget.js";
 
 /** How a deployment switches planning on. */
@@ -120,55 +121,15 @@ function readCall(call: unknown): MockPlanCall | undefined {
   return { key, summary };
 }
 
-/** Each call's summary, with what its shape says it returns after the page's words. */
+/** Each call's summary, with what its shape says it returns beside the page's words. */
 async function described(
   calls: readonly MockPlanCall[],
   shapes: () => Promise<ShapeIndex>,
 ): Promise<MockPlanCall[]> {
   const index = calls.length === 0 ? undefined : await shapes();
   return calls.map((call) => {
-    const shape = index?.find(call.key);
-    const said = shape === undefined ? "" : describe(shape.schema, 0);
-    return { key: call.key, summary: [call.summary, said].filter(Boolean).join(" — ") };
+    return { key: call.key, summary: summarise(call.summary, index?.find(call.key)?.schema) };
   });
-}
-
-/** How deep a summary reads into a schema, and how long it may grow. */
-const DEPTH = 2;
-const FIELDS = 12;
-const MAX_SAID = 400;
-
-/**
- * A schema in a line: its title and description, its fields, and a list's
- * item in brackets. Names only; a value never reaches a planner from here.
- */
-function describe(schema: JsonSchema, depth: number): string {
-  if (!isRecord(schema) || depth > DEPTH) return "";
-  const parts = [schema["title"], schema["description"]].filter(
-    (part): part is string => typeof part === "string" && part !== "",
-  );
-
-  const items = schema["items"];
-  if (items !== undefined && typeof items !== "boolean") {
-    parts.push(`list of [${describe(items as JsonSchema, depth + 1)}]`);
-  }
-
-  const properties = schema["properties"];
-  if (isRecord(properties)) {
-    const fields = Object.entries(properties)
-      .slice(0, FIELDS)
-      .map(([name, value]) => field(name, value as JsonSchema, depth));
-    if (fields.length > 0) parts.push(fields.join(", "));
-  }
-
-  return parts.join(": ").slice(0, MAX_SAID);
-}
-
-/** A field's name, and what a list-valued one holds. */
-function field(name: string, schema: JsonSchema, depth: number): string {
-  if (!isRecord(schema) || schema["items"] === undefined) return name;
-  const inner = describe(schema["items"] as JsonSchema, depth + 1);
-  return inner === "" ? name : `${name} [${inner}]`;
 }
 
 async function readJson(request: Request): Promise<unknown> {

@@ -359,10 +359,13 @@ is logged and answered 502 with nothing of the cause, since a provider's error
 can name its key.
 
 **The shapes add to each summary.** Where the shape index describes a call,
-the route appends its schema in a line to the page's summary: title,
-description, field names, and a list's item in brackets, two levels deep, so
-`rest:GET /api/roasts` reads `RoastPage: items [id, origin], nextCursor`. Only
-names reach the planner; a value never does.
+the route describes its schema in a line: title or component name,
+description, field names, and a list's item in brackets, two levels deep, a
+local `$ref` followed. `rest:GET /api/reviews` reads `items [Review: id, repo,
+branch, …], total, nextCursor`, and `trpc:user.me` reads `User: id, name,
+since`. When the page's words are all in that line, only the line is sent, and
+the other way about; otherwise both, with a dash between. Only names reach the
+planner; a value never does.
 
 **`maple mock plan` asks a deployed route**, not a model:
 
