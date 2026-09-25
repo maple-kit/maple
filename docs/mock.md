@@ -260,6 +260,28 @@ for every key asked in the same tick, and keeps every answer, a miss included,
 for the page's life. Nothing under `route` is recorded or mocked. The Vite
 example's `verify` checks that neither build carries its `openapi.json`.
 
+**Router types, from `maple mock schema`.** `@maple-kit/cli` wraps
+`@trpc/openapi`, which reads a router's TypeScript types statically, runs none
+of its code, and needs no `.output()`:
+
+```sh
+maple mock schema server/router.ts --out=.maple/schema.json --superjson
+```
+
+The document it writes carries `x-maple-mock` (`codec: "trpc"`,
+`source: "router"`, and `superjson` when asked), so `readSchemaDocument` hands
+the route a document without being told what it is. **It is a preview build
+artifact**: written by a step before the preview build and `next dev`, and
+never committed, so it cannot fall behind the router it describes. The route
+reads it on its first request, and without it has no shapes.
+
+**`@trpc/openapi` is an alpha, and an optional peer.** It is loaded by dynamic
+import inside that one command and nowhere else, pinned to one version, and a
+missing install says which to add. Its programmatic API is used because the
+alpha's own `bin` points at a file it does not ship. It asks for TypeScript
+below 7, which holds the repository there while it is the rung this command
+stands on. A subscription is not described; the generator does not yet do it.
+
 **Normalising.** A `trpc` document has a path per procedure, `/project.list`,
 and the shape is its 2xx answer's `result.data`. A `rest` document is keyed by
 method and path, with `prefix` put in front, and a `{param}` segment matches any
