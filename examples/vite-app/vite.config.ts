@@ -88,7 +88,10 @@ export default defineConfig(async ({ command, isPreview, mode }) => {
   const env = loadEnv(mode, import.meta.dirname, "");
   const apiKey = env["TYPESAFE_API_KEY"];
   const model = env["MAPLE_AI_MODEL"];
-  const classifier = apiKey ? jevClassifier({ apiKey, ...(model ? { model } : {}) }) : undefined;
+  const baseUrl = env["MAPLE_AI_API"];
+  const classifier = apiKey
+    ? jevClassifier({ apiKey, ...(model ? { model } : {}), ...(baseUrl ? { baseUrl } : {}) })
+    : undefined;
 
   // On for a preview build and off everywhere else, so a production build is
   // correct even when the flag is forgotten. `vite dev` is a preview of a
