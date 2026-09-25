@@ -23,6 +23,8 @@ export type {
 } from "./client/index.js";
 export { isData } from "./codec.js";
 export type { Answer, Call, Codec } from "./codec.js";
+export { flagType, holdStreams } from "./flag-source.js";
+export type { FlagSource, Flags, FlagStream } from "./flag-source.js";
 export { seenFlags } from "./flags.js";
 export type { FlagRegistry, SeenFlag } from "./flags.js";
 export { impose, meetsNeed, realIdentity } from "./identity.js";

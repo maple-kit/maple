@@ -1,11 +1,14 @@
+import { createClient } from "@launchdarkly/js-client-sdk";
 import { createLogger, memorySink } from "@maple-kit/core/logger";
 import { linkRecipe } from "@maple-kit/core/mock";
-import { installMock, pathPattern, RECIPE_STORAGE_KEY } from "@maple-kit/mock";
+import { installMock, pathPattern, RECIPE_STORAGE_KEY, seenFlags } from "@maple-kit/mock";
+import { launchDarklyFlags } from "@maple-kit/mock/launchdarkly";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { API, createApiFake, ME, PROJECTS, SESSION } from "./msw/api.js";
 import { handlerFetch } from "./msw/fetch.js";
 import { RULES } from "./msw/identity.js";
+import { createLaunchDarklyFake, LD_BASE, LD_ENV } from "./msw/launchdarkly.js";
 
 import type { MockState, Recipe } from "@maple-kit/core/mock";
 import type { MockHandle } from "@maple-kit/mock";
@@ -197,5 +200,73 @@ describe("the recipe a comment records", () => {
     expect(sink.records.map((record) => record.message)).toContain(
       "A write reached the server, which acts as you, not as the page shows.",
     );
+  });
+});
+
+/**
+ * The client, as far as these tests use it. The SDK's own declarations import
+ * extensionless ESM paths, which `nodenext` does not resolve.
+ */
+interface FlagClient {
+  start(): Promise<{ status: string }>;
+  variation(key: string, fallback: unknown): unknown;
+  close(): Promise<void>;
+}
+
+describe("installMock with LaunchDarkly's own browser SDK", () => {
+  const ld = createLaunchDarklyFake();
+  const endpoints = { baseUri: LD_BASE, streamUri: LD_BASE, eventsUri: LD_BASE };
+  const named: Recipe = { version: 2, calls: [], flags: { "new-roaster": true } };
+
+  beforeEach(() => {
+    globalThis.fetch = handlerFetch([...api.handlers, ...ld.handlers]);
+  });
+  afterEach(() => ld.reset());
+
+  async function started(): Promise<{ client: FlagClient; status: string }> {
+    const client = createClient(
+      LD_ENV,
+      { kind: "user", key: "reviewer" },
+      {
+        ...endpoints,
+        fetchGoals: false,
+        sendEvents: false,
+        disableCache: true,
+        streaming: false,
+      },
+    ) as unknown as FlagClient;
+    const { status } = await client.start();
+    return { client, status };
+  }
+
+  it("answers the flags the recipe names, and records every flag's real value", async () => {
+    install(named, { flags: [launchDarklyFlags(endpoints)] });
+    const { client } = await started();
+
+    expect(client.variation("new-roaster", false)).toBe(true);
+    expect(client.variation("roast-limit", 0)).toBe(3);
+    expect(seenFlags().list()).toEqual(
+      expect.arrayContaining([
+        { key: "new-roaster", type: "boolean", value: false },
+        { key: "roast-limit", type: "number", value: 3 },
+      ]),
+    );
+    await client.close();
+  });
+
+  it("lets the SDK's own answer through without a recipe", async () => {
+    install(undefined, { flags: [launchDarklyFlags(endpoints)] });
+    const { client } = await started();
+    expect(client.variation("new-roaster", true)).toBe(false);
+    await client.close();
+  });
+
+  it("lets a failed poll through as it came", async () => {
+    ld.fail();
+    install(named, { flags: [launchDarklyFlags(endpoints)] });
+    const { client, status } = await started();
+    expect(status).not.toBe("complete");
+    expect(client.variation("new-roaster", false)).toBe(false);
+    await client.close();
   });
 });

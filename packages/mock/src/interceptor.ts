@@ -10,6 +10,9 @@ import { BatchInterceptor } from "@mswjs/interceptors";
 import { FetchInterceptor } from "@mswjs/interceptors/fetch";
 import { XMLHttpRequestInterceptor } from "@mswjs/interceptors/XMLHttpRequest";
 
+import { keptHeaders } from "./codec.js";
+import { flagType, holdStreams } from "./flag-source.js";
+import { seenFlags } from "./flags.js";
 import { installedMock, keepInstalled } from "./handle.js";
 import { knows } from "./identity.js";
 import { createInventory } from "./inventory.js";
@@ -23,6 +26,7 @@ import { trpcCodec } from "./trpc.js";
 import { createWriteLog } from "./writes.js";
 
 import type { Codec } from "./codec.js";
+import type { Flags, FlagSource } from "./flag-source.js";
 import type { Inventory } from "./inventory.js";
 import type { PlanLookup } from "./schema/plan.js";
 import type { ShapeLookup } from "./schema/shape.js";
@@ -51,6 +55,8 @@ export interface InstallOptions {
   readonly shape?: ShapeLookup;
   /** The identity rules a recipe's `as` is applied through, in place of the route's. */
   readonly identity?: IdentityRules;
+  /** Vendors whose flags are read and answered on the wire, such as `launchDarklyFlags()`. */
+  readonly flags?: readonly FlagSource[];
 }
 
 /** The installed transport. */
@@ -101,10 +107,25 @@ export function installMock(options: InstallOptions = {}): MockHandle {
     interceptors: [new FetchInterceptor(), new XMLHttpRequestInterceptor()],
   });
   const codecs = options.codecs ?? CODECS;
+  const sources = options.flags ?? [];
+  const sourceOf = (request: Request) => sources.find((source) => source.claims(request));
+  const flags = () => {
+    const applying = recipe?.route === undefined || recipe.route === route();
+    const named = applying ? recipe?.flags : undefined;
+    return named === undefined || Object.keys(named).length === 0 ? undefined : named;
+  };
+  const unhold = recipe?.flags === undefined ? () => undefined : holdStreams(sources, recipe.flags);
   interceptor.on(
     "request",
     awaited(async ({ controller, request }) => {
       if (ignored(request.url)) return;
+      const source = sourceOf(request);
+      if (source !== undefined) {
+        const named = flags();
+        if (named !== undefined)
+          controller.respondWith(await answerFlags(request, source, named, forward));
+        return;
+      }
       const rules = await identity;
       const response = await resolve(request, recipe, inventory, {
         codecs,
@@ -122,6 +143,11 @@ export function installMock(options: InstallOptions = {}): MockHandle {
   interceptor.on("response", ({ isMockedResponse, request, response }) => {
     const copy = isMockedResponse || ignored(request.url) ? undefined : buffered(response);
     if (copy === undefined) return release(response);
+    const source = sourceOf(request);
+    if (source !== undefined) {
+      void readFlags(source, copy).finally(() => release(response));
+      return;
+    }
     const at = route();
     remember(request, copy, codecs)
       .then(
@@ -146,11 +172,46 @@ export function installMock(options: InstallOptions = {}): MockHandle {
     writes,
     dispose() {
       interceptor.dispose();
+      unhold();
       keepInstalled(undefined);
     },
   };
   keepInstalled(handle);
   return handle;
+}
+
+/**
+ * A vendor's flag answer with the recipe's flags written in. The real values
+ * are recorded first; an answer that cannot be read goes through as it came.
+ */
+async function answerFlags(
+  request: Request,
+  source: FlagSource,
+  flags: Flags,
+  forward: typeof fetch,
+): Promise<Response> {
+  const real = await forward(request);
+  const body = await readBody(real.clone());
+  if (body === undefined) return real;
+  recordFlags(source, body);
+  const headers = keptHeaders(real, "application/json");
+  return new Response(JSON.stringify(source.write(body, flags)), { status: real.status, headers });
+}
+
+async function readFlags(source: FlagSource, copy: Promise<Response>): Promise<void> {
+  const body = await readBody(await copy);
+  if (body !== undefined) recordFlags(source, body);
+}
+
+async function readBody(response: Response): Promise<unknown> {
+  if (!response.ok || !isJson(response.headers.get("content-type"))) return undefined;
+  return response.json().catch(() => undefined);
+}
+
+function recordFlags(source: FlagSource, body: unknown): void {
+  for (const [key, value] of Object.entries(source.read(body) ?? {})) {
+    seenFlags().record({ key, type: flagType(value), value });
+  }
 }
 
 /** Maple's own route is never the page's data, and neither is anything the host names. */

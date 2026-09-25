@@ -38,6 +38,7 @@
       "@maple-kit/mock": ["./packages/mock/src/index.ts"],
       "@maple-kit/mock/client": ["./packages/mock/src/client/index.ts"],
       "@maple-kit/mock/install": ["./packages/mock/src/install.ts"],
+      "@maple-kit/mock/launchdarkly": ["./packages/mock/src/launchdarkly/index.ts"],
       "@maple-kit/mock/msw": ["./packages/mock/src/msw/index.ts"],
       "@maple-kit/mock/node": ["./packages/mock/src/node/index.ts"],
       "@maple-kit/mock/openfeature": ["./packages/mock/src/openfeature/index.ts"],

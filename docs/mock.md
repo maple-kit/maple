@@ -497,6 +497,33 @@ OpenFeature.setProvider(withMockFlags(new VendorProvider(options)));
 - **The recipe is the page's** by default, through the installed handle's
   `current()`. A server passes the request's as `recipe`.
 
+**A vendor on the wire** is a flag source, `installMock({ flags: [...] })`,
+for a page whose SDK is not behind OpenFeature. A source says which request
+asks for flag values, reads the real ones for `seenFlags()`, and writes the
+recipe's in; the interceptor forwards the request and answers with the
+rewrite. Such a request is never recorded as one of the page's calls.
+
+**LaunchDarkly** is `launchDarklyFlags({ baseUri?, streamUri? })` from
+`@maple-kit/mock/launchdarkly`. Its browser SDK's format was read from the
+source of `@launchdarkly/js-client-sdk` 4.10.3, and the tests run 4.10.2's
+real client against a fake poll.
+
+- **The poll is `GET /sdk/evalx/{env}/contexts/{context}`**, or a `REPORT`
+  to `…/context`, over `fetch`, answered by an object keyed by flag key. This
+  is FDv1, the SDK's default. FDv2, which runs only when `dataSystem` is
+  passed, is not read.
+- **A named flag is answered with the largest safe version.** The SDK ignores
+  a `patch` or `delete` that is not newer than the version it holds, so no
+  real change replaces it. Its `variation` and `reason` are dropped, since
+  they describe the real evaluation.
+- **The stream is the page's `EventSource`, wrapped** while a recipe has
+  flags. A `put` is rewritten; a `patch` or `delete` of a named flag is
+  dropped; a `ping` makes the SDK poll again, which is rewritten too.
+- **The SDK caches what it is told** in `localStorage` and shows it before
+  its next poll answers, so the first load after Turn off shows the mocked
+  values until that poll does. `disableCache: true` on a preview avoids it.
+- **Evaluation events still go to LaunchDarkly**, with the mocked value.
+
 `@maple-kit/mock/testing` has `runFlagProviderContract`, the suite every
 wrapped provider runs, and `memoryFlagProvider`. The package's own tests run
 it against the memory provider and wrap OpenFeature's own in-memory providers
@@ -609,7 +636,7 @@ a page's real data in a public pull-request comment.
 
 ## What is not done
 
-- A vendor's flags on the wire, without OpenFeature, and flags in the box.
+- Flags in the box, and a vendor other than LaunchDarkly on the wire.
 - `as` in the box and the banner, on the server through
   `@maple-kit/mock/node`, and in `mockHandlers`, which takes no rules.
 

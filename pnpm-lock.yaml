@@ -242,6 +242,9 @@ importers:
         specifier: 0.41.9
         version: 0.41.9
     devDependencies:
+      '@launchdarkly/js-client-sdk':
+        specifier: 4.10.2
+        version: 4.10.2
       '@openfeature/core':
         specifier: 1.12.0
         version: 1.12.0
@@ -840,6 +843,15 @@ packages:
 
   '@keyv/serialize@1.1.1':
     resolution: {integrity: sha512-dXn3FZhPv0US+7dtJsIi2R+c7qWYiReoEh5zUntWCf4oSpMNib8FDhSoed6m3QyZdx5hK7iLFkYk3rNxwt8vTA==}
+
+  '@launchdarkly/js-client-sdk-common@1.32.0':
+    resolution: {integrity: sha512-RxNiBLbbssjVUwf9vBmOgGJXxAimesxsasBM1d94OJhHyECFcYXDI2tH7KCqMSwt9cJu947Cd6C9C5kUSFuiig==}
+
+  '@launchdarkly/js-client-sdk@4.10.2':
+    resolution: {integrity: sha512-sqiaFJ8nR0nHHHRXXC9gyNccnPEJygAlAED3YmumUp5NncIcGhojuXSxd/wh1q5XIyF6hrH30y9jOWWwn2tR9w==}
+
+  '@launchdarkly/js-sdk-common@2.26.0':
+    resolution: {integrity: sha512-udqKKgDhRpvprMh53GtK2hSdIJvhs9mUNseAyyyEBcLc5ftNxAZeZbWfKvmyuckS7Qt7rznIHHSSiwm2yYW4+g==}
 
   '@loaderkit/resolve@1.0.6':
     resolution: {integrity: sha512-G8FdIoF5CypfwmD9rl8BXod5HDn8JqB0CCNBXDTaRZ+yRYhARrrSToX1zg1zy9jX3zLqigsELwhT4gNtkdQAUg==}
@@ -3600,6 +3612,16 @@ snapshots:
       keyv: 5.6.0
 
   '@keyv/serialize@1.1.1': {}
+
+  '@launchdarkly/js-client-sdk-common@1.32.0':
+    dependencies:
+      '@launchdarkly/js-sdk-common': 2.26.0
+
+  '@launchdarkly/js-client-sdk@4.10.2':
+    dependencies:
+      '@launchdarkly/js-client-sdk-common': 1.32.0
+
+  '@launchdarkly/js-sdk-common@2.26.0': {}
 
   '@loaderkit/resolve@1.0.6':
     dependencies:

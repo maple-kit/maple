@@ -5,6 +5,7 @@ export default defineConfig({
     "src/index.ts",
     "src/client/index.ts",
     "src/install.ts",
+    "src/launchdarkly/index.ts",
     "src/msw/index.ts",
     "src/node/index.ts",
     "src/openfeature/index.ts",
