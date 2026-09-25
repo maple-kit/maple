@@ -185,21 +185,34 @@ function Box(props: SurfaceProps & { layers: LayerChunk | undefined }): ReactEle
     ),
     suggestions(state, client, layers),
     createElement(
-      "p",
-      { className: "mk-mock-route" },
-      `${MOCK_COPY.routePrefix} `,
-      createElement("span", { className: "mk-mono" }, state.route),
+      "div",
+      { className: "mk-mock-body" },
+      createElement(
+        "p",
+        { className: "mk-mock-route" },
+        `${MOCK_COPY.routePrefix} `,
+        createElement("span", { className: "mk-mono" }, state.route),
+      ),
+      calls(state, client),
+      layers && createElement(layers.Layers, { state, client }),
     ),
-    calls(state, client),
-    layers && createElement(layers.Layers, { state, client }),
     createElement(Foot, { client, state }),
   );
 }
 
-/** At most two chips, or the one line for a sentence that names no state. */
+/**
+ * At most two chips, or the one line for a sentence that names no state. The
+ * slot is held open from the first word, so an answer landing moves nothing.
+ */
 function suggestions(state: MockClientState, client: MockClient, layers?: LayerChunk): ReactNode {
-  if (state.unnamed) return createElement("p", { className: "mk-mock-unnamed" }, MOCK_COPY.unnamed);
-  if (state.suggestions.length === 0) return null;
+  if (!state.planning || state.query.trim() === "") return null;
+  if (state.unnamed) {
+    return createElement(
+      "div",
+      { className: "mk-mock-suggest mk-live" },
+      createElement("p", { className: "mk-mock-unnamed" }, MOCK_COPY.unnamed),
+    );
+  }
   return createElement(
     "div",
     { className: "mk-mock-suggest mk-live" },

@@ -680,7 +680,8 @@ before anything is drawn:
 
 A chip puts its calls in its state beside whatever the draft holds, and the
 sentence goes into the recipe's `request`; Clear drops it. No number is shown,
-and nothing moves while a plan is on its way. A failure is swallowed, as the
+and nothing moves while a plan is on its way: the chip's row is held open from
+the first word, so an answer landing pushes nothing down. A failure is swallowed, as the
 assist tier's is, and a 404 turns the field back into a filter for the page's
 life: every word must match a key, as before a plan existed. `plan: false`
 keeps it a filter.
@@ -688,7 +689,10 @@ keeps it a filter.
 A call the recipe names that this route never recorded is listed after the
 rest, since a mocked answer is never recorded.
 
-**Flags and who the page is shown as are a second panel**, under the calls:
+**Flags and who the page is shown as are a second panel**, under the calls,
+and the two scroll together between the field and the footer, so a short
+window never squeezes the calls to a sliver. Taking a chip scrolls the rows it
+set into view. The panel is
 a role picker and a Granted / Taken away pair per permission, from the
 host's identity rules (`handle.identity()`, read once from
 `/mock/identity`), and a toggle per flag the page evaluated (`seenFlags()`):

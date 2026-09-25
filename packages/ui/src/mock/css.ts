@@ -69,6 +69,13 @@ function box(): string {
   font-size: 10.5px;
 }
 
+.mk-mock-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 .mk-mock-route {
   flex: none;
   margin: 0;
@@ -97,9 +104,12 @@ function suggest(): string {
 .mk-mock-suggest {
   flex: none;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
-  padding: 8px 12px 0;
+  min-height: 43px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--mk-line);
   color: var(--mk-faint);
   font-size: 11px;
 }
@@ -112,6 +122,7 @@ function suggest(): string {
   color: var(--mk-fg);
   font: inherit;
   font-size: 12px;
+  line-height: 18px;
   cursor: pointer;
 }
 
@@ -120,9 +131,7 @@ function suggest(): string {
 }
 
 .mk-mock-unnamed {
-  flex: none;
   margin: 0;
-  padding: 8px 12px 0;
   color: var(--mk-muted);
   font-size: 12px;
 }
@@ -132,11 +141,8 @@ function suggest(): string {
 function calls(): string {
   return `
 .mk-mock-calls {
-  flex: 1 1 auto;
-  min-height: 0;
   margin: 0;
   padding: 4px 6px 6px;
-  overflow-y: auto;
   list-style: none;
 }
 

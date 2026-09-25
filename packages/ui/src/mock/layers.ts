@@ -5,11 +5,11 @@
  */
 
 import { describeIdentity } from "@maple-kit/core/mock";
-import { createElement } from "react";
+import { createElement, useEffect, useRef } from "react";
 
 import type { FlagValue, MockSuggestion } from "@maple-kit/core/mock";
 import type { MockClient, MockClientState, MockFlagRow } from "@maple-kit/mock/client";
-import type { ReactElement, ReactNode } from "react";
+import type { ReactElement, ReactNode, RefObject } from "react";
 
 /** The words this chunk says. They load with it. */
 export const LAYER_COPY = {
@@ -34,6 +34,8 @@ interface LayerProps {
 export function Layers(props: LayerProps): ReactElement {
   const { client, state } = props;
   const { identity } = state;
+  const panel = useRef<HTMLDivElement>(null);
+  useShowTaken(panel, state.request);
   const rows: ReactNode[] = [];
   const roles = identity?.role?.values ?? [];
   if (roles.length > 0) {
@@ -59,7 +61,7 @@ export function Layers(props: LayerProps): ReactElement {
   }
   return createElement(
     "div",
-    { className: "mk-mock-layers" },
+    { className: "mk-mock-layers", ref: panel },
     rows.length === 0 ? null : section(LAYER_COPY.shownAs, rows),
     state.flags.length === 0
       ? null
@@ -68,6 +70,20 @@ export function Layers(props: LayerProps): ReactElement {
           state.flags.map((flag) => flagRow(flag, client)),
         ),
   );
+}
+
+/** A chip, taken, scrolls the last row it set here into view: those rows are its answer. */
+function useShowTaken(ref: RefObject<HTMLElement | null>, request: string | undefined): void {
+  useEffect(() => {
+    const panel = ref.current;
+    if (request === undefined || panel === null) return;
+    const set = panel.querySelectorAll('[data-mk-mocked="true"]');
+    const still = panel.ownerDocument.defaultView?.matchMedia("(prefers-reduced-motion: reduce)");
+    set[set.length - 1]?.scrollIntoView({
+      block: "nearest",
+      behavior: still?.matches ? "instant" : "smooth",
+    });
+  }, [ref, request]);
 }
 
 /** What the banner adds while a mock tells the page something about who or what. */

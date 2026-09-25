@@ -451,6 +451,34 @@ describe("the box, reading a sentence", () => {
     expect(find(".mk-mock-unnamed")).toBeNull();
   });
 
+  it("holds the chip's place while it waits, so the answer lands without moving the calls", async () => {
+    const held: { answer?: (plan: MockPlan) => void } = {};
+    const later = new Promise<MockPlan>((resolve) => (held.answer = resolve));
+    const client = track(
+      createMockClient({
+        handle: { ...handle(), plan: () => later },
+        view: fakePage().view,
+        defaultOpen: true,
+        planDebounceMs: 10,
+      }),
+    );
+    await render(createElement(MapleMock, { client }));
+    await vi.waitFor(() => expect(find(".mk-mock-field")).not.toBeNull());
+    await userEvent.type(find<HTMLInputElement>(".mk-mock-field")!, "no reviews yet");
+    await vi.waitFor(() => expect(find(".mk-mock-suggest")).not.toBeNull());
+    await Promise.all(
+      find(".mk-mock")!
+        .getAnimations()
+        .map((motion) => motion.finished),
+    );
+    const top = () => find(".mk-mock-route")!.getBoundingClientRect().top;
+    const before = top();
+
+    held.answer?.(planned({ empty: 0.8 }));
+    await vi.waitFor(() => expect(find(".mk-mock-chip")).not.toBeNull());
+    expect(top()).toBe(before);
+  });
+
   it("keeps every call listed while it reads a sentence rather than filtering", async () => {
     await typed("no reviews yet", planned({ empty: 0.8 }));
 
@@ -506,6 +534,27 @@ describe("flags and who the page is told the reviewer is", () => {
       as: { role: "barista", permissions: { "roasts.delete": false } },
       route: HERE,
     });
+  });
+
+  it("scrolls as a whole in a short window rather than squeezing the calls", async () => {
+    seenFlags().record({ key: "new-roaster", type: "boolean", value: false });
+    const size = { width: window.innerWidth, height: window.innerHeight };
+    await page.viewport(560, 420);
+    try {
+      const client = track(
+        createMockClient({ handle: layered(), view: fakePage().view, defaultOpen: true }),
+      );
+      client.start();
+      await render(createElement(MapleMock, { client }));
+      await vi.waitFor(() => expect(find('[aria-label="new-roaster"]')).not.toBeNull());
+
+      const list = find<HTMLElement>(".mk-mock-calls")!;
+      const body = find<HTMLElement>(".mk-mock-body")!;
+      expect(list.scrollHeight).toBe(list.clientHeight);
+      expect(body.scrollHeight).toBeGreaterThan(body.clientHeight);
+    } finally {
+      await page.viewport(size.width, size.height);
+    }
   });
 
   it("says who the page is shown as, that the server still acts as you, and every write", async () => {
