@@ -19,6 +19,9 @@ npm install @maple-kit/react
 `@maple-kit/core/client`. An application that renders review comments in its own
 design system depends on this package and pulls in none of `@maple-kit/ui`.
 
+`@maple-kit/react/mock` is `useMock()`, one subscription over Maple Mock's box
+controller in `@maple-kit/mock/client`.
+
 The state machine lives one level below, in core, deliberately: a React hook is
 not portable, and a controller is.
 
