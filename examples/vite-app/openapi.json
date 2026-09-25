@@ -18,10 +18,17 @@
                   "properties": {
                     "items": {
                       "type": "array",
-                      "items": { "$ref": "#/components/schemas/Review" }
+                      "items": {
+                        "$ref": "#/components/schemas/Review"
+                      }
                     },
-                    "total": { "type": "integer", "minimum": 0 },
-                    "nextCursor": { "type": ["string", "null"] }
+                    "total": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "nextCursor": {
+                      "type": ["string", "null"]
+                    }
                   },
                   "required": ["items", "total", "nextCursor"]
                 }
@@ -41,13 +48,67 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "name": { "type": "string" },
-                    "tint": { "type": "integer", "minimum": 0, "maximum": 5 }
+                    "name": {
+                      "type": "string"
+                    },
+                    "tint": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 5
+                    },
+                    "role": {
+                      "type": "string",
+                      "enum": ["owner", "reviewer", "guest"]
+                    },
+                    "permissions": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": ["settings.write", "reviews.export"]
+                      }
+                    }
                   },
-                  "required": ["name", "tint"]
+                  "required": ["name", "tint", "role", "permissions"]
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/audit": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "What changed, most recent first. Owners only.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AuditEvent"
+                      }
+                    }
+                  },
+                  "required": ["items"]
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "The reviewer is not an owner."
+          }
+        }
+      }
+    },
+    "/api/settings": {
+      "post": {
+        "responses": {
+          "204": {
+            "description": "Saved."
           }
         }
       }
@@ -58,15 +119,51 @@
       "Review": {
         "type": "object",
         "properties": {
-          "id": { "type": "string" },
-          "repo": { "type": "string" },
-          "branch": { "type": "string" },
-          "open": { "type": "integer", "minimum": 0 },
-          "state": { "enum": ["blocked", "clear", "waiting"] },
-          "reviewer": { "type": "string" },
-          "tint": { "type": "integer", "minimum": 0, "maximum": 5 }
+          "id": {
+            "type": "string"
+          },
+          "repo": {
+            "type": "string"
+          },
+          "branch": {
+            "type": "string"
+          },
+          "open": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "state": {
+            "enum": ["blocked", "clear", "waiting"]
+          },
+          "reviewer": {
+            "type": "string"
+          },
+          "tint": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 5
+          }
         },
         "required": ["id", "repo", "branch", "open", "state", "reviewer", "tint"]
+      },
+      "AuditEvent": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "who": {
+            "type": "string"
+          },
+          "what": {
+            "type": "string"
+          },
+          "when": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": ["id", "who", "what", "when"]
       }
     }
   }

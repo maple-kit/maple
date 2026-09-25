@@ -25,6 +25,12 @@ import { build } from "vite";
  */
 const INTERCEPTOR = "fetch-interceptor";
 
+/**
+ * The pattern Maple's LaunchDarkly flag source claims the SDK's poll by. The
+ * SDK itself builds the path from parts, so only the flag source writes it.
+ */
+const FLAG_SOURCE = "evalx\\/[^/]+\\/(?:contexts";
+
 /** Written only in `openapi.json`, which the route serves and no bundle may carry. */
 const SCHEMA_MARK = "Supplied to Maple Mock by vite.config.ts; never bundled.";
 
@@ -93,6 +99,11 @@ assert(
 );
 
 assert(
+  previewOutput.includes(FLAG_SOURCE),
+  "A preview build should carry Maple's LaunchDarkly flag source, and does not.",
+);
+
+assert(
   !previewOutput.includes(SCHEMA_MARK),
   "A preview build must not carry the page's schema, which the route serves per call.",
 );
@@ -130,6 +141,11 @@ assert(
 assert(
   !productionOutput.includes(INTERCEPTOR),
   "A production build must carry no Maple Mock interceptor, and this one does.",
+);
+
+assert(
+  !productionOutput.includes(FLAG_SOURCE),
+  "A production build must not rewrite LaunchDarkly's flags, and carries the flag source.",
 );
 
 process.stdout.write(

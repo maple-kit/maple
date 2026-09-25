@@ -8,7 +8,7 @@
 
 import { useEffect, useState } from "react";
 
-import type { Row } from "./data.js";
+import type { AuditEvent, Row } from "./data.js";
 
 /** `GET /api/reviews`: a page of open reviews, in the usual envelope. */
 export interface Reviews {
@@ -17,10 +17,17 @@ export interface Reviews {
   readonly nextCursor: string | null;
 }
 
-/** `GET /api/session`: who is signed in. */
+/** `GET /api/session`: who is signed in, and what they may do. */
 export interface Session {
   readonly name: string;
   readonly tint: number;
+  readonly role: "owner" | "reviewer" | "guest";
+  readonly permissions: readonly ("settings.write" | "reviews.export")[];
+}
+
+/** `GET /api/audit`: what changed. Owners only; anyone else is answered 403. */
+export interface Audit {
+  readonly items: readonly AuditEvent[];
 }
 
 /** A call, as a component renders it. */

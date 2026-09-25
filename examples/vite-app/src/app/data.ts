@@ -83,3 +83,32 @@ export const WEEKS: readonly number[] = [12, 18, 14, 22, 26, 21, 30, 28, 35, 31,
 
 /** The week the gate landed, zero-based, which the chart marks. */
 export const GATE_WEEK = 6;
+
+export interface AuditEvent {
+  readonly id: string;
+  readonly who: string;
+  readonly what: string;
+  readonly when: string;
+}
+
+/** What `GET /api/audit` answers an owner. */
+export const AUDIT: readonly AuditEvent[] = [
+  {
+    id: "a3",
+    who: "Ada",
+    what: "turned the merge gate on for maple-kit/site",
+    when: "2026-09-24T16:10:00Z",
+  },
+  {
+    id: "a2",
+    who: "Grace",
+    what: "added a reviewer to maple-kit/maple",
+    when: "2026-09-23T09:42:00Z",
+  },
+  { id: "a1", who: "Ada", what: "changed the digest to daily", when: "2026-09-22T12:05:00Z" },
+];
+
+/** What the preview's fake LaunchDarkly answers, in its FDv1 poll format. */
+export const LD_FLAGS = {
+  "merge-forecast": { value: false, variation: 1, version: 3, flagVersion: 2, trackEvents: false },
+};

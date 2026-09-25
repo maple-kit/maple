@@ -144,6 +144,9 @@ importers:
 
   examples/vite-app:
     dependencies:
+      '@launchdarkly/js-client-sdk':
+        specifier: 4.10.2
+        version: 4.10.2
       '@maple-kit/classifier':
         specifier: workspace:*
         version: link:../../packages/classifier

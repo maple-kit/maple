@@ -66,6 +66,15 @@ pnpm --filter @maple-kit/example-vite verify
    with `<MapleMock />` and no `<Maple />`, and `verify` checks it carries none
    of the island, the composer or the marks, and that a production build
    carries no interceptor even with `<Maple />` mounted.
+8. **Flags and who the page is shown as.** The session carries a `role` and
+   `permissions` whose words come from `openapi.json`, and `vite.config.ts`
+   declares the identity rules: the audit log is owners only. The box's
+   second panel picks a role, grants or takes away a permission, and flips
+   `merge-forecast`, a flag LaunchDarkly's own browser SDK reads from a fake
+   poll at `/ld`. As a guest, Invite and Save disappear and the audit log shows
+   its own 403; the banner says the server still acts as you, and counts a
+   Save that reached it. A production build ignores the same link, and
+   `verify` checks it carries no flag source.
 
 ## What it does not prove yet
 

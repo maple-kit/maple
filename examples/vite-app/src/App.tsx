@@ -1,4 +1,5 @@
 import {
+  AuditLog,
   GateNotice,
   MetricRow,
   ReviewTable,
@@ -7,11 +8,13 @@ import {
   ThroughputChart,
   TopBar,
 } from "./app/components.js";
+import { useFlag } from "./app/flags.js";
 
 import type { ReactNode } from "react";
 
 /** The page, with whatever Maple mounts beside it: the overlay, or the mock box alone. */
 export function App({ overlay }: { readonly overlay: ReactNode }) {
+  const forecast = useFlag("merge-forecast", false);
   return (
     <div className="shell">
       <SideNav />
@@ -20,6 +23,11 @@ export function App({ overlay }: { readonly overlay: ReactNode }) {
         <header className="page-head">
           <h1>Review overview</h1>
           <p>Every repository with a preview, over the last 28 days.</p>
+          {forecast && (
+            <p className="forecast" data-maple-label="the merge forecast">
+              At this pace, every open review merges by Friday.
+            </p>
+          )}
         </header>
         <MetricRow />
         <div className="split" data-maple-label="the chart and the gate notice">
@@ -27,6 +35,7 @@ export function App({ overlay }: { readonly overlay: ReactNode }) {
           <GateNotice />
         </div>
         <ReviewTable />
+        <AuditLog />
         <SettingsForm />
       </main>
       {overlay}

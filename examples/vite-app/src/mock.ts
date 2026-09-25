@@ -7,8 +7,13 @@
  */
 
 import { installMock } from "@maple-kit/mock";
+import { launchDarklyFlags } from "@maple-kit/mock/launchdarkly";
+
+import { LD_BASE } from "./app/ld.js";
 
 if (__MAPLE_PREVIEW__) {
-  // Maple's route is never mocked, and its /mock/schema answers each call's shape.
-  installMock({ route: "/api/maple" });
+  // Maple's route is never mocked, and its /mock/schema answers each call's
+  // shape. LaunchDarkly's poll is answered with the recipe's flags written in.
+  const flags = launchDarklyFlags({ baseUri: LD_BASE, streamUri: LD_BASE });
+  installMock({ route: "/api/maple", flags: [flags] });
 }

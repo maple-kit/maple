@@ -8,12 +8,14 @@
  * rather than the component's own spelling.
  */
 
+import { useState } from "react";
+
 import { useApi } from "./api.js";
 import { GATE_WEEK, METRICS, WEEKS } from "./data.js";
 
-import type { Loaded, Reviews, Session } from "./api.js";
+import type { Audit, Loaded, Reviews, Session } from "./api.js";
 import type { Metric, Row } from "./data.js";
-import type { ReactNode } from "react";
+import type { ReactNode, SyntheticEvent } from "react";
 
 export function MetricCard({ metric }: { readonly metric: Metric }) {
   const rising = metric.delta >= 0;
@@ -150,6 +152,34 @@ function ReviewRow({ row }: { readonly row: Row }) {
   );
 }
 
+/** Owners only: the server answers anyone else 403, and the region says so. */
+export function AuditLog() {
+  const audit = useApi<Audit>("/api/audit");
+  return (
+    <article className="card table-card" data-maple-label="the audit log">
+      <header className="card-head">
+        <h3>Audit log</h3>
+      </header>
+      {audit.state === "ready" && (
+        <ul className="audit">
+          {audit.data.items.map((event) => (
+            <li key={event.id}>
+              <strong>{event.who}</strong> {event.what}
+            </li>
+          ))}
+        </ul>
+      )}
+      {audit.state === "failed" && (
+        <p className={`table-notice ${audit.status === 403 ? "quiet" : "bad"}`}>
+          {audit.status === 403
+            ? "Only owners can see the audit log."
+            : "The audit log could not be loaded."}
+        </p>
+      )}
+    </article>
+  );
+}
+
 export function GateNotice() {
   return (
     <aside className="card notice" data-maple-label="the gate notice" role="note">
@@ -167,10 +197,20 @@ export function GateNotice() {
 }
 
 export function SettingsForm() {
+  const session = useApi<Session>("/api/session");
+  const [saved, setSaved] = useState(false);
+  const writable = session.state === "ready" && session.data.permissions.includes("settings.write");
+  const save = (event: SyntheticEvent) => {
+    event.preventDefault();
+    void fetch("/api/settings", { method: "POST", body: "{}" }).then((response) =>
+      setSaved(response.ok),
+    );
+  };
+
   return (
     <article className="card form-card">
       <h3>Notifications</h3>
-      <form onSubmit={(event) => event.preventDefault()}>
+      <form onSubmit={save}>
         <Field label="Email digest">
           <select defaultValue="daily">
             <option value="off">Off</option>
@@ -184,7 +224,11 @@ export function SettingsForm() {
         <Field label="Reply address">
           <input type="email" defaultValue="reviews@example.test" />
         </Field>
-        <button type="submit">Save</button>
+        {writable ? (
+          <button type="submit">{saved ? "Saved" : "Save"}</button>
+        ) : (
+          <p className="metric-note">Only someone who may change settings can save these.</p>
+        )}
       </form>
     </article>
   );
@@ -243,6 +287,11 @@ export function TopBar() {
       </p>
       <div className="topbar-end">
         <span className="range">Last 28 days</span>
+        {me?.role === "owner" && (
+          <button type="button" className="invite">
+            Invite reviewer
+          </button>
+        )}
         {me && (
           <span className={`avatar tint-${String(me.tint)} me`} aria-label={me.name}>
             {me.name.charAt(0)}

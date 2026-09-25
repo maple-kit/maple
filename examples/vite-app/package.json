@@ -11,6 +11,7 @@
     "verify": "node scripts/verify.ts"
   },
   "dependencies": {
+    "@launchdarkly/js-client-sdk": "4.10.2",
     "@maple-kit/classifier": "workspace:*",
     "@maple-kit/core": "workspace:*",
     "@maple-kit/mock": "workspace:*",
