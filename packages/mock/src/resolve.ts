@@ -66,7 +66,7 @@ export async function resolve(
   const applies = recipe?.route === undefined || recipe.route === options.route;
   const split = await splitRequest(request, applies ? recipe : undefined, options.codecs);
   if (split === undefined || split.states.every((state) => state === undefined)) return undefined;
-  if (split.states.includes("loading")) return hold(request.signal);
+  if (split.states.includes("loading")) return hold(request);
 
   const needsServer = split.states.some((state) => state === undefined || BODY_STATES.has(state));
   const sent = split.codec.prepare?.(request) ?? request;
@@ -124,12 +124,25 @@ function failure(): Answer {
 }
 
 /**
+ * Held requests, kept reachable: Node links a request's signal to the caller's
+ * weakly, so a collected one never hears the abort.
+ */
+// eslint-disable-next-line sonarjs/no-unused-collection -- holding the reference is the point.
+const HELD = new Set<Request>();
+
+/**
  * Settles only when the request is abandoned. The signal may already have
  * aborted while the request was being taken apart, and fires no event then.
  */
-function hold(signal: AbortSignal): Promise<never> {
+function hold(request: Request): Promise<never> {
+  const { signal } = request;
   if (signal.aborted) return Promise.reject(signal.reason as Error);
+  HELD.add(request);
   return new Promise((_, reject) => {
-    signal.addEventListener("abort", () => reject(signal.reason as Error), { once: true });
+    const release = () => {
+      HELD.delete(request);
+      reject(signal.reason as Error);
+    };
+    signal.addEventListener("abort", release, { once: true });
   });
 }

@@ -1,3 +1,6 @@
+import { setFlagsFromString } from "node:v8";
+import { runInNewContext } from "node:vm";
+
 import { createInventory, MANY, resolve, restCodec } from "@maple-kit/mock";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
@@ -121,6 +124,27 @@ describe("resolve", () => {
     expect(api.reached).toEqual([]);
   });
 
+  /** Node links a request's signal to the caller's weakly; a collection used to cut it. */
+  it("still hears the abort of a held call after a garbage collection", async () => {
+    const controller = new AbortController();
+    const pending = resolve(
+      new Request(`${API}/projects`, { signal: controller.signal }),
+      recipe("rest:GET /api/projects", "loading"),
+      createInventory(),
+      options,
+    );
+    await wait(30);
+    collectGarbage();
+    await wait(10);
+    controller.abort();
+
+    const outcome = pending.then(
+      () => "settled",
+      () => "rejected",
+    );
+    expect(await Promise.race([outcome, wait(500).then(() => "held")])).toBe("rejected");
+  });
+
   it("lets go of a loading call abandoned before it was held", async () => {
     const controller = new AbortController();
     const request = new Request(`${API}/projects`, { signal: controller.signal });
@@ -172,6 +196,12 @@ describe("resolve", () => {
     await expect(response?.json()).resolves.toBe(0);
   });
 });
+
+/** A full collection, from a test run without `--expose-gc`. */
+function collectGarbage(): void {
+  setFlagsFromString("--expose-gc");
+  (runInNewContext("gc") as () => void)();
+}
 
 function wait(ms: number): Promise<void> {
   return new Promise((done) => setTimeout(done, ms));
