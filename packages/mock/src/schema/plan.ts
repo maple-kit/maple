@@ -35,12 +35,12 @@ export interface RoutePlanOptions {
 export function routePlan(options: RoutePlanOptions): PlanLookup {
   const url = new URL(`${options.basePath.replace(/\/$/, "")}/mock/plan`, origin(options));
 
-  return async ({ request, route, calls }, signal) => {
+  return async ({ request, route, calls, flags }, signal) => {
     const response = await options.fetch(url, {
       method: "POST",
       credentials: "same-origin",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ request, route, calls }),
+      body: JSON.stringify({ request, route, calls, ...(flags === undefined ? {} : { flags }) }),
       ...(signal === undefined ? {} : { signal }),
     });
     if (response.status === 404) throw new PlanUnavailableError("This route plans nothing.");

@@ -183,7 +183,7 @@ function Box(props: SurfaceProps & { layers: LayerChunk | undefined }): ReactEle
       }),
       createElement("kbd", { className: "mk-mock-key-hint" }, MOCK_COPY.escape),
     ),
-    suggestions(state, client),
+    suggestions(state, client, layers),
     createElement(
       "p",
       { className: "mk-mock-route" },
@@ -197,25 +197,34 @@ function Box(props: SurfaceProps & { layers: LayerChunk | undefined }): ReactEle
 }
 
 /** At most two chips, or the one line for a sentence that names no state. */
-function suggestions(state: MockClientState, client: MockClient): ReactNode {
+function suggestions(state: MockClientState, client: MockClient, layers?: LayerChunk): ReactNode {
   if (state.unnamed) return createElement("p", { className: "mk-mock-unnamed" }, MOCK_COPY.unnamed);
   if (state.suggestions.length === 0) return null;
   return createElement(
     "div",
     { className: "mk-mock-suggest mk-live" },
-    state.suggestions.flatMap((suggestion, index) => [
-      index === 0 ? null : createElement("span", { key: `or${String(index)}` }, MOCK_COPY.or),
-      createElement(
-        "button",
-        {
-          key: suggestion.state,
-          type: "button",
-          className: "mk-mock-chip mk-press",
-          onClick: () => client.suggest(index),
-        },
-        suggestionLabel(suggestion.state, suggestion.calls.length),
-      ),
-    ]),
+    state.suggestions.flatMap((suggestion, index) => {
+      const label = [
+        suggestion.state && suggestionLabel(suggestion.state, suggestion.calls.length),
+        layers?.layerLabel(suggestion),
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      return [
+        index === 0 ? null : createElement("span", { key: `or${String(index)}` }, MOCK_COPY.or),
+        label &&
+          createElement(
+            "button",
+            {
+              key: index,
+              type: "button",
+              className: "mk-mock-chip mk-press",
+              onClick: () => client.suggest(index),
+            },
+            label,
+          ),
+      ];
+    }),
   );
 }
 

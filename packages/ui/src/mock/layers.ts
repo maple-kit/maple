@@ -7,7 +7,7 @@
 import { describeIdentity } from "@maple-kit/core/mock";
 import { createElement } from "react";
 
-import type { FlagValue } from "@maple-kit/core/mock";
+import type { FlagValue, MockSuggestion } from "@maple-kit/core/mock";
 import type { MockClient, MockClientState, MockFlagRow } from "@maple-kit/mock/client";
 import type { ReactElement, ReactNode } from "react";
 
@@ -87,6 +87,15 @@ export function LayerBanner(props: { readonly state: MockClientState }): ReactNo
   return said.length === 0
     ? null
     : createElement("span", { className: "mk-mock-banner-as" }, said.join(" "));
+}
+
+/** A chip's flags and role, in the chip's own words: `new-roaster Off · as barista`. */
+export function layerLabel(suggestion: MockSuggestion): string {
+  const flags = Object.entries(suggestion.flags ?? {}).map(
+    ([key, value]) => `${key} ${valueLabel(value)}`,
+  );
+  const role = suggestion.as?.role;
+  return [...flags, ...(role === undefined ? [] : [`as ${role}`])].join(" · ");
 }
 
 function flagRow(flag: MockFlagRow, client: MockClient): ReactNode {

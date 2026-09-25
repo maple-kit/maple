@@ -9,6 +9,7 @@
 import { DEFAULT_PILLARS, selectPillars } from "@maple-kit/core/connectors";
 
 import { openSystemOne } from "./internal/systemone.js";
+import { hasLayers, layerQuestions, layersFrom, layerStateFor } from "./plan-layers.js";
 import {
   callKey,
   callQuestion,
@@ -88,18 +89,24 @@ export function jevClassifier(options: JevClassifierOptions): ClassifierConnecto
         questions[callKey(index)] = callQuestion(index, call.key);
       });
 
-      const answers = await open().ask({
-        connector: connector.name,
-        operation: "plan",
-        questions,
-        signal: request.signal,
-        state: planStateFor(request),
-      });
+      const asked = { connector: connector.name, signal: request.signal };
+      const [answers, layers] = await Promise.all([
+        open().ask({ ...asked, operation: "plan", questions, state: planStateFor(request) }),
+        hasLayers(request)
+          ? open().ask({
+              ...asked,
+              operation: "plan-layers",
+              questions: layerQuestions(request),
+              state: layerStateFor(request),
+            })
+          : undefined,
+      ]);
       return {
         ...planStateFrom(answerAt(answers, PLAN_STATE_KEY)),
         calls: request.calls.map((call, index) =>
           plannedCallFrom(call.key, answerAt(answers, callKey(index))),
         ),
+        ...(layers === undefined ? {} : layersFrom(request, layers)),
       };
     },
   };

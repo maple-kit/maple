@@ -404,11 +404,14 @@ a camel-cased key split into words. A sentence sharing no word with any call
 is about the whole page, and concerns every call except a REST write and one
 whose summary says `mutation`.
 
-**The eval** is `evals/mock-plan.eval.test.ts`: 65 sentences against seven
-pages' calls, scored on state accuracy and on the F1 of the calls a plan
-concerns. The keyword planner scores 92.3% and 67.6% and runs on every CI
-run; jev scores 94.4% and 76.7% over three samples, and must beat it. `evals/cases/mock-plan/README.md`
-says where the cases came from, and why that flatters the word list.
+**The eval** is `evals/mock-plan.eval.test.ts`: 94 sentences against seven
+pages' calls, scored on state accuracy, on the F1 of the calls a plan
+concerns, and, on the three pages with flags and roles, on whether the flags
+and role it sets are exactly the ones meant. It is scored per set: the 65
+data cases, where jev must beat the word list on state and calls, and 29
+cases written for flags and roles, where it must beat it on the layers.
+`evals/cases/mock-plan/README.md` has the numbers, where the cases came from,
+and why that flatters the word list.
 
 It reads no grammar: "no errors" is `empty` and `error` at once, and two
 states named equally come out torn between them, which is the honest answer
@@ -424,6 +427,34 @@ route with no calls asks only the state. The questions are keyed by index,
 
 A plan is a keystroke's judgement like a score, so there are no retries, and
 `timeoutMs` (8 s by default) abandons one the endpoint never answers.
+
+**The plan learns flags and roles.** The box lists the flags the page
+evaluated, `{ key, type, variants? }` from `seenFlags()` and never a value,
+and the route adds the roles from its own identity rules, never the page's.
+The route drops a flag with no values a plan could set it to, and keeps an
+answer to what was listed: a flag, a value or a role nobody listed is
+dropped, whatever the planner said. A plan answers one `PlannedFlag` per
+listed flag, `{ key, value, concerned, p }` with `value` one of its values,
+and a `role` when the sentence names a listed one.
+
+- **The gate carries them.** Named flags and a role at even odds or better
+  ride on each state's chip, or make a chip of their own when the sentence
+  names no state: "as a barista" is `new-roaster Off · as barista`, not "That
+  doesn't name a state". The chip's words come from the lazy chunk.
+- **The keyword planner** sets a flag when every word of its key is in the
+  sentence (a camel-cased or kebab key split, a ticket prefix like
+  `ROAST-2210-` dropped), on unless "no", "without", "off" or the like sits
+  next to it, and a variant only when the sentence names exactly one. A role
+  is read only after "as", "for", or before "view", "sees": "the owner column"
+  names no role. It never reads a key out of the sentence.
+- **jev asks for them in a second request**, sent beside the first: one
+  `choice` per flag over its values and `leave-unchanged`, and one over the
+  roles and `no-role-named`, with the sentence, every flag's values and the
+  roles as that request's `state`. The first request is exactly what it is
+  without them. A host role named like the person typing, `reviewer`, is read
+  poorly, since every question calls that person the reviewer; the Vite
+  example's roles are `owner`, `member` and `guest` for that reason. Putting the lists in one shared `state` cost the data cases
+  about two points of state accuracy, measured, which is why it is not done.
 
 ## Who the reviewer is
 

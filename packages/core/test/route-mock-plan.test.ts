@@ -64,6 +64,11 @@ const signedIn: IdentityConnector = {
     Promise.resolve(request.headers["cookie"] === "session=ok" ? { id: "u_1", name: "R" } : null),
 };
 
+/** Any plan for `request`, for a classifier whose layers a test writes itself. */
+async function memoryPlan(request: MockPlanRequest) {
+  return memoryClassifier({ state: "empty" }).plan!(request);
+}
+
 /** A classifier that plans with the keyword planner and keeps what it was asked. */
 function recording(): { classifier: ClassifierConnector; asked: MockPlanRequest[] } {
   const asked: MockPlanRequest[] = [];
@@ -132,6 +137,71 @@ describe("POST /mock/plan", () => {
     await handle(post(ASKED));
 
     expect(classifier.asked()).toEqual(["no roasts yet"]);
+  });
+
+  it("passes the page's settable flags and the host's roles, never the page's", async () => {
+    const { classifier, asked } = recording();
+    const identity = {
+      call: "rest:GET /api/me",
+      role: { path: "role", values: ["owner", "barista"] },
+    };
+    const handle = createMapleHandler({
+      mock: { preview: true, schemas: [DOCUMENT], identity, plan: { classifier } },
+    });
+    const flags = [
+      { key: "new-roaster", type: "boolean" },
+      { key: "banner", type: "string" },
+      { key: "tier", type: "string", variants: ["gold", "free"] },
+    ];
+    await handle(post({ ...ASKED, flags, roles: ["admin"] }));
+
+    expect(asked[0]?.flags).toEqual([flags[0], flags[2]]);
+    expect(asked[0]?.roles).toEqual(["owner", "barista"]);
+  });
+
+  it("lists no flags and no roles to a planner when there are none", async () => {
+    const { classifier, asked } = recording();
+    await handler(classifier)(post(ASKED));
+    expect(asked[0]).not.toHaveProperty("flags");
+    expect(asked[0]).not.toHaveProperty("roles");
+  });
+
+  it("keeps a plan to the flags, values and roles it was given", async () => {
+    const liar: ClassifierConnector = {
+      name: "liar",
+      pillars: [],
+      plan: async (request) => ({
+        ...(await memoryPlan(request)),
+        flags: [
+          { key: "new-roaster", value: "maybe", concerned: true, p: 1 },
+          { key: "tier", value: "gold", concerned: true, p: 1 },
+          { key: "invented", value: true, concerned: true, p: 1 },
+        ],
+        role: { role: "admin", p: 1 },
+      }),
+    };
+    const flags = [
+      { key: "new-roaster", type: "boolean" },
+      { key: "tier", type: "string", variants: ["gold", "free"] },
+    ];
+    const response = await handler(liar)(post({ ...ASKED, flags }));
+    const { plan } = (await response.json()) as {
+      plan: { state: string; flags: unknown[]; role?: unknown };
+    };
+
+    expect(plan.state).toBe("empty");
+    expect(plan.flags).toEqual([{ key: "tier", value: "gold", concerned: true, p: 1 }]);
+    expect(plan).not.toHaveProperty("role");
+  });
+
+  it.each<[string, unknown]>([
+    ["not a list", { key: "x" }],
+    ["a flag with no key", [{ type: "boolean" }]],
+    ["an unknown type", [{ key: "x", type: "date" }]],
+    ["a variant that is an object", [{ key: "x", type: "object", variants: [{ a: 1 }] }]],
+  ])("refuses flags that are %s", async (_name, flags) => {
+    const response = await handler(memoryClassifier())(post({ ...ASKED, flags }));
+    expect(response.status).toBe(400);
   });
 
   it.each<[string, RouteOptions]>([

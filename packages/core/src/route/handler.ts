@@ -136,7 +136,7 @@ export function createMapleHandler(options: RouteOptions): (request: Request) =>
     options,
     assist: options.assist === undefined ? undefined : createAssist(options.assist),
     mock,
-    planner: mock && plan ? createMockPlanner(plan, () => mock.index()) : undefined,
+    planner: mock && plan ? createMockPlanner(plan, mock) : undefined,
   };
 
   return async function handle(request: Request): Promise<Response> {

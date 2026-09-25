@@ -116,3 +116,94 @@ describe("the plan arithmetic", () => {
     expect(call.p).toBeLessThanOrEqual(1);
   });
 });
+
+describe("the keyword planner's flags and role", () => {
+  const FLAGS = [
+    { key: "new-roaster", type: "boolean" as const },
+    { key: "roastTier", type: "string" as const, variants: ["gold", "free"] },
+    { key: "batch_limit", type: "number" as const, variants: [3, 10] },
+  ];
+  const ROLES = ["owner", "barista", "guest"];
+
+  function layered(request: string) {
+    return keywordPlan({ request, route: "/roasts", calls: CALLS, flags: FLAGS, roles: ROLES });
+  }
+
+  function set(request: string): Record<string, unknown> {
+    const named = (layered(request).flags ?? []).filter((flag) => flag.concerned);
+    return Object.fromEntries(named.map((flag) => [flag.key, flag.value]));
+  }
+
+  it.each<[string, Record<string, unknown>]>([
+    ["with the new roaster", { "new-roaster": true }],
+    ["the new roaster turned on", { "new-roaster": true }],
+    ["without the new roaster", { "new-roaster": false }],
+    ["turn off the new roaster", { "new-roaster": false }],
+    ["the new roaster disabled", { "new-roaster": false }],
+    ["new roasters off and the gold roast tier", { "new-roaster": false, roastTier: "gold" }],
+    ["a batch limit of 10", { batch_limit: 10 }],
+    ["the roast tier", {}],
+    ["the roaster", {}],
+    ["no roasts yet", {}],
+  ])("reads %j as %j", (request, flags) => {
+    expect(set(request)).toEqual(flags);
+  });
+
+  it.each<[string, string, Record<string, unknown>]>([
+    ["a ticket prefix, which names the work", "ROAST-2210-sparkline-tooltips", {}],
+    ["digits in a key", "cupping-form-v3", {}],
+  ])("reads a key with %s", (_name, key) => {
+    const sentence = key === "cupping-form-v3" ? "cupping form v3 on" : "sparkline tooltips off";
+    const planned = keywordPlan({
+      request: sentence,
+      route: "/roasts",
+      calls: CALLS,
+      flags: [{ key, type: "boolean" }],
+    });
+    expect(planned.flags?.[0]?.concerned).toBe(true);
+  });
+
+  it("reads a role written with a hyphen as the words it joins", () => {
+    const planned = keywordPlan({
+      request: "as the head roaster",
+      route: "/roasts",
+      calls: CALLS,
+      roles: ["roaster", "head-roaster"],
+    });
+    expect(planned.role?.role).toBe("head-roaster");
+  });
+
+  it("answers every listed flag once, in order, with one of its values", () => {
+    const flags = layered("no roasts yet").flags ?? [];
+    expect(flags.map((flag) => [flag.key, flag.concerned])).toEqual([
+      ["new-roaster", false],
+      ["roastTier", false],
+      ["batch_limit", false],
+    ]);
+    expect(flags.map((flag) => flag.value)).toEqual([true, "gold", 3]);
+  });
+
+  it.each<[string, string | undefined]>([
+    ["as a barista", "barista"],
+    ["show it for an owner", "owner"],
+    ["what a guest sees", "guest"],
+    ["the barista's view with no roasts", "barista"],
+    ["as a guest, then as an owner", "guest"],
+    ["the owner column is empty", undefined],
+    ["as an admin", undefined],
+  ])("reads %j as the role %j", (request, role) => {
+    expect(layered(request).role?.role).toBe(role);
+  });
+
+  it("names no flag and no role for a request that lists none", () => {
+    const planned = plan("as a barista with the new roaster");
+    expect(planned.flags).toBeUndefined();
+    expect(planned.role).toBeUndefined();
+  });
+
+  it("keeps the state and the calls it read without the layers", () => {
+    const planned = layered("no roasts as a barista with the new roaster");
+    expect(planned.state).toBe("empty");
+    expect(planned.calls.find((call) => call.key === "trpc:roast.list")?.concerned).toBe(true);
+  });
+});

@@ -87,7 +87,62 @@
         "key": "trpc:order.markShipped",
         "summary": "Order: id, status"
       }
-    ]
+    ],
+    "flags": [
+      {
+        "key": "new-roast-planner",
+        "type": "boolean"
+      },
+      {
+        "key": "ROAST-2210-sparkline-tooltips",
+        "type": "boolean"
+      },
+      {
+        "key": "originMapV2",
+        "type": "boolean"
+      },
+      {
+        "key": "low-stock-banner",
+        "type": "boolean"
+      },
+      {
+        "key": "dashboard-density",
+        "type": "string",
+        "variants": ["compact", "comfortable"]
+      },
+      {
+        "key": "order-list-page-size",
+        "type": "number",
+        "variants": [10, 25, 50]
+      },
+      {
+        "key": "wholesale-portal",
+        "type": "boolean"
+      },
+      {
+        "key": "notification-digest",
+        "type": "string",
+        "variants": ["off", "daily", "weekly"]
+      },
+      {
+        "key": "cupping-shortcut-beta",
+        "type": "boolean"
+      },
+      {
+        "key": "green-bean-forecast",
+        "type": "boolean"
+      },
+      {
+        "key": "shipping-labels-beta",
+        "type": "boolean"
+      },
+      {
+        "key": "theme",
+        "type": "string",
+        "variants": ["light", "dark", "roastery"]
+      }
+    ],
+    "roles": ["owner", "head-roaster", "roaster", "barista", "wholesale-buyer", "viewer"]
   },
   "bean-detail": {
     "source": "written",
@@ -167,7 +222,36 @@
         "key": "rest:PATCH /api/orders/:id",
         "summary": "Order: id, status, notes"
       }
-    ]
+    ],
+    "flags": [
+      {
+        "key": "bulk-ship",
+        "type": "boolean"
+      },
+      {
+        "key": "cafe-credit-limits",
+        "type": "boolean"
+      },
+      {
+        "key": "split-shipments",
+        "type": "boolean"
+      },
+      {
+        "key": "courier",
+        "type": "string",
+        "variants": ["dhl", "ups", "local-van"]
+      },
+      {
+        "key": "queue-sort",
+        "type": "string",
+        "variants": ["oldest", "priority"]
+      },
+      {
+        "key": "auto-invoice",
+        "type": "boolean"
+      }
+    ],
+    "roles": ["owner", "head-roaster", "roaster", "barista", "wholesale-buyer", "viewer"]
   },
   "team-settings": {
     "source": "written",
@@ -327,6 +411,39 @@
         "key": "trpc:roast.duplicate",
         "summary": "Roast: id"
       }
-    ]
+    ],
+    "flags": [
+      {
+        "key": "roast-curve-overlay",
+        "type": "boolean"
+      },
+      {
+        "key": "ror-smoothing",
+        "type": "number",
+        "variants": [0, 3, 5]
+      },
+      {
+        "key": "profile-diff-view",
+        "type": "boolean"
+      },
+      {
+        "key": "ROAST-3001-ai-notes",
+        "type": "boolean"
+      },
+      {
+        "key": "cupping-form-v3",
+        "type": "boolean"
+      },
+      {
+        "key": "batch-labels",
+        "type": "string",
+        "variants": ["qr", "barcode"]
+      },
+      {
+        "key": "roaster-maintenance-alerts",
+        "type": "boolean"
+      }
+    ],
+    "roles": ["owner", "head-roaster", "roaster", "barista", "wholesale-buyer", "viewer"]
   }
 }

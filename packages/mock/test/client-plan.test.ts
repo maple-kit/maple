@@ -6,6 +6,7 @@ import {
   planCall,
   PlanUnavailableError,
   routePlan,
+  seenFlags,
 } from "../src/index.js";
 import { createPlanFake, PLAN_URL, SURE } from "./msw/plan.js";
 import { createTestServer, useTestServer } from "./msw/server.js";
@@ -132,6 +133,54 @@ describe("the box, planning a sentence", () => {
     vi.useRealTimers();
   });
 
+  it("sends the flags the page evaluated, by key, type and variants, and never a value", async () => {
+    vi.useFakeTimers();
+    seenFlags().record({ key: "new-roaster", type: "boolean", value: true });
+    seenFlags().record({ key: "tier", type: "string", value: "gold", variants: ["gold", "free"] });
+    const plan = vi.fn<PlanLookup>(() => Promise.resolve(null));
+    const client = createMockClient({ view: view(), handle: handle(plan) });
+    client.setQuery("without the new roaster");
+    await settle();
+
+    expect(plan.mock.calls[0]?.[0].flags).toEqual([
+      { key: "new-roaster", type: "boolean" },
+      { key: "tier", type: "string", variants: ["gold", "free"] },
+    ]);
+    vi.useRealTimers();
+  });
+
+  it("puts a chip's flags beside the draft's and its role in place of the draft's", async () => {
+    vi.useFakeTimers();
+    const planned: MockPlan = {
+      ...planOf({ none: 0.7 }),
+      flags: [{ key: "new-roaster", value: false, concerned: true, p: 0.9 }],
+      role: { role: "barista", p: 0.9 },
+    };
+    const client = createMockClient({
+      view: view(),
+      handle: handle(() => Promise.resolve(planned)),
+    });
+    client.setFlag("tier", "gold");
+    client.setPermission("roasts.delete", false);
+    client.setRole("owner");
+    client.setQuery("as a barista without the new roaster");
+    await settle();
+
+    expect(client.getState().suggestions).toEqual([
+      { calls: [], flags: { "new-roaster": false }, as: { role: "barista" } },
+    ]);
+    client.suggest(0);
+    expect(client.recipe()).toEqual({
+      version: 2,
+      calls: [],
+      flags: { tier: "gold", "new-roaster": false },
+      as: { role: "barista", permissions: { "roasts.delete": false } },
+      route: ROUTE,
+      request: "as a barista without the new roaster",
+    });
+    vi.useRealTimers();
+  });
+
   it("goes back to filtering for good once the route says it plans nothing", async () => {
     vi.useFakeTimers();
     const plan = vi.fn<PlanLookup>(() => Promise.reject(new PlanUnavailableError("no")));
@@ -186,6 +235,12 @@ describe("the route's planner, over the network", () => {
     expect(fake.asked).toEqual([asked]);
     expect(plan?.state).toBe("empty");
     expect(plan?.calls).toEqual([{ key: LIST, concerned: true, p: 0.9 }]);
+  });
+
+  it("posts the page's flags when it lists some, and no roles: the route has its own", async () => {
+    const flags = [{ key: "new-roaster", type: "boolean" as const }];
+    await lookup({ ...asked, flags, roles: ["admin"] });
+    expect(fake.asked).toEqual([{ ...asked, flags }]);
   });
 
   it("answers null for a blank sentence", async () => {

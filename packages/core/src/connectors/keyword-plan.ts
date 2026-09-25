@@ -5,6 +5,7 @@
  */
 
 import { MOCK_STATES } from "../mock/recipe.js";
+import { planFlags, planRole } from "./keyword-layers.js";
 import { plannedCall, stateFromWeights } from "./plan.js";
 
 import type { MockState } from "../mock/recipe.js";
@@ -157,7 +158,13 @@ export function keywordPlan(request: MockPlanRequest): MockPlan {
   const weights: Partial<Record<MockState, number>> = {};
   for (const state of MOCK_STATES) weights[state] = hits(text, STATE_PATTERNS[state]);
 
-  return { ...stateFromWeights(weights), calls: concerns(contentWords(text), request.calls) };
+  const role = request.roles === undefined ? undefined : planRole(text, request.roles);
+  return {
+    ...stateFromWeights(weights),
+    calls: concerns(contentWords(text), request.calls),
+    ...(request.flags === undefined ? {} : { flags: planFlags(text, request.flags) }),
+    ...(role === undefined ? {} : { role }),
+  };
 }
 
 /**

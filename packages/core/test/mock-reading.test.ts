@@ -53,6 +53,41 @@ describe("the calm-UI gate", () => {
   });
 });
 
+describe("the gate, with flags and a role", () => {
+  const ROASTER = { key: "new-roaster", value: false, concerned: true, p: 0.9 };
+  const TIER = { key: "tier", value: "gold", concerned: false, p: 0.2 };
+  const layered = (plan: MockPlan, role?: { role: string; p: number }): MockPlan => ({
+    ...plan,
+    flags: [ROASTER, TIER],
+    ...(role === undefined ? {} : { role }),
+  });
+
+  it("rides the named flags and role on every state it offers", () => {
+    const reading = readPlan(
+      layered(planOf({ empty: 0.45, error: 0.35 }), { role: "barista", p: 0.9 }),
+    );
+    expect(reading.suggestions).toEqual([
+      { state: "empty", calls: [LIST], flags: { "new-roaster": false }, as: { role: "barista" } },
+      { state: "error", calls: [LIST], flags: { "new-roaster": false }, as: { role: "barista" } },
+    ]);
+  });
+
+  it.each<[string, MockPlan]>([
+    ["a sure none", layered(planOf({ none: 0.7 }), { role: "barista", p: 0.9 })],
+    ["a shrug", layered(planOf({ empty: 0.3 }), { role: "barista", p: 0.9 })],
+  ])("offers them on their own for %s", (_name, plan) => {
+    expect(readPlan(plan)).toEqual({
+      suggestions: [{ calls: [], flags: { "new-roaster": false }, as: { role: "barista" } }],
+      unnamed: false,
+    });
+  });
+
+  it("leaves out a flag not concerned and a role under even odds", () => {
+    const plan = { ...planOf({ none: 0.7 }), flags: [TIER], role: { role: "guest", p: 0.4 } };
+    expect(readPlan(plan)).toEqual({ suggestions: [], unnamed: true });
+  });
+});
+
 describe("the gate's two numbers", () => {
   it("are the calm-UI thresholds the design names", () => {
     expect([PLAN_FLOOR, PLAN_TIE]).toEqual([0.4, 0.15]);

@@ -13,7 +13,7 @@ import {
   scoreAtPosition,
   selectPillars,
 } from "../connectors/classifier.js";
-import { plannedCall, stateFromWeights } from "../connectors/plan.js";
+import { flagValues, plannedCall, plannedFlag, stateFromWeights } from "../connectors/plan.js";
 
 import type {
   ClassifierConnector,
@@ -21,12 +21,15 @@ import type {
   CommentKind,
   KindGuess,
   MockPlan,
+  MockPlanFlag,
   MockPlanRequest,
   MockPlanState,
   Pillar,
   PillarScore,
+  PlannedFlag,
   ScoreRequest,
 } from "../connectors/types.js";
+import type { FlagValue } from "../mock/recipe.js";
 
 /** Options for {@link memoryClassifier}. */
 export interface MemoryClassifierOptions {
@@ -42,6 +45,10 @@ export interface MemoryClassifierOptions {
   readonly state?: MockPlanState;
   /** The call keys every plan concerns. Defaults to every call it is given. */
   readonly concerns?: readonly string[];
+  /** Flags every plan sets, by key, when the request lists them. Defaults to none. */
+  readonly planFlags?: Readonly<Record<string, FlagValue>>;
+  /** The role every plan names, when the request lists it. Defaults to none. */
+  readonly planRole?: string;
   /** Which methods to define, to exercise a partly capable connector. Defaults to all. */
   readonly methods?: readonly ("classify" | "plan" | "score")[];
 }
@@ -96,11 +103,21 @@ export function memoryClassifier(options: MemoryClassifierOptions = {}): MemoryC
       const state = options.state ?? "none";
       const concerned = (key: string): boolean => options.concerns?.includes(key) ?? true;
 
+      const role = options.planRole;
       return Promise.resolve({
         ...stateFromWeights(state === "none" ? {} : { [state]: 2 }),
         calls: request.calls.map((call) => plannedCall(call.key, concerned(call.key) ? 1 : 0)),
+        ...(request.flags === undefined ? {} : { flags: request.flags.map(flagVerdict) }),
+        ...(role !== undefined && request.roles?.includes(role) ? { role: { role, p: 1 } } : {}),
       });
     };
+  }
+
+  /** The flag's set value when the options name it, else a verdict that it is not meant. */
+  function flagVerdict(flag: MockPlanFlag): PlannedFlag {
+    const set = options.planFlags?.[flag.key];
+    if (set !== undefined) return plannedFlag(flag.key, set, 1);
+    return plannedFlag(flag.key, flagValues(flag)[0] ?? null, 0);
   }
 
   return connector;

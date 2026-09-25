@@ -58,7 +58,7 @@
                     },
                     "role": {
                       "type": "string",
-                      "enum": ["owner", "reviewer", "guest"]
+                      "enum": ["owner", "member", "guest"]
                     },
                     "permissions": {
                       "type": "array",

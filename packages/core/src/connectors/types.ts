@@ -8,7 +8,7 @@
  * capabilities twice.
  */
 
-import type { MockState } from "../mock/recipe.js";
+import type { FlagValue, MockState } from "../mock/recipe.js";
 import type {
   Approval,
   Comment,
@@ -264,6 +264,10 @@ export interface MockPlanRequest {
   readonly route: string;
   /** Every call the route has made, in the order a surface lists them. */
   readonly calls: readonly MockPlanCall[];
+  /** The flags the page evaluated. A plan sets only these, to one of their values. */
+  readonly flags?: readonly MockPlanFlag[];
+  /** The roles the host's identity rules list. A plan picks only one of these. */
+  readonly roles?: readonly string[];
   /** Abandons the plan when the next keystroke makes it stale. */
   readonly signal?: AbortSignal;
 }
@@ -274,6 +278,14 @@ export interface MockPlanCall {
   readonly key: string;
   /** What the call returns, in schema names and descriptions where there is a schema. */
   readonly summary: string;
+}
+
+/** A flag the page evaluated, as a planner reads it: its key and its values, never its value. */
+export interface MockPlanFlag {
+  readonly key: string;
+  readonly type: "boolean" | "number" | "object" | "string";
+  /** The values it may take, where its source lists them. A boolean's are true and false. */
+  readonly variants?: readonly FlagValue[];
 }
 
 /** A state a sentence can name, or `none` when it names no state at all. */
@@ -292,6 +304,26 @@ export interface MockPlan {
   readonly confidence: number;
   /** One verdict per call in the request, in the request's order. */
   readonly calls: readonly PlannedCall[];
+  /** One verdict per flag in the request, in its order. Absent when it listed none. */
+  readonly flags?: readonly PlannedFlag[];
+  /** The role the sentence asks the page to be shown as, when it names a listed one. */
+  readonly role?: PlannedRole;
+}
+
+/** Whether the sentence sets one flag, to which of its values, and how likely that is. */
+export interface PlannedFlag {
+  readonly key: string;
+  /** One of the flag's values: what the sentence would set it to. */
+  readonly value: FlagValue;
+  /** True exactly when `p` is at least one half. */
+  readonly concerned: boolean;
+  readonly p: number;
+}
+
+/** A role the sentence names, and how likely it is that it does. */
+export interface PlannedRole {
+  readonly role: string;
+  readonly p: number;
 }
 
 /** Whether the sentence concerns one call, and how likely that is. */

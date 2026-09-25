@@ -357,9 +357,17 @@ async function runPlan(runtime: Runtime, sentence: string): Promise<void> {
   runtime.planFlight = flight;
   const { route } = runtime.state;
   const calls = (runtime.handle?.inventory.calls(route) ?? []).map(planCall);
+  const flags = seenFlags()
+    .list()
+    .map(({ key, type, variants }) => ({
+      key,
+      type,
+      ...(variants === undefined ? {} : { variants }),
+    }));
 
   try {
-    const plan = await lookup({ request: sentence, route, calls }, flight.signal);
+    const asked = { request: sentence, route, calls, ...(flags.length === 0 ? {} : { flags }) };
+    const plan = await lookup(asked, flight.signal);
     if (!flight.signal.aborted) patch(runtime, readPlan(plan));
   } catch (error) {
     if (error instanceof PlanUnavailableError) runtime.planOff = true;
@@ -369,15 +377,25 @@ async function runPlan(runtime: Runtime, sentence: string): Promise<void> {
   }
 }
 
-/** A chip, taken: its calls go into the draft in its state, beside the rest. */
+/**
+ * A chip, taken: its calls go into the draft in its state, its flags beside
+ * the draft's, and its role in place of the draft's, keeping its permissions.
+ */
 function suggest(runtime: Runtime, index: number): void {
   const suggestion = runtime.state.suggestions[index];
   if (suggestion === undefined) return;
-  const draft = suggestion.calls.reduce(
-    (next, key) => chosen(next, key, suggestion.state),
-    runtime.state.draft,
-  );
-  patch(runtime, { draft, request: runtime.state.query.trim() });
+  const { state } = runtime;
+  const draft =
+    suggestion.state === undefined
+      ? state.draft
+      : suggestion.calls.reduce((next, key) => chosen(next, key, suggestion.state), state.draft);
+  const role = suggestion.as?.role;
+  patch(runtime, {
+    draft,
+    draftFlags: { ...state.draftFlags, ...suggestion.flags },
+    draftAs: role === undefined ? state.draftAs : withRole(state.draftAs, role),
+    request: state.query.trim(),
+  });
 }
 
 /** The recipe in force, when it applies on `route`. */

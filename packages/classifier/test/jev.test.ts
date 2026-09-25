@@ -171,6 +171,67 @@ describe("jevClassifier", () => {
     expect(plan?.calls).toEqual([]);
   });
 
+  describe("with flags and roles", () => {
+    const FLAGS = [
+      { key: "new-roaster", type: "boolean" as const },
+      { key: "tier", type: "string" as const, variants: ["gold", "free"] },
+    ];
+    const layered = {
+      request: "x",
+      route: "/roasts",
+      calls: CALLS,
+      flags: FLAGS,
+      roles: ["owner", "barista"],
+    };
+
+    it("asks for them in a second request, leaving the first as it is without them", async () => {
+      await connector().plan?.(layered);
+
+      expect(fake.asked).toHaveLength(2);
+      const asksState = (asked: (typeof fake.asked)[number]) => "state" in asked.questions;
+      const data = fake.asked.find(asksState);
+      const layers = fake.asked.find((asked) => !asksState(asked));
+      expect(data?.state).toEqual({ request: "x", route: "/roasts", calls: CALLS });
+      expect(Object.keys(layers?.questions ?? {})).toEqual(["flag:0", "flag:1", "role"]);
+      expect(layers?.state).toEqual({
+        request: "x",
+        route: "/roasts",
+        flags: [
+          { key: "new-roaster", values: ["on", "off"] },
+          { key: "tier", values: ["gold", "free"] },
+        ],
+        roles: ["owner", "barista"],
+      });
+      expect(layers?.questions["flag:0"]?.instructions).toContain("new-roaster");
+      expect(Object.keys(layers?.questions["flag:1"]?.criteria as object)).toEqual([
+        "gold",
+        "free",
+        "leave-unchanged",
+      ]);
+    });
+
+    it("reads each flag's likeliest value and the likeliest role", async () => {
+      const plan = await connector().plan?.(layered);
+
+      expect(plan?.flags).toEqual([
+        { key: "new-roaster", value: false, concerned: true, p: 0.7 },
+        { key: "tier", value: "free", concerned: true, p: 0.7 },
+      ]);
+      expect(plan?.role).toEqual({ role: "barista", p: 0.7 });
+    });
+
+    it("names no role where naming none is likelier", async () => {
+      const plan = await connector().plan?.({ ...layered, flags: [], roles: ["owner"] });
+      expect(plan?.role).toBeUndefined();
+      expect(plan?.flags).toEqual([]);
+    });
+
+    it("asks once, as without them, when the request lists none", async () => {
+      await connector().plan?.({ ...layered, flags: [], roles: [] });
+      expect(fake.asked).toHaveLength(1);
+    });
+  });
+
   it("reports an account out of credit as a plain error, without retrying", async () => {
     fake.failNext(402, { detail: "PaymentRequired" });
 

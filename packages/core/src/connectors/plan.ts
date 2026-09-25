@@ -7,7 +7,8 @@
 
 import { MOCK_STATES } from "../mock/recipe.js";
 
-import type { MockPlan, MockPlanState, PlannedCall } from "./types.js";
+import type { FlagValue } from "../mock/recipe.js";
+import type { MockPlan, MockPlanFlag, MockPlanState, PlannedCall, PlannedFlag } from "./types.js";
 
 /**
  * Every state a plan can pick, `none` last. The order is the tie-break: two
@@ -61,6 +62,17 @@ export function stateFromWeights(
 export function plannedCall(key: string, p: number): PlannedCall {
   const clamped = Math.min(1, Math.max(0, p));
   return { key, concerned: clamped >= 0.5, p: clamped };
+}
+
+/** One flag's verdict. `concerned` is derived, as a call's is. */
+export function plannedFlag(key: string, value: FlagValue, p: number): PlannedFlag {
+  const clamped = Math.min(1, Math.max(0, p));
+  return { key, value, concerned: clamped >= 0.5, p: clamped };
+}
+
+/** The values a plan may set a flag to: a boolean's two, else the ones its source lists. */
+export function flagValues(flag: MockPlanFlag): readonly FlagValue[] {
+  return flag.type === "boolean" ? [true, false] : (flag.variants ?? []);
 }
 
 /** The first index holding the largest value, so ties go to the earlier one. */

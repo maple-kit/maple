@@ -208,7 +208,8 @@
     "inventory": "roastery-dashboard",
     "request": "a barista account that can't see orders",
     "state": "forbidden",
-    "calls": ["trpc:order.list"]
+    "calls": ["trpc:order.list"],
+    "as": "barista"
   },
   {
     "id": "mockplan-026",
@@ -554,5 +555,326 @@
     "request": "the profile versions list overflows with versions",
     "state": "many",
     "calls": ["trpc:profile.listVersions"]
+  },
+  {
+    "id": "mockplan-066",
+    "by": "agent",
+    "set": "layers",
+    "inventory": "roastery-dashboard",
+    "request": "turn on the new roast planner",
+    "state": "none",
+    "flags": {
+      "new-roast-planner": true
+    }
+  },
+  {
+    "id": "mockplan-067",
+    "by": "agent",
+    "set": "layers",
+    "inventory": "roastery-dashboard",
+    "request": "dashboard without the low stock banner",
+    "state": "none",
+    "flags": {
+      "low-stock-banner": false
+    }
+  },
+  {
+    "id": "mockplan-068",
+    "by": "agent",
+    "set": "layers",
+    "inventory": "roastery-dashboard",
+    "request": "compact dashboard density",
+    "state": "none",
+    "flags": {
+      "dashboard-density": "compact"
+    }
+  },
+  {
+    "id": "mockplan-069",
+    "by": "agent",
+    "set": "layers",
+    "inventory": "roastery-dashboard",
+    "request": "as a barista",
+    "state": "none",
+    "as": "barista"
+  },
+  {
+    "id": "mockplan-070",
+    "by": "agent",
+    "set": "layers",
+    "inventory": "roastery-dashboard",
+    "request": "what a wholesale buyer sees on the dashboard",
+    "state": "none",
+    "as": "wholesale-buyer"
+  },
+  {
+    "id": "mockplan-071",
+    "by": "agent",
+    "set": "layers",
+    "inventory": "roastery-dashboard",
+    "request": "as the head roaster with no roasts yet",
+    "state": "empty",
+    "calls": ["trpc:roast.list"],
+    "as": "head-roaster",
+    "maybe": [
+      "trpc:roast.countByStatus",
+      "trpc:roast.meanRoastTime",
+      "trpc:roast.overTime",
+      "trpc:roast.overTimeSparkline",
+      "trpc:origin.top"
+    ]
+  },
+  {
+    "id": "mockplan-072",
+    "by": "agent",
+    "set": "layers",
+    "inventory": "roastery-dashboard",
+    "request": "viewer, with the origin map v2",
+    "state": "none",
+    "flags": {
+      "originMapV2": true
+    },
+    "as": "viewer"
+  },
+  {
+    "id": "mockplan-073",
+    "by": "agent",
+    "set": "layers",
+    "inventory": "roastery-dashboard",
+    "request": "orders fail to load for a roaster",
+    "state": "error",
+    "calls": ["trpc:order.list"],
+    "as": "roaster"
+  },
+  {
+    "id": "mockplan-074",
+    "by": "agent",
+    "set": "layers",
+    "inventory": "roastery-dashboard",
+    "request": "the sparkline tooltips turned off",
+    "state": "none",
+    "flags": {
+      "ROAST-2210-sparkline-tooltips": false
+    }
+  },
+  {
+    "id": "mockplan-075",
+    "by": "agent",
+    "set": "layers",
+    "inventory": "roastery-dashboard",
+    "request": "dark theme",
+    "state": "none",
+    "flags": {
+      "theme": "dark"
+    }
+  },
+  {
+    "id": "mockplan-076",
+    "by": "agent",
+    "set": "layers",
+    "inventory": "roastery-dashboard",
+    "request": "weekly notification digest",
+    "state": "none",
+    "flags": {
+      "notification-digest": "weekly"
+    }
+  },
+  {
+    "id": "mockplan-077",
+    "by": "agent",
+    "set": "layers",
+    "inventory": "roastery-dashboard",
+    "request": "the orders list shows the owner column empty",
+    "state": "empty",
+    "calls": ["trpc:order.list"]
+  },
+  {
+    "id": "mockplan-078",
+    "by": "agent",
+    "set": "layers",
+    "inventory": "order-queue",
+    "request": "enable bulk ship",
+    "state": "none",
+    "flags": {
+      "bulk-ship": true
+    }
+  },
+  {
+    "id": "mockplan-079",
+    "by": "agent",
+    "set": "layers",
+    "inventory": "order-queue",
+    "request": "ship everything with ups",
+    "state": "none",
+    "flags": {
+      "courier": "ups"
+    }
+  },
+  {
+    "id": "mockplan-080",
+    "by": "agent",
+    "set": "layers",
+    "inventory": "order-queue",
+    "request": "split shipments on and no orders",
+    "state": "empty",
+    "calls": ["rest:GET /api/orders"],
+    "flags": {
+      "split-shipments": true
+    },
+    "maybe": ["rest:GET /api/orders/:id", "rest:GET /api/shipments"]
+  },
+  {
+    "id": "mockplan-081",
+    "by": "agent",
+    "set": "layers",
+    "inventory": "order-queue",
+    "request": "queue sorted by priority",
+    "state": "none",
+    "flags": {
+      "queue-sort": "priority"
+    }
+  },
+  {
+    "id": "mockplan-082",
+    "by": "agent",
+    "set": "layers",
+    "inventory": "order-queue",
+    "request": "a barista's view of the queue",
+    "state": "none",
+    "as": "barista"
+  },
+  {
+    "id": "mockplan-083",
+    "by": "agent",
+    "set": "layers",
+    "inventory": "order-queue",
+    "request": "without auto invoice, as the owner",
+    "state": "none",
+    "flags": {
+      "auto-invoice": false
+    },
+    "as": "owner"
+  },
+  {
+    "id": "mockplan-084",
+    "by": "agent",
+    "set": "layers",
+    "inventory": "order-queue",
+    "request": "cafe credit limits switched on for a wholesale buyer",
+    "state": "none",
+    "flags": {
+      "cafe-credit-limits": true
+    },
+    "as": "wholesale-buyer"
+  },
+  {
+    "id": "mockplan-085",
+    "by": "agent",
+    "set": "layers",
+    "inventory": "roast-detail",
+    "request": "roast curve overlay on",
+    "state": "none",
+    "flags": {
+      "roast-curve-overlay": true
+    }
+  },
+  {
+    "id": "mockplan-086",
+    "by": "agent",
+    "set": "layers",
+    "inventory": "roast-detail",
+    "request": "ror smoothing at 5",
+    "state": "none",
+    "flags": {
+      "ror-smoothing": 5
+    }
+  },
+  {
+    "id": "mockplan-087",
+    "by": "agent",
+    "set": "layers",
+    "inventory": "roast-detail",
+    "request": "as a viewer the cupping notes fail",
+    "state": "error",
+    "calls": ["trpc:cupping.listForRoast"],
+    "as": "viewer",
+    "maybe": ["trpc:cupping.meanScore"]
+  },
+  {
+    "id": "mockplan-088",
+    "by": "agent",
+    "set": "layers",
+    "inventory": "roast-detail",
+    "request": "hide the ai notes",
+    "state": "none",
+    "flags": {
+      "ROAST-3001-ai-notes": false
+    }
+  },
+  {
+    "id": "mockplan-089",
+    "by": "agent",
+    "set": "layers",
+    "inventory": "roast-detail",
+    "request": "cupping form v3 for a head roaster",
+    "state": "none",
+    "flags": {
+      "cupping-form-v3": true
+    },
+    "as": "head-roaster"
+  },
+  {
+    "id": "mockplan-090",
+    "by": "agent",
+    "set": "layers",
+    "inventory": "roast-detail",
+    "request": "qr batch labels",
+    "state": "none",
+    "flags": {
+      "batch-labels": "qr"
+    }
+  },
+  {
+    "id": "mockplan-091",
+    "by": "agent",
+    "set": "layers",
+    "inventory": "roast-detail",
+    "request": "with the maintenance alerts hidden",
+    "state": "none",
+    "flags": {
+      "roaster-maintenance-alerts": false
+    }
+  },
+  {
+    "id": "mockplan-092",
+    "by": "agent",
+    "set": "layers",
+    "inventory": "roast-detail",
+    "request": "the batch list is empty",
+    "state": "empty",
+    "calls": ["trpc:roast.batchesForRoast"]
+  },
+  {
+    "id": "mockplan-093",
+    "by": "agent",
+    "set": "layers",
+    "inventory": "roast-detail",
+    "request": "the profile diff view as an owner, with hundreds of events",
+    "state": "many",
+    "calls": ["trpc:roast.events"],
+    "flags": {
+      "profile-diff-view": true
+    },
+    "as": "owner"
+  },
+  {
+    "id": "mockplan-094",
+    "by": "agent",
+    "set": "layers",
+    "inventory": "roast-detail",
+    "request": "a roaster who can't see the cupping scores",
+    "state": "forbidden",
+    "calls": ["trpc:cupping.listForRoast", "trpc:cupping.meanScore"],
+    "as": "roaster"
   }
 ]

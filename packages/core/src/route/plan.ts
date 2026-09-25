@@ -9,12 +9,19 @@
 import { stableStringify } from "../lib/stable-stringify.js";
 import { createCache, createLimiter, json } from "./budget.js";
 import { MOCK_SCHEMA_KEYS } from "./mock.js";
+import { confined, planRoles, readPlanFlags } from "./plan-layers.js";
 import { summarise } from "./summary.js";
 
-import type { ClassifierConnector, MockPlan, MockPlanCall } from "../connectors/types.js";
+import type {
+  ClassifierConnector,
+  MockPlan,
+  MockPlanCall,
+  MockPlanFlag,
+} from "../connectors/types.js";
 import type { Logger } from "../logger/types.js";
 import type { ShapeIndex } from "../mock/shape.js";
 import type { RateLimit } from "./budget.js";
+import type { MockSchemas } from "./mock.js";
 
 /** How a deployment switches planning on. */
 export interface MockPlanOptions {
@@ -50,6 +57,7 @@ interface Asked {
   readonly request: string;
   readonly route: string;
   readonly calls: readonly MockPlanCall[];
+  readonly flags: readonly MockPlanFlag[];
 }
 
 /**
@@ -58,7 +66,7 @@ interface Asked {
  */
 export function createMockPlanner(
   options: MockPlanOptions,
-  shapes: () => Promise<ShapeIndex>,
+  schemas: MockSchemas,
 ): MockPlanner | undefined {
   const { classifier } = options;
   if (typeof classifier.plan !== "function") return undefined;
@@ -74,7 +82,7 @@ export function createMockPlanner(
       if (asked === undefined) return json({ error }, 400);
       if (asked.request.trim() === "") return json({ plan: null } satisfies MockPlanAnswer, 200);
 
-      const planned = { ...asked, calls: await described(asked.calls, shapes) };
+      const planned = await layered(asked, schemas);
       const key = stableStringify(planned);
       const hit = cache.get(key);
       if (hit) return json(hit, 200);
@@ -82,7 +90,9 @@ export function createMockPlanner(
       if (!limiter.take(session)) return json({ error: "Too many plans" }, 429);
 
       try {
-        const answer = { plan: await plan({ ...planned, signal: request.signal }) };
+        const answer = {
+          plan: confined(await plan({ ...planned, signal: request.signal }), planned),
+        };
         cache.set(key, answer);
         return json(answer, 200);
       } catch (error) {
@@ -97,6 +107,8 @@ export function createMockPlanner(
 function read(posted: unknown): { asked?: Asked; error?: string } {
   if (!isRecord(posted)) return { error: "A body is required" };
   const { request, route, calls } = posted;
+  const flags = readPlanFlags(posted["flags"]);
+  if (flags.flags === undefined) return { error: flags.error ?? "flags" };
   if (typeof request !== "string" || request.length > MAX_REQUEST) {
     return { error: `request: a string of at most ${MAX_REQUEST} characters` };
   }
@@ -110,7 +122,7 @@ function read(posted: unknown): { asked?: Asked; error?: string } {
   if (read.some((call) => call === undefined)) {
     return { error: "calls: each a { key, summary } with a codec-prefixed key" };
   }
-  return { asked: { request, route, calls: read as MockPlanCall[] } };
+  return { asked: { request, route, calls: read as MockPlanCall[], flags: flags.flags } };
 }
 
 function readCall(call: unknown): MockPlanCall | undefined {
@@ -119,6 +131,21 @@ function readCall(call: unknown): MockPlanCall | undefined {
   if (typeof key !== "string" || key.length > MAX_KEY || !KEY.test(key)) return undefined;
   if (typeof summary !== "string" || summary.length > MAX_SUMMARY) return undefined;
   return { key, summary };
+}
+
+/**
+ * The request a planner is given: summaries from the shapes, the flags only
+ * when the page listed some, and the roles only when the host's rules list some.
+ */
+async function layered(asked: Asked, schemas: MockSchemas) {
+  const { flags, ...rest } = asked;
+  const roles = planRoles(await schemas.identity());
+  return {
+    ...rest,
+    calls: await described(asked.calls, () => schemas.index()),
+    ...(flags.length === 0 ? {} : { flags }),
+    ...(roles.length === 0 ? {} : { roles }),
+  };
 }
 
 /** Each call's summary, with what its shape says it returns beside the page's words. */

@@ -26,9 +26,11 @@ export { githubStore } from "./github.js";
 export type { GitHubStoreOptions } from "./github.js";
 export { keywordClassifier } from "./keyword.js";
 export {
+  flagValues,
   MOCK_PLAN_STATE_DESCRIPTIONS,
   MOCK_PLAN_STATES,
   plannedCall,
+  plannedFlag,
   stateFromWeights,
 } from "./plan.js";
 export type { StateGuess } from "./plan.js";
@@ -50,6 +52,7 @@ export type {
   MediaConnector,
   MockPlan,
   MockPlanCall,
+  MockPlanFlag,
   MockPlanRequest,
   MockPlanState,
   ObservabilityConnector,
@@ -57,6 +60,8 @@ export type {
   PillarLevel,
   PillarScore,
   PlannedCall,
+  PlannedFlag,
+  PlannedRole,
   ReplayEvent,
   ReplayQuery,
   ScoreRequest,

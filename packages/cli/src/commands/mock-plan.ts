@@ -72,9 +72,12 @@ function recipeFrom(plan: MockPlan | null, asked: Asked): MockPlanResult {
     return failed(`Not sure enough to mock anything; the best reading was ${best}.`);
   }
 
+  const { as, flags, state } = chosen;
   const recipe: Recipe = parseRecipe({
     version: RECIPE_VERSION,
-    calls: chosen.calls.map((key) => ({ key, state: chosen.state })),
+    calls: state === undefined ? [] : chosen.calls.map((key) => ({ key, state })),
+    ...(flags === undefined ? {} : { flags }),
+    ...(as === undefined ? {} : { as }),
     route: asked.route,
     request: asked.sentence,
   });

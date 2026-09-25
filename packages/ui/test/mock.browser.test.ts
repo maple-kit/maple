@@ -471,3 +471,53 @@ describe("flags and who the page is told the reviewer is", () => {
     );
   });
 });
+
+describe("the box, reading a sentence that names a role or a flag", () => {
+  const RULES: IdentityRules = {
+    call: USER,
+    role: { path: "role", values: ["owner", "barista"] },
+    requires: {},
+  };
+
+  it("offers a chip in the chunk's words, and Apply carries the role and the flag", async () => {
+    const fake = fakePage();
+    const plan: MockPlan = {
+      ...planned({ none: 0.8 }),
+      flags: [{ key: "new-roaster", value: false, concerned: true, p: 0.9 }],
+      role: { role: "barista", p: 0.9 },
+    };
+    const client = track(
+      createMockClient({
+        handle: {
+          ...handle(),
+          identity: () => Promise.resolve(RULES),
+          plan: () => Promise.resolve(plan),
+        },
+        view: fake.view,
+        defaultOpen: true,
+        planDebounceMs: 10,
+      }),
+    );
+    client.start();
+    await render(createElement(MapleMock, { client }));
+    await vi.waitFor(() => expect(find(".mk-mock-layers")).not.toBeNull());
+    await userEvent.type(find<HTMLInputElement>(".mk-mock-field")!, "as a barista, no new roaster");
+
+    await vi.waitFor(() =>
+      expect(find(".mk-mock-chip")?.textContent).toBe("new-roaster Off · as barista"),
+    );
+    buttonNamed("new-roaster Off · as barista").click();
+    await vi.waitFor(() => expect(buttonNamed("Apply and reload").disabled).toBe(false));
+    buttonNamed("Apply and reload").click();
+
+    const applied = new URL(String(fake.assign.mock.calls[0]?.[0]));
+    expect(decodeRecipe(applied.searchParams.get("maple-mock") ?? "")).toEqual({
+      version: 2,
+      calls: [],
+      flags: { "new-roaster": false },
+      as: { role: "barista" },
+      route: HERE,
+      request: "as a barista, no new roaster",
+    });
+  });
+});

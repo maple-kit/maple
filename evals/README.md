@@ -7,10 +7,12 @@ enforces. A prompt without an eval is a prompt nobody can change safely.
 model tier whenever a credential is in the environment.
 
 - `assist`: thirty review comments written against a real running application.
-- `mock-plan`: 65 sentences for the mock box against seven pages' calls, two
-  recorded from the examples and five written at production scale. Every
-  sentence so far is `by: agent`; `cases/mock-plan/README.md` says why that
-  matters and what the set needs next.
+- `mock-plan`: 94 sentences for the mock box against seven pages' calls, two
+  recorded from the examples and five written at production scale, three of
+  them with flags and roles; 29 of the sentences are a set of their own for
+  those, scored and gated apart. Every sentence so far is `by: agent`;
+  `cases/mock-plan/README.md` says why that matters and what the set needs
+  next.
 
 ## Harness
 

@@ -7,7 +7,12 @@ page made, the way `POST /mock/plan` hands them to a planner.
 
 `inventories.json` holds seven pages' calls, each as `{ key, summary }` in the
 form the route sends: the names in the call's last answer, and its schema in
-one line.
+one line. Three written pages, the dashboard, the order queue and the roast
+detail, also carry the page's `flags` (`{ key, type, variants? }`, as the box
+lists them) and the host's `roles`: 6 to 12 flags each, in the naming styles
+real flags come in (kebab, camel, a ticket prefix such as `ROAST-2210-`),
+booleans with a few string and number flags among them, and six roles, two of
+them hyphenated.
 
 - **`recorded`** (two): captured from the Vite and Next examples running in
   Chromium, with the box's own summaries, then passed through the route with
@@ -32,6 +37,13 @@ inflated by it: it was written by someone who knew which words it matches.
 Cases typed by a maintainer or a reviewer, against these inventories or a real
 page, are what this set most needs, and they get their own `by`.
 
+**Sets.** A case with `set: "layers"` (29, `mockplan-066` on) was written for
+flags and roles; every other case is the data set. They are scored and
+gated apart, because the layer sentences mostly name no data state, which a
+word list gets right by matching nothing. The keyword planner's flag and role
+reading was tuned after these cases were written, by the same agent, so its
+layer score flatters it most of all.
+
 **Labels.** `state` is always labelled. `calls` lists the calls the sentence
 must concern, and is left out where that is arguable. `maybe` lists calls a
 reader could argue either way; they count neither for nor against a plan. A
@@ -39,12 +51,20 @@ reader could argue either way; they count neither for nor against a plan. A
 
 ## Scores
 
-| Tier    | State accuracy | Call F1 | Threshold   | When                                       |
-| ------- | -------------- | ------- | ----------- | ------------------------------------------ |
-| keyword | 92.3%          | 67.6%   | 0.90 / 0.65 | 65 cases, every CI run                     |
-| jev     | 94.4%          | 76.7%   | 0.92 / 0.74 | `jev-latest`, `EVAL_SAMPLES=3`, with a key |
+Per set, as state accuracy / call F1 / layer accuracy. Layers are scored on
+the three pages with flags and roles: exactly the flags, at exactly the
+values, and the role meant, nothing more.
 
-jev also has to beat the keyword planner outright on both. Its misses were
-mostly sentences a word list gets right by construction: "roast with no
-comments" and "no comm" (read as something other than `empty` in some
-samples), and "what does a cafe see when it can't see its orders".
+| Tier    | Data set (65)      | Layers set (29)    | Thresholds (data; layers)              | When                                       |
+| ------- | ------------------ | ------------------ | -------------------------------------- | ------------------------------------------ |
+| keyword | 92.3 / 67.6 / 97.0 | 100 / 66.7 / 82.8  | 0.90 / 0.65 / 0.95; 0.97 / 0.64 / 0.80 | every CI run                               |
+| jev     | 95.4 / 74.9 / 98.0 | 83.9 / 69.8 / 93.1 | 0.92 / 0.74 / 0.97; 0.80 / 0.68 / 0.90 | `jev-latest`, `EVAL_SAMPLES=3`, with a key |
+
+On the data set jev has to beat the keyword planner outright on state and
+calls; on the layers set, on the layers. Its data misses were mostly
+sentences a word list gets right by construction: "roast with no comments"
+and "no comm" (read as something other than `empty` in some samples), and
+"what does a cafe see when it can't see its orders". Its layers-set state
+misses are sentences that mix a flag or a role with the data, such as
+"queue sorted by priority" (read as `many`) and "a roaster who can't see the
+cupping scores" (read as `none`).

@@ -21,7 +21,7 @@ export interface Reviews {
 export interface Session {
   readonly name: string;
   readonly tint: number;
-  readonly role: "owner" | "reviewer" | "guest";
+  readonly role: "owner" | "member" | "guest";
   readonly permissions: readonly ("settings.write" | "reviews.export")[];
 }
 

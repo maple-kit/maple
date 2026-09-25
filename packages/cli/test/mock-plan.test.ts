@@ -64,6 +64,20 @@ describe("maple mock plan", () => {
     expect(JSON.parse(result.output)).toMatchObject({ calls: [{ key: LIST, state: "empty" }] });
   });
 
+  it("prints a role the route plans, with no call, where the sentence names no state", async () => {
+    fake.answerNext({ ...planOf({ none: 0.7 }, []), role: { role: "barista", p: 0.9 } });
+    const result = await plan("as a barista");
+
+    expect(result.exitCode).toBe(0);
+    expect(JSON.parse(result.output)).toEqual({
+      version: 2,
+      calls: [],
+      as: { role: "barista" },
+      route: "/roasts",
+      request: "as a barista",
+    });
+  });
+
   it.each<[string, ReturnType<typeof planOf> | null, RegExp]>([
     ["a sentence that names no state", planOf({ none: 0.7 }, []), /doesn't name a state/],
     ["a plan it is unsure of", planOf({ empty: 0.3 }, [LIST]), /Not sure enough.*empty at 0\.30/],

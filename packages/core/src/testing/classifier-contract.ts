@@ -50,6 +50,17 @@ const MOCK_REQUEST: MockPlanRequest = {
   ],
 };
 
+/** The same sentence, on a page that evaluated flags and whose host lists roles. */
+const LAYERED_REQUEST: MockPlanRequest = {
+  ...MOCK_REQUEST,
+  request: "show the roast list empty as a barista with the new roaster off",
+  flags: [
+    { key: "new-roaster", type: "boolean" },
+    { key: "roast-tier", type: "string", variants: ["gold", "free"] },
+  ],
+  roles: ["owner", "barista"],
+};
+
 /** Nothing may be scored against a pillar with this id, in any configuration. */
 const NO_SUCH_PILLAR = "definitely-not-a-configured-pillar";
 
@@ -183,6 +194,29 @@ export function runClassifierContract(options: ClassifierContractOptions): void 
       });
     });
 
+    it("answers every listed flag once, in order, with a value it can take, and names only a listed role", async () => {
+      await withSubject(async (connector) => {
+        if (!connector.plan) return;
+        const plan = await connector.plan(LAYERED_REQUEST);
+
+        expectPlan(plan, LAYERED_REQUEST);
+        expect(plan.flags?.map((flag) => flag.key)).toEqual(["new-roaster", "roast-tier"]);
+        expect([true, false]).toContain(plan.flags?.[0]?.value);
+        expect(["gold", "free"]).toContain(plan.flags?.[1]?.value);
+        if (plan.role !== undefined) expect(LAYERED_REQUEST.roles).toContain(plan.role.role);
+      });
+    });
+
+    it("names no flag and no role for a request that lists none", async () => {
+      await withSubject(async (connector) => {
+        if (!connector.plan) return;
+        const plan = await connector.plan(MOCK_REQUEST);
+
+        expect(plan.flags ?? []).toEqual([]);
+        expect(plan.role).toBeUndefined();
+      });
+    });
+
     it("plans a sentence still being typed, an empty one, and a route with no calls", async () => {
       await withSubject(async (connector) => {
         if (!connector.plan) return;
@@ -208,10 +242,14 @@ function expectPlan(plan: MockPlan, request: MockPlanRequest): void {
   expect(plan.confidence).toBeLessThanOrEqual(1);
 
   expect(plan.calls).toHaveLength(request.calls.length);
-  for (const call of plan.calls) {
-    expect(call.p).toBeGreaterThanOrEqual(0);
-    expect(call.p).toBeLessThanOrEqual(1);
-    expect(call.concerned).toBe(call.p >= 0.5);
+  for (const verdict of [...plan.calls, ...(plan.flags ?? [])]) {
+    expect(verdict.p).toBeGreaterThanOrEqual(0);
+    expect(verdict.p).toBeLessThanOrEqual(1);
+    expect(verdict.concerned).toBe(verdict.p >= 0.5);
+  }
+  if (plan.role !== undefined) {
+    expect(plan.role.p).toBeGreaterThanOrEqual(0);
+    expect(plan.role.p).toBeLessThanOrEqual(1);
   }
 }
 
