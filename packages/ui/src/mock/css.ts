@@ -425,6 +425,8 @@ function banner(): string {
 @media (max-width: ${String(SHEET_BREAKPOINT_PX - 1)}px) {
   .mk-mock-banner {
     bottom: 56px;
+    left: 50%;
+    translate: -50% 0;
     flex-wrap: wrap;
     max-width: calc(100vw - 24px);
     border-radius: var(--mk-r);

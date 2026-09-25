@@ -345,23 +345,27 @@ describe("the banner", () => {
   });
 
   it.each([
-    [1100, 12],
-    [360, 56],
-  ])("docks bottom-left at %i px, clear of the top bar and the island", async (width, bottom) => {
-    const size = { width: window.innerWidth, height: window.innerHeight };
-    await page.viewport(width, 640);
-    try {
-      const client = track(createMockClient({ handle: handle(active), view: fakePage().view }));
-      await render(createElement(MapleMock, { client }));
-      await vi.waitFor(() => expect(find(".mk-mock-banner")).not.toBeNull());
+    [1100, 12, "left"],
+    [360, 56, "centre"],
+  ])(
+    "docks at %i px %ipx up, on the %s, clear of the top bar and the island",
+    async (width, bottom, where) => {
+      const size = { width: window.innerWidth, height: window.innerHeight };
+      await page.viewport(width, 640);
+      try {
+        const client = track(createMockClient({ handle: handle(active), view: fakePage().view }));
+        await render(createElement(MapleMock, { client }));
+        await vi.waitFor(() => expect(find(".mk-mock-banner")).not.toBeNull());
 
-      const box = find(".mk-mock-banner")!.getBoundingClientRect();
-      expect(box.left).toBe(12);
-      expect(Math.round(640 - box.bottom)).toBe(bottom);
-    } finally {
-      await page.viewport(size.width, size.height);
-    }
-  });
+        const box = find(".mk-mock-banner")!.getBoundingClientRect();
+        if (where === "left") expect(box.left).toBe(12);
+        else expect(Math.abs(box.left - (width - box.right))).toBeLessThanOrEqual(1);
+        expect(Math.round(640 - box.bottom)).toBe(bottom);
+      } finally {
+        await page.viewport(size.width, size.height);
+      }
+    },
+  );
 
   it("opens the box from Edit, with the mock's calls already chosen", async () => {
     const client = track(createMockClient({ handle: handle(active), view: fakePage().view }));
