@@ -69,6 +69,31 @@ describe("routing", () => {
   });
 });
 
+/** A host that only mocks mounts the route without a store, as `assist` without a classifier. */
+describe("a route with no store", () => {
+  const storeless = createMapleHandler({});
+
+  it.each([
+    ["GET", "/api/maple/comments?branch=main"],
+    ["POST", "/api/maple/comments"],
+    ["PATCH", "/api/maple/comments/c_1"],
+    ["GET", "/api/maple/approvals?branch=main"],
+  ])("answers 404 to %s %s", async (method, path) => {
+    const response = await storeless(request(method, path, method === "GET" ? undefined : {}));
+    expect(response.status).toBe(404);
+  });
+
+  it("still says who is asking", async () => {
+    const response = await storeless(request("GET", "/api/maple/me"));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ user: null, media: false });
+  });
+
+  it("still answers 405 before 404 for a wrong method", async () => {
+    expect((await storeless(request("DELETE", "/api/maple/comments"))).status).toBe(405);
+  });
+});
+
 describe("listing comments", () => {
   it("requires a branch rather than guessing one", async () => {
     const response = await handler()(request("GET", "/api/maple/comments"));

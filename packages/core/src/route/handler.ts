@@ -56,10 +56,10 @@ export type MediaResolver = (
 /** What the route is wired to. */
 export interface RouteOptions {
   /**
-   * Where comments live: a `createCommentStore(connector)`, or one chosen per
-   * request. The wrapper is the seam — it is what carries the retries.
+   * Where comments live: a `createCommentStore(connector)` or a resolver. Absent,
+   * the comment and approval endpoints answer 404, for a host that only mocks.
    */
-  readonly store: CommentStore | StoreResolver;
+  readonly store?: CommentStore | StoreResolver;
   /**
    * Where screenshots go. Without one the overlay says a screenshot has
    * nowhere to be kept, rather than offering to take one and dropping it.
@@ -155,6 +155,7 @@ async function dispatch(
   const allowed = methodAllowed(route, one !== null, request.method);
   if (!allowed) return json({ error: "Method not allowed" }, 405);
   if (route === "/me") return whoAmI(mount, request);
+  if (options.store === undefined) return json({ error: "Not found" }, 404);
 
   const store = await storeFor(options, request);
   if (!store) return json({ error: "This reviewer has no store to write to" }, 401);
@@ -175,6 +176,7 @@ async function approvals(
   route: string,
   url: URL,
 ): Promise<Response> {
+  if (options.store === undefined) return json({ error: "Not found" }, 404);
   const store = await storeFor(options, request);
   if (!store) return json({ error: "This reviewer has no store to write to" }, 401);
 
@@ -294,6 +296,7 @@ function methodAllowed(route: string, one: boolean, method: string): boolean {
 /** A plain connector is used as it is; a resolver is asked, every request. */
 async function storeFor(options: RouteOptions, request: Request): Promise<CommentStore | null> {
   const { store } = options;
+  if (store === undefined) return null;
   return typeof store === "function" ? store(identityRequest(request)) : store;
 }
 
