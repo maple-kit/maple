@@ -121,6 +121,20 @@ describe("resolve", () => {
     expect(api.reached).toEqual([]);
   });
 
+  it("lets go of a loading call abandoned before it was held", async () => {
+    const controller = new AbortController();
+    const request = new Request(`${API}/projects`, { signal: controller.signal });
+    controller.abort();
+    const pending = resolve(
+      request,
+      recipe("rest:GET /api/projects", "loading"),
+      createInventory(),
+      options,
+    );
+    await expect(pending).rejects.toThrow();
+    expect(api.reached).toEqual([]);
+  });
+
   it("records the real answer, not the mocked one", async () => {
     const inventory = createInventory();
     await run("/projects", recipe("rest:GET /api/projects", "empty"), inventory);

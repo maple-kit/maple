@@ -123,8 +123,12 @@ function failure(): Answer {
   return { kind: "failure", state: "error" };
 }
 
-/** Never settles. The interceptor abandons it when the request's signal aborts. */
+/**
+ * Settles only when the request is abandoned. The signal may already have
+ * aborted while the request was being taken apart, and fires no event then.
+ */
 function hold(signal: AbortSignal): Promise<never> {
+  if (signal.aborted) return Promise.reject(signal.reason as Error);
   return new Promise((_, reject) => {
     signal.addEventListener("abort", () => reject(signal.reason as Error), { once: true });
   });
