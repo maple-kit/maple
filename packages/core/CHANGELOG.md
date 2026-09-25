@@ -1,5 +1,152 @@
 # @maple-kit/core
 
+## 0.10.0
+
+### Minor Changes
+
+- 0606059: `ClassifierConnector.plan?(request)` reads a mock request as a plan: the state
+  it names (or `none`), a distribution over the states, a confidence, and one
+  verdict per call the route made. `keywordClassifier()` and `memoryClassifier()`
+  implement it, `runClassifierContract` checks it, and `MOCK_PLAN_STATES`,
+  `stateFromWeights` and `plannedCall` serve a planner with no probabilities of
+  its own.
+
+  **Breaking:** `CONNECTOR_METHODS.classifier` lists `plan`, so a
+  `CapabilityReport<"classifier">` has a `plan` field, and `memoryClassifier()`
+  defines `plan` unless `methods` leaves it out.
+
+- 4493ac7: A comment written while a mock is on records it as `context.mock`: the recipe's
+  calls and states, its route and the sentence behind it. `captureContext` reads
+  it through `activeRecipe()`, which finds `@maple-kit/mock`'s handle by
+  `MOCK_HANDLE_KEY` without importing it. The fence reads the recipe through
+  `parseRecipe` and drops one it cannot read, sheds it first when over budget
+  (the new `"mock"` reduction), and the ledger row says `mocked`. The fence stays
+  version 1.
+- 2271457: `MOCK_PLAN_STATE_DESCRIPTIONS` says what each plan state means, in the words a
+  model is asked to judge against, so two planners cannot read `empty` two ways.
+- 5d832df: `readPlan(plan)`, `PLAN_FLOOR` and `PLAN_TIE` in `@maple-kit/core/mock` are the
+  calm-UI gate over a mock plan, shared by the mock box and `maple mock plan`:
+  nothing under 0.4 confidence, two suggestions when the runner-up is within
+  0.15, `unnamed` for a sentence that names no state.
+- 4b8e7c9: `readSchemaDocument(document)` reads the `x-maple-mock` extension that
+  `maple mock schema` stamps on a document, so the route takes the file as it is.
+- 1cb2f6f: `encodeRecipe`, `decodeRecipe`, `linkRecipe` and `RECIPE_PARAM` move to
+  `@maple-kit/core/mock`, beside the recipe whose wire format they are, so a
+  server replaying a comment's mock builds the same link the page reads.
+
+  **Breaking:** `@maple-kit/mock` no longer exports them; import them from
+  `@maple-kit/core/mock`.
+
+- a02a975: Three body states join `empty`, `one` and `many`: `long` (every text as long
+  as the page could receive, from its own characters, and every number at its
+  widest), `sparse` (everything that may be missing is missing) and `mixed` (a
+  list covering every enum value, both booleans, null and set, absent and
+  present, short and long text). `MOCK_STATES` lists them last, the recipe stays
+  version 2, and the mock box shows a button for each.
+
+  **Breaking:** a 0.9.0 reader refuses a recipe naming one of them, as it refuses
+  any state it does not know. They ship in the same release as the version-2
+  recipe, which no released reader has seen either.
+
+  `MOCK_PLAN_STATES` is now its own list rather than `MOCK_STATES` plus `none`,
+  and `MockPlanState` is its element type: the plan does not pick the three new
+  states until its evals measure them.
+
+- b66c3c0: `RouteOptions.mock.identity` declares who a reviewer is for a recipe's `as`:
+  the call that says so, its role and permission fields by dotted path, and what
+  each call needs (`requires`). `GET {base}/mock/identity` serves the rules with
+  each vocabulary filled in from the call's shape, gated as `/mock/schema` is.
+  `identityRules` and `isIdentityRules` are in `@maple-kit/core/mock`.
+- eccf75c: The plan picks `long`, `sparse` and `mixed`. `MOCK_PLAN_STATES` is
+  `MOCK_STATES` plus `none` again, and `MOCK_PLAN_STATE_DESCRIPTIONS` describes
+  the three, which is what jev judges against. `keywordClassifier()` reads
+  "truncated", "no avatar" and "every status", among others. "long" and
+  "overflow" now read as `long`; `many` keeps "a long list" and "overflows
+  with".
+
+  `stateFromWeights` spreads a fixed prior of 1.4 across the states rather than
+  0.2 each, so a single matched word stays above `PLAN_FLOOR` with nine states.
+
+  **Breaking:** `MockPlanState` gains the three states, so a
+  `Record<MockPlanState, …>` needs them.
+
+- decec98: A mock plan sets flags and who the page is shown as. `MockPlanRequest` takes
+  the page's `flags` (`{ key, type, variants? }`) and the host's `roles`, and
+  `MockPlan` answers one `PlannedFlag` per flag and a `PlannedRole`. The route
+  adds the roles from its own identity rules, drops a flag with no values, and
+  keeps an answer to what was listed. `readPlan` carries named flags and a role
+  on each suggestion, or as a suggestion of their own. The keyword planner reads
+  them without ever taking a key from the sentence, `jevClassifier` asks for them
+  in a second request so the state and calls are judged as before, the box sends
+  the flags it saw and applies a layered chip, and `maple mock plan` prints them.
+  `plannedFlag` and `flagValues` are exported from `@maple-kit/core/connectors`,
+  and `memoryClassifier` takes `planFlags` and `planRole`.
+
+  **Breaking:** `MockSuggestion.state` is optional, since a chip may name only a
+  flag or a role, and `createMockPlanner` takes the route's mock schemas rather
+  than a shapes lookup.
+
+- c597ef7: A server can read the mock recipe. While a recipe has `flags` or `as`, a
+  preview's page keeps them in a `maple-mock` cookie (set by the interceptor on
+  install and by the box on Apply, cleared on Turn off), and
+  `requestRecipe(request)` from the new `@maple-kit/mock/server` subpath reads it,
+  or a `?maple-mock=` link in the request's own URL. The cookie never carries
+  `calls`, and is not written when it would exceed 4096 bytes; the interceptor
+  warns instead.
+
+  Core adds `RECIPE_COOKIE`, `RECIPE_COOKIE_LIMIT`, `recipeCookie` and
+  `readRecipeCookie` to `@maple-kit/core/mock`.
+
+  **Breaking:** `MockView.location` must also carry `protocol`, so the cookie is
+  `Secure` over HTTPS. `window` already does.
+
+- 2abe3f0: `m` is a second bare-key shortcut, `MOCK_SHORTCUT`, checked by `opensMock`.
+  Both shortcuts now read where the key landed from `composedPath()`, so typing
+  `c` into a field inside a shadow root no longer starts a pick.
+- 264e019: A recipe gains two layers beside `calls`: `flags`, flag keys answered with any
+  JSON value, and `as`, who the page is told the reviewer is (a `role`, and
+  `permissions` granted or taken away, both in the host's own words).
+  `describeIdentity` says an identity in words. The ledger row reads
+  `mocked as <identity>`, and `get_comment_context` names the flags and the
+  identity and says the server acted as the reviewer.
+
+  **Breaking:** `RECIPE_VERSION` is 2 and every recipe is written as version 2,
+  so a build released before it refuses a new link or fence recipe rather than
+  applying half of it. Version 1 is still read, and comes back as version 2.
+
+- 9591b2d: `POST {base}/mock/plan` reads a reviewer's sentence as a mock plan, through
+  `RouteOptions.mock.plan = { classifier, cacheSize?, rate? }`. It answers 404
+  unless `mock.preview` is true and the classifier defines `plan`, 401 to a
+  reviewer the identity connector does not resolve, and adds what each call's
+  shape says it returns to the summary the classifier reads. It shares
+  `/assist`'s cache and per-reviewer limiter code.
+
+  **Breaking:** `AssistRate` is renamed `RateLimit`, since `/mock/plan` takes one
+  too.
+
+- 4acc6db: `RouteOptions.mock = { preview, schemas }` serves Maple Mock's shapes at
+  `GET {base}/mock/schema?key=…`, per call, only on a preview that switched it
+  on and only to a reviewer the identity connector resolves. `@maple-kit/core/mock`
+  gains the wire format, `Shape`, `JsonSchema` and `SHAPE_SOURCES`, and
+  `createShapeIndex`, which normalises REST and tRPC OpenAPI documents into one
+  shape per call key.
+- 2abe3f0: **Breaking:** `RouteOptions.store` is optional. Without one, the comment and
+  approval endpoints answer 404, the way `/assist` does without a classifier, so
+  a host that only mocks can mount the route. Code that reads `options.store`
+  off a `RouteOptions` now has to handle `undefined`.
+
+### Patch Changes
+
+- 78f0692: Each call in the mock box has one button naming its state instead of nine
+  segmented buttons. It opens a menu of Real, marked with a green dot as what the
+  page does on its own, and the nine states; arrow keys move through it, and
+  scrolling the box closes it. `watchEscape` from `@maple-kit/core/client` now
+  leaves an open `popover="auto"` its own Escape, so Escape inside the menu
+  closes the menu and not the box. `ChevronIcon` joins `@maple-kit/ui/icons`.
+- 4ae5179: `/mock/plan` describes a call's schema past a local `$ref`, naming the
+  component it points at (`User: id, name, since`), and no longer repeats names
+  the page already sent.
+
 ## 0.9.0
 
 ### Minor Changes

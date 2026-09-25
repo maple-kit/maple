@@ -1,5 +1,45 @@
 # @maple-kit/mcp
 
+## 0.10.0
+
+### Minor Changes
+
+- 1cb2f6f: `get_comment_context` returns `mock: { recipe, replay }` for a comment written
+  under a Maple Mock, where `replay` opens the comment's page with the recipe on,
+  and adds a `mocked: …` line to `conditions`.
+- 264e019: A recipe gains two layers beside `calls`: `flags`, flag keys answered with any
+  JSON value, and `as`, who the page is told the reviewer is (a `role`, and
+  `permissions` granted or taken away, both in the host's own words).
+  `describeIdentity` says an identity in words. The ledger row reads
+  `mocked as <identity>`, and `get_comment_context` names the flags and the
+  identity and says the server acted as the reviewer.
+
+  **Breaking:** `RECIPE_VERSION` is 2 and every recipe is written as version 2,
+  so a build released before it refuses a new link or fence recipe rather than
+  applying half of it. Version 1 is still read, and comes back as version 2.
+
+### Patch Changes
+
+- Updated dependencies [0606059]
+- Updated dependencies [4493ac7]
+- Updated dependencies [2271457]
+- Updated dependencies [5d832df]
+- Updated dependencies [4b8e7c9]
+- Updated dependencies [1cb2f6f]
+- Updated dependencies [a02a975]
+- Updated dependencies [b66c3c0]
+- Updated dependencies [eccf75c]
+- Updated dependencies [decec98]
+- Updated dependencies [c597ef7]
+- Updated dependencies [2abe3f0]
+- Updated dependencies [78f0692]
+- Updated dependencies [264e019]
+- Updated dependencies [9591b2d]
+- Updated dependencies [4acc6db]
+- Updated dependencies [2abe3f0]
+- Updated dependencies [4ae5179]
+  - @maple-kit/core@0.10.0
+
 ## 0.9.0
 
 ### Patch Changes

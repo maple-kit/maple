@@ -1,5 +1,53 @@
 # @maple-kit/react
 
+## 0.10.0
+
+### Minor Changes
+
+- 5fc5eb1: `useMock()` at the new `@maple-kit/react/mock` entry: one subscription over
+  Maple Mock's box controller, which it builds and starts for the component's
+  lifetime or reads from a `client` the caller owns.
+
+### Patch Changes
+
+- Updated dependencies [0606059]
+- Updated dependencies [4493ac7]
+- Updated dependencies [2271457]
+- Updated dependencies [5d832df]
+- Updated dependencies [4b8e7c9]
+- Updated dependencies [1cb2f6f]
+- Updated dependencies [d9ff194]
+- Updated dependencies [a02a975]
+- Updated dependencies [50f80c9]
+- Updated dependencies [7ace7e4]
+- Updated dependencies [5fc5eb1]
+- Updated dependencies [4493ac7]
+- Updated dependencies [7ff6fd9]
+- Updated dependencies [b66c3c0]
+- Updated dependencies [13fe029]
+- Updated dependencies [59e5de3]
+- Updated dependencies [111360f]
+- Updated dependencies [a939399]
+- Updated dependencies [a93dc26]
+- Updated dependencies [8707fda]
+- Updated dependencies [eccf75c]
+- Updated dependencies [decec98]
+- Updated dependencies [1b2b4ae]
+- Updated dependencies [d57cb19]
+- Updated dependencies [c597ef7]
+- Updated dependencies [2d13012]
+- Updated dependencies [4acc6db]
+- Updated dependencies [c62cad0]
+- Updated dependencies [2abe3f0]
+- Updated dependencies [78f0692]
+- Updated dependencies [264e019]
+- Updated dependencies [9591b2d]
+- Updated dependencies [4acc6db]
+- Updated dependencies [2abe3f0]
+- Updated dependencies [4ae5179]
+  - @maple-kit/core@0.10.0
+  - @maple-kit/mock@0.10.0
+
 ## 0.9.0
 
 ### Patch Changes

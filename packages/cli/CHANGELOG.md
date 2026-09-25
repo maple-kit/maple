@@ -1,5 +1,60 @@
 # @maple-kit/cli
 
+## 0.10.0
+
+### Minor Changes
+
+- 5d832df: `maple mock plan "<sentence>" --url --route --calls` prints the recipe a
+  preview's Maple route plans for a sentence, as the mock box's first chip would
+  apply it, and exits 1 saying why when there is nothing to apply. It asks the
+  route, so CI holds no model key. `maple mock` alone prints both subcommands'
+  usage.
+- 4b8e7c9: `maple mock schema <router.ts> [--export] [--out] [--superjson]` writes an
+  OpenAPI document of a tRPC router's response types for Maple's route to serve
+  as each call's shape, marked `x-maple-mock` so the route reads it untold. It
+  wraps `@trpc/openapi@11.19.0-alpha`, an optional peer loaded only by this
+  command.
+
+  **Breaking:** `run()` returns a Promise.
+
+### Patch Changes
+
+- decec98: A mock plan sets flags and who the page is shown as. `MockPlanRequest` takes
+  the page's `flags` (`{ key, type, variants? }`) and the host's `roles`, and
+  `MockPlan` answers one `PlannedFlag` per flag and a `PlannedRole`. The route
+  adds the roles from its own identity rules, drops a flag with no values, and
+  keeps an answer to what was listed. `readPlan` carries named flags and a role
+  on each suggestion, or as a suggestion of their own. The keyword planner reads
+  them without ever taking a key from the sentence, `jevClassifier` asks for them
+  in a second request so the state and calls are judged as before, the box sends
+  the flags it saw and applies a layered chip, and `maple mock plan` prints them.
+  `plannedFlag` and `flagValues` are exported from `@maple-kit/core/connectors`,
+  and `memoryClassifier` takes `planFlags` and `planRole`.
+
+  **Breaking:** `MockSuggestion.state` is optional, since a chip may name only a
+  flag or a role, and `createMockPlanner` takes the route's mock schemas rather
+  than a shapes lookup.
+
+- Updated dependencies [0606059]
+- Updated dependencies [4493ac7]
+- Updated dependencies [2271457]
+- Updated dependencies [5d832df]
+- Updated dependencies [4b8e7c9]
+- Updated dependencies [1cb2f6f]
+- Updated dependencies [a02a975]
+- Updated dependencies [b66c3c0]
+- Updated dependencies [eccf75c]
+- Updated dependencies [decec98]
+- Updated dependencies [c597ef7]
+- Updated dependencies [2abe3f0]
+- Updated dependencies [78f0692]
+- Updated dependencies [264e019]
+- Updated dependencies [9591b2d]
+- Updated dependencies [4acc6db]
+- Updated dependencies [2abe3f0]
+- Updated dependencies [4ae5179]
+  - @maple-kit/core@0.10.0
+
 ## 0.9.0
 
 ### Patch Changes
