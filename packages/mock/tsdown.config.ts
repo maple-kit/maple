@@ -9,6 +9,7 @@ export default defineConfig({
     "src/msw/index.ts",
     "src/node/index.ts",
     "src/openfeature/index.ts",
+    "src/server/index.ts",
     "src/testing/index.ts",
   ],
   format: ["esm"],

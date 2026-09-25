@@ -30,6 +30,7 @@
     "./msw": "./dist/msw/index.js",
     "./node": "./dist/node/index.js",
     "./openfeature": "./dist/openfeature/index.js",
+    "./server": "./dist/server/index.js",
     "./testing": "./dist/testing/index.js",
     "./package.json": "./package.json"
   },

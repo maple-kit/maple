@@ -9,7 +9,16 @@
 export { activeRecipe, MOCK_HANDLE_KEY } from "./active.js";
 export { identityRules, isIdentityRules } from "./identity.js";
 export type { CallNeed, IdentityField, IdentityRules, IdentitySource } from "./identity.js";
-export { decodeRecipe, encodeRecipe, linkRecipe, RECIPE_PARAM } from "./link.js";
+export {
+  decodeRecipe,
+  encodeRecipe,
+  linkRecipe,
+  readRecipeCookie,
+  RECIPE_COOKIE,
+  RECIPE_COOKIE_LIMIT,
+  RECIPE_PARAM,
+  recipeCookie,
+} from "./link.js";
 export { PLAN_FLOOR, PLAN_TIE, readPlan } from "./reading.js";
 
 export type { MockSuggestion, PlanReading } from "./reading.js";

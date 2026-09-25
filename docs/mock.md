@@ -25,6 +25,7 @@ Nothing in the runtime calls a model.
 | Interceptor, codecs, transforms, recipe storage | `@maple-kit/mock`         |
 | The one-line install                            | `@maple-kit/mock/install` |
 | The box's controller, framework-free            | `@maple-kit/mock/client`  |
+| The recipe a server request carries             | `@maple-kit/mock/server`  |
 | `useMock()`                                     | `@maple-kit/react/mock`   |
 | `MapleMock`, the box and its banner             | `@maple-kit/ui/mock`      |
 
@@ -495,7 +496,8 @@ OpenFeature.setProvider(withMockFlags(new VendorProvider(options)));
 - **Every evaluation is recorded** with the provider's real value in
   `seenFlags()`, the page's one registry, for the box to list.
 - **The recipe is the page's** by default, through the installed handle's
-  `current()`. A server passes the request's as `recipe`.
+  `current()`. A server passes the request's, from `requestRecipe` (see
+  "The recipe on the server").
 
 **A vendor on the wire** is a flag source, `installMock({ flags: [...] })`,
 for a page whose SDK is not behind OpenFeature. A source says which request
@@ -634,11 +636,45 @@ a page's real data in a public pull-request comment.
   additive. A `maple-action` on an older core drops a version 2 recipe from
   the comment and keeps the comment. It moves to the core that writes it in the same release.
 
+## The recipe on the server
+
+After the first load the recipe lives in `sessionStorage`, which a server never
+sees, so a flag evaluated in a server render would show its real value. The
+page keeps a `maple-mock` cookie for it, and `requestRecipe(request)` from
+`@maple-kit/mock/server` reads it:
+
+```ts
+OpenFeature.setProvider(withMockFlags(provider, { recipe: () => requestRecipe(request) }));
+```
+
+- **Only a preview writes it.** The interceptor sets it on install and the box
+  on Apply, before the reload, so the reloaded page's server render reads it.
+  Turn off, a recipe that cannot be read and no mock at all clear it. A
+  production build has no interceptor and no box, so it never sets one.
+- **It carries the layers a server evaluates**: `flags`, `as` and `route`,
+  never `calls` or `request`. Calls are answered in the page, and leaving them
+  out keeps the cookie small. A recipe with neither layer clears it, so the
+  cookie exists only while a server-side layer is on.
+- **It is site-wide, `SameSite=Lax`, and `Secure` over HTTPS**, and lasts the
+  browser session. It is not `HttpOnly`, because the page writes it.
+- **Over 4096 bytes it is not written.** Browsers drop a larger cookie without
+  a word, which would show real flag values in a mock that says otherwise, so
+  the interceptor clears it and warns, and the page's own layers still apply.
+- **A `?maple-mock=` link in the request's own URL wins** over the cookie, as
+  it does in the page. A link or cookie that cannot be read is no recipe.
+- **The route is not checked.** An API request made for a page has the API's
+  path, not the page's, so a server that cares compares `route` itself.
+- **It is a subpath of its own**, not `./node`, because `./node` imports MSW,
+  an optional peer a server that only reads the cookie does not have.
+- **It is opt-in.** Nothing reads the cookie unless the host calls
+  `requestRecipe` from its own server code.
+
 ## What is not done
 
 - Flags in the box, and a vendor other than LaunchDarkly on the wire.
-- `as` in the box and the banner, on the server through
-  `@maple-kit/mock/node`, and in `mockHandlers`, which takes no rules.
+- `as` in the box and the banner, and in `mockHandlers`, which takes no
+  rules. On the server `requestRecipe` gives the host the recipe's `as`, and
+  applying it there is the host's code.
 
 - A recorded error body shape. REST `error` answers `{ message }`, and tRPC
   answers its default error shape.

@@ -53,7 +53,7 @@ describe("what a planner reads of a recorded call", () => {
 function view(): MockView {
   const url = new URL(`https://preview.example.com${ROUTE}`);
   return {
-    location: { href: url.href, pathname: url.pathname, assign: vi.fn() },
+    location: { href: url.href, pathname: url.pathname, assign: vi.fn(), protocol: url.protocol },
   } as unknown as MockView;
 }
 

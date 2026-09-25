@@ -6,7 +6,13 @@
  * tab form keeps it through client-side navigation that drops the query.
  */
 
-import { decodeRecipe, InvalidRecipeError, parseRecipe, RECIPE_PARAM } from "@maple-kit/core/mock";
+import {
+  decodeRecipe,
+  InvalidRecipeError,
+  parseRecipe,
+  RECIPE_PARAM,
+  recipeCookie,
+} from "@maple-kit/core/mock";
 
 import type { Recipe } from "@maple-kit/core/mock";
 
@@ -42,6 +48,22 @@ export function saveRecipe(storage: Pick<Storage, "setItem">, recipe: Recipe): v
 /** Forgets the tab's recipe. A link still carrying one is the caller's to drop. */
 export function forgetRecipe(storage: Pick<Storage, "removeItem">): void {
   storage.removeItem(RECIPE_STORAGE_KEY);
+}
+
+/**
+ * Keeps the recipe's server layers in the cookie a server reads, or clears it.
+ * False when they would not fit, and the cookie is cleared instead. Only a
+ * page that installed the interceptor, a preview's, ever calls this.
+ */
+export function keepRecipeCookie(
+  view: { document?: Pick<Document, "cookie">; location: Pick<Location, "protocol"> } | undefined,
+  recipe: Recipe | undefined,
+): boolean {
+  if (view?.document === undefined) return true;
+  const secure = view.location.protocol === "https:";
+  const cookie = recipeCookie(recipe, secure);
+  view.document.cookie = cookie ?? recipeCookie(undefined, secure) ?? "";
+  return cookie !== undefined;
 }
 
 function parseJson(text: string): unknown {

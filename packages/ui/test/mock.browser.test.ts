@@ -31,7 +31,12 @@ function fakePage(): Page {
     document,
     matchMedia: (query) => window.matchMedia(query),
     getComputedStyle: (element) => window.getComputedStyle(element),
-    location: { href: `${location.origin}${HERE}`, pathname: HERE, assign },
+    location: {
+      href: `${location.origin}${HERE}`,
+      pathname: HERE,
+      assign,
+      protocol: location.protocol,
+    },
     sessionStorage,
     navigator: { clipboard: { writeText } },
     addEventListener: (type, listener, options) => window.addEventListener(type, listener, options),

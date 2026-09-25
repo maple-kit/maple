@@ -16,7 +16,7 @@ import { seenFlags } from "./flags.js";
 import { installedMock, keepInstalled } from "./handle.js";
 import { knows } from "./identity.js";
 import { createInventory } from "./inventory.js";
-import { forgetRecipe, readRecipe, saveRecipe } from "./link.js";
+import { forgetRecipe, keepRecipeCookie, readRecipe, saveRecipe } from "./link.js";
 import { record, resolve, splitRequest } from "./resolve.js";
 import { isJson, pathPattern, restCodec } from "./rest.js";
 import { routeIdentity } from "./schema/identity.js";
@@ -302,16 +302,25 @@ function release(response: Response): void {
   if (!response.bodyUsed) response.body?.cancel().catch(() => undefined);
 }
 
-/** The recipe to apply. A linked one is kept for the tab; a broken one is dropped. */
+/**
+ * The recipe to apply. A linked one is kept for the tab and in the cookie a
+ * server reads; a broken one is dropped from both.
+ */
 function activeRecipe(storage: Storage | undefined, logger?: Logger): Recipe | undefined {
   const url = pageUrl();
   if (url === undefined) return undefined;
   try {
     const recipe = readRecipe({ url, ...(storage === undefined ? {} : { storage }) });
     if (recipe !== undefined && storage !== undefined) saveRecipe(storage, recipe);
+    if (!keepRecipeCookie(pageView(), recipe)) {
+      logger?.warn(
+        "The mock's flags and identity are too long for a cookie; the server sees none.",
+      );
+    }
     return recipe;
   } catch (error) {
     if (storage !== undefined) forgetRecipe(storage);
+    keepRecipeCookie(pageView(), undefined);
     logger?.warn("Ignoring a mock recipe that could not be read.", { error: String(error) });
     return undefined;
   }
@@ -323,6 +332,10 @@ function activeRecipe(storage: Storage | undefined, logger?: Logger): Recipe | u
  */
 function awaited<A extends unknown[]>(listener: (...args: A) => Promise<void>) {
   return listener as (...args: A) => void;
+}
+
+function pageView() {
+  return typeof document === "undefined" ? undefined : { document, location };
 }
 
 function pageUrl(): URL | undefined {

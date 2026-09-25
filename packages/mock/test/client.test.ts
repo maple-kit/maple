@@ -47,9 +47,10 @@ function page(href = PAGE, clipboard = true): Page {
   const assign = vi.fn();
   const writeText = vi.fn(() => Promise.resolve());
   const view = {
-    location: { href: url.href, pathname: url.pathname, assign },
+    location: { href: url.href, pathname: url.pathname, assign, protocol: url.protocol },
     sessionStorage: storage,
     navigator: clipboard ? { clipboard: { writeText } } : {},
+    document: { cookie: "" },
   } as unknown as MockView;
   return { view, storage, assign, writeText };
 }
@@ -190,6 +191,25 @@ describe("applying", () => {
 
     expect(storage.getItem(RECIPE_STORAGE_KEY)).toBeNull();
     expect(assign).toHaveBeenCalledWith(PAGE);
+  });
+
+  it("clears the server's cookie before reloading, for calls a server never answers", () => {
+    const { assign, view } = page();
+    view.document.cookie = "maple-mock=stale";
+    assign.mockImplementation(() =>
+      expect(view.document.cookie).toMatch(/^maple-mock=; Max-Age=0;/),
+    );
+    const client = createMockClient({ view, handle: handle() });
+    client.choose(LIST, "empty");
+    client.apply();
+    expect(assign).toHaveBeenCalledOnce();
+  });
+
+  it("clears the server's cookie when mocking is turned off", () => {
+    const { view } = page();
+    view.document.cookie = "maple-mock=stale";
+    createMockClient({ view, handle: handle(recipe()) }).turnOff();
+    expect(view.document.cookie).toBe("maple-mock=; Max-Age=0; Path=/; SameSite=Lax; Secure");
   });
 
   it("still reloads into the link where the tab's storage is blocked", () => {

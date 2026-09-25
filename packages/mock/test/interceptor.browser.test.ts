@@ -1,6 +1,6 @@
 import { createClient } from "@launchdarkly/js-client-sdk";
 import { createLogger, memorySink } from "@maple-kit/core/logger";
-import { linkRecipe } from "@maple-kit/core/mock";
+import { linkRecipe, readRecipeCookie, RECIPE_COOKIE } from "@maple-kit/core/mock";
 import { installMock, pathPattern, RECIPE_STORAGE_KEY, seenFlags } from "@maple-kit/mock";
 import { launchDarklyFlags } from "@maple-kit/mock/launchdarkly";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -49,6 +49,7 @@ afterEach(() => {
   handle = undefined;
   globalThis.fetch = nativeFetch;
   history.replaceState(null, "", page);
+  document.cookie = `${RECIPE_COOKIE}=; Max-Age=0; Path=/`;
   api.reset();
 });
 
@@ -150,6 +151,55 @@ describe("installMock, in a real browser", () => {
     first.dispose();
     handle = undefined;
     expect(globalThis.fetch).toBe(stub);
+  });
+});
+
+describe("the cookie a server reads the recipe from", () => {
+  const layered: Recipe = {
+    ...recipe(["rest:GET /api/projects", "empty"]),
+    flags: { roaster: true },
+  };
+
+  it("keeps a linked recipe's flags and identity, and none of its calls", () => {
+    install({ ...layered, as: { role: "barista" } });
+    expect(readRecipeCookie(document.cookie)).toEqual({
+      version: 2,
+      calls: [],
+      flags: { roaster: true },
+      as: { role: "barista" },
+    });
+  });
+
+  it("clears it when the recipe has no layer a server evaluates", () => {
+    document.cookie = `${RECIPE_COOKIE}=stale; Path=/`;
+    install(recipe(["rest:GET /api/projects", "empty"]));
+    expect(document.cookie).not.toContain(`${RECIPE_COOKIE}=`);
+  });
+
+  it("clears it with no mock on, and when the recipe cannot be read", () => {
+    document.cookie = `${RECIPE_COOKIE}=stale; Path=/`;
+    install();
+    expect(document.cookie).not.toContain(`${RECIPE_COOKIE}=`);
+
+    handle?.dispose();
+    document.cookie = `${RECIPE_COOKIE}=stale; Path=/`;
+    sessionStorage.setItem(RECIPE_STORAGE_KEY, "{");
+    install();
+    expect(document.cookie).not.toContain(`${RECIPE_COOKIE}=`);
+  });
+
+  it("says so when the layers are too long for a cookie, and still mocks the page", async () => {
+    const flags = Object.fromEntries(
+      Array.from({ length: 200 }, (_, i) => [`f${i}`, "x".repeat(20)]),
+    );
+    const sink = memorySink();
+    install({ ...layered, flags }, { logger: createLogger({ sinks: [sink] }) });
+
+    expect(document.cookie).not.toContain(`${RECIPE_COOKIE}=`);
+    expect(sink.records.map((line) => line.message)).toContain(
+      "The mock's flags and identity are too long for a cookie; the server sees none.",
+    );
+    expect(((await (await fetch(`${API}/projects`)).json()) as typeof PROJECTS).items).toEqual([]);
   });
 });
 

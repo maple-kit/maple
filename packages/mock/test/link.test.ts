@@ -8,6 +8,8 @@ import {
 import { forgetRecipe, readRecipe, RECIPE_STORAGE_KEY, saveRecipe } from "@maple-kit/mock";
 import { describe, expect, it } from "vitest";
 
+import { keepRecipeCookie } from "../src/link.js";
+
 import type { Recipe } from "@maple-kit/core/mock";
 
 const empty: Recipe = { version: 2, calls: [{ key: "trpc:project.list", state: "empty" }] };
@@ -105,5 +107,36 @@ describe("linkRecipe", () => {
   it("removes the parameter", () => {
     const linked = linkRecipe("https://preview.example/projects?tab=2", empty);
     expect(linkRecipe(linked, undefined).href).toBe("https://preview.example/projects?tab=2");
+  });
+});
+
+describe("keepRecipeCookie", () => {
+  const layered: Recipe = { ...empty, flags: { "new-roaster": true } };
+  const view = (protocol = "https:") => ({ document: { cookie: "" }, location: { protocol } });
+
+  it("keeps the server's layers, secure over HTTPS", () => {
+    const page = view();
+    expect(keepRecipeCookie(page, layered)).toBe(true);
+    expect(page.document.cookie).toMatch(/^maple-mock=[\w-]+; Path=\/; SameSite=Lax; Secure$/);
+  });
+
+  it("clears the cookie for no recipe, and over plain HTTP leaves out Secure", () => {
+    const page = view("http:");
+    expect(keepRecipeCookie(page, undefined)).toBe(true);
+    expect(page.document.cookie).toBe("maple-mock=; Max-Age=0; Path=/; SameSite=Lax");
+  });
+
+  it("clears the cookie and says so when the layers do not fit", () => {
+    const page = view();
+    const flags = Object.fromEntries(
+      Array.from({ length: 200 }, (_, i) => [`f${i}`, "x".repeat(20)]),
+    );
+    expect(keepRecipeCookie(page, { ...empty, flags })).toBe(false);
+    expect(page.document.cookie).toMatch(/^maple-mock=; Max-Age=0;/);
+  });
+
+  it("does nothing where there is no document", () => {
+    expect(keepRecipeCookie({ location: { protocol: "https:" } }, layered)).toBe(true);
+    expect(keepRecipeCookie(undefined, layered)).toBe(true);
   });
 });

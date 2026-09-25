@@ -11,7 +11,7 @@ import { opensMock, watchEscape, watchTheme } from "@maple-kit/core/client";
 import { linkRecipe, MOCK_STATES, readPlan, RECIPE_VERSION } from "@maple-kit/core/mock";
 
 import { installedMock } from "../handle.js";
-import { forgetRecipe, saveRecipe } from "../link.js";
+import { forgetRecipe, keepRecipeCookie, saveRecipe } from "../link.js";
 import { pathPattern } from "../rest.js";
 import { PlanUnavailableError } from "../schema/plan.js";
 import { PLAN_DEBOUNCE_MS, PLAN_MIN_LENGTH, planCall } from "./plan.js";
@@ -23,7 +23,7 @@ import type { MockCall, MockState, Recipe, ShapeSource } from "@maple-kit/core/m
 
 /** What the client attaches to. `window` satisfies it. */
 export interface MockView extends ThemeView {
-  readonly location: Pick<Location, "href" | "pathname" | "assign">;
+  readonly location: Pick<Location, "href" | "pathname" | "assign" | "protocol">;
   readonly sessionStorage?: Storage;
   readonly navigator?: { readonly clipboard?: Pick<Clipboard, "writeText"> };
   addEventListener(type: "popstate", listener: () => void, options?: AddEventListenerOptions): void;
@@ -376,12 +376,14 @@ function apply(runtime: Runtime): void {
   if (recipe === undefined) return turnOff(runtime);
   const storage = tabStorage(runtime.view);
   if (storage !== undefined) saveRecipe(storage, recipe);
+  keepRecipeCookie(runtime.view, recipe);
   runtime.view?.location.assign(linkRecipe(hrefOf(runtime), recipe).href);
 }
 
 function turnOff(runtime: Runtime): void {
   const storage = tabStorage(runtime.view);
   if (storage !== undefined) forgetRecipe(storage);
+  keepRecipeCookie(runtime.view, undefined);
   runtime.view?.location.assign(linkRecipe(hrefOf(runtime), undefined).href);
 }
 

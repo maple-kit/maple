@@ -42,6 +42,7 @@
       "@maple-kit/mock/msw": ["./packages/mock/src/msw/index.ts"],
       "@maple-kit/mock/node": ["./packages/mock/src/node/index.ts"],
       "@maple-kit/mock/openfeature": ["./packages/mock/src/openfeature/index.ts"],
+      "@maple-kit/mock/server": ["./packages/mock/src/server/index.ts"],
       "@maple-kit/mock/testing": ["./packages/mock/src/testing/index.ts"],
       "@maple-kit/react": ["./packages/react/src/index.ts"],
       "@maple-kit/react/mock": ["./packages/react/src/mock/index.ts"],
