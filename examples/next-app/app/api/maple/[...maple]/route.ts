@@ -1,7 +1,7 @@
 /**
  * Maple's route, mounted for Maple Mock alone: no store, so the comment
- * endpoints answer 404, and `/mock/schema` serves the router's shapes on a
- * preview build and `next dev`.
+ * endpoints answer 404. On a preview build and `next dev`, `/mock/schema`
+ * serves the router's shapes and `/mock/plan` reads a sentence, offline.
  *
  * `.maple/schema.json` is a preview build artifact: `pnpm schema` writes it
  * from `server/router.ts` before the build. Missing, the route has no shapes.
@@ -10,6 +10,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import { keywordClassifier } from "@maple-kit/core/connectors";
 import { readSchemaDocument } from "@maple-kit/core/mock";
 import { createMapleHandler } from "@maple-kit/core/route";
 
@@ -22,6 +23,12 @@ async function schemas() {
   }
 }
 
-const handler = createMapleHandler({ mock: { preview: process.env.MAPLE_MOCK === "1", schemas } });
+const handler = createMapleHandler({
+  mock: {
+    preview: process.env.MAPLE_MOCK === "1",
+    schemas,
+    plan: { classifier: keywordClassifier() },
+  },
+});
 
-export { handler as GET };
+export { handler as GET, handler as POST };

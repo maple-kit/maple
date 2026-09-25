@@ -31,6 +31,7 @@ function baseFor(phase: string): NextConfig {
     turbopack: {
       resolveAlias: {
         "@maple-kit/mock": "../../packages/mock/dist/index.js",
+        "@maple-kit/core/connectors": "../../packages/core/dist/connectors/index.js",
         "@maple-kit/core/mock": "../../packages/core/dist/mock/index.js",
         "@maple-kit/core/route": "../../packages/core/dist/route/index.js",
       },

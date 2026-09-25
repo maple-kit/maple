@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { jevClassifier } from "@maple-kit/classifier";
-import { createCommentStore } from "@maple-kit/core";
+import { createCommentStore, keywordClassifier } from "@maple-kit/core";
 import { memoryMedia, memoryStore } from "@maple-kit/core/testing";
 import { maple } from "@maple-kit/core/vite";
 import react from "@vitejs/plugin-react";
@@ -113,8 +113,13 @@ export default defineConfig(async ({ command, isPreview, mode }) => {
           store,
           media,
           ...(classifier ? { assist: { classifier } } : {}),
-          // The page's API, described for Maple Mock; served per call, never bundled.
-          mock: { preview, schemas: [{ codec: "rest", document: openapi() }] },
+          // The page's API, described for Maple Mock; served per call, never
+          // bundled. A sentence is planned by the model when it can plan.
+          mock: {
+            preview,
+            schemas: [{ codec: "rest", document: openapi() }],
+            plan: { classifier: classifier?.plan ? classifier : keywordClassifier() },
+          },
         },
       }),
     ],
