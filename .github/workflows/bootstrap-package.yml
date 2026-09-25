@@ -1,0 +1,76 @@
+name: Bootstrap a package
+
+# The first publish of a new package name, by hand. npm registers a trusted
+# publisher only against a package that exists, so a new name cannot go out
+# through release.yml's OIDC. See docs/releasing.md for the whole procedure.
+#
+# Dormant without the NPM_TOKEN secret, which exists only during a bootstrap.
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: "Directory under packages/, such as mock"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Provenance still comes from the OIDC token, as it does for a release.
+      id-token: write
+    env:
+      PACKAGE_DIR: packages/${{ inputs.package }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: ./.github/actions/setup
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          registry-url: https://registry.npmjs.org
+
+      - name: Refuse anything but a new name
+        # A name already on npm has, or can have, a trusted publisher, and goes
+        # out through release.yml. The token is for the first version only.
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          test -n "$NODE_AUTH_TOKEN" || { echo "::error::NPM_TOKEN is not set"; exit 1; }
+          name=$(node -p "require('./$PACKAGE_DIR/package.json').name")
+          version=$(node -p "require('./$PACKAGE_DIR/package.json').version")
+          if npm view "$name" name >/dev/null 2>&1; then
+            echo "::error::$name is already on npm; release it through release.yml"
+            exit 1
+          fi
+          echo "NAME=$name" >> "$GITHUB_ENV"
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Build the packages
+        run: pnpm build
+
+      - name: Pack with pnpm
+        # pnpm rewrites `workspace:*` to the exact version as it packs; npm
+        # would leave it in place and publish a tarball nobody can install.
+        working-directory: ${{ env.PACKAGE_DIR }}
+        run: pnpm pack --pack-destination "$RUNNER_TEMP"
+
+      - name: Publish it
+        run: npm publish "$RUNNER_TEMP"/*.tgz --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: "true"
+
+      - name: Say what is staged, if anything
+        # A brand-new name can answer 404 for minutes after a real publish,
+        # which reads like a staged one. This is what tells the two apart.
+        if: always()
+        run: npm stage list "$NAME" || true
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
