@@ -1,0 +1,558 @@
+[
+  {
+    "id": "mockplan-001",
+    "by": "agent",
+    "inventory": "vite-overview",
+    "request": "mock this page with an empty state",
+    "state": "empty",
+    "calls": ["rest:GET /api/reviews"],
+    "maybe": ["rest:GET /api/session"]
+  },
+  {
+    "id": "mockplan-002",
+    "by": "agent",
+    "inventory": "vite-overview",
+    "request": "no reviews yet",
+    "state": "empty",
+    "calls": ["rest:GET /api/reviews"]
+  },
+  {
+    "id": "mockplan-003",
+    "by": "agent",
+    "inventory": "vite-overview",
+    "request": "what does it look like when the reviews api is down",
+    "state": "error",
+    "calls": ["rest:GET /api/reviews"]
+  },
+  {
+    "id": "mockplan-004",
+    "by": "agent",
+    "inventory": "vite-overview",
+    "request": "loading skeleton for the review table",
+    "state": "loading",
+    "calls": ["rest:GET /api/reviews"]
+  },
+  {
+    "id": "mockplan-005",
+    "by": "agent",
+    "inventory": "vite-overview",
+    "request": "only one open review",
+    "state": "one",
+    "calls": ["rest:GET /api/reviews"]
+  },
+  {
+    "id": "mockplan-006",
+    "by": "agent",
+    "inventory": "vite-overview",
+    "request": "a ton of reviews so the table has to scroll",
+    "state": "many",
+    "calls": ["rest:GET /api/reviews"]
+  },
+  {
+    "id": "mockplan-007",
+    "by": "agent",
+    "inventory": "vite-overview",
+    "request": "what if the session call returns 403",
+    "state": "forbidden",
+    "calls": ["rest:GET /api/session"]
+  },
+  {
+    "id": "mockplan-008",
+    "by": "agent",
+    "inventory": "vite-overview",
+    "request": "make the chart bars thinner",
+    "state": "none"
+  },
+  {
+    "id": "mockplan-009",
+    "by": "agent",
+    "inventory": "vite-overview",
+    "request": "reviews come back 403",
+    "state": "forbidden",
+    "calls": ["rest:GET /api/reviews"]
+  },
+  {
+    "id": "mockplan-010",
+    "by": "agent",
+    "inventory": "next-projects",
+    "request": "no projects at all",
+    "state": "empty",
+    "calls": ["trpc:project.list"],
+    "maybe": ["trpc:project.count"]
+  },
+  {
+    "id": "mockplan-011",
+    "by": "agent",
+    "inventory": "next-projects",
+    "request": "the project list fails to load",
+    "state": "error",
+    "calls": ["trpc:project.list"]
+  },
+  {
+    "id": "mockplan-012",
+    "by": "agent",
+    "inventory": "next-projects",
+    "request": "user.me is forbidden",
+    "state": "forbidden",
+    "calls": ["trpc:user.me"]
+  },
+  {
+    "id": "mockplan-013",
+    "by": "agent",
+    "inventory": "next-projects",
+    "request": "the slow call never comes back",
+    "state": "loading",
+    "calls": ["trpc:project.slow"]
+  },
+  {
+    "id": "mockplan-014",
+    "by": "agent",
+    "inventory": "next-projects",
+    "request": "just a single project",
+    "state": "one",
+    "calls": ["trpc:project.list"],
+    "maybe": ["trpc:project.count"]
+  },
+  {
+    "id": "mockplan-015",
+    "by": "agent",
+    "inventory": "next-projects",
+    "request": "fifty projects in the table",
+    "state": "many",
+    "calls": ["trpc:project.list"],
+    "maybe": ["trpc:project.count"]
+  },
+  {
+    "id": "mockplan-016",
+    "by": "agent",
+    "inventory": "next-projects",
+    "request": "rename the Projects heading to Workspaces",
+    "state": "none"
+  },
+  {
+    "id": "mockplan-017",
+    "by": "agent",
+    "inventory": "next-projects",
+    "request": "empty",
+    "state": "empty",
+    "calls": ["trpc:project.list"],
+    "maybe": ["trpc:project.count", "trpc:project.slow", "trpc:user.me"]
+  },
+  {
+    "id": "mockplan-018",
+    "by": "agent",
+    "inventory": "next-projects",
+    "request": "me call errors",
+    "state": "error",
+    "calls": ["trpc:user.me"]
+  },
+  {
+    "id": "mockplan-019",
+    "by": "agent",
+    "inventory": "roastery-dashboard",
+    "request": "new roastery with no roasts yet",
+    "state": "empty",
+    "calls": ["trpc:roast.list"],
+    "maybe": [
+      "trpc:roast.countByStatus",
+      "trpc:roast.meanRoastTime",
+      "trpc:roast.overTime",
+      "trpc:roast.overTimeSparkline",
+      "trpc:origin.top"
+    ]
+  },
+  {
+    "id": "mockplan-020",
+    "by": "agent",
+    "inventory": "roastery-dashboard",
+    "request": "the orders feed errors out",
+    "state": "error",
+    "calls": ["trpc:order.list"]
+  },
+  {
+    "id": "mockplan-021",
+    "by": "agent",
+    "inventory": "roastery-dashboard",
+    "request": "low stock list is empty",
+    "state": "empty",
+    "calls": ["trpc:bean.listLowStock"]
+  },
+  {
+    "id": "mockplan-022",
+    "by": "agent",
+    "inventory": "roastery-dashboard",
+    "request": "hundreds of low stock beans",
+    "state": "many",
+    "calls": ["trpc:bean.listLowStock"]
+  },
+  {
+    "id": "mockplan-023",
+    "by": "agent",
+    "inventory": "roastery-dashboard",
+    "request": "notifications badge while loading",
+    "state": "loading",
+    "calls": ["trpc:notification.unreadCount"]
+  },
+  {
+    "id": "mockplan-024",
+    "by": "agent",
+    "inventory": "roastery-dashboard",
+    "request": "the roast chart has no data",
+    "state": "empty",
+    "calls": ["trpc:roast.overTime"],
+    "maybe": ["trpc:roast.overTimeSparkline"]
+  },
+  {
+    "id": "mockplan-025",
+    "by": "agent",
+    "inventory": "roastery-dashboard",
+    "request": "a barista account that can't see orders",
+    "state": "forbidden",
+    "calls": ["trpc:order.list"]
+  },
+  {
+    "id": "mockplan-026",
+    "by": "agent",
+    "inventory": "roastery-dashboard",
+    "request": "creating a roast fails",
+    "state": "error",
+    "calls": ["trpc:roast.create"]
+  },
+  {
+    "id": "mockplan-027",
+    "by": "agent",
+    "inventory": "roastery-dashboard",
+    "request": "only one origin in the top origins card",
+    "state": "one",
+    "calls": ["trpc:origin.top"]
+  },
+  {
+    "id": "mockplan-028",
+    "by": "agent",
+    "inventory": "roastery-dashboard",
+    "request": "dashboard stuck loading",
+    "state": "loading",
+    "calls": [
+      "trpc:roast.list",
+      "trpc:roast.countByStatus",
+      "trpc:roast.meanRoastTime",
+      "trpc:roast.overTime",
+      "trpc:roast.overTimeSparkline",
+      "trpc:origin.top",
+      "trpc:bean.listLowStock",
+      "trpc:order.list",
+      "trpc:notification.unreadCount"
+    ],
+    "maybe": ["trpc:user.me"]
+  },
+  {
+    "id": "mockplan-029",
+    "by": "agent",
+    "inventory": "roastery-dashboard",
+    "request": "make the sparkline green",
+    "state": "none"
+  },
+  {
+    "id": "mockplan-030",
+    "by": "agent",
+    "inventory": "roastery-dashboard",
+    "request": "every widget errors",
+    "state": "error",
+    "calls": [
+      "trpc:roast.list",
+      "trpc:roast.countByStatus",
+      "trpc:roast.meanRoastTime",
+      "trpc:roast.overTime",
+      "trpc:roast.overTimeSparkline",
+      "trpc:origin.top",
+      "trpc:bean.listLowStock",
+      "trpc:order.list"
+    ],
+    "maybe": ["trpc:user.me", "trpc:notification.unreadCount"]
+  },
+  {
+    "id": "mockplan-031",
+    "by": "agent",
+    "inventory": "roastery-dashboard",
+    "request": "one order only",
+    "state": "one",
+    "calls": ["trpc:order.list"]
+  },
+  {
+    "id": "mockplan-032",
+    "by": "agent",
+    "inventory": "bean-detail",
+    "request": "cupping notes list is empty",
+    "state": "empty",
+    "calls": ["trpc:cupping.listForBean"],
+    "maybe": ["trpc:cupping.meanScore"]
+  },
+  {
+    "id": "mockplan-033",
+    "by": "agent",
+    "inventory": "bean-detail",
+    "request": "supplier lookup 500s",
+    "state": "error",
+    "calls": ["trpc:supplier.getForBean"]
+  },
+  {
+    "id": "mockplan-034",
+    "by": "agent",
+    "inventory": "bean-detail",
+    "request": "lots of lots for this bean",
+    "state": "many",
+    "calls": ["trpc:lot.listByBeanIds"]
+  },
+  {
+    "id": "mockplan-035",
+    "by": "agent",
+    "inventory": "bean-detail",
+    "request": "the stock chart is still loading",
+    "state": "loading",
+    "calls": ["trpc:bean.stockOverTime"]
+  },
+  {
+    "id": "mockplan-036",
+    "by": "agent",
+    "inventory": "bean-detail",
+    "request": "archiving the bean is forbidden",
+    "state": "forbidden",
+    "calls": ["trpc:bean.setArchived"]
+  },
+  {
+    "id": "mockplan-037",
+    "by": "agent",
+    "inventory": "bean-detail",
+    "request": "a single lot",
+    "state": "one",
+    "calls": ["trpc:lot.listByBeanIds"]
+  },
+  {
+    "id": "mockplan-038",
+    "by": "agent",
+    "inventory": "bean-detail",
+    "request": "the altitude label should say metres",
+    "state": "none"
+  },
+  {
+    "id": "mockplan-039",
+    "by": "agent",
+    "inventory": "order-queue",
+    "request": "no orders in the queue",
+    "state": "empty",
+    "calls": ["rest:GET /api/orders"]
+  },
+  {
+    "id": "mockplan-040",
+    "by": "agent",
+    "inventory": "order-queue",
+    "request": "the orders endpoint returns 500",
+    "state": "error",
+    "calls": ["rest:GET /api/orders"],
+    "maybe": ["rest:GET /api/orders/:id"]
+  },
+  {
+    "id": "mockplan-041",
+    "by": "agent",
+    "inventory": "order-queue",
+    "request": "shipping an order fails",
+    "state": "error",
+    "calls": ["rest:POST /api/orders/:id/ship"]
+  },
+  {
+    "id": "mockplan-042",
+    "by": "agent",
+    "inventory": "order-queue",
+    "request": "cafe details forbidden",
+    "state": "forbidden",
+    "calls": ["rest:GET /api/cafes/:id"]
+  },
+  {
+    "id": "mockplan-043",
+    "by": "agent",
+    "inventory": "order-queue",
+    "request": "a huge backlog of orders",
+    "state": "many",
+    "calls": ["rest:GET /api/orders"]
+  },
+  {
+    "id": "mockplan-044",
+    "by": "agent",
+    "inventory": "order-queue",
+    "request": "shipments still loading",
+    "state": "loading",
+    "calls": ["rest:GET /api/shipments"]
+  },
+  {
+    "id": "mockplan-045",
+    "by": "agent",
+    "inventory": "order-queue",
+    "request": "no shipments yet",
+    "state": "empty",
+    "calls": ["rest:GET /api/shipments"]
+  },
+  {
+    "id": "mockplan-046",
+    "by": "agent",
+    "inventory": "order-queue",
+    "request": "what does a cafe see when it can't see its orders",
+    "state": "forbidden",
+    "calls": ["rest:GET /api/orders"],
+    "maybe": ["rest:GET /api/orders/:id"]
+  },
+  {
+    "id": "mockplan-047",
+    "by": "agent",
+    "inventory": "team-settings",
+    "request": "no pending invites",
+    "state": "empty",
+    "calls": ["trpc:team.listInvites"]
+  },
+  {
+    "id": "mockplan-048",
+    "by": "agent",
+    "inventory": "team-settings",
+    "request": "billing is forbidden for a non-owner",
+    "state": "forbidden",
+    "calls": ["trpc:billing.getPlan", "trpc:billing.listInvoices"]
+  },
+  {
+    "id": "mockplan-049",
+    "by": "agent",
+    "inventory": "team-settings",
+    "request": "one member on the team",
+    "state": "one",
+    "calls": ["trpc:team.listMembers"]
+  },
+  {
+    "id": "mockplan-050",
+    "by": "agent",
+    "inventory": "team-settings",
+    "request": "dozens of invoices",
+    "state": "many",
+    "calls": ["trpc:billing.listInvoices"]
+  },
+  {
+    "id": "mockplan-051",
+    "by": "agent",
+    "inventory": "team-settings",
+    "request": "testing an integration errors",
+    "state": "error",
+    "calls": ["trpc:integration.test"]
+  },
+  {
+    "id": "mockplan-052",
+    "by": "agent",
+    "inventory": "team-settings",
+    "request": "the integrations list spins forever",
+    "state": "loading",
+    "calls": ["trpc:integration.list"]
+  },
+  {
+    "id": "mockplan-053",
+    "by": "agent",
+    "inventory": "team-settings",
+    "request": "can we move the invite button to the right",
+    "state": "none"
+  },
+  {
+    "id": "mockplan-054",
+    "by": "agent",
+    "inventory": "roast-detail",
+    "request": "roast with no comments",
+    "state": "empty",
+    "calls": ["trpc:comment.listForRoast"],
+    "maybe": ["trpc:comment.countForRoast"]
+  },
+  {
+    "id": "mockplan-055",
+    "by": "agent",
+    "inventory": "roast-detail",
+    "request": "the roast curve fails",
+    "state": "error",
+    "calls": ["trpc:roast.curve"]
+  },
+  {
+    "id": "mockplan-056",
+    "by": "agent",
+    "inventory": "roast-detail",
+    "request": "cupping score still loading",
+    "state": "loading",
+    "calls": ["trpc:cupping.meanScore"],
+    "maybe": ["trpc:cupping.listForRoast"]
+  },
+  {
+    "id": "mockplan-057",
+    "by": "agent",
+    "inventory": "roast-detail",
+    "request": "forbidden to change status",
+    "state": "forbidden",
+    "calls": ["trpc:roast.setStatus"],
+    "maybe": ["trpc:roast.update"]
+  },
+  {
+    "id": "mockplan-058",
+    "by": "agent",
+    "inventory": "roast-detail",
+    "request": "many similar roasts",
+    "state": "many",
+    "calls": ["trpc:roast.similar"]
+  },
+  {
+    "id": "mockplan-059",
+    "by": "agent",
+    "inventory": "roast-detail",
+    "request": "a single batch",
+    "state": "one",
+    "calls": ["trpc:roast.batchesForRoast"]
+  },
+  {
+    "id": "mockplan-060",
+    "by": "agent",
+    "inventory": "roast-detail",
+    "request": "no attachments",
+    "state": "empty",
+    "calls": ["trpc:attachment.listForRoast"]
+  },
+  {
+    "id": "mockplan-061",
+    "by": "agent",
+    "inventory": "roast-detail",
+    "request": "maintenance card error",
+    "state": "error",
+    "calls": ["trpc:roaster.maintenanceDue"],
+    "maybe": ["trpc:roaster.get"]
+  },
+  {
+    "id": "mockplan-062",
+    "by": "agent",
+    "inventory": "roast-detail",
+    "request": "the drop temperature should be in fahrenheit",
+    "state": "none"
+  },
+  {
+    "id": "mockplan-063",
+    "by": "agent",
+    "inventory": "roast-detail",
+    "request": "uploading an attachment fails",
+    "state": "error",
+    "calls": ["trpc:attachment.upload"]
+  },
+  {
+    "id": "mockplan-064",
+    "by": "agent",
+    "inventory": "roast-detail",
+    "request": "no comm",
+    "state": "empty",
+    "calls": [],
+    "maybe": ["trpc:comment.listForRoast", "trpc:comment.countForRoast"]
+  },
+  {
+    "id": "mockplan-065",
+    "by": "agent",
+    "inventory": "roast-detail",
+    "request": "the profile versions list overflows with versions",
+    "state": "many",
+    "calls": ["trpc:profile.listVersions"]
+  }
+]

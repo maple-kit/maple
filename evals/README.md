@@ -3,9 +3,14 @@
 Every AI path in Maple ships with an eval set and a pass-rate threshold that CI
 enforces. A prompt without an eval is a prompt nobody can change safely.
 
-**Status:** one set, `assist`. Thirty review comments written against a real
-running application, scoring the keyword baseline on every CI run and the model
-tier whenever a credential is in the environment.
+**Status:** two sets, each scoring its keyword baseline on every CI run and the
+model tier whenever a credential is in the environment.
+
+- `assist`: thirty review comments written against a real running application.
+- `mock-plan`: 65 sentences for the mock box against seven pages' calls, two
+  recorded from the examples and five written at production scale. Every
+  sentence so far is `by: agent`; `cases/mock-plan/README.md` says why that
+  matters and what the set needs next.
 
 ## Harness
 

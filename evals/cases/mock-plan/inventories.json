@@ -1,0 +1,332 @@
+{
+  "vite-overview": {
+    "source": "recorded",
+    "route": "/",
+    "calls": [
+      {
+        "key": "rest:GET /api/reviews",
+        "summary": "items [Review: id, repo, branch, open, state, reviewer, tint], total, nextCursor"
+      },
+      {
+        "key": "rest:GET /api/session",
+        "summary": "name, tint"
+      }
+    ]
+  },
+  "next-projects": {
+    "source": "recorded",
+    "route": "/",
+    "calls": [
+      {
+        "key": "trpc:project.slow",
+        "summary": "waitedMs"
+      },
+      {
+        "key": "trpc:project.count",
+        "summary": ""
+      },
+      {
+        "key": "trpc:project.list",
+        "summary": "items [Project: id, name, owner, createdAt], total, nextCursor"
+      },
+      {
+        "key": "trpc:user.me",
+        "summary": "User: id, name, since"
+      }
+    ]
+  },
+  "roastery-dashboard": {
+    "source": "written",
+    "route": "/dashboard",
+    "calls": [
+      {
+        "key": "trpc:user.me",
+        "summary": "User: id, name, email, role, roasteryId"
+      },
+      {
+        "key": "trpc:roast.list",
+        "summary": "items [Roast: id, beanName, origin, status, roastedAt, weightKg], nextCursor, totalCount"
+      },
+      {
+        "key": "trpc:roast.countByStatus",
+        "summary": "planned, roasting, cooling, packed"
+      },
+      {
+        "key": "trpc:roast.meanRoastTime",
+        "summary": "minutes, previousMinutes, changePercent"
+      },
+      {
+        "key": "trpc:roast.overTime",
+        "summary": "list of [day, count]"
+      },
+      {
+        "key": "trpc:roast.overTimeSparkline",
+        "summary": "list of [day, count]"
+      },
+      {
+        "key": "trpc:origin.top",
+        "summary": "list of [Origin: id, country, region, roastCount]"
+      },
+      {
+        "key": "trpc:bean.listLowStock",
+        "summary": "items [Bean: id, name, origin, stockKg, reorderAtKg], totalCount"
+      },
+      {
+        "key": "trpc:order.list",
+        "summary": "items [Order: id, cafeName, status, placedAt, totalKg], nextCursor, hasMore"
+      },
+      {
+        "key": "trpc:notification.unreadCount",
+        "summary": "count"
+      },
+      {
+        "key": "trpc:roast.create",
+        "summary": "Roast: id, beanName, status"
+      },
+      {
+        "key": "trpc:order.markShipped",
+        "summary": "Order: id, status"
+      }
+    ]
+  },
+  "bean-detail": {
+    "source": "written",
+    "route": "/beans/:id",
+    "calls": [
+      {
+        "key": "trpc:bean.get",
+        "summary": "Bean: id, name, origin, process, altitudeM, stockKg, archived"
+      },
+      {
+        "key": "trpc:lot.listByBeanIds",
+        "summary": "list of [Lot: id, beanId, harvestYear, weightKg, receivedAt]"
+      },
+      {
+        "key": "trpc:supplier.getForBean",
+        "summary": "Supplier: id, name, country, contactEmail"
+      },
+      {
+        "key": "trpc:cupping.listForBean",
+        "summary": "items [Cupping: id, score, notes, cuppedAt, cupper], nextCursor, totalCount"
+      },
+      {
+        "key": "trpc:cupping.meanScore",
+        "summary": "score, sampleCount"
+      },
+      {
+        "key": "trpc:bean.stockOverTime",
+        "summary": "list of [day, stockKg]"
+      },
+      {
+        "key": "trpc:user.me",
+        "summary": "User: id, name, email, role, roasteryId"
+      },
+      {
+        "key": "trpc:bean.update",
+        "summary": "Bean: id, name, stockKg"
+      },
+      {
+        "key": "trpc:bean.setArchived",
+        "summary": "Bean: id, archived"
+      },
+      {
+        "key": "trpc:cupping.create",
+        "summary": "Cupping: id, score"
+      }
+    ]
+  },
+  "order-queue": {
+    "source": "written",
+    "route": "/orders",
+    "calls": [
+      {
+        "key": "rest:GET /api/orders",
+        "summary": "items [Order: id, cafeId, status, placedAt, lines [OrderLine: beanId, weightKg]], nextCursor, total"
+      },
+      {
+        "key": "rest:GET /api/orders/:id",
+        "summary": "Order: id, cafeId, status, placedAt, lines [OrderLine: beanId, weightKg], notes"
+      },
+      {
+        "key": "rest:GET /api/cafes/:id",
+        "summary": "Cafe: id, name, city, since"
+      },
+      {
+        "key": "rest:GET /api/shipments",
+        "summary": "items [Shipment: id, orderId, carrier, trackingCode, shippedAt], total"
+      },
+      {
+        "key": "rest:GET /api/me",
+        "summary": "Me: id, name, role"
+      },
+      {
+        "key": "rest:POST /api/orders/:id/ship",
+        "summary": "Shipment: id, orderId, carrier"
+      },
+      {
+        "key": "rest:PATCH /api/orders/:id",
+        "summary": "Order: id, status, notes"
+      }
+    ]
+  },
+  "team-settings": {
+    "source": "written",
+    "route": "/settings/team",
+    "calls": [
+      {
+        "key": "trpc:team.listMembers",
+        "summary": "items [Member: id, name, email, role, joinedAt], totalCount"
+      },
+      {
+        "key": "trpc:team.listInvites",
+        "summary": "list of [Invite: id, email, role, sentAt, expiresAt]"
+      },
+      {
+        "key": "trpc:billing.getPlan",
+        "summary": "Plan: name, seats, seatsUsed, renewsAt"
+      },
+      {
+        "key": "trpc:billing.listInvoices",
+        "summary": "items [Invoice: id, number, amount, currency, issuedAt, paid], nextCursor"
+      },
+      {
+        "key": "trpc:integration.list",
+        "summary": "list of [Integration: id, kind, connected, lastSyncAt]"
+      },
+      {
+        "key": "trpc:user.me",
+        "summary": "User: id, name, email, role, roasteryId"
+      },
+      {
+        "key": "trpc:team.invite",
+        "summary": "Invite: id, email"
+      },
+      {
+        "key": "trpc:team.removeMember",
+        "summary": ""
+      },
+      {
+        "key": "trpc:integration.test",
+        "summary": "ok, message"
+      }
+    ]
+  },
+  "roast-detail": {
+    "source": "written",
+    "route": "/roasts/:id",
+    "calls": [
+      {
+        "key": "trpc:roast.get",
+        "summary": "Roast: id, beanId, status, roastedAt, weightKg, profileId, roasterId"
+      },
+      {
+        "key": "trpc:roast.curve",
+        "summary": "list of [secondsIn, beanTempC, airTempC, rateOfRise]"
+      },
+      {
+        "key": "trpc:roast.events",
+        "summary": "list of [RoastEvent: kind, secondsIn, note]"
+      },
+      {
+        "key": "trpc:roast.batchesForRoast",
+        "summary": "list of [Batch: id, weightKg, packedAt]"
+      },
+      {
+        "key": "trpc:profile.get",
+        "summary": "Profile: id, name, targetDevelopmentPercent, chargeTempC"
+      },
+      {
+        "key": "trpc:profile.listVersions",
+        "summary": "list of [ProfileVersion: id, version, createdAt]"
+      },
+      {
+        "key": "trpc:bean.get",
+        "summary": "Bean: id, name, origin, process, altitudeM, stockKg, archived"
+      },
+      {
+        "key": "trpc:lot.listByBeanIds",
+        "summary": "list of [Lot: id, beanId, harvestYear, weightKg, receivedAt]"
+      },
+      {
+        "key": "trpc:cupping.listForRoast",
+        "summary": "items [Cupping: id, score, notes, cuppedAt, cupper], totalCount"
+      },
+      {
+        "key": "trpc:cupping.meanScore",
+        "summary": "score, sampleCount"
+      },
+      {
+        "key": "trpc:roaster.get",
+        "summary": "Roaster: id, name, model, capacityKg"
+      },
+      {
+        "key": "trpc:roaster.maintenanceDue",
+        "summary": "due, lastServicedAt"
+      },
+      {
+        "key": "trpc:comment.listForRoast",
+        "summary": "items [Comment: id, author, body, createdAt], nextCursor"
+      },
+      {
+        "key": "trpc:comment.countForRoast",
+        "summary": "count"
+      },
+      {
+        "key": "trpc:order.listForRoast",
+        "summary": "list of [Order: id, cafeName, status, totalKg]"
+      },
+      {
+        "key": "trpc:roast.similar",
+        "summary": "list of [Roast: id, beanName, roastedAt, developmentPercent]"
+      },
+      {
+        "key": "trpc:roast.developmentStats",
+        "summary": "developmentPercent, firstCrackSeconds, dropTempC"
+      },
+      {
+        "key": "trpc:roast.developmentStatsSparkline",
+        "summary": "list of [roastedAt, developmentPercent]"
+      },
+      {
+        "key": "trpc:user.me",
+        "summary": "User: id, name, email, role, roasteryId"
+      },
+      {
+        "key": "trpc:user.listForRoastery",
+        "summary": "list of [User: id, name]"
+      },
+      {
+        "key": "trpc:label.listForRoast",
+        "summary": "list of [Label: id, name, color]"
+      },
+      {
+        "key": "trpc:attachment.listForRoast",
+        "summary": "list of [Attachment: id, fileName, uploadedAt]"
+      },
+      {
+        "key": "trpc:roast.update",
+        "summary": "Roast: id, status"
+      },
+      {
+        "key": "trpc:roast.setStatus",
+        "summary": "Roast: id, status"
+      },
+      {
+        "key": "trpc:comment.create",
+        "summary": "Comment: id"
+      },
+      {
+        "key": "trpc:label.attach",
+        "summary": ""
+      },
+      {
+        "key": "trpc:attachment.upload",
+        "summary": "Attachment: id"
+      },
+      {
+        "key": "trpc:roast.duplicate",
+        "summary": "Roast: id"
+      }
+    ]
+  }
+}

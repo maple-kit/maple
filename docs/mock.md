@@ -390,6 +390,12 @@ a camel-cased key split into words. A sentence sharing no word with any call
 is about the whole page, and concerns every call except a REST write and one
 whose summary says `mutation`.
 
+**The eval** is `evals/mock-plan.eval.test.ts`: 65 sentences against seven
+pages' calls, scored on state accuracy and on the F1 of the calls a plan
+concerns. The keyword planner scores 92.3% and 67.6%, runs on every CI run,
+and is the floor the model tier must beat. `evals/cases/mock-plan/README.md`
+says where the cases came from, and why that flatters the word list.
+
 It reads no grammar: "no errors" is `empty` and `error` at once, and two
 states named equally come out torn between them, which is the honest answer
 for a word list.
