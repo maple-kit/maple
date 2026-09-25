@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { jevClassifier } from "@maple-kit/classifier";
@@ -75,6 +76,10 @@ function exampleApi(): Plugin {
 
 const BRANCH = process.env["VITE_MAPLE_BRANCH"] ?? "feat/example";
 
+function openapi(): unknown {
+  return JSON.parse(readFileSync(here("openapi.json"), "utf8"));
+}
+
 export default defineConfig(async ({ command, mode }) => {
   // Read here, in the config, which runs in Node. The empty prefix is what
   // makes `loadEnv` return unprefixed names, and only `VITE_` ones reach
@@ -105,7 +110,13 @@ export default defineConfig(async ({ command, mode }) => {
         // Only the dev and preview servers mount this; a static build has no
         // server, so a deployed copy hosts the route elsewhere. In memory and
         // seeded, so a restart is a clean slate with something in it.
-        route: { store, media, ...(classifier ? { assist: { classifier } } : {}) },
+        route: {
+          store,
+          media,
+          ...(classifier ? { assist: { classifier } } : {}),
+          // The page's API, described for Maple Mock; served per call, never bundled.
+          mock: { preview, schemas: [{ codec: "rest", document: openapi() }] },
+        },
       }),
     ],
     build: {

@@ -1,0 +1,73 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "The example's own API",
+    "version": "1",
+    "description": "Supplied to Maple Mock by vite.config.ts; never bundled."
+  },
+  "paths": {
+    "/api/reviews": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "A page of open reviews.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Review" }
+                    },
+                    "total": { "type": "integer", "minimum": 0 },
+                    "nextCursor": { "type": ["string", "null"] }
+                  },
+                  "required": ["items", "total", "nextCursor"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/session": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Who is signed in.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "name": { "type": "string" },
+                    "tint": { "type": "integer", "minimum": 0, "maximum": 5 }
+                  },
+                  "required": ["name", "tint"]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Review": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "repo": { "type": "string" },
+          "branch": { "type": "string" },
+          "open": { "type": "integer", "minimum": 0 },
+          "state": { "enum": ["blocked", "clear", "waiting"] },
+          "reviewer": { "type": "string" },
+          "tint": { "type": "integer", "minimum": 0, "maximum": 5 }
+        },
+        "required": ["id", "repo", "branch", "open", "state", "reviewer", "tint"]
+      }
+    }
+  }
+}

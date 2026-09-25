@@ -25,6 +25,9 @@ import { build } from "vite";
  */
 const INTERCEPTOR = "fetch-interceptor";
 
+/** Written only in `openapi.json`, which the route serves and no bundle may carry. */
+const SCHEMA_MARK = "Supplied to Maple Mock by vite.config.ts; never bundled.";
+
 /** Rules only the island's, the composer's and the marks' stylesheets write. */
 const OTHER_PARTS = [".mk-island {", ".mk-composer {", ".mk-marks {"];
 
@@ -89,6 +92,11 @@ assert(
   "A preview build should carry Maple Mock's interceptor, and does not.",
 );
 
+assert(
+  !previewOutput.includes(SCHEMA_MARK),
+  "A preview build must not carry the page's schema, which the route serves per call.",
+);
+
 const mockOnly = await pageScripts(previewDirectory, "mock.html");
 assert(
   mockOnly.includes(".mk-mock-banner {") && mockOnly.includes(INTERCEPTOR),
@@ -115,6 +123,10 @@ assert(
   "A production build must leak no source path, and this one does.",
 );
 
+assert(
+  !productionOutput.includes(SCHEMA_MARK),
+  "A production build must not carry the page's schema, and this one does.",
+);
 assert(
   !productionOutput.includes(INTERCEPTOR),
   "A production build must carry no Maple Mock interceptor, and this one does.",
