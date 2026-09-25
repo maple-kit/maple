@@ -49,6 +49,9 @@ export interface ShapeIndex {
   readonly size: number;
 }
 
+/** The extension `maple mock schema` stamps on a document it writes. */
+export const MOCK_EXTENSION = "x-maple-mock";
+
 const SOURCES: ReadonlySet<string> = new Set(SHAPE_SOURCES);
 const METHODS = ["get", "post", "put", "patch", "delete"] as const;
 
@@ -59,6 +62,27 @@ export function isShape(value: unknown): value is Shape {
   if (!(typeof schema === "boolean" || isRecord(schema))) return false;
   if (typeof source !== "string" || !SOURCES.has(source)) return false;
   return superjson === undefined || typeof superjson === "boolean";
+}
+
+/**
+ * A document as the route takes it, read from the `x-maple-mock` extension
+ * that `maple mock schema` writes. A document without one is a supplied REST
+ * one; `overrides` win over both.
+ */
+export function readSchemaDocument(
+  document: unknown,
+  overrides: Partial<Omit<SchemaDocument, "document">> = {},
+): SchemaDocument {
+  const stamped = isRecord(document) ? document[MOCK_EXTENSION] : undefined;
+  const mark = isRecord(stamped) ? stamped : {};
+  const source = typeof mark["source"] === "string" && SOURCES.has(mark["source"]);
+  return {
+    document,
+    codec: mark["codec"] === "trpc" ? "trpc" : "rest",
+    ...(source ? { source: mark["source"] as ShapeSource } : {}),
+    ...(mark["superjson"] === true ? { superjson: true } : {}),
+    ...overrides,
+  };
 }
 
 /**

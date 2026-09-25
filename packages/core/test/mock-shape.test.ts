@@ -115,3 +115,23 @@ describe("a shape on the wire", () => {
     expect(isShape(value)).toBe(expected);
   });
 });
+
+describe("a document read from what the CLI stamped on it", () => {
+  it("takes its codec, rung and envelope from x-maple-mock", async () => {
+    const { readSchemaDocument } = await import("../src/mock/index.js");
+    const stamped = {
+      "x-maple-mock": { codec: "trpc", source: "router", superjson: true },
+      paths: {},
+    };
+
+    expect(readSchemaDocument(stamped)).toEqual({
+      document: stamped,
+      codec: "trpc",
+      source: "router",
+      superjson: true,
+    });
+    expect(readSchemaDocument({ paths: {} })).toEqual({ document: { paths: {} }, codec: "rest" });
+    expect(readSchemaDocument(stamped, { superjson: false }).superjson).toBe(false);
+    expect(readSchemaDocument({ "x-maple-mock": { source: "made-up" } }).source).toBeUndefined();
+  });
+});

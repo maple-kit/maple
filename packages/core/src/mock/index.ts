@@ -9,5 +9,11 @@
 export { InvalidRecipeError, MOCK_STATES, parseRecipe, RECIPE_VERSION } from "./recipe.js";
 
 export type { MockCall, MockState, Recipe } from "./recipe.js";
-export { createShapeIndex, isShape, SHAPE_SOURCES } from "./shape.js";
+export {
+  createShapeIndex,
+  isShape,
+  MOCK_EXTENSION,
+  readSchemaDocument,
+  SHAPE_SOURCES,
+} from "./shape.js";
 export type { JsonSchema, SchemaDocument, Shape, ShapeIndex, ShapeSource } from "./shape.js";
