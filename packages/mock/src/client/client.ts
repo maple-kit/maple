@@ -16,7 +16,7 @@ import { pathPattern } from "../rest.js";
 
 import type { MockHandle } from "../interceptor.js";
 import type { Scheme, ThemeView } from "@maple-kit/core/client";
-import type { MockCall, MockState, Recipe } from "@maple-kit/core/mock";
+import type { MockCall, MockState, Recipe, ShapeSource } from "@maple-kit/core/mock";
 
 /** What the client attaches to. `window` satisfies it. */
 export interface MockView extends ThemeView {
@@ -44,6 +44,8 @@ export interface MockCallRow {
   readonly state?: MockState;
   /** False for a call the draft names that this route has not recorded. */
   readonly seen: boolean;
+  /** Where the call's shape came from, once it is known; absent with none. */
+  readonly source?: ShapeSource;
 }
 
 /** Everything a surface draws. Replaced whole on a change. */
@@ -105,6 +107,8 @@ interface Runtime {
   readonly view: MockView | undefined;
   readonly options: MockClientOptions;
   readonly listeners: Set<(state: MockClientState) => void>;
+  /** Each looked-up call's shape source, null for a call nothing describes. */
+  readonly sources: Map<string, ShapeSource | null>;
   state: MockClientState;
   stop?: () => void;
 }
@@ -114,7 +118,14 @@ export function createMockClient(options: MockClientOptions = {}): MockClient {
   const view = options.view ?? (globalThis as { window?: MockView }).window;
   const handle = options.handle ?? installedMock();
   const state = initial(options.defaultOpen === true);
-  const runtime: Runtime = { handle, view, options, listeners: new Set(), state };
+  const runtime: Runtime = {
+    handle,
+    view,
+    options,
+    listeners: new Set(),
+    sources: new Map(),
+    state,
+  };
   runtime.state = derive(runtime, { draft: activeOn(runtime, routeOf(view))?.calls ?? [] });
 
   return {
@@ -176,6 +187,7 @@ function derive(runtime: Runtime, next: Partial<MockClientState>): MockClientSta
 function patch(runtime: Runtime, next: Partial<MockClientState>): void {
   runtime.state = derive(runtime, next);
   for (const listener of [...runtime.listeners]) listener(runtime.state);
+  if (runtime.stop !== undefined) lookUp(runtime);
 }
 
 function start(runtime: Runtime): void {
@@ -199,6 +211,21 @@ function start(runtime: Runtime): void {
     unsubscribe();
   };
   patch(runtime, { scheme: theme.current().overlay });
+}
+
+/** Asks for the shape of every listed call not asked about yet, once started. */
+function lookUp(runtime: Runtime): void {
+  const shape = runtime.handle?.shape;
+  if (shape === undefined) return;
+  for (const { key } of runtime.state.calls) {
+    if (runtime.sources.has(key)) continue;
+    runtime.sources.set(key, null);
+    void Promise.resolve(shape(key)).then((found) => {
+      if (found === undefined) return;
+      runtime.sources.set(key, found.source);
+      patch(runtime, {});
+    });
+  }
 }
 
 function onKeydown(runtime: Runtime, event: KeyboardEvent): void {
@@ -226,7 +253,13 @@ function rows(runtime: Runtime, route: string, state: MockClientState): MockCall
     .filter(([key]) => words.every((word) => key.toLowerCase().includes(word)))
     .map(([key, recorded]) => {
       const chosen = states.get(key);
-      return { key, seen: recorded, ...(chosen === undefined ? {} : { state: chosen }) };
+      const source = runtime.sources.get(key) ?? undefined;
+      return {
+        key,
+        seen: recorded,
+        ...(chosen === undefined ? {} : { state: chosen }),
+        ...(source === undefined ? {} : { source }),
+      };
     });
 }
 

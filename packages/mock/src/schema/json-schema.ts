@@ -4,8 +4,7 @@
  * 3.1's type lists and a `$ref` into `$defs` or `components` all read the same.
  */
 
-/** A JSON Schema, as JSON. `true` accepts anything, `false` nothing. */
-export type JsonSchema = boolean | { readonly [keyword: string]: unknown };
+import type { JsonSchema } from "@maple-kit/core/mock";
 
 type Node = { readonly [keyword: string]: unknown };
 

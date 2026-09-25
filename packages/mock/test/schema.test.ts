@@ -11,7 +11,7 @@ import {
 } from "@maple-kit/mock";
 import { describe, expect, it } from "vitest";
 
-import type { JsonSchema } from "@maple-kit/mock";
+import type { JsonSchema } from "@maple-kit/core/mock";
 
 /** A page of projects whose cursor is a plain required string: never null. */
 function page(cursor: JsonSchema, required: string[]): JsonSchema {

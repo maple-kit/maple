@@ -13,9 +13,9 @@ import { reshape, reshapeTyped } from "./transform.js";
 
 import type { Answer, Call, Codec } from "./codec.js";
 import type { Inventory, Sample } from "./inventory.js";
-import type { Shape, ShapeLookup } from "./schema/shape.js";
+import type { ShapeLookup } from "./schema/shape.js";
 import type { BodyState } from "./transform.js";
-import type { MockState, Recipe } from "@maple-kit/core/mock";
+import type { MockState, Recipe, Shape } from "@maple-kit/core/mock";
 
 /** What {@link resolve} needs besides the request. */
 export interface ResolveOptions {

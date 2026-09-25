@@ -47,11 +47,12 @@ export {
   typesOf,
   valueBranch,
 } from "./schema/json-schema.js";
-export type { JsonSchema, Located } from "./schema/json-schema.js";
+export type { Located } from "./schema/json-schema.js";
+export { routeShapes } from "./schema/route.js";
+export type { RouteShapesOptions } from "./schema/route.js";
 export { sampleSchema } from "./schema/sample.js";
 export type { SampleOptions } from "./schema/sample.js";
-export { SHAPE_SOURCES } from "./schema/shape.js";
-export type { Shape, ShapeLookup, ShapeSource } from "./schema/shape.js";
+export type { ShapeLookup } from "./schema/shape.js";
 export { annotate, deflate, inflate, isWrapped, prefixMeta, extractMeta } from "./superjson.js";
 export type { TypeMeta } from "./superjson.js";
 export { MANY, reshape, reshapeTyped } from "./transform.js";

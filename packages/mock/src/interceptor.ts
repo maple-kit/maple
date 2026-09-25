@@ -15,6 +15,7 @@ import { createInventory } from "./inventory.js";
 import { forgetRecipe, readRecipe, saveRecipe } from "./link.js";
 import { record, resolve, splitRequest } from "./resolve.js";
 import { pathPattern, restCodec } from "./rest.js";
+import { routeShapes } from "./schema/route.js";
 import { trpcCodec } from "./trpc.js";
 
 import type { Codec } from "./codec.js";
@@ -35,7 +36,12 @@ export interface InstallOptions {
   readonly codecs?: readonly Codec[];
   /** The real `fetch` a mocked request is forwarded through. */
   readonly fetch?: typeof fetch;
-  /** Each call's response schema. Without one, a call never seen cannot take a body state. */
+  /**
+   * Where Maple's route is mounted, such as `/api/maple`. Nothing under it is
+   * recorded or mocked, and its `/mock/schema` answers each call's shape.
+   */
+  readonly route?: string;
+  /** Each call's shape, in place of the route's. */
   readonly shape?: ShapeLookup;
 }
 
@@ -44,6 +50,8 @@ export interface MockHandle {
   /** The recipe in force, read once at install. */
   readonly recipe: Recipe | undefined;
   readonly inventory: Inventory;
+  /** Each call's shape, when the page has a source for them. */
+  readonly shape?: ShapeLookup;
   /** Restores `fetch` and `XMLHttpRequest`. */
   dispose(): void;
 }
@@ -62,7 +70,8 @@ export function installMock(options: InstallOptions = {}): MockHandle {
   const recipe = activeRecipe(storage, options.logger);
   const inventory = createInventory(storage === undefined ? {} : { storage });
   const forward = options.fetch ?? globalThis.fetch.bind(globalThis);
-  const ignored = (url: string) => options.ignore?.(new URL(url)) ?? false;
+  const ignored = (url: string) => ignores(options, new URL(url));
+  const shape = shapeLookup(options, forward);
   const route = () => pathPattern(pageUrl()?.pathname ?? "/");
 
   const interceptor = new BatchInterceptor({
@@ -78,7 +87,7 @@ export function installMock(options: InstallOptions = {}): MockHandle {
         codecs,
         forward,
         route: route(),
-        ...(options.shape === undefined ? {} : { shape: options.shape }),
+        ...(shape === undefined ? {} : { shape }),
       });
       if (response !== undefined) controller.respondWith(response);
     }),
@@ -101,6 +110,7 @@ export function installMock(options: InstallOptions = {}): MockHandle {
   const handle: MockHandle = {
     recipe,
     inventory,
+    ...(shape === undefined ? {} : { shape }),
     dispose() {
       interceptor.dispose();
       keepInstalled(undefined);
@@ -108,6 +118,22 @@ export function installMock(options: InstallOptions = {}): MockHandle {
   };
   keepInstalled(handle);
   return handle;
+}
+
+/** Maple's own route is never the page's data, and neither is anything the host names. */
+function ignores(options: InstallOptions, url: URL): boolean {
+  const base = options.route?.replace(/\/$/, "");
+  if (base !== undefined && (url.pathname === base || url.pathname.startsWith(`${base}/`))) {
+    return true;
+  }
+  return options.ignore?.(url) ?? false;
+}
+
+function shapeLookup(options: InstallOptions, forward: typeof fetch): ShapeLookup | undefined {
+  if (options.shape !== undefined) return options.shape;
+  return options.route === undefined
+    ? undefined
+    : routeShapes({ basePath: options.route, fetch: forward });
 }
 
 /** A passthrough response, read into the answers worth recording. */

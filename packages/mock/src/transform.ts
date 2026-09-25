@@ -10,8 +10,9 @@
 import { allowsNull, arrayOf, enumOf, properties, property } from "./schema/json-schema.js";
 import { deflate, inflate, throughMarker } from "./superjson.js";
 
-import type { JsonSchema, Located } from "./schema/json-schema.js";
+import type { Located } from "./schema/json-schema.js";
 import type { TypeMeta } from "./superjson.js";
+import type { JsonSchema } from "@maple-kit/core/mock";
 
 /** The states a body can be reshaped into. */
 export type BodyState = "empty" | "many" | "one";

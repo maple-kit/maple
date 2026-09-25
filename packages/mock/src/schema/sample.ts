@@ -7,7 +7,7 @@
 import { annotate } from "../superjson.js";
 import { arrayOf, deref, enumOf, properties, typesOf, valueBranch } from "./json-schema.js";
 
-import type { JsonSchema } from "./json-schema.js";
+import type { JsonSchema } from "@maple-kit/core/mock";
 
 /** How a sample is written. */
 export interface SampleOptions {
