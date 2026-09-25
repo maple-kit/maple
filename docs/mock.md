@@ -242,8 +242,30 @@ the five names above repeats its keys under `many`.
 A call's **shape** is one JSON Schema over what its data decodes to, and the
 rung it came from: `supplied`, `router`, `validator`, `introspection` or
 `sample`. `resolve` and `installMock` take a `shape(key)` lookup, asked only for
-a call a body state reshapes. Where the shapes come from is the next slice of
-#169; this is what they change.
+a call a body state reshapes. The type is `Shape` in `@maple-kit/core/mock`,
+since the route writes it and the page reads it.
+
+**The route serves shapes, per call, to a preview that asked.**
+`RouteOptions.mock` is `{ preview, schemas }`: the host's preview build switch,
+never `NODE_ENV`, since a preview is a production build; and OpenAPI documents,
+each marked `rest` or `trpc`, highest rung first, or a function that reads them
+once. `GET {base}/mock/schema?key=…` answers the shapes of up to a hundred keys
+and leaves out any it has none for. It answers 404 unless `preview` is true,
+and 401 to a reviewer the identity connector does not resolve, when there is
+one. The documents are normalised on the first request, not at startup.
+
+**The schema never reaches the page's bundle.** `installMock({ route })` reads
+shapes from the route as calls need them, through the real `fetch`, one request
+for every key asked in the same tick, and keeps every answer, a miss included,
+for the page's life. Nothing under `route` is recorded or mocked. The Vite
+example's `verify` checks that neither build carries its `openapi.json`.
+
+**Normalising.** A `trpc` document has a path per procedure, `/project.list`,
+and the shape is its 2xx answer's `result.data`. A `rest` document is keyed by
+method and path, with `prefix` put in front, and a `{param}` segment matches any
+one segment of a call's key. The first document that describes a key wins on
+structure; the recorded or live answer still supplies the values. The box tags
+each call with the rung its shape came from.
 
 **A transform stays inside the schema.** A key is nulled only where it is
 nullable (a type list with `null`, OpenAPI 3.0's `nullable`, a union with
