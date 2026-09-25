@@ -179,9 +179,16 @@ it; the suite checks that against tRPC's own server, not against this codec.
 as a stream.** The forwarded request drops `trpc-accept`, so the server answers
 one JSON array, and the codec writes the JSONL the client asked for: the head,
 failed calls, then each level of the rest, in the order tRPC's own producer
-writes them for calls that settle at once. Every line of a partly mocked stream
-but the mocked one matches the server's own stream exactly. What is lost is
-streaming itself: the page gets every call when the slowest has answered.
+writes them for calls that settle at once. When they do, every line of a partly
+mocked stream but the mocked one matches the server's own stream exactly.
+
+When one settles later, the server numbers its chunks in the order they settle,
+which a plain answer does not say. The lines then differ in those numbers only,
+and tRPC's client decodes every untouched call to the value the server sent.
+
+What is lost is streaming itself: the page gets every call when the slowest has
+answered. In the Next example, a call batched beside one that takes 1.5 s
+arrives in about 10 ms unmocked and in about 1.5 s with a mock on the batch.
 
 **A stream the page receives unmocked is read without holding it.** Recording
 reads a copy of the response after the page has it, because the interceptor

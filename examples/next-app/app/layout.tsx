@@ -1,3 +1,5 @@
+import "./page.css";
+
 export const metadata = { title: "Maple example: Next" };
 
 export default function RootLayout({ children }: { readonly children: React.ReactNode }) {

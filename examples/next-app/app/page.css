@@ -1,0 +1,99 @@
+:root {
+  --ink: #1d2320;
+  --quiet: #6b746f;
+  --line: #e3e7e4;
+  --paper: #f7f8f6;
+  --bad: #b3261e;
+  --live: #2f8f5b;
+  color: var(--ink);
+  background: var(--paper);
+  font:
+    15px/1.5 system-ui,
+    sans-serif;
+}
+
+main {
+  max-width: 44rem;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+
+.bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.quiet {
+  color: var(--quiet);
+}
+
+.card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.5rem 1rem 1rem;
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.card-head h2 {
+  font-size: 1rem;
+}
+
+.count {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0 0.5rem;
+  font-size: 0.8rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 0.4rem 0.25rem;
+  border-bottom: 1px solid var(--line);
+}
+
+th {
+  color: var(--quiet);
+  font-weight: 500;
+  font-size: 0.85rem;
+}
+
+.mono {
+  font-variant-numeric: tabular-nums;
+}
+
+.notice {
+  text-align: center;
+  padding: 1.5rem 0;
+}
+
+.notice.bad {
+  color: var(--bad);
+}
+
+.live {
+  font-variant-numeric: tabular-nums;
+  color: var(--live);
+}
+
+.dot {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--live);
+}

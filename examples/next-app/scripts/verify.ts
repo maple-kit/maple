@@ -17,6 +17,8 @@ import { promisify } from "node:util";
 const run = promisify(execFile);
 const HERE = join(import.meta.dirname, "..");
 const ATTRIBUTE = "data-maple-";
+/** Written into a bundle only by the recipe reader, so it marks Maple Mock's presence. */
+const RECIPE_PARAM = "maple-mock";
 
 interface Bundles {
   readonly client: string;
@@ -63,6 +65,11 @@ assert(
   "A preview build should tag the client bundle, and does not.",
 );
 
+assert(
+  tagged.client.includes(RECIPE_PARAM),
+  "A preview build should carry Maple Mock's interceptor, and does not.",
+);
+
 const stripped = await buildWith({ MAPLE_STRIP_CHECK: "1" }, ".next-strip");
 assert(
   !stripped.client.includes(ATTRIBUTE),
@@ -79,7 +86,11 @@ assert(
   !production.client.includes(ATTRIBUTE) && !production.server.includes(ATTRIBUTE),
   "A production build must carry no Maple attribute, and this one does.",
 );
+assert(
+  !production.client.includes(RECIPE_PARAM) && !production.server.includes(RECIPE_PARAM),
+  "A production build must carry no Maple Mock interceptor, and this one does.",
+);
 
 process.stdout.write(
-  "next-app: tagged on preview, stripped from both bundles, clean in production.\n",
+  "next-app: tagged and mockable on preview, stripped from both bundles, clean in production.\n",
 );

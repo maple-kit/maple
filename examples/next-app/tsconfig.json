@@ -8,5 +8,12 @@
     "allowJs": true,
     "noPropertyAccessFromIndexSignature": false
   },
-  "include": ["app/**/*.ts", "app/**/*.tsx", "scripts/**/*.ts", "*.config.ts"]
+  "include": [
+    "app/**/*.ts",
+    "app/**/*.tsx",
+    "server/**/*.ts",
+    "scripts/**/*.ts",
+    "*.config.ts",
+    "instrumentation-client.ts"
+  ]
 }
