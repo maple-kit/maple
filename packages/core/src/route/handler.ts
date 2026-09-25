@@ -14,6 +14,7 @@ import { handleApprovals } from "./approvals.js";
 import { createAssist } from "./assist.js";
 import { endLink, finishLink, githubState, linkFailure, startLink } from "./auth.js";
 import { gateFor } from "./gate.js";
+import { createMockSchemas, MOCK_SCHEMA_KEYS, shapesFor } from "./mock.js";
 
 import type {
   GateConnector,
@@ -35,6 +36,7 @@ import type {
 import type { Assist, AssistOptions } from "./assist.js";
 import type { GitHubAuthOptions } from "./auth.js";
 import type { GateResolver } from "./gate.js";
+import type { MockRouteOptions, MockSchemas } from "./mock.js";
 
 /**
  * Chooses the store for one request. The shape a per-reviewer credential
@@ -87,6 +89,11 @@ export interface RouteOptions {
    * store that keeps approvals and an identity to name who left one.
    */
   readonly requireApproval?: boolean;
+  /**
+   * Maple Mock's shapes, served at `/mock/schema` to a preview that asked.
+   * Absent, or with `preview` false, that endpoint answers 404.
+   */
+  readonly mock?: MockRouteOptions;
   /** Defaults to `/api/maple`. */
   readonly basePath?: string;
   /** Where failures are reported. Silent when absent. */
@@ -113,6 +120,8 @@ interface Mount {
   readonly options: RouteOptions;
   /** Undefined when no classifier is configured: the whole tier is off. */
   readonly assist: Assist | undefined;
+  /** Undefined when the route serves no shapes. */
+  readonly mock: MockSchemas | undefined;
 }
 
 export function createMapleHandler(options: RouteOptions): (request: Request) => Promise<Response> {
@@ -120,6 +129,7 @@ export function createMapleHandler(options: RouteOptions): (request: Request) =>
   const mount: Mount = {
     options,
     assist: options.assist === undefined ? undefined : createAssist(options.assist),
+    mock: options.mock === undefined ? undefined : createMockSchemas(options.mock),
   };
 
   return async function handle(request: Request): Promise<Response> {
@@ -143,6 +153,7 @@ async function dispatch(
 ): Promise<Response> {
   const { options } = mount;
   if (route === "/assist") return judge(mount, request);
+  if (route === "/mock/schema") return mockSchema(mount, request, url);
   if (route === "/auth/github") return link(options, request);
   if (route === "/media" || route.startsWith("/media/")) return media(options, request, route, url);
   if (route === "/approvals" || route.startsWith("/approvals/")) {
@@ -482,6 +493,26 @@ async function judge(mount: Mount, request: Request): Promise<Response> {
 
   const user = await options.identity?.resolveUser(identityRequest(request));
   return assist.respond(request, user?.id ?? "anonymous", options.logger);
+}
+
+/**
+ * Shapes for the keys asked about. Only on a preview that switched it on, and
+ * only to a reviewer the identity connector resolves, when there is one.
+ */
+async function mockSchema(mount: Mount, request: Request, url: URL): Promise<Response> {
+  const { mock, options } = mount;
+  if (mock === undefined || !mock.preview) return json({ error: "Not found" }, 404);
+  if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
+
+  if (options.identity !== undefined) {
+    const user = await options.identity.resolveUser(identityRequest(request));
+    if (user === null) return json({ error: "Sign in to read shapes" }, 401);
+  }
+  const keys = url.searchParams.getAll("key");
+  if (keys.length === 0 || keys.length > MOCK_SCHEMA_KEYS) {
+    return json({ error: `Ask for between 1 and ${MOCK_SCHEMA_KEYS} keys` }, 400);
+  }
+  return json({ shapes: await shapesFor(mock, keys) }, 200);
 }
 
 /** The identity connector sees headers and a URL, and nothing else. */

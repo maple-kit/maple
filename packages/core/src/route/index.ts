@@ -9,10 +9,12 @@
 export type { AssistAnswer, AssistOptions, AssistRate } from "./assist.js";
 export type { GitHubAuthOptions, GitHubState } from "./auth.js";
 export type { GateResolver } from "./gate.js";
-
 export { createMapleHandler, DEFAULT_BASE_PATH } from "./handler.js";
-
 export type { MediaResolver, RouteOptions, StoreResolver } from "./handler.js";
+
+export { MOCK_SCHEMA_KEYS } from "./mock.js";
+
+export type { MockRouteOptions } from "./mock.js";
 
 export { toNodeMiddleware } from "./node.js";
 export type { NodeMiddleware } from "./node.js";
