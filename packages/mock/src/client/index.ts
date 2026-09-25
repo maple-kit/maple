@@ -14,3 +14,12 @@ export type {
   MockClientState,
   MockView,
 } from "./client.js";
+export {
+  PLAN_DEBOUNCE_MS,
+  PLAN_FLOOR,
+  PLAN_MIN_LENGTH,
+  PLAN_TIE,
+  planCall,
+  readPlan,
+} from "./plan.js";
+export type { MockSuggestion, PlanReading } from "./plan.js";

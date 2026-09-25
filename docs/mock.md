@@ -429,11 +429,31 @@ overlay's is by default.
 rest. It has Edit and Turn off and no dismiss: a reviewer who forgets a mock is
 on reads mocked data as real.
 
-**Until a plan exists, the field filters the calls**, every word matching the
-key. The typed words are not kept in the recipe: `request` records a sentence
-that produced a recipe, and none did. A call the recipe names that this route
-never recorded is listed after the rest, since a mocked answer is never
-recorded.
+**Where the route plans, the field is a sentence.** `installMock({ route })`
+leaves a `plan` lookup on the handle beside `shape`, over the real `fetch`, and
+the client asks it 500 ms after typing pauses, abandoning the request before.
+It sends every call recorded on the route with a summary of the names in its
+last answer, never a value. The list is not filtered while it plans.
+
+What comes back passes the calm-UI gate before anything is drawn:
+
+| The plan                                  | The box                                                 |
+| ----------------------------------------- | ------------------------------------------------------- |
+| confidence below 0.4                      | nothing                                                 |
+| `none`                                    | "That doesn't name a state this page's data can be in." |
+| a state, the runner-up more than 0.15 off | one chip: `Empty · 3 calls`                             |
+| the runner-up within 0.15                 | two chips, `Empty · 3 calls or Error · 3 calls`         |
+| no call concerned                         | nothing                                                 |
+
+A chip puts its calls in its state beside whatever the draft holds, and the
+sentence goes into the recipe's `request`; Clear drops it. No number is shown,
+and nothing moves while a plan is on its way. A failure is swallowed, as the
+assist tier's is, and a 404 turns the field back into a filter for the page's
+life: every word must match a key, as before a plan existed. `plan: false`
+keeps it a filter.
+
+A call the recipe names that this route never recorded is listed after the
+rest, since a mocked answer is never recorded.
 
 **Without a store, the box shares a mock by copying**: Copy link writes the
 page's URL with the recipe in `?maple-mock=`, and Copy recipe writes the JSON.
@@ -446,8 +466,6 @@ answer 404 without one.
   answers its default error shape.
 - A delay for `loading`. It holds until the page reloads, and a held call in a
   batch holds the whole batch.
-- The plan's place in the box (#170). The box's
-  field filters; it does not read a sentence yet.
 - A second box on the same page. Each claims `m`, and the first to hear it
   opens.
 - A streamed procedure whose data is itself a promise or an async iterable.

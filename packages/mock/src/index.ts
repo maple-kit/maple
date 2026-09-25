@@ -6,8 +6,20 @@
  * pieces a box or a test uses: the recipe, the inventory, the codecs.
  */
 
-export { createMockClient, installedMock, MockClipboardError } from "./client/index.js";
+export {
+  createMockClient,
+  installedMock,
+  MockClipboardError,
+  PLAN_DEBOUNCE_MS,
+  PLAN_FLOOR,
+  PLAN_MIN_LENGTH,
+  PLAN_TIE,
+  planCall,
+  readPlan,
+} from "./client/index.js";
 export type {
+  MockSuggestion,
+  PlanReading,
   MockCallRow,
   MockClient,
   MockClientOptions,
@@ -48,6 +60,8 @@ export {
   valueBranch,
 } from "./schema/json-schema.js";
 export type { Located } from "./schema/json-schema.js";
+export { PlanUnavailableError, routePlan } from "./schema/plan.js";
+export type { PlanLookup, RoutePlanOptions } from "./schema/plan.js";
 export { routeShapes } from "./schema/route.js";
 export type { RouteShapesOptions } from "./schema/route.js";
 export { sampleSchema } from "./schema/sample.js";

@@ -15,11 +15,13 @@ import { createInventory } from "./inventory.js";
 import { forgetRecipe, readRecipe, saveRecipe } from "./link.js";
 import { record, resolve, splitRequest } from "./resolve.js";
 import { isJson, pathPattern, restCodec } from "./rest.js";
+import { routePlan } from "./schema/plan.js";
 import { routeShapes } from "./schema/route.js";
 import { trpcCodec } from "./trpc.js";
 
 import type { Codec } from "./codec.js";
 import type { Inventory } from "./inventory.js";
+import type { PlanLookup } from "./schema/plan.js";
 import type { ShapeLookup } from "./schema/shape.js";
 import type { Logger } from "@maple-kit/core/logger";
 import type { Recipe } from "@maple-kit/core/mock";
@@ -38,7 +40,7 @@ export interface InstallOptions {
   readonly fetch?: typeof fetch;
   /**
    * Where Maple's route is mounted, such as `/api/maple`. Nothing under it is
-   * recorded or mocked, and its `/mock/schema` answers each call's shape.
+   * recorded or mocked; `/mock/schema` answers shapes and `/mock/plan` plans.
    */
   readonly route?: string;
   /** Each call's shape, in place of the route's. */
@@ -52,6 +54,8 @@ export interface MockHandle {
   readonly inventory: Inventory;
   /** Each call's shape, when the page has a source for them. */
   readonly shape?: ShapeLookup;
+  /** Plans a sentence through Maple's route, when the page names one. */
+  readonly plan?: PlanLookup;
   /** Restores `fetch` and `XMLHttpRequest`. */
   dispose(): void;
 }
@@ -108,10 +112,15 @@ export function installMock(options: InstallOptions = {}): MockHandle {
   });
   interceptor.apply();
 
+  const plan =
+    options.route === undefined
+      ? undefined
+      : routePlan({ basePath: options.route, fetch: forward });
   const handle: MockHandle = {
     recipe,
     inventory,
     ...(shape === undefined ? {} : { shape }),
+    ...(plan === undefined ? {} : { plan }),
     dispose() {
       interceptor.dispose();
       keepInstalled(undefined);

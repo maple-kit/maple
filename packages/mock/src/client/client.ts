@@ -13,8 +13,11 @@ import { MOCK_STATES, RECIPE_VERSION } from "@maple-kit/core/mock";
 import { installedMock } from "../handle.js";
 import { forgetRecipe, linkRecipe, saveRecipe } from "../link.js";
 import { pathPattern } from "../rest.js";
+import { PlanUnavailableError } from "../schema/plan.js";
+import { PLAN_DEBOUNCE_MS, PLAN_MIN_LENGTH, planCall, readPlan } from "./plan.js";
 
 import type { MockHandle } from "../interceptor.js";
+import type { MockSuggestion, PlanReading } from "./plan.js";
 import type { Scheme, ThemeView } from "@maple-kit/core/client";
 import type { MockCall, MockState, Recipe, ShapeSource } from "@maple-kit/core/mock";
 
@@ -36,6 +39,10 @@ export interface MockClientOptions {
   readonly shortcut?: string | false;
   /** Start with the box open. */
   readonly defaultOpen?: boolean;
+  /** False keeps the field a filter even where the route plans. */
+  readonly plan?: boolean;
+  /** How long typing pauses before a sentence is planned. Defaults to 500 ms. */
+  readonly planDebounceMs?: number;
 }
 
 /** One call the box offers, and the state the draft puts it in. */
@@ -53,11 +60,19 @@ export interface MockClientState {
   /** False when no transport is installed: a surface draws nothing. */
   readonly installed: boolean;
   readonly open: boolean;
-  /** What the box's field filters the calls by. */
+  /** What the box's field holds: a sentence to plan, or words to filter by. */
   readonly query: string;
+  /** True when the field is read as a sentence, since the route plans one. */
+  readonly planning: boolean;
+  /** At most two chips for the sentence, and none it was unsure of. */
+  readonly suggestions: readonly MockSuggestion[];
+  /** True when the sentence was read, confidently, as naming no state. */
+  readonly unnamed: boolean;
+  /** The sentence behind the draft, once a chip put it there. */
+  readonly request: string | undefined;
   /** The page's route pattern, which a recipe applied from here is scoped to. */
   readonly route: string;
-  /** The calls matching the query, most recent first. */
+  /** The calls, most recent first; filtered by the query when nothing plans. */
   readonly calls: readonly MockCallRow[];
   /** What Apply would put in force. Starts as the active recipe's calls. */
   readonly draft: readonly MockCall[];
@@ -80,6 +95,8 @@ export interface MockClient {
   setOpen(open: boolean): void;
   toggle(): void;
   setQuery(query: string): void;
+  /** Puts a suggestion's calls in its state, and keeps the sentence for the recipe. */
+  suggest(index: number): void;
   /** Puts a call in a state, or takes it out of the draft when undefined. */
   choose(key: string, state: MockState | undefined): void;
   clear(): void;
@@ -111,6 +128,11 @@ interface Runtime {
   readonly sources: Map<string, ShapeSource | null>;
   state: MockClientState;
   stop?: () => void;
+  /** The pending plan: its timer and its request. */
+  planTimer?: ReturnType<typeof setTimeout>;
+  planFlight?: AbortController;
+  /** Set once the route says it plans nothing, for the page's life. */
+  planOff?: boolean;
 }
 
 /** A mock box controller over the installed transport. */
@@ -140,12 +162,17 @@ export function createMockClient(options: MockClientOptions = {}): MockClient {
     destroy() {
       runtime.stop?.();
       delete runtime.stop;
+      cancelPlan(runtime);
     },
     setOpen: (open) => patch(runtime, { open }),
     toggle: () => patch(runtime, { open: !runtime.state.open }),
-    setQuery: (query) => patch(runtime, { query }),
+    setQuery(query) {
+      patch(runtime, { query });
+      schedulePlan(runtime);
+    },
+    suggest: (index) => suggest(runtime, index),
     choose: (key, state) => patch(runtime, { draft: chosen(runtime.state.draft, key, state) }),
-    clear: () => patch(runtime, { draft: [] }),
+    clear: () => patch(runtime, { draft: [], request: undefined }),
     recipe: () => recipeOf(runtime.state),
     link: () => linkRecipe(hrefOf(runtime), recipeOf(runtime.state)),
     apply: () => apply(runtime),
@@ -160,6 +187,10 @@ function initial(open: boolean): MockClientState {
     installed: false,
     open,
     query: "",
+    planning: false,
+    suggestions: [],
+    unnamed: false,
+    request: undefined,
     route: "/",
     calls: [],
     draft: [],
@@ -171,7 +202,7 @@ function initial(open: boolean): MockClientState {
 
 /** Recomputes everything read off the page and the handle, around `next`. */
 function derive(runtime: Runtime, next: Partial<MockClientState>): MockClientState {
-  const merged = { ...runtime.state, ...next };
+  const merged = { ...runtime.state, ...next, planning: plans(runtime) };
   const route = routeOf(runtime.view);
   const active = activeOn(runtime, route);
   return {
@@ -235,6 +266,62 @@ function onKeydown(runtime: Runtime, event: KeyboardEvent): void {
   patch(runtime, { open: !runtime.state.open });
 }
 
+/** Whether the field is a sentence: the route plans, and nobody switched it off. */
+function plans(runtime: Runtime): boolean {
+  return runtime.handle?.plan !== undefined && runtime.options.plan !== false && !runtime.planOff;
+}
+
+function cancelPlan(runtime: Runtime): void {
+  if (runtime.planTimer !== undefined) clearTimeout(runtime.planTimer);
+  delete runtime.planTimer;
+  runtime.planFlight?.abort();
+  delete runtime.planFlight;
+}
+
+const QUIET: PlanReading = { suggestions: [], unnamed: false };
+
+/** A keystroke: restarts the wait and abandons whatever plan was in flight. */
+function schedulePlan(runtime: Runtime): void {
+  cancelPlan(runtime);
+  if (!runtime.state.planning) return;
+  const sentence = runtime.state.query.trim();
+  if (sentence.length < PLAN_MIN_LENGTH) return patch(runtime, QUIET);
+
+  const wait = runtime.options.planDebounceMs ?? PLAN_DEBOUNCE_MS;
+  runtime.planTimer = setTimeout(() => void runPlan(runtime, sentence), wait);
+}
+
+/** A failure is swallowed: the box keeps working, and no chip arrives. */
+async function runPlan(runtime: Runtime, sentence: string): Promise<void> {
+  const lookup = runtime.handle?.plan;
+  if (lookup === undefined) return;
+  const flight = new AbortController();
+  runtime.planFlight = flight;
+  const { route } = runtime.state;
+  const calls = (runtime.handle?.inventory.calls(route) ?? []).map(planCall);
+
+  try {
+    const plan = await lookup({ request: sentence, route, calls }, flight.signal);
+    if (!flight.signal.aborted) patch(runtime, readPlan(plan));
+  } catch (error) {
+    if (error instanceof PlanUnavailableError) runtime.planOff = true;
+    if (!flight.signal.aborted) patch(runtime, QUIET);
+  } finally {
+    if (runtime.planFlight === flight) delete runtime.planFlight;
+  }
+}
+
+/** A chip, taken: its calls go into the draft in its state, beside the rest. */
+function suggest(runtime: Runtime, index: number): void {
+  const suggestion = runtime.state.suggestions[index];
+  if (suggestion === undefined) return;
+  const draft = suggestion.calls.reduce(
+    (next, key) => chosen(next, key, suggestion.state),
+    runtime.state.draft,
+  );
+  patch(runtime, { draft, request: runtime.state.query.trim() });
+}
+
 /** The recipe in force, when it applies on `route`. */
 function activeOn(runtime: Runtime, route: string): Recipe | undefined {
   const recipe = runtime.handle?.recipe;
@@ -247,7 +334,7 @@ function rows(runtime: Runtime, route: string, state: MockClientState): MockCall
   const states = new Map(state.draft.map((call) => [call.key, call.state]));
   const seen = (runtime.handle?.inventory.calls(route) ?? []).map((sample) => sample.key);
   const unseen = state.draft.map((call) => call.key).filter((key) => !seen.includes(key));
-  const words = state.query.toLowerCase().split(/\s+/).filter(Boolean);
+  const words = state.planning ? [] : state.query.toLowerCase().split(/\s+/).filter(Boolean);
 
   return [...seen.map((key) => [key, true] as const), ...unseen.map((key) => [key, false] as const)]
     .filter(([key]) => words.every((word) => key.toLowerCase().includes(word)))
@@ -280,7 +367,8 @@ function sameCalls(a: readonly MockCall[], b: readonly MockCall[]): boolean {
 
 function recipeOf(state: MockClientState): Recipe | undefined {
   if (state.draft.length === 0) return undefined;
-  return { version: RECIPE_VERSION, calls: state.draft, route: state.route };
+  const { draft: calls, request, route } = state;
+  return { version: RECIPE_VERSION, calls, route, ...(request === undefined ? {} : { request }) };
 }
 
 function apply(runtime: Runtime): void {
