@@ -2,8 +2,10 @@
  * The in-page transport, imported from the app's entry before its first
  * request: `import "@maple-kit/mock/install"`.
  *
- * It installs nothing yet. The interceptor over `@mswjs/interceptors` and the
- * REST codec arrive together, so this entry is never half a transport.
+ * Importing it installs it, with every default. A host that wants a logger or
+ * an `ignore` calls `installMock` from `@maple-kit/mock` instead.
  */
 
-export {};
+import { installMock } from "./interceptor.js";
+
+installMock();

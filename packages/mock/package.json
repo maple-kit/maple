@@ -34,7 +34,8 @@
     "clean": "rm -rf dist *.tsbuildinfo"
   },
   "dependencies": {
-    "@maple-kit/core": "workspace:*"
+    "@maple-kit/core": "workspace:*",
+    "@mswjs/interceptors": "0.41.9"
   },
   "publishConfig": {
     "access": "public"

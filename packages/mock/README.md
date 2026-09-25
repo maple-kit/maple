@@ -7,10 +7,24 @@ a reviewer asked to see — empty, error, forbidden, loading, one item or many.
 
 ## Status
 
-The recipe and where it is kept exist. The interceptor, the REST and tRPC
-codecs and the transforms do not yet; `@maple-kit/mock/install`,
-`@maple-kit/mock/msw` and `@maple-kit/mock/node` are empty entries until they
-do.
+The recipe, the in-page interceptor, the REST codec, the transforms and the
+inventory exist. The tRPC codec does not yet, and `@maple-kit/mock/msw` and
+`@maple-kit/mock/node` are empty entries until the codecs are complete.
+
+## Install
+
+```ts
+// The app's entry, first line, on preview builds only.
+import "@maple-kit/mock/install";
+```
+
+or, with options:
+
+```ts
+import { installMock } from "@maple-kit/mock";
+
+installMock({ ignore: (url) => url.pathname.startsWith("/api/maple"), logger });
+```
 
 ## The recipe
 
