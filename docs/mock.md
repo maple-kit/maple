@@ -424,6 +424,34 @@ route with no calls asks only the state. The questions are keyed by index,
 A plan is a keystroke's judgement like a score, so there are no retries, and
 `timeoutMs` (8 s by default) abandons one the endpoint never answers.
 
+## Who the reviewer is
+
+Maple never guesses which of a page's fields carries authorisation. The host
+names it in `RouteOptions.mock.identity`:
+
+```ts
+identity: {
+  call: "rest:GET /api/session",
+  role: { path: "role" },
+  permissions: { path: "permissions" },
+  requires: {
+    "rest:GET /api/audit": { roles: ["owner", "auditor"] },
+    "rest:DELETE /api/roasts/:id": { permission: "roast:delete" },
+  },
+}
+```
+
+- **`call` says who the reviewer is**, and `path` is a dotted path into its
+  answer. The permissions field is a list of names or an object of booleans.
+- **The words are the host's.** A field's `values` are the ones given, else
+  the call's shape's: a role's `enum`, a list's item `enum`, an object's
+  property names. Every role and permission `requires` names is added.
+- **`requires` says what a call needs**: any one of `roles`, or `permission`
+  granted. It is what turns a call into the page's own 403 under `as`.
+
+`GET {base}/mock/identity` serves the rules with each vocabulary filled in,
+gated as `/mock/schema` is, and answers 404 when the host declares none.
+
 ## The inventory
 
 The last real 2xx answer of every call, per route pattern, in memory and in

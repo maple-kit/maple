@@ -4,13 +4,14 @@
  * followed, and the component it names is named.
  */
 
+import { isNode as isRecord, resolved } from "../mock/pointer.js";
+
 import type { JsonSchema } from "../mock/shape.js";
 
 /** How deep a summary reads into a schema, how wide, and how long it may grow. */
 const DEPTH = 2;
 const FIELDS = 12;
 const MAX_SAID = 400;
-const REF_HOPS = 8;
 
 /**
  * The page's words and the schema's, once each: where one's words are all in
@@ -28,8 +29,6 @@ function covers(outer: string, inner: string): boolean {
   const words = new Set(outer.match(/\w+/g));
   return (inner.match(/\w+/g) ?? []).every((word) => words.has(word));
 }
-
-type Node = Readonly<Record<string, unknown>>;
 
 /** A schema in a line: its name or title, description, fields, a list's item. */
 function describe(root: JsonSchema, node: JsonSchema, depth: number): string {
@@ -61,37 +60,4 @@ function field(root: JsonSchema, key: string, schema: JsonSchema, depth: number)
   if (items === undefined || typeof items === "boolean") return key;
   const inner = describe(root, items as JsonSchema, depth + 1);
   return inner === "" ? key : `${key} [${inner}]`;
-}
-
-/** The node a chain of local `$ref`s ends at, and the component it last named. */
-function resolved(root: JsonSchema, node: JsonSchema): { here?: Node; name?: string } {
-  let current: unknown = node;
-  let name: string | undefined;
-  for (let hop = 0; hop < REF_HOPS; hop += 1) {
-    if (!isRecord(current)) return {};
-    const ref = current["$ref"];
-    if (typeof ref !== "string") return { here: current, ...(name === undefined ? {} : { name }) };
-    name = decode(ref.split("/").at(-1) ?? "");
-    current = pointer(root, ref);
-  }
-  return {};
-}
-
-/** A `#/…` pointer into the schema itself. A ref outside it is not followed. */
-function pointer(root: JsonSchema, ref: string): unknown {
-  if (!ref.startsWith("#/")) return undefined;
-  let at: unknown = root;
-  for (const segment of ref.slice(2).split("/")) {
-    if (!isRecord(at)) return undefined;
-    at = at[decode(segment)];
-  }
-  return at;
-}
-
-function decode(segment: string): string {
-  return segment.replaceAll("~1", "/").replaceAll("~0", "~");
-}
-
-function isRecord(value: unknown): value is Node {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

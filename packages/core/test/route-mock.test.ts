@@ -79,3 +79,61 @@ describe("GET /mock/schema", () => {
     expect(schemas).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("GET /mock/identity", () => {
+  const SESSION: SchemaDocument = {
+    codec: "rest",
+    document: {
+      paths: {
+        "/api/session": {
+          get: {
+            responses: {
+              "200": {
+                content: {
+                  "application/json": {
+                    schema: {
+                      type: "object",
+                      properties: { role: { type: "string", enum: ["owner", "barista"] } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  };
+  const identity = {
+    call: "rest:GET /api/session",
+    role: { path: "role" },
+    requires: { "rest:GET /api/audit": { roles: ["owner"] } },
+  };
+  const read = (init?: RequestInit) => new Request(`${BASE}/mock/identity`, init);
+
+  it("serves the host's rules with the roles read from the call's shape", async () => {
+    const handle = createMapleHandler({ mock: { preview: true, schemas: [SESSION], identity } });
+    const response = await handle(read());
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      identity: { ...identity, role: { path: "role", values: ["owner", "barista"] } },
+    });
+  });
+
+  it.each([
+    ["no identity rules", { mock: { preview: true, schemas: [SESSION] } }],
+    ["a build that is not a preview", { mock: { preview: false, identity } }],
+  ])("answers 404 with %s", async (_name, options) => {
+    expect((await createMapleHandler(options)(read())).status).toBe(404);
+  });
+
+  it("answers 405 to anything but GET, and 401 to a reviewer nobody resolves", async () => {
+    const open = createMapleHandler({ mock: { preview: true, identity } });
+    expect((await open(read({ method: "POST" }))).status).toBe(405);
+
+    const gated = createMapleHandler({ identity: signedIn, mock: { preview: true, identity } });
+    expect((await gated(read())).status).toBe(401);
+    expect((await gated(read({ headers: { cookie: "session=ok" } }))).status).toBe(200);
+  });
+});

@@ -92,8 +92,8 @@ export interface RouteOptions {
    */
   readonly requireApproval?: boolean;
   /**
-   * Maple Mock's shapes at `/mock/schema`, and its planner at `/mock/plan`,
-   * for a preview that asked. Absent, or with `preview` false, both answer 404.
+   * Maple Mock's `/mock/schema`, `/mock/plan` and `/mock/identity`, for a
+   * preview that asked. Absent, or with `preview` false, each answers 404.
    */
   readonly mock?: MockRouteOptions;
   /** Defaults to `/api/maple`. */
@@ -162,6 +162,7 @@ async function dispatch(
   if (route === "/assist") return judge(mount, request);
   if (route === "/mock/schema") return mockSchema(mount, request, url);
   if (route === "/mock/plan") return mockPlan(mount, request);
+  if (route === "/mock/identity") return mockIdentity(mount, request);
   if (route === "/auth/github") return link(options, request);
   if (route === "/media" || route.startsWith("/media/")) return media(options, request, route, url);
   if (route === "/approvals" || route.startsWith("/approvals/")) {
@@ -521,6 +522,20 @@ async function mockSchema(mount: Mount, request: Request, url: URL): Promise<Res
     return json({ error: `Ask for between 1 and ${MOCK_SCHEMA_KEYS} keys` }, 400);
   }
   return json({ shapes: await shapesFor(mock, keys) }, 200);
+}
+
+/** The host's identity rules, gated as the shapes are. */
+async function mockIdentity(mount: Mount, request: Request): Promise<Response> {
+  const { mock, options } = mount;
+  const identity = mock?.preview === true ? await mock.identity() : undefined;
+  if (identity === undefined) return json({ error: "Not found" }, 404);
+  if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
+
+  if (options.identity !== undefined) {
+    const user = await options.identity.resolveUser(identityRequest(request));
+    if (user === null) return json({ error: "Sign in to read identity rules" }, 401);
+  }
+  return json({ identity }, 200);
 }
 
 /**

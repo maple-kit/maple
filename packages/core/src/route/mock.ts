@@ -6,8 +6,10 @@
  * connector resolves. The documents are normalised once, on first request.
  */
 
+import { identityRules } from "../mock/identity.js";
 import { createShapeIndex } from "../mock/shape.js";
 
+import type { IdentityRules, IdentitySource } from "../mock/identity.js";
 import type { SchemaDocument, Shape, ShapeIndex } from "../mock/shape.js";
 import type { MockPlanOptions } from "./plan.js";
 
@@ -25,6 +27,11 @@ export interface MockRouteOptions {
    * that does not plan, that endpoint answers 404.
    */
   readonly plan?: MockPlanOptions;
+  /**
+   * Who a reviewer is, for a recipe's `as`, served at `/mock/identity`.
+   * Absent, that endpoint answers 404.
+   */
+  readonly identity?: IdentitySource;
 }
 
 /** The most keys one request may ask about: the box asks for a route's calls at once. */
@@ -34,16 +41,24 @@ export const MOCK_SCHEMA_KEYS = 100;
 export interface MockSchemas {
   readonly preview: boolean;
   index(): Promise<ShapeIndex>;
+  /** The identity rules, vocabularies filled in from the shapes; undefined when the host declares none. */
+  identity(): Promise<IdentityRules | undefined>;
 }
 
 /** Builds the lazily normalised index once, when the handler is. */
 export function createMockSchemas(options: MockRouteOptions): MockSchemas {
   let built: Promise<ShapeIndex> | undefined;
+  const index = () => {
+    built ??= documents(options.schemas).then(createShapeIndex);
+    return built;
+  };
+  const source = options.identity;
   return {
     preview: options.preview,
-    index() {
-      built ??= documents(options.schemas).then(createShapeIndex);
-      return built;
+    index,
+    async identity() {
+      if (source === undefined) return undefined;
+      return identityRules(source, (await index()).find(source.call));
     },
   };
 }
