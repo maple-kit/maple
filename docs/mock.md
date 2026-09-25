@@ -203,7 +203,11 @@ The error written is tRPC's default shape: `code` `-32603` or `-32003`, and
 fields is not reproduced.
 
 Subscriptions (`httpSubscriptionLink`) are claimed and never read: only a JSON
-response is, and an event stream is not one.
+response is, and an event stream is not one. The browser's own `EventSource`
+never reaches the interceptor at all. A polyfill that reads the stream over
+`fetch` or `XMLHttpRequest` does, and its events arrive as the server sends them.
+The interceptor cancels its own copy of any body it did not read, since a
+stream copied and left open cannot be closed by the page.
 
 ## Transforms
 

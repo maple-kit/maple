@@ -37,7 +37,23 @@ const secret = () => {
 const typed = initTRPC.create({ transformer: superjson, isDev: false, allowOutsideOfServer: true });
 const plain = initTRPC.create({ isDev: false, allowOutsideOfServer: true });
 
+/** How many `activity.onEvent` subscriptions the server is still running. */
+export const subscriptions = { open: 0 };
+
+async function* ticks() {
+  subscriptions.open++;
+  try {
+    for (let tick = 1; ; tick++) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      yield { tick, at: CREATED };
+    }
+  } finally {
+    subscriptions.open--;
+  }
+}
+
 export const typedRouter = typed.router({
+  activity: typed.router({ onEvent: typed.procedure.subscription(ticks) }),
   project: typed.router({
     list: typed.procedure.query(list),
     count: typed.procedure.query(() => 2),

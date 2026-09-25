@@ -111,6 +111,30 @@ describe("installMock, in a real browser", () => {
     expect(inventory.calls(pathPattern(location.pathname))).toEqual([]);
   });
 
+  it("lets the page cancel an endless stream it does not read", async () => {
+    let pulled = 0;
+    let cancelled = false;
+    const endless = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        pulled++;
+        controller.enqueue(new TextEncoder().encode(`data: ${String(pulled)}\n\n`));
+      },
+      cancel() {
+        cancelled = true;
+      },
+    });
+    const headers = { "content-type": "text/event-stream" };
+    globalThis.fetch = () => Promise.resolve(new Response(endless, { headers }));
+    install(recipe(["rest:GET /api/projects", "empty"]));
+
+    const reader = (await fetch(`${API}/events`)).body?.getReader();
+    for (let chunk = 0; chunk < 3; chunk++) await reader?.read();
+    await reader?.cancel();
+
+    // The page's cancel settles only once every copy of the stream is cancelled.
+    expect(cancelled).toBe(true);
+  });
+
   it("installs once, and restores fetch when disposed", () => {
     const stub = globalThis.fetch;
     const first = install();

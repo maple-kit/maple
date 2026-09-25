@@ -85,13 +85,15 @@ export function installMock(options: InstallOptions = {}): MockHandle {
   // Not awaited: the interceptor holds the page's response until a listener
   // settles, and reading a streamed batch to its end would hold it that long.
   interceptor.on("response", ({ isMockedResponse, request, response }) => {
-    if (isMockedResponse || ignored(request.url)) return;
+    if (isMockedResponse || ignored(request.url)) return release(response);
     const at = route();
-    remember(request, response, codecs).then(
-      (found) => found && record(inventory, found.calls, found.answers, { route: at }),
-      (error: unknown) =>
-        options.logger?.debug("Could not record a response.", { error: String(error) }),
-    );
+    remember(request, response, codecs)
+      .then(
+        (found) => found && record(inventory, found.calls, found.answers, { route: at }),
+        (error: unknown) =>
+          options.logger?.debug("Could not record a response.", { error: String(error) }),
+      )
+      .finally(() => release(response));
   });
   interceptor.apply();
 
@@ -113,6 +115,14 @@ async function remember(request: Request, response: Response, codecs: readonly C
   if (split === undefined) return undefined;
   const answers = await split.codec.read(response, split.calls);
   return { calls: split.calls, answers };
+}
+
+/**
+ * Cancels the listener's copy of a body nothing read. It is a tee of the
+ * page's stream: while it is open, the page cannot cancel its own.
+ */
+function release(response: Response): void {
+  if (!response.bodyUsed) response.body?.cancel().catch(() => undefined);
 }
 
 /** The recipe to apply. A linked one is kept for the tab; a broken one is dropped. */

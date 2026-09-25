@@ -11,6 +11,7 @@ import {
   ORIGIN,
   serve,
   STREAM_HEADERS,
+  subscriptions,
   TYPED,
 } from "./msw/trpc.js";
 
@@ -102,5 +103,19 @@ describe("installMock with tRPC, in a real browser", () => {
         values: { since: ["Date"] },
         v: 1,
       });
+  });
+
+  it("lets the page close a subscription read over fetch, and the server stop it", async () => {
+    const response = await fetch(`${ORIGIN}${TYPED}/activity.onEvent`);
+    const reader = response.body?.getReader();
+    let text = "";
+    while (!text.includes('"tick":2')) {
+      const chunk = await reader?.read();
+      text += new TextDecoder().decode(chunk?.value);
+    }
+    await reader?.cancel();
+
+    expect(response.headers.get("content-type")).toBe("text/event-stream");
+    await expect.poll(() => subscriptions.open).toBe(0);
   });
 });
