@@ -9,6 +9,6 @@
 import { installMock } from "@maple-kit/mock";
 
 if (process.env.MAPLE_MOCK === "1") {
-  // Maple's own route is not the page's data, and is never mocked.
-  installMock({ ignore: (url) => url.pathname.startsWith("/api/maple") });
+  // Maple's route is never mocked, and its /mock/schema answers each call's shape.
+  installMock({ route: "/api/maple" });
 }

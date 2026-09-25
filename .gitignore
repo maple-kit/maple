@@ -23,6 +23,8 @@ build/
 
 # Maple local artifacts (screenshots may contain application data)
 .maple/shots/
+# A preview build artifact, written by `maple mock schema` before the build
+**/.maple/schema.json
 
 # Owner notes. STATUS.md and setup-owner.md live here: both describe the state
 # of this installation — what is registered, what is still open, which gaps are

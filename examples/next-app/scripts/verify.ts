@@ -17,8 +17,11 @@ import { promisify } from "node:util";
 const run = promisify(execFile);
 const HERE = join(import.meta.dirname, "..");
 const ATTRIBUTE = "data-maple-";
-/** Written into a bundle only by the recipe reader, so it marks Maple Mock's presence. */
-const RECIPE_PARAM = "maple-mock";
+/**
+ * Written only by `@mswjs/interceptors`, so it marks the transport. Core's own
+ * mock contract is in the server bundle of every build, since the route uses it.
+ */
+const INTERCEPTOR = "fetch-interceptor";
 
 interface Bundles {
   readonly client: string;
@@ -55,7 +58,29 @@ function assert(condition: boolean, message: string): void {
   }
 }
 
+/** Written only in the generated schema, which the route reads from disk and no bundle may carry. */
+const SCHEMA_MARK = "#/components/schemas/Project";
+
+// The preview build artifact, written as a host writes it: before the build.
+await run(
+  "maple",
+  ["mock", "schema", "server/router.ts", "--out=.maple/schema.json", "--superjson"],
+  {
+    cwd: HERE,
+  },
+);
+const schema = await readFile(join(HERE, ".maple", "schema.json"), "utf8");
+assert(schema.includes(SCHEMA_MARK), "maple mock schema should describe Project, and does not.");
+assert(
+  schema.includes('"format": "date-time"'),
+  "maple mock schema should write a superjson Date as date-time, and does not.",
+);
+
 const tagged = await buildWith({ MAPLE_PREVIEW: "1" }, ".next-preview");
+assert(
+  !tagged.client.includes(SCHEMA_MARK) && !tagged.server.includes(SCHEMA_MARK),
+  "A preview build must not carry the schema, which the route reads per call.",
+);
 assert(
   tagged.server.includes(ATTRIBUTE),
   "A preview build should tag the server bundle, and does not.",
@@ -66,7 +91,7 @@ assert(
 );
 
 assert(
-  tagged.client.includes(RECIPE_PARAM),
+  tagged.client.includes(INTERCEPTOR),
   "A preview build should carry Maple Mock's interceptor, and does not.",
 );
 
@@ -87,7 +112,7 @@ assert(
   "A production build must carry no Maple attribute, and this one does.",
 );
 assert(
-  !production.client.includes(RECIPE_PARAM) && !production.server.includes(RECIPE_PARAM),
+  !production.client.includes(INTERCEPTOR) && !production.server.includes(INTERCEPTOR),
   "A production build must carry no Maple Mock interceptor, and this one does.",
 );
 

@@ -49,6 +49,14 @@ Open the page with `?maple-mock=` set to any state on `trpc:project.list` and
 the table shows it. `/api/created` says how many creates reached the server,
 which is how a mocked mutation is shown never to arrive.
 
+**Shapes from the router's own types.** `pnpm schema` runs
+`maple mock schema server/router.ts`, which writes `.maple/schema.json`, an
+OpenAPI document of every procedure's response, with each `Date` as a
+`date-time`. It is a preview build artifact, gitignored and written before the
+build; `verify` writes it the same way and checks no bundle carries it. Maple's
+route, `app/api/maple/[...maple]/route.ts`, mounts with no store and serves it at
+`/api/maple/mock/schema` on a preview build and `next dev`, and nowhere else.
+
 **Every call is made on the client.** The interceptor lives in the page, so a
 server component's data never passes through it. `instrumentation-client.ts`
 installs it before hydration, behind `MAPLE_MOCK`, which `next.config.ts` sets

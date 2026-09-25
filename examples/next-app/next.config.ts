@@ -32,6 +32,7 @@ function baseFor(phase: string): NextConfig {
       resolveAlias: {
         "@maple-kit/mock": "../../packages/mock/dist/index.js",
         "@maple-kit/core/mock": "../../packages/core/dist/mock/index.js",
+        "@maple-kit/core/route": "../../packages/core/dist/route/index.js",
       },
     },
   };
