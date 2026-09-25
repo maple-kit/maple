@@ -6,20 +6,36 @@
  * so resolving, recording and transforming never look at a URL or a header.
  */
 
+import type { TypeMeta } from "./superjson.js";
+
 /** One logical call inside a request. */
 export interface Call {
   /** The stable key a recipe names it by, prefixed with the codec's name. */
   readonly key: string;
 }
 
-/** What one call answered, or is to answer. */
+/**
+ * What one call answered, or is to answer. `meta` is present when the body
+ * travels in superjson's envelope, and says what its annotations are.
+ */
 export type Answer =
-  | { readonly kind: "data"; readonly status: number; readonly body: unknown }
-  | { readonly kind: "failure"; readonly state: "error" | "forbidden" };
+  | {
+      readonly kind: "data";
+      readonly status: number;
+      readonly body: unknown;
+      readonly meta?: TypeMeta;
+    }
+  | {
+      readonly kind: "failure";
+      readonly state: "error" | "forbidden";
+      readonly meta?: TypeMeta;
+    };
 
 /** A wire protocol Maple can take apart and put back together. */
 export interface Codec {
   readonly name: string;
+  /** The request as it is sent on when its response will be rewritten. */
+  prepare?(request: Request): Request;
   /** The calls `request` carries, or undefined when this codec does not own it. */
   split(request: Request): Promise<readonly Call[] | undefined>;
   /** A real response as one answer per call, or undefined when it cannot be read. */

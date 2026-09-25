@@ -106,8 +106,13 @@ that are not the page's data, such as Maple's own route.
 
 A **codec** takes one HTTP exchange apart into logical calls and puts it back
 together: `split(request)`, `read(response)` and `join(calls, answers)`. `read`
-is `split` for the response. Everything a protocol does differently stays
-inside those three, so nothing else in the package reads a URL or a header.
+is `split` for the response. An optional `prepare(request)` rewrites the
+request sent on when its response will be rewritten. Everything a protocol does
+differently stays inside those, so nothing else in the package reads a URL or a
+header.
+
+The default codecs are tRPC at `/api/trpc`, then REST. `installMock({ codecs })`
+replaces them, for example with `trpcCodec({ endpoint: "/trpc" })`.
 
 For each request, the calls the recipe names are answered and the rest keep
 the server's answer:
@@ -137,6 +142,49 @@ among them. The query string is not part of the key.
 It is the last codec tried and claims every request that reaches it, but reads
 only a JSON response, so a script or an image is never recorded or reshaped.
 
+## The tRPC codec
+
+`/api/trpc/project.list,user.me?batch=1` is two calls, `trpc:project.list` and
+`trpc:user.me`. Input is not part of the key. A single call without batching,
+a GET query and a POST mutation are all read the same way.
+
+**A partial mock is a splice.** The real batch is still sent, and only the
+named calls are replaced in the answer, so the server stays the truth for
+everything the reviewer did not ask to change. The batch status is recomputed
+as tRPC computes it: one status if every item agrees, 207 if they differ. An
+item the mock did not touch is written back byte for byte as the server wrote
+it; the suite checks that against tRPC's own server, not against this codec.
+
+**A streamed batch (`httpBatchStreamLink`) is fetched plain and written back
+as a stream.** The forwarded request drops `trpc-accept`, so the server answers
+one JSON array, and the codec writes the JSONL the client asked for: the head,
+failed calls, then each level of the rest, in the order tRPC's own producer
+writes them for calls that settle at once. Every line of a partly mocked stream
+but the mocked one matches the server's own stream exactly. What is lost is
+streaming itself: the page gets every call when the slowest has answered.
+
+**A stream the page receives unmocked is read without holding it.** Recording
+reads a copy of the response after the page has it, because the interceptor
+would otherwise wait for the whole stream before handing it over.
+
+**superjson is read from the answers**, as the `{ json, meta }` envelope.
+`meta` says which values were a `Date`, a `bigint` or a `Map`, by path, and a
+transform keeps it true: an emptied list drops its items' annotations, a
+repeated item repeats them. Referential equalities are kept on an untouched
+answer and dropped from a reshaped one. In a stream each line is serialised
+whole, so an answer's annotations move under `2.0.0` of its line, and back.
+
+**A failure nothing was fetched for** borrows the envelope the call was last
+recorded in. A call never seen, failed without a request, has no answer to
+learn from; `trpcCodec({ transformer: "superjson" })` says it up front.
+
+The error written is tRPC's default shape: `code` `-32603` or `-32003`, and
+`data` with `code`, `httpStatus` and `path`. An `errorFormatter` that adds
+fields is not reproduced.
+
+Subscriptions (`httpSubscriptionLink`) are claimed and never read: only a JSON
+response is, and an event stream is not one.
+
 ## Transforms
 
 Code, with no model. Every value in the output was in the input.
@@ -165,6 +213,9 @@ leaves it working in memory.
 
 ## What is not done
 
-- The tRPC codec: batches, streams and superjson.
-- A recorded error body shape. `error` answers `{ message }`.
-- A delay for `loading`. It holds until the page reloads.
+- A recorded error body shape. REST `error` answers `{ message }`, and tRPC
+  answers its default error shape.
+- A delay for `loading`. It holds until the page reloads, and a held call in a
+  batch holds the whole batch.
+- A streamed procedure whose data is itself a promise or an async iterable.
+  Such a stream is not read, so it is neither recorded nor reshaped.

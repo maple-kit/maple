@@ -7,9 +7,9 @@ a reviewer asked to see — empty, error, forbidden, loading, one item or many.
 
 ## Status
 
-The recipe, the in-page interceptor, the REST codec, the transforms and the
-inventory exist. The tRPC codec does not yet, and `@maple-kit/mock/msw` and
-`@maple-kit/mock/node` are empty entries until the codecs are complete.
+The recipe, the in-page interceptor, the REST and tRPC codecs (batches,
+streams and superjson included), the transforms and the inventory exist.
+`@maple-kit/mock/msw` and `@maple-kit/mock/node` are still empty entries.
 
 ## Install
 

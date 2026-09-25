@@ -6,6 +6,10 @@
  * is left alone, because without a schema nothing says it may be null.
  */
 
+import { deflate, inflate, throughMarker } from "./superjson.js";
+
+import type { TypeMeta } from "./superjson.js";
+
 /** The states a body can be reshaped into. */
 export type BodyState = "empty" | "many" | "one";
 
@@ -43,7 +47,24 @@ export function reshape(state: BodyState, body: unknown): unknown {
   return walk(state, body, 0);
 }
 
+/**
+ * `body` reshaped with its superjson annotations kept true: a dropped item
+ * drops its `Date`, a repeated one repeats it. Identities are not kept.
+ */
+export function reshapeTyped(
+  state: BodyState,
+  body: unknown,
+  meta: TypeMeta,
+): { body: unknown; meta: TypeMeta } {
+  if (meta.values === undefined) return { body: reshape(state, body), meta: {} };
+  return deflate(reshape(state, inflate(body, meta)), meta.v);
+}
+
 function walk(state: BodyState, value: unknown, depth: number): unknown {
+  return throughMarker(value, (unmarked) => walkUnmarked(state, unmarked, depth));
+}
+
+function walkUnmarked(state: BodyState, value: unknown, depth: number): unknown {
   if (Array.isArray(value)) return list(state, value);
   if (!isRecord(value) || depth >= DEPTH) return value;
   return Object.fromEntries(

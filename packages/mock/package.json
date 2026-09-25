@@ -39,5 +39,10 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "devDependencies": {
+    "@trpc/client": "11.19.0",
+    "@trpc/server": "11.19.0",
+    "superjson": "2.2.6"
   }
 }

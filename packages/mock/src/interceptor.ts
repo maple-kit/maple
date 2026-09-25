@@ -14,6 +14,7 @@ import { createInventory } from "./inventory.js";
 import { forgetRecipe, readRecipe, saveRecipe } from "./link.js";
 import { record, resolve, splitRequest } from "./resolve.js";
 import { pathPattern, restCodec } from "./rest.js";
+import { trpcCodec } from "./trpc.js";
 
 import type { Codec } from "./codec.js";
 import type { Inventory } from "./inventory.js";
@@ -28,6 +29,8 @@ export interface InstallOptions {
   readonly logger?: Logger;
   /** The tab's storage. Defaults to `sessionStorage` when there is one. */
   readonly storage?: Storage;
+  /** Tried in order. Defaults to tRPC at `/api/trpc`, then REST. */
+  readonly codecs?: readonly Codec[];
   /** The real `fetch` a mocked request is forwarded through. */
   readonly fetch?: typeof fetch;
 }
@@ -42,7 +45,7 @@ export interface MockHandle {
 }
 
 const INSTALLED = Symbol.for("@maple-kit/mock.installed");
-const CODECS: readonly Codec[] = [restCodec];
+const CODECS: readonly Codec[] = [trpcCodec(), restCodec];
 
 type Installed = typeof globalThis & { [INSTALLED]?: MockHandle };
 
@@ -66,25 +69,30 @@ export function installMock(options: InstallOptions = {}): MockHandle {
     name: "maple-mock",
     interceptors: [new FetchInterceptor(), new XMLHttpRequestInterceptor()],
   });
+  const codecs = options.codecs ?? CODECS;
   interceptor.on(
     "request",
     awaited(async ({ controller, request }) => {
       if (ignored(request.url)) return;
-      const options = { codecs: CODECS, forward, route: route() };
-      const response = await resolve(request, recipe, inventory, options);
+      const response = await resolve(request, recipe, inventory, {
+        codecs,
+        forward,
+        route: route(),
+      });
       if (response !== undefined) controller.respondWith(response);
     }),
   );
-  interceptor.on(
-    "response",
-    awaited(async ({ isMockedResponse, request, response }) => {
-      if (isMockedResponse || ignored(request.url)) return;
-      const split = await splitRequest(request, undefined, CODECS);
-      if (split === undefined) return;
-      const answers = await split.codec.read(response, split.calls);
-      record(inventory, split.calls, answers, { route: route() });
-    }),
-  );
+  // Not awaited: the interceptor holds the page's response until a listener
+  // settles, and reading a streamed batch to its end would hold it that long.
+  interceptor.on("response", ({ isMockedResponse, request, response }) => {
+    if (isMockedResponse || ignored(request.url)) return;
+    const at = route();
+    remember(request, response, codecs).then(
+      (found) => found && record(inventory, found.calls, found.answers, { route: at }),
+      (error: unknown) =>
+        options.logger?.debug("Could not record a response.", { error: String(error) }),
+    );
+  });
   interceptor.apply();
 
   const handle: MockHandle = {
@@ -97,6 +105,14 @@ export function installMock(options: InstallOptions = {}): MockHandle {
   };
   global[INSTALLED] = handle;
   return handle;
+}
+
+/** A passthrough response, read into the answers worth recording. */
+async function remember(request: Request, response: Response, codecs: readonly Codec[]) {
+  const split = await splitRequest(request, undefined, codecs);
+  if (split === undefined) return undefined;
+  const answers = await split.codec.read(response, split.calls);
+  return { calls: split.calls, answers };
 }
 
 /** The recipe to apply. A linked one is kept for the tab; a broken one is dropped. */

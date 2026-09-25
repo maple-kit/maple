@@ -6,11 +6,15 @@
  * that applies a mock. Only real 2xx answers are kept, never a mocked one.
  */
 
+import type { TypeMeta } from "./superjson.js";
+
 /** One call's last real answer. */
 export interface Sample {
   readonly key: string;
   readonly status: number;
   readonly body: unknown;
+  /** superjson's annotations, when the body travelled in its envelope. */
+  readonly meta?: TypeMeta;
   /** Milliseconds since the epoch. */
   readonly at: number;
 }
