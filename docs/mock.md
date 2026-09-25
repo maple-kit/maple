@@ -471,6 +471,37 @@ instead.
 - **Nothing changes without rules.** A recipe with `as` on a route that
   declares none mocks only its calls, and a warning says so.
 
+## Flags
+
+A recipe's `flags` answer flags where the page evaluates them.
+
+**OpenFeature**, the most portable, is `withMockFlags(provider)` from
+`@maple-kit/mock/openfeature`:
+
+```ts
+OpenFeature.setProvider(withMockFlags(new VendorProvider(options)));
+```
+
+- **It answers the flags the recipe names and delegates the rest.** An
+  answered flag carries `variant: "maple-mock"` and reason `STATIC`. A value
+  of the wrong type answers OpenFeature's own `TYPE_MISMATCH`, as a provider
+  would, rather than a value the page did not ask for.
+- **It is typed structurally**, so it wraps a web or a server provider and
+  imports neither SDK. `@openfeature/*` are not dependencies of the package.
+- **A change to a named flag is held back.** A provider's configuration change
+  is passed on without the keys the recipe names, and not at all when nothing
+  is left, so the page never re-reads a flag it is being told something else
+  about.
+- **Every evaluation is recorded** with the provider's real value in
+  `seenFlags()`, the page's one registry, for the box to list.
+- **The recipe is the page's** by default, through the installed handle's
+  `current()`. A server passes the request's as `recipe`.
+
+`@maple-kit/mock/testing` has `runFlagProviderContract`, the suite every
+wrapped provider runs, and `memoryFlagProvider`. The package's own tests run
+it against the memory provider and wrap OpenFeature's own in-memory providers
+under the web and the server SDK.
+
 ## The inventory
 
 The last real 2xx answer of every call, per route pattern, in memory and in
@@ -578,8 +609,7 @@ a page's real data in a public pull-request comment.
 
 ## What is not done
 
-- `flags` in the runtime. The recipe carries them and every reader shows
-  them, but nothing answers a flag yet (#173).
+- A vendor's flags on the wire, without OpenFeature, and flags in the box.
 - `as` in the box and the banner, on the server through
   `@maple-kit/mock/node`, and in `mockHandlers`, which takes no rules.
 

@@ -28,6 +28,8 @@
     "./install": "./dist/install.js",
     "./msw": "./dist/msw/index.js",
     "./node": "./dist/node/index.js",
+    "./openfeature": "./dist/openfeature/index.js",
+    "./testing": "./dist/testing/index.js",
     "./package.json": "./package.json"
   },
   "scripts": {
@@ -39,18 +41,26 @@
     "@mswjs/interceptors": "0.41.9"
   },
   "peerDependencies": {
-    "msw": "^2.0.0"
+    "msw": "^2.0.0",
+    "vitest": "^4.0.0 || ^5.0.0"
   },
   "peerDependenciesMeta": {
     "msw": {
       "optional": true
+    },
+    "vitest": {
+      "optional": true
     }
   },
   "devDependencies": {
+    "@openfeature/core": "1.12.0",
+    "@openfeature/server-sdk": "1.23.0",
+    "@openfeature/web-sdk": "1.10.0",
     "@trpc/client": "11.19.0",
     "@trpc/server": "11.19.0",
     "msw": "2.15.0",
-    "superjson": "2.2.6"
+    "superjson": "2.2.6",
+    "vitest": "5.0.1"
   },
   "publishConfig": {
     "access": "public"
