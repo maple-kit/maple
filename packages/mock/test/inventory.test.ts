@@ -103,3 +103,18 @@ describe("createInventory", () => {
     ).toEqual(["k:ok"]);
   });
 });
+
+describe("an inventory's subscribers", () => {
+  it("hears every record until it unsubscribes", () => {
+    const inventory = createInventory();
+    const heard: string[] = [];
+    const stop = inventory.subscribe(() => heard.push(inventory.calls("/a")[0]?.key ?? ""));
+
+    inventory.record("/a", sample("k:one"));
+    inventory.record("/a", sample("k:two"));
+    stop();
+    inventory.record("/a", sample("k:three"));
+
+    expect(heard).toEqual(["k:one", "k:two"]);
+  });
+});

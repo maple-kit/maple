@@ -24,6 +24,7 @@
   ],
   "exports": {
     ".": "./dist/index.js",
+    "./client": "./dist/client/index.js",
     "./install": "./dist/install.js",
     "./msw": "./dist/msw/index.js",
     "./node": "./dist/node/index.js",

@@ -23,6 +23,7 @@ const alias = [
   { find: /^@maple-kit\/mock\/install$/, replacement: here("./packages/mock/src/install.ts") },
   { find: /^@maple-kit\/mock\/(.*)$/, replacement: here("./packages/mock/src/$1/index.ts") },
   { find: /^@maple-kit\/react$/, replacement: here("./packages/react/src/index.ts") },
+  { find: /^@maple-kit\/react\/(.*)$/, replacement: here("./packages/react/src/$1/index.ts") },
   { find: /^@maple-kit\/ui$/, replacement: here("./packages/ui/src/index.ts") },
   { find: /^@maple-kit\/ui\/(.*)$/, replacement: here("./packages/ui/src/$1/index.ts") },
 ];

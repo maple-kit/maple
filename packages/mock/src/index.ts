@@ -6,6 +6,14 @@
  * pieces a box or a test uses: the recipe, the inventory, the codecs.
  */
 
+export { createMockClient, installedMock, MockClipboardError } from "./client/index.js";
+export type {
+  MockCallRow,
+  MockClient,
+  MockClientOptions,
+  MockClientState,
+  MockView,
+} from "./client/index.js";
 export { isData } from "./codec.js";
 export type { Answer, Call, Codec } from "./codec.js";
 export { installMock } from "./interceptor.js";

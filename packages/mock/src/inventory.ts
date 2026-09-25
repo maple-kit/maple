@@ -26,6 +26,8 @@ export interface Inventory {
   sample(key: string, route: string): Sample | undefined;
   /** Every call seen on `route`, most recent first. */
   calls(route: string): readonly Sample[];
+  /** Called after every record. Returns the unsubscribe. */
+  subscribe(listener: () => void): () => void;
 }
 
 /** Bounds that keep the stored inventory well inside a storage quota. */
@@ -53,6 +55,7 @@ type Routes = Map<string, Map<string, Sample>>;
 export function createInventory(options: InventoryOptions = {}): Inventory {
   const limits = { ...LIMITS, ...options.limits };
   const routes: Routes = restore(options.storage);
+  const listeners = new Set<() => void>();
 
   return {
     record(route, sample) {
@@ -63,6 +66,7 @@ export function createInventory(options: InventoryOptions = {}): Inventory {
       calls.set(sample.key, sample);
       trim(routes, limits);
       persist(routes, limits, options.storage);
+      for (const listener of [...listeners]) listener();
     },
     sample(key, route) {
       const here = routes.get(route)?.get(key);
@@ -72,6 +76,12 @@ export function createInventory(options: InventoryOptions = {}): Inventory {
     },
     calls(route) {
       return [...(routes.get(route)?.values() ?? [])].reverse();
+    },
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
     },
   };
 }

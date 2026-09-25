@@ -10,6 +10,7 @@ import { BatchInterceptor } from "@mswjs/interceptors";
 import { FetchInterceptor } from "@mswjs/interceptors/fetch";
 import { XMLHttpRequestInterceptor } from "@mswjs/interceptors/XMLHttpRequest";
 
+import { installedMock, keepInstalled } from "./handle.js";
 import { createInventory } from "./inventory.js";
 import { forgetRecipe, readRecipe, saveRecipe } from "./link.js";
 import { record, resolve, splitRequest } from "./resolve.js";
@@ -44,18 +45,14 @@ export interface MockHandle {
   dispose(): void;
 }
 
-const INSTALLED = Symbol.for("@maple-kit/mock.installed");
 const CODECS: readonly Codec[] = [trpcCodec(), restCodec];
-
-type Installed = typeof globalThis & { [INSTALLED]?: MockHandle };
 
 /**
  * Wraps `fetch` and `XMLHttpRequest` and applies the active recipe. A second
  * call returns the first handle rather than wrapping twice.
  */
 export function installMock(options: InstallOptions = {}): MockHandle {
-  const global = globalThis as Installed;
-  const existing = global[INSTALLED];
+  const existing = installedMock();
   if (existing !== undefined) return existing;
 
   const storage = options.storage ?? tabStorage();
@@ -102,10 +99,10 @@ export function installMock(options: InstallOptions = {}): MockHandle {
     inventory,
     dispose() {
       interceptor.dispose();
-      delete global[INSTALLED];
+      keepInstalled(undefined);
     },
   };
-  global[INSTALLED] = handle;
+  keepInstalled(handle);
   return handle;
 }
 

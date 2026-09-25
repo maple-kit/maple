@@ -46,6 +46,9 @@ saveRecipe(sessionStorage, recipe);
 location.assign(linkRecipe(location.href, recipe));
 ```
 
+The box that does this for a reviewer is `<MapleMock />` from
+`@maple-kit/ui/mock`, over `createMockClient()` from `@maple-kit/mock/client`.
+
 For Storybook or a test that already runs MSW, put the handlers first:
 
 ```ts
@@ -56,12 +59,13 @@ const server = setupServer(...mockHandlers(recipe), ...handlers);
 
 ## Entries
 
-| Entry                     | What it is                                                       |
-| ------------------------- | ---------------------------------------------------------------- |
-| `@maple-kit/mock`         | Reading and writing the recipe: link, tab, encode, decode.       |
-| `@maple-kit/mock/install` | The in-page transport, imported first from the app's entry.      |
-| `@maple-kit/mock/msw`     | Handlers for a host that already runs MSW's `setupWorker`.       |
-| `@maple-kit/mock/node`    | The same handlers for `setupServer` in tests or a server render. |
+| Entry                     | What it is                                                            |
+| ------------------------- | --------------------------------------------------------------------- |
+| `@maple-kit/mock`         | Reading and writing the recipe: link, tab, encode, decode.            |
+| `@maple-kit/mock/client`  | The box's controller, which finds the transport without importing it. |
+| `@maple-kit/mock/install` | The in-page transport, imported first from the app's entry.           |
+| `@maple-kit/mock/msw`     | Handlers for a host that already runs MSW's `setupWorker`.            |
+| `@maple-kit/mock/node`    | The same handlers for `setupServer` in tests or a server render.      |
 
 This package uses no React, no Effect and no model. `@maple-kit/ui` and
 `@maple-kit/react` import it; it never imports them.
