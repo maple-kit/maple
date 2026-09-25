@@ -276,6 +276,7 @@ function banner(): string {
   display: flex;
   align-items: center;
   gap: 8px;
+  width: max-content;
   max-width: calc(100vw - 24px);
   padding: 4px 4px 4px 12px;
   border: 1px solid var(--mk-warn);
@@ -291,6 +292,10 @@ function banner(): string {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+.mk-mock-banner-as {
+  white-space: normal;
 }
 
 .mk-mock-banner .mk-mock-button {

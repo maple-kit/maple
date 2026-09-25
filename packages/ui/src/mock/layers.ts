@@ -86,7 +86,7 @@ export function LayerBanner(props: { readonly state: MockClientState }): ReactNo
   ].filter(Boolean);
   return said.length === 0
     ? null
-    : createElement("span", { className: "mk-mock-banner-said" }, said.join(" "));
+    : createElement("span", { className: "mk-mock-banner-as" }, said.join(" "));
 }
 
 function flagRow(flag: MockFlagRow, client: MockClient): ReactNode {
