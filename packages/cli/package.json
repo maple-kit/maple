@@ -35,5 +35,17 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "devDependencies": {
+    "@trpc/openapi": "11.19.0-alpha",
+    "@trpc/server": "11.19.0"
+  },
+  "peerDependencies": {
+    "@trpc/openapi": "11.19.0-alpha"
+  },
+  "peerDependenciesMeta": {
+    "@trpc/openapi": {
+      "optional": true
+    }
   }
 }

@@ -6,6 +6,7 @@ Usage
 
 Commands
   connectors        Show the connector kinds and the methods each one may implement
+  mock schema       Write an OpenAPI document of a tRPC router's response types
 
 Options
   --json            Print machine-readable output where a command supports it

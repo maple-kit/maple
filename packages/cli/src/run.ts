@@ -1,11 +1,16 @@
 import { isSet, parseArgs } from "./args.js";
 import { connectorKindRows, renderConnectorKinds } from "./commands/connectors.js";
+import { mockSchema } from "./commands/mock-schema.js";
 import { HELP } from "./help.js";
+
+import type { Generate } from "./commands/mock-schema.js";
 
 /** What the CLI needs from its environment, so tests can supply their own. */
 export interface RunOptions {
   /** Reported by `--version`. */
   readonly version: string;
+  /** `maple mock schema`'s generator, in place of the optional peer. */
+  readonly generate?: Generate;
 }
 
 /** What a command produced: text to print and the exit code to use. */
@@ -25,12 +30,14 @@ function present(json: boolean, value: unknown, text: string): RunResult {
  * Nothing here writes to stdout or exits the process; that is the binary's job,
  * which is what makes every command testable as a plain function.
  */
-export function run(argv: readonly string[], options: RunOptions): RunResult {
-  const { command, flags } = parseArgs(argv);
+export async function run(argv: readonly string[], options: RunOptions): Promise<RunResult> {
+  const { command, flags, positionals } = parseArgs(argv);
   const json = isSet(flags, "json");
 
   if (isSet(flags, "version")) return { output: options.version, exitCode: 0 };
   if (isSet(flags, "help") || command === undefined) return { output: HELP, exitCode: 0 };
+
+  if (command === "mock") return mockSchema({ flags, positionals }, options.generate);
 
   if (command === "connectors") {
     const rows = connectorKindRows();

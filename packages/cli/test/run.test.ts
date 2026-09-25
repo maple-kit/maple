@@ -7,43 +7,43 @@ import { run } from "../src/run.js";
 const OPTIONS = { version: "1.2.3" };
 
 describe("run", () => {
-  it("prints help when given nothing", () => {
-    expect(run([], OPTIONS)).toEqual({ output: HELP, exitCode: 0 });
+  it("prints help when given nothing", async () => {
+    expect(await run([], OPTIONS)).toEqual({ output: HELP, exitCode: 0 });
   });
 
-  it("prints help for --help", () => {
-    expect(run(["--help"], OPTIONS).output).toBe(HELP);
+  it("prints help for --help", async () => {
+    expect((await run(["--help"], OPTIONS)).output).toBe(HELP);
   });
 
-  it("prints the version for --version", () => {
-    expect(run(["--version"], OPTIONS)).toEqual({ output: "1.2.3", exitCode: 0 });
+  it("prints the version for --version", async () => {
+    expect(await run(["--version"], OPTIONS)).toEqual({ output: "1.2.3", exitCode: 0 });
   });
 
-  it("answers --version even when a command is given", () => {
-    expect(run(["connectors", "--version"], OPTIONS).output).toBe("1.2.3");
+  it("answers --version even when a command is given", async () => {
+    expect((await run(["connectors", "--version"], OPTIONS)).output).toBe("1.2.3");
   });
 
-  it("exits non-zero on an unknown command and says so", () => {
-    const result = run(["nope"], OPTIONS);
+  it("exits non-zero on an unknown command and says so", async () => {
+    const result = await run(["nope"], OPTIONS);
 
     expect(result.exitCode).toBe(1);
     expect(result.output).toContain('Unknown command "nope"');
   });
 
-  it("lists every connector kind", () => {
-    const output = run(["connectors"], OPTIONS).output;
+  it("lists every connector kind", async () => {
+    const output = (await run(["connectors"], OPTIONS)).output;
 
     for (const kind of Object.keys(CONNECTOR_METHODS)) expect(output).toContain(kind);
   });
 
-  it("says a kind requiring nothing requires none, rather than leaving a blank", () => {
-    const output = run(["connectors"], OPTIONS).output;
+  it("says a kind requiring nothing requires none, rather than leaving a blank", async () => {
+    const output = (await run(["connectors"], OPTIONS)).output;
 
     expect(output).toContain("classifier    required: none");
   });
 
-  it("emits JSON for --json", () => {
-    const result = run(["connectors", "--json"], OPTIONS);
+  it("emits JSON for --json", async () => {
+    const result = await run(["connectors", "--json"], OPTIONS);
     const parsed: unknown = JSON.parse(result.output);
 
     expect(parsed).toContainEqual({
@@ -53,8 +53,8 @@ describe("run", () => {
     });
   });
 
-  it("derives the matrix from core rather than a copy", () => {
-    const parsed = JSON.parse(run(["connectors", "--json"], OPTIONS).output) as {
+  it("derives the matrix from core rather than a copy", async () => {
+    const parsed = JSON.parse((await run(["connectors", "--json"], OPTIONS)).output) as {
       kind: string;
       required: string[];
       optional: string[];
