@@ -39,11 +39,12 @@ reader could argue either way; they count neither for nor against a plan. A
 
 ## Scores
 
-| Tier    | State accuracy | Call F1 | When                           |
-| ------- | -------------- | ------- | ------------------------------ |
-| keyword | 92.3%          | 67.6%   | 65 cases, when this set landed |
-| jev     | not yet run    |         | needs `TYPESAFE_API_KEY`       |
+| Tier    | State accuracy | Call F1 | Threshold   | When                                       |
+| ------- | -------------- | ------- | ----------- | ------------------------------------------ |
+| keyword | 92.3%          | 67.6%   | 0.90 / 0.65 | 65 cases, every CI run                     |
+| jev     | 94.4%          | 76.7%   | 0.92 / 0.74 | `jev-latest`, `EVAL_SAMPLES=3`, with a key |
 
-The model tier's thresholds equal the keyword planner's until a keyed run is
-measured, and it must beat the keyword planner outright on both. The first
-keyed run raises them to just under what it scores.
+jev also has to beat the keyword planner outright on both. Its misses were
+mostly sentences a word list gets right by construction: "roast with no
+comments" and "no comm" (read as something other than `empty` in some
+samples), and "what does a cafe see when it can't see its orders".

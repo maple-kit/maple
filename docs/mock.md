@@ -392,8 +392,8 @@ whose summary says `mutation`.
 
 **The eval** is `evals/mock-plan.eval.test.ts`: 65 sentences against seven
 pages' calls, scored on state accuracy and on the F1 of the calls a plan
-concerns. The keyword planner scores 92.3% and 67.6%, runs on every CI run,
-and is the floor the model tier must beat. `evals/cases/mock-plan/README.md`
+concerns. The keyword planner scores 92.3% and 67.6% and runs on every CI
+run; jev scores 94.4% and 76.7% over three samples, and must beat it. `evals/cases/mock-plan/README.md`
 says where the cases came from, and why that flatters the word list.
 
 It reads no grammar: "no errors" is `empty` and `error` at once, and two

@@ -45,12 +45,12 @@ const INVENTORIES = read<Readonly<Record<string, Inventory>>>("inventories.json"
 const CASES = read<readonly Case[]>("cases.json");
 
 /**
- * Keyword scored 92.3/67.6 when this set landed; the model's is the same until
- * a keyed run is measured, and it must beat the word list. Never lowered.
+ * Measured, not chosen: keyword 92.3/67.6, jev 94.4/76.7 over three samples
+ * when these were set, each sitting just under. Raised, never lowered.
  */
 const THRESHOLDS = {
   keyword: { state: 0.9, calls: 0.65 },
-  model: { state: 0.9, calls: 0.65 },
+  model: { state: 0.92, calls: 0.74 },
 };
 
 const ids = process.env["EVAL_IDS"]?.split(",").map((id) => id.trim());
