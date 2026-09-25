@@ -205,6 +205,12 @@ importers:
         specifier: 4.6.5
         version: 4.6.5
 
+  packages/mock:
+    dependencies:
+      '@maple-kit/core':
+        specifier: workspace:*
+        version: link:../core
+
   packages/react:
     dependencies:
       '@maple-kit/core':

@@ -105,6 +105,31 @@ export default tseslint.config(
   },
 
   {
+    // The mock runtime is imported from a host's entry before anything else,
+    // so it carries no framework. The packages that render depend on it
+    // through their ./mock subpaths; the arrow never points the other way.
+    files: ["packages/mock/src/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["effect", "effect/*", "@effect/*", "react", "react-dom", "react/*"],
+              message: "@maple-kit/mock uses no Effect and no React. See docs/mock.md.",
+            },
+            {
+              group: ["@maple-kit/ui", "@maple-kit/ui/*", "@maple-kit/react", "@maple-kit/react/*"],
+              message:
+                "@maple-kit/ui and @maple-kit/react import @maple-kit/mock, not the reverse.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+
+  {
     // The two packages that render, and their source rather than their tests:
     // a test probe reassigns a module variable on purpose to observe a render.
     files: ["packages/react/src/**/*.{ts,tsx}", "packages/ui/src/**/*.{ts,tsx}"],

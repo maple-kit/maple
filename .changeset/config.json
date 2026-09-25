@@ -8,6 +8,7 @@
       "@maple-kit/classifier",
       "@maple-kit/cli",
       "@maple-kit/mcp",
+      "@maple-kit/mock",
       "@maple-kit/react",
       "@maple-kit/ui"
     ]

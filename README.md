@@ -73,6 +73,7 @@ Run `maple connectors` to print the matrix from the code, or see
 | `@maple-kit/cli`        | The `maple` command.                                    |
 | `@maple-kit/mcp`        | The MCP server an agent talks to.                       |
 | `@maple-kit/classifier` | Scores a comment as it is written.                      |
+| `@maple-kit/mock`       | Rewrites a page's API responses into a named state.     |
 
 ## Documentation
 

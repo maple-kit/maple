@@ -1,0 +1,42 @@
+{
+  "name": "@maple-kit/mock",
+  "version": "0.8.0",
+  "description": "Rewrites a page's API responses into the state a reviewer asked to see",
+  "license": "Apache-2.0",
+  "type": "module",
+  "sideEffects": [
+    "./dist/install.js"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maple-kit/maple.git",
+    "directory": "packages/mock"
+  },
+  "homepage": "https://github.com/maple-kit/maple/tree/main/packages/mock",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "NOTICE",
+    "README.md"
+  ],
+  "exports": {
+    ".": "./dist/index.js",
+    "./install": "./dist/install.js",
+    "./msw": "./dist/msw/index.js",
+    "./node": "./dist/node/index.js",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "clean": "rm -rf dist *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@maple-kit/core": "workspace:*"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
