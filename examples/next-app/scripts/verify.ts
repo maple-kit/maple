@@ -23,6 +23,12 @@ const ATTRIBUTE = "data-maple-";
  */
 const INTERCEPTOR = "fetch-interceptor";
 
+/**
+ * The key of Maple Mock's flag registry, which `withMockFlags` records into.
+ * Only the flag layer writes it, so it marks the mocked provider.
+ */
+const FLAG_LAYER = "@maple-kit/mock.flags";
+
 interface Bundles {
   readonly client: string;
   readonly server: string;
@@ -95,6 +101,11 @@ assert(
   "A preview build should carry Maple Mock's interceptor, and does not.",
 );
 
+assert(
+  tagged.server.includes(FLAG_LAYER),
+  "A preview build should wrap the server's flag provider for Maple Mock, and does not.",
+);
+
 const stripped = await buildWith({ MAPLE_STRIP_CHECK: "1" }, ".next-strip");
 assert(
   !stripped.client.includes(ATTRIBUTE),
@@ -114,6 +125,11 @@ assert(
 assert(
   !production.client.includes(INTERCEPTOR) && !production.server.includes(INTERCEPTOR),
   "A production build must carry no Maple Mock interceptor, and this one does.",
+);
+
+assert(
+  !production.client.includes(FLAG_LAYER) && !production.server.includes(FLAG_LAYER),
+  "A production build must not wrap a flag provider for Maple Mock, and this one does.",
 );
 
 process.stdout.write(

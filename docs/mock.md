@@ -664,6 +664,23 @@ page keeps a `maple-mock` cookie for it, and `requestRecipe(request)` from
 OpenFeature.setProvider(withMockFlags(provider, { recipe: () => requestRecipe(request) }));
 ```
 
+A server whose provider is shared by every request, as OpenFeature's global
+one is, keeps each request's recipe in an `AsyncLocalStorage` for the
+duration of the evaluation. The Next example's `server/flags.ts` does, and
+only on a preview:
+
+```ts
+const rendering = new AsyncLocalStorage<Recipe | undefined>();
+OpenFeature.setProvider(withMockFlags(provider, { recipe: () => rendering.getStore() }));
+rendering.run(requestRecipe(request), () => client.getBooleanValue("launch-week", false));
+```
+
+A server component has no URL, so the example builds `url` from its
+`searchParams` and passes `headers()`. That makes the page dynamic on a
+preview only; a production build never reads the request and stays static.
+A flag evaluated only on the server is not listed in the box, whose list is
+the page's own `seenFlags()`: a link or a copied recipe sets it.
+
 - **Only a preview writes it.** The interceptor sets it on install and the box
   on Apply, before the reload, so the reloaded page's server render reads it.
   Turn off, a recipe that cannot be read and no mock at all clear it. A

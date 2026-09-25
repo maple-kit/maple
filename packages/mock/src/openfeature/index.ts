@@ -57,7 +57,7 @@ export interface FlagProvider {
 export interface MockFlagsOptions {
   /**
    * The recipe in force. Defaults to the page's, from the installed
-   * interceptor; a server passes the request's, from `@maple-kit/mock/node`.
+   * interceptor; a server passes the request's, from `requestRecipe` in `@maple-kit/mock/server`.
    */
   readonly recipe?: () => Recipe | undefined;
 }

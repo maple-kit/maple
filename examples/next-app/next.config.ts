@@ -32,6 +32,8 @@ function baseFor(phase: string): NextConfig {
       resolveAlias: {
         "@maple-kit/mock": "../../packages/mock/dist/index.js",
         "@maple-kit/mock/client": "../../packages/mock/dist/client/index.js",
+        "@maple-kit/mock/openfeature": "../../packages/mock/dist/openfeature/index.js",
+        "@maple-kit/mock/server": "../../packages/mock/dist/server/index.js",
         "@maple-kit/core/client": "../../packages/core/dist/client/index.js",
         "@maple-kit/core/overlay": "../../packages/core/dist/overlay/index.js",
         "@maple-kit/react": "../../packages/react/dist/index.js",

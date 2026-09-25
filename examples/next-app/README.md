@@ -57,10 +57,20 @@ build; `verify` writes it the same way and checks no bundle carries it. Maple's
 route, `app/api/maple/[...maple]/route.ts`, mounts with no store and serves it at
 `/api/maple/mock/schema` on a preview build and `next dev`, and nowhere else.
 
-**Every call is made on the client.** The interceptor lives in the page, so a
-server component's data never passes through it. `instrumentation-client.ts`
+**Every call is made on the client, and one flag on the server.** The
+interceptor lives in the page, so a server component's data never passes
+through it. `instrumentation-client.ts`
 installs it before hydration, behind `MAPLE_MOCK`, which `next.config.ts` sets
 for a preview build and `next dev` and inlines, so production drops it.
+
+**A role and a server-evaluated flag.** `user.me` has a `role` whose union
+type is the list the box offers, and the route's identity rules say a viewer
+may not create a project: as a viewer, New project is hidden and a create
+answers 403 without reaching the server. `launch-week` is evaluated in the
+server component through OpenFeature's server SDK, wrapped by `withMockFlags`
+on a preview only (`server/flags.ts`): a link or the `maple-mock` cookie turns
+it on in the server-rendered HTML. A production build reads no request, keeps
+`/` static, and `verify` checks it carries no flag layer.
 
 ## What it does not prove yet
 

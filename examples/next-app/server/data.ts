@@ -14,6 +14,8 @@ export interface User {
   readonly id: string;
   readonly name: string;
   readonly since: Date;
+  /** What the reviewer may do. The union is the role list Maple Mock offers. */
+  readonly role: "owner" | "member" | "viewer";
 }
 
 export const PROJECTS: readonly Project[] = [
@@ -23,4 +25,9 @@ export const PROJECTS: readonly Project[] = [
   { id: "p_4", name: "Dune", owner: "Barbara", createdAt: new Date("2026-08-21T17:45:00Z") },
 ];
 
-export const ME: User = { id: "u_1", name: "Ada", since: new Date("2025-11-05T10:00:00Z") };
+export const ME: User = {
+  id: "u_1",
+  name: "Ada",
+  since: new Date("2025-11-05T10:00:00Z"),
+  role: "owner",
+};

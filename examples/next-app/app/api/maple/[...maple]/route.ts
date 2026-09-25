@@ -28,6 +28,13 @@ const handler = createMapleHandler({
     preview: process.env.MAPLE_MOCK === "1",
     schemas,
     plan: { classifier: keywordClassifier() },
+    // Who the page is told the reviewer is, for a recipe's `as`. The roles come
+    // from `user.me`'s own output type; a viewer's create answers 403.
+    identity: {
+      call: "trpc:user.me",
+      role: { path: "role" },
+      requires: { "trpc:project.create": { roles: ["owner", "member"] } },
+    },
   },
 });
 

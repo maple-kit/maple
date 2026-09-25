@@ -49,7 +49,7 @@ export function Projects() {
               : "Waiting for the slow call…"}
           </span>
         </span>
-        <CreateProject />
+        {me.state === "ready" && me.data.role !== "viewer" && <CreateProject />}
       </footer>
     </>
   );
@@ -60,7 +60,8 @@ function Session({ me }: { readonly me: Loaded<Awaited<ReturnType<typeof whoAmI>
   if (me.state === "failed") return <span data-testid="me">Not signed in.</span>;
   return (
     <span data-testid="me">
-      Signed in as <strong>{me.data.name}</strong>, a member since {DAY.format(me.data.since)}.
+      Signed in as <strong>{me.data.name}</strong> ({me.data.role}), with us since{" "}
+      {DAY.format(me.data.since)}.
     </span>
   );
 }

@@ -97,3 +97,9 @@ th {
   border-radius: 50%;
   background: var(--live);
 }
+
+.launch {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #e6ecff;
+}
