@@ -3,8 +3,9 @@ import { linkRecipe } from "@maple-kit/core/mock";
 import { installMock, pathPattern, RECIPE_STORAGE_KEY } from "@maple-kit/mock";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { API, createApiFake, ME, PROJECTS } from "./msw/api.js";
+import { API, createApiFake, ME, PROJECTS, SESSION } from "./msw/api.js";
 import { handlerFetch } from "./msw/fetch.js";
+import { RULES } from "./msw/identity.js";
 
 import type { MockState, Recipe } from "@maple-kit/core/mock";
 import type { MockHandle } from "@maple-kit/mock";
@@ -166,5 +167,35 @@ describe("the recipe a comment records", () => {
 
   it("is nothing with no mock on", () => {
     expect(install().current?.()).toBeUndefined();
+  });
+
+  it("shows the page who the recipe says, refuses what that identity may not do, and says when a write reaches the server", async () => {
+    const sink = memorySink();
+    sessionStorage.setItem(
+      "maple-mock-inventory",
+      JSON.stringify([
+        [pathPattern(location.pathname), [{ key: RULES.call, status: 200, body: SESSION, at: 1 }]],
+      ]),
+    );
+    const mocked = install(
+      { version: 2, calls: [], as: { role: "guest", permissions: { "project:delete": false } } },
+      { identity: RULES, logger: createLogger({ sinks: [sink] }) },
+    );
+
+    const session = (await (await fetch(`${API}/session`)).json()) as typeof SESSION;
+    const audit = await fetch(`${API}/audit`);
+    const remove = await fetch(`${API}/projects/1`, { method: "DELETE" });
+    const create = await fetch(`${API}/projects`, { method: "POST", body: "{}" });
+
+    expect(session).toEqual({
+      user: { ...SESSION.user, role: "guest" },
+      permissions: ["billing:write"],
+    });
+    expect([audit.status, remove.status, create.status]).toEqual([403, 403, 201]);
+    expect(api.reached).toEqual(["GET /api/session", "POST /api/projects"]);
+    expect(mocked.writes?.list()).toEqual(["rest:POST /api/projects"]);
+    expect(sink.records.map((record) => record.message)).toContain(
+      "A write reached the server, which acts as you, not as the page shows.",
+    );
   });
 });

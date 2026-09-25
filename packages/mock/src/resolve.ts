@@ -7,6 +7,7 @@
  */
 
 import { isData } from "./codec.js";
+import { impose, meetsNeed, realIdentity } from "./identity.js";
 import { sampleSchema } from "./schema/sample.js";
 import { deflate } from "./superjson.js";
 import { reshape, reshapeTyped } from "./transform.js";
@@ -15,7 +16,7 @@ import type { Answer, Call, Codec } from "./codec.js";
 import type { Inventory, Sample } from "./inventory.js";
 import type { ShapeLookup } from "./schema/shape.js";
 import type { BodyState } from "./transform.js";
-import type { MockState, Recipe, Shape } from "@maple-kit/core/mock";
+import type { IdentityRules, MockIdentity, MockState, Recipe, Shape } from "@maple-kit/core/mock";
 
 /** What {@link resolve} needs besides the request. */
 export interface ResolveOptions {
@@ -29,6 +30,10 @@ export interface ResolveOptions {
   readonly now?: () => number;
   /** Each call's response schema, which bounds a reshape and answers a call never seen. */
   readonly shape?: ShapeLookup;
+  /** The host's identity rules, which a recipe's `as` is applied through. */
+  readonly identity?: IdentityRules;
+  /** Told of each call a write sends to the server while a recipe's `as` is on. */
+  readonly onWrite?: (key: string) => void;
 }
 
 /** A request taken apart: its codec, its calls, and each call's state. */
@@ -69,8 +74,15 @@ export async function resolve(
   options: ResolveOptions,
 ): Promise<Response | undefined> {
   const applies = recipe?.route === undefined || recipe.route === options.route;
-  const split = await splitRequest(request, applies ? recipe : undefined, options.codecs);
-  if (split === undefined || split.states.every((state) => state === undefined)) return undefined;
+  const active = applies ? recipe : undefined;
+  const taken = await splitRequest(request, active, options.codecs);
+  if (taken === undefined) return undefined;
+  const layer = identityLayer(active?.as, options.identity);
+  const split = layer === undefined ? taken : withNeeds(taken, layer, inventory, options.route);
+  if (layer !== undefined && WRITES.test(request.method)) tellWrites(split, options.onWrite);
+  const imposed = split.calls.map((call) => call.key === layer?.rules.call);
+  const untouched = split.states.every((state) => state === undefined);
+  if (untouched && !imposed.includes(true)) return undefined;
   if (split.states.includes("loading")) return hold(request);
 
   const needsServer = split.states.some((state) => state === undefined || BODY_STATES.has(state));
@@ -81,15 +93,55 @@ export async function resolve(
 
   record(inventory, split.calls, live, options);
   const shapes = await shapesOf(split, options.shape);
-  const answers = split.calls.map((call, index) =>
-    answer(
+  const answers = split.calls.map((call, index) => {
+    const one = answer(
       split.states[index],
       live?.[index],
       inventory.sample(call.key, options.route),
       shapes[index],
-    ),
-  );
+    );
+    return imposed[index] && layer !== undefined ? withIdentity(one, layer) : one;
+  });
   return split.codec.join(split.calls, answers, real);
+}
+
+/** `as`, and the rules it is applied through: both, or no layer at all. */
+interface IdentityLayer {
+  readonly as: MockIdentity;
+  readonly rules: IdentityRules;
+}
+
+const WRITES = /^(?:POST|PUT|PATCH|DELETE)$/i;
+
+function identityLayer(as?: MockIdentity, rules?: IdentityRules): IdentityLayer | undefined {
+  return as === undefined || rules === undefined ? undefined : { as, rules };
+}
+
+/**
+ * Each call the shown identity may not make answers 403, unless the recipe
+ * names it. The real identity is the one the identity call last answered.
+ */
+function withNeeds(split: Split, layer: IdentityLayer, inventory: Inventory, route: string): Split {
+  const sample = inventory.sample(layer.rules.call, route);
+  const real = sample === undefined ? {} : realIdentity(sample.body, layer.rules);
+  const states = split.calls.map((call, index) => {
+    const named = split.states[index];
+    if (named !== undefined) return named;
+    return meetsNeed(call.key, layer.as, layer.rules, real) ? undefined : "forbidden";
+  });
+  return { ...split, states };
+}
+
+/** A write that reaches the server under `as` still acts as the reviewer: say so. */
+function tellWrites(split: Split, onWrite: ResolveOptions["onWrite"]): void {
+  split.calls.forEach((call, index) => {
+    const state = split.states[index];
+    if (state === undefined || BODY_STATES.has(state)) onWrite?.(call.key);
+  });
+}
+
+function withIdentity(answer: Answer, layer: IdentityLayer): Answer {
+  return isData(answer) ? { ...answer, body: impose(answer.body, layer.as, layer.rules) } : answer;
 }
 
 /** Records every real 2xx answer. A mocked one is never recorded. */

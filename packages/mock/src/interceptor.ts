@@ -11,20 +11,24 @@ import { FetchInterceptor } from "@mswjs/interceptors/fetch";
 import { XMLHttpRequestInterceptor } from "@mswjs/interceptors/XMLHttpRequest";
 
 import { installedMock, keepInstalled } from "./handle.js";
+import { knows } from "./identity.js";
 import { createInventory } from "./inventory.js";
 import { forgetRecipe, readRecipe, saveRecipe } from "./link.js";
 import { record, resolve, splitRequest } from "./resolve.js";
 import { isJson, pathPattern, restCodec } from "./rest.js";
+import { routeIdentity } from "./schema/identity.js";
 import { routePlan } from "./schema/plan.js";
 import { routeShapes } from "./schema/route.js";
 import { trpcCodec } from "./trpc.js";
+import { createWriteLog } from "./writes.js";
 
 import type { Codec } from "./codec.js";
 import type { Inventory } from "./inventory.js";
 import type { PlanLookup } from "./schema/plan.js";
 import type { ShapeLookup } from "./schema/shape.js";
+import type { WriteLog } from "./writes.js";
 import type { Logger } from "@maple-kit/core/logger";
-import type { Recipe } from "@maple-kit/core/mock";
+import type { IdentityRules, Recipe } from "@maple-kit/core/mock";
 
 /** How {@link installMock} runs. Every field has a working default. */
 export interface InstallOptions {
@@ -45,6 +49,8 @@ export interface InstallOptions {
   readonly route?: string;
   /** Each call's shape, in place of the route's. */
   readonly shape?: ShapeLookup;
+  /** The identity rules a recipe's `as` is applied through, in place of the route's. */
+  readonly identity?: IdentityRules;
 }
 
 /** The installed transport. */
@@ -58,6 +64,8 @@ export interface MockHandle {
   readonly plan?: PlanLookup;
   /** The recipe applying on the page's current route, which a comment records. */
   current?(): Recipe | undefined;
+  /** Each call a write sent to the server while the recipe's `as` was on. */
+  readonly writes?: WriteLog;
   /** Restores `fetch` and `XMLHttpRequest`. */
   dispose(): void;
 }
@@ -79,6 +87,14 @@ export function installMock(options: InstallOptions = {}): MockHandle {
   const ignored = (url: string) => ignores(options, new URL(url));
   const shape = shapeLookup(options, forward);
   const route = () => pathPattern(pageUrl()?.pathname ?? "/");
+  const identity = recipe?.as === undefined ? undefined : identityRules(options, forward, recipe);
+  const writes = createWriteLog();
+  const onWrite = (key: string) => {
+    writes.add(key);
+    options.logger?.warn("A write reached the server, which acts as you, not as the page shows.", {
+      key,
+    });
+  };
 
   const interceptor = new BatchInterceptor({
     name: "maple-mock",
@@ -89,11 +105,14 @@ export function installMock(options: InstallOptions = {}): MockHandle {
     "request",
     awaited(async ({ controller, request }) => {
       if (ignored(request.url)) return;
+      const rules = await identity;
       const response = await resolve(request, recipe, inventory, {
         codecs,
         forward,
         route: route(),
+        onWrite,
         ...(shape === undefined ? {} : { shape }),
+        ...(rules === undefined ? {} : { identity: rules }),
       });
       if (response !== undefined) controller.respondWith(response);
     }),
@@ -124,6 +143,7 @@ export function installMock(options: InstallOptions = {}): MockHandle {
     ...(shape === undefined ? {} : { shape }),
     ...(plan === undefined ? {} : { plan }),
     current: () => (recipe?.route === undefined || recipe.route === route() ? recipe : undefined),
+    writes,
     dispose() {
       interceptor.dispose();
       keepInstalled(undefined);
@@ -140,6 +160,31 @@ function ignores(options: InstallOptions, url: URL): boolean {
     return true;
   }
   return options.ignore?.(url) ?? false;
+}
+
+/**
+ * The rules `recipe.as` is applied through, read once. A recipe they cannot
+ * apply is said: a page showing the real reviewer looks like a working `as`.
+ */
+async function identityRules(
+  options: InstallOptions,
+  forward: typeof fetch,
+  recipe: Recipe,
+): Promise<IdentityRules | undefined> {
+  const rules =
+    options.identity ??
+    (options.route === undefined
+      ? undefined
+      : await routeIdentity({ basePath: options.route, fetch: forward }));
+  const role = recipe.as?.role;
+  if (rules === undefined) {
+    options.logger?.warn(
+      "The mock names who you are shown as, but the route has no identity rules.",
+    );
+  } else if (role !== undefined && !knows(rules.role?.values ?? [], role)) {
+    options.logger?.warn("The mock names a role the identity rules do not list.", { role });
+  }
+  return rules;
 }
 
 function shapeLookup(options: InstallOptions, forward: typeof fetch): ShapeLookup | undefined {

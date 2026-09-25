@@ -23,16 +23,20 @@ export type {
 } from "./client/index.js";
 export { isData } from "./codec.js";
 export type { Answer, Call, Codec } from "./codec.js";
+export { impose, meetsNeed, realIdentity } from "./identity.js";
+export type { RealIdentity } from "./identity.js";
 export { installMock } from "./interceptor.js";
 export type { InstallOptions, MockHandle } from "./interceptor.js";
 export { createInventory, INVENTORY_STORAGE_KEY } from "./inventory.js";
+
 export type { Inventory, InventoryLimits, InventoryOptions, Sample } from "./inventory.js";
 export { forgetRecipe, RECIPE_STORAGE_KEY, readRecipe, saveRecipe } from "./link.js";
-
 export type { RecipeSources } from "./link.js";
 export { resolve } from "./resolve.js";
 export type { ResolveOptions } from "./resolve.js";
 export { isJson, pathPattern, restCodec, restKey } from "./rest.js";
+export { routeIdentity } from "./schema/identity.js";
+export type { RouteIdentityOptions } from "./schema/identity.js";
 export {
   allowsNull,
   arrayOf,
@@ -59,3 +63,4 @@ export { MANY, reshape, reshapeTyped } from "./transform.js";
 export type { BodyState } from "./transform.js";
 export { trpcCodec } from "./trpc.js";
 export type { TrpcCodecOptions } from "./trpc.js";
+export type { WriteLog } from "./writes.js";

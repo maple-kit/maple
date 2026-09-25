@@ -23,6 +23,12 @@ export const PROJECTS = {
 
 export const ME = { id: "u_1", name: "Reviewer", plan: "team" };
 
+/** Who the reviewer is, for a recipe's `as`: a role, and permissions by name. */
+export const SESSION = {
+  user: { name: "Reviewer", role: "owner" },
+  permissions: ["project:delete", "billing:write"],
+};
+
 /** A fake API, plus what it was asked. */
 export interface ApiFake {
   readonly handlers: RequestHandler[];
@@ -54,6 +60,12 @@ export function createApiFake(): ApiFake {
     http.get(
       `${API}/me`,
       ({ request }) => seen(request) ?? HttpResponse.json(ME, { headers: { "x-trace": "t1" } }),
+    ),
+    http.get(`${API}/session`, ({ request }) => seen(request) ?? HttpResponse.json(SESSION)),
+    http.get(`${API}/audit`, ({ request }) => seen(request) ?? HttpResponse.json({ items: [] })),
+    http.delete(
+      `${API}/projects/:id`,
+      ({ request }) => seen(request) ?? new HttpResponse(null, { status: 204 }),
     ),
     http.get(`${API}/count`, ({ request }) => seen(request) ?? HttpResponse.json(7)),
     http.get(`${API}/page`, ({ request }) => seen(request) ?? HttpResponse.html("<p>hi</p>")),

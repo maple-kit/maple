@@ -4,7 +4,8 @@ import { runInNewContext } from "node:vm";
 import { createInventory, MANY, resolve, restCodec } from "@maple-kit/mock";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import { API, createApiFake, ME, PROJECTS } from "./msw/api.js";
+import { API, createApiFake, ME, PROJECTS, SESSION } from "./msw/api.js";
+import { RULES } from "./msw/identity.js";
 import { createTestServer, useTestServer } from "./msw/server.js";
 
 import type { MockState, Recipe } from "@maple-kit/core/mock";
@@ -255,3 +256,87 @@ function collectGarbage(): void {
 function wait(ms: number): Promise<void> {
   return new Promise((done) => setTimeout(done, ms));
 }
+
+describe("resolve, under `as`", () => {
+  const shownAs = (as: Recipe["as"], calls: Recipe["calls"] = []): Recipe => ({
+    version: 2,
+    calls,
+    ...(as === undefined ? {} : { as }),
+  });
+
+  async function under(active: Recipe, url: string, init?: RequestInit) {
+    const inventory = createInventory();
+    const writes: string[] = [];
+    await resolve(new Request(`${API}/session`), undefined, inventory, options).then(() =>
+      inventory.record("/p", { key: "rest:GET /api/session", status: 200, body: SESSION, at: 1 }),
+    );
+    api.reset();
+    const response = await resolve(new Request(`${API}${url}`, init), active, inventory, {
+      ...options,
+      identity: RULES,
+      onWrite: (key) => writes.push(key),
+    });
+    return { response, writes };
+  }
+
+  it("tells the page the role and permissions the recipe names", async () => {
+    const { response } = await under(
+      shownAs({ role: "barista", permissions: { "billing:write": false } }),
+      "/session",
+    );
+    await expect(response?.json()).resolves.toEqual({
+      user: { name: "Reviewer", role: "barista" },
+      permissions: ["project:delete"],
+    });
+    expect(api.reached).toEqual(["GET /api/session"]);
+  });
+
+  it("answers the page's own 403 for a call the shown role may not make, without asking", async () => {
+    const { response } = await under(shownAs({ role: "guest" }), "/audit");
+    expect(response?.status).toBe(403);
+    expect(api.reached).toEqual([]);
+  });
+
+  it("lets a call through when the shown identity meets its need", async () => {
+    const { response } = await under(shownAs({ role: "owner" }), "/audit");
+    expect(response).toBeUndefined();
+  });
+
+  it("puts a call the recipe names in its named state, whatever it requires", async () => {
+    const { response } = await under(
+      shownAs({ role: "guest" }, [{ key: "rest:GET /api/audit", state: "empty" }]),
+      "/audit",
+    );
+    expect(response?.status).toBe(200);
+  });
+
+  it("refuses a write the shown identity may not make, and never sends it", async () => {
+    const { response, writes } = await under(
+      shownAs({ permissions: { "project:delete": false } }),
+      "/projects/1",
+      { method: "DELETE" },
+    );
+    expect(response?.status).toBe(403);
+    expect(api.reached).toEqual([]);
+    expect(writes).toEqual([]);
+  });
+
+  it("lets through a write it allows, and says the server acts as the reviewer", async () => {
+    const { response, writes } = await under(shownAs({ role: "barista" }), "/projects", {
+      method: "POST",
+      body: "{}",
+    });
+    expect(response).toBeUndefined();
+    expect(writes).toEqual(["rest:POST /api/projects"]);
+  });
+
+  it("changes nothing without identity rules", async () => {
+    const response = await resolve(
+      new Request(`${API}/audit`),
+      shownAs({ role: "guest" }),
+      createInventory(),
+      options,
+    );
+    expect(response).toBeUndefined();
+  });
+});

@@ -452,6 +452,25 @@ identity: {
 `GET {base}/mock/identity` serves the rules with each vocabulary filled in,
 gated as `/mock/schema` is, and answers 404 when the host declares none.
 
+**The page applies them.** `installMock({ route })` reads the rules once, and
+only when the recipe has `as`; `installMock({ identity })` supplies them
+instead.
+
+- **The identity call's answer is told the recipe's identity**: the role
+  written at its path, and each permission named added to or taken from the
+  list, or set in the object. A role outside the rules' words is left as the
+  server said it, and a warning says so.
+- **A call the shown identity may not make answers 403**, in the protocol's
+  own error shape, and is never sent. The identity is the recipe's where it
+  names a role or permission, and otherwise the reviewer's own, as the
+  identity call last answered. A need nothing can judge is let through: the
+  server decides. A call the recipe names keeps its named state.
+- **A write is not blocked.** The server still acts as the reviewer, so a
+  write it allows really happens. Each one that reaches the server is logged
+  as a warning and listed on the handle's `writes`, for a surface to say.
+- **Nothing changes without rules.** A recipe with `as` on a route that
+  declares none mocks only its calls, and a warning says so.
+
 ## The inventory
 
 The last real 2xx answer of every call, per route pattern, in memory and in
@@ -559,8 +578,10 @@ a page's real data in a public pull-request comment.
 
 ## What is not done
 
-- `flags` and `as` in the runtime. The recipe carries them and every reader
-  shows them, but nothing answers a flag or rewrites an identity yet (#173).
+- `flags` in the runtime. The recipe carries them and every reader shows
+  them, but nothing answers a flag yet (#173).
+- `as` in the box and the banner, on the server through
+  `@maple-kit/mock/node`, and in `mockHandlers`, which takes no rules.
 
 - A recorded error body shape. REST `error` answers `{ message }`, and tRPC
   answers its default error shape.
