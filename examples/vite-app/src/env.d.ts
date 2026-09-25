@@ -9,3 +9,6 @@ interface ImportMetaEnv {
   /** The branch under review. CI stamps it; absent, the example picks its own. */
   readonly VITE_MAPLE_BRANCH?: string;
 }
+
+/** True on a preview build and in `vite dev`, set by `vite.config.ts`. */
+declare const __MAPLE_PREVIEW__: boolean;

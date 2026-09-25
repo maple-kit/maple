@@ -13,6 +13,7 @@
   "dependencies": {
     "@maple-kit/classifier": "workspace:*",
     "@maple-kit/core": "workspace:*",
+    "@maple-kit/mock": "workspace:*",
     "@maple-kit/react": "workspace:*",
     "@maple-kit/ui": "workspace:*",
     "react": "19.3.0",

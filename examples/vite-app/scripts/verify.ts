@@ -19,6 +19,9 @@ import { join } from "node:path";
 
 import { build } from "vite";
 
+/** Written into a bundle only by the recipe reader, so it marks Maple Mock's presence. */
+const RECIPE_PARAM = "maple-mock";
+
 /** The example itself, not this script's directory. */
 const HERE = join(import.meta.dirname, "..");
 
@@ -56,6 +59,11 @@ assert(
   "A preview build should carry data-maple-name on a tagged element, and does not.",
 );
 
+assert(
+  previewOutput.includes(RECIPE_PARAM),
+  "A preview build should carry Maple Mock's interceptor, and does not.",
+);
+
 const productionOutput = await contentsOf(await buildInto("dist", false));
 assert(
   !productionOutput.includes(emitted("data-maple-src")),
@@ -70,4 +78,9 @@ assert(
   "A production build must leak no source path, and this one does.",
 );
 
-process.stdout.write("vite-app: tagged on preview, clean in production.\n");
+assert(
+  !productionOutput.includes(RECIPE_PARAM),
+  "A production build must carry no Maple Mock interceptor, and this one does.",
+);
+
+process.stdout.write("vite-app: tagged and mockable on preview, clean in production.\n");

@@ -19,6 +19,8 @@ export const METRICS: readonly Metric[] = [
 ];
 
 export interface Row {
+  /** What the table keys a row by, as a real API's rows carry one. */
+  readonly id: string;
   readonly repo: string;
   readonly branch: string;
   readonly open: number;
@@ -30,6 +32,7 @@ export interface Row {
 
 export const ROWS: readonly Row[] = [
   {
+    id: "rv_1",
     repo: "maple-kit/maple",
     branch: "feat/ui-picker",
     open: 3,
@@ -38,6 +41,7 @@ export const ROWS: readonly Row[] = [
     tint: 0,
   },
   {
+    id: "rv_2",
     repo: "maple-kit/maple",
     branch: "fix/anchor-quote",
     open: 0,
@@ -46,6 +50,7 @@ export const ROWS: readonly Row[] = [
     tint: 0,
   },
   {
+    id: "rv_3",
     repo: "maple-kit/site",
     branch: "feat/pricing",
     open: 1,
@@ -54,6 +59,7 @@ export const ROWS: readonly Row[] = [
     tint: 1,
   },
   {
+    id: "rv_4",
     repo: "maple-kit/site",
     branch: "chore/deps",
     open: 0,
@@ -62,6 +68,7 @@ export const ROWS: readonly Row[] = [
     tint: 2,
   },
   {
+    id: "rv_5",
     repo: "maple-kit/action",
     branch: "feat/gate",
     open: 2,

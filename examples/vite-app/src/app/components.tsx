@@ -8,8 +8,10 @@
  * rather than the component's own spelling.
  */
 
-import { GATE_WEEK, METRICS, ROWS, WEEKS } from "./data.js";
+import { useApi } from "./api.js";
+import { GATE_WEEK, METRICS, WEEKS } from "./data.js";
 
+import type { Loaded, Reviews, Session } from "./api.js";
 import type { Metric, Row } from "./data.js";
 import type { ReactNode } from "react";
 
@@ -74,11 +76,13 @@ export function ThroughputChart() {
 }
 
 export function ReviewTable() {
+  const reviews = useApi<Reviews>("/api/reviews");
+
   return (
     <article className="card table-card">
       <header className="card-head">
         <h3>Open reviews</h3>
-        <span className="count">{ROWS.length}</span>
+        {reviews.state === "ready" && <span className="count">{reviews.data.total}</span>}
       </header>
       <table>
         <thead>
@@ -90,13 +94,38 @@ export function ReviewTable() {
           </tr>
         </thead>
         <tbody>
-          {ROWS.map((row) => (
-            <ReviewRow key={row.branch} row={row} />
-          ))}
+          {reviews.state === "ready" &&
+            reviews.data.items.map((row) => <ReviewRow key={row.id} row={row} />)}
+          <ReviewNotice reviews={reviews} />
         </tbody>
       </table>
     </article>
   );
+}
+
+/** What the table says when it has no rows to show, and why. */
+function ReviewNotice({ reviews }: { readonly reviews: Loaded<Reviews> }) {
+  const notice = reviewNotice(reviews);
+  if (notice === undefined) return null;
+  return (
+    <tr>
+      <td colSpan={4} className={`table-notice ${notice.tone}`}>
+        {notice.text}
+      </td>
+    </tr>
+  );
+}
+
+function reviewNotice(reviews: Loaded<Reviews>): { text: string; tone: string } | undefined {
+  if (reviews.state === "loading") return { text: "Loading reviews…", tone: "quiet" };
+  if (reviews.state === "failed" && reviews.status === 403) {
+    return { text: "You do not have access to these reviews.", tone: "bad" };
+  }
+  if (reviews.state === "failed") return { text: "Reviews could not be loaded.", tone: "bad" };
+  if (reviews.data.items.length === 0) {
+    return { text: "No open reviews. Every preview is clear to merge.", tone: "quiet" };
+  }
+  return undefined;
 }
 
 function ReviewRow({ row }: { readonly row: Row }) {
@@ -204,6 +233,9 @@ export function SideNav() {
 
 /** The bar above the page: where you are, and who you are. */
 export function TopBar() {
+  const session = useApi<Session>("/api/session");
+  const me = session.state === "ready" ? session.data : undefined;
+
   return (
     <div className="topbar">
       <p className="crumbs">
@@ -211,9 +243,11 @@ export function TopBar() {
       </p>
       <div className="topbar-end">
         <span className="range">Last 28 days</span>
-        <span className="avatar tint-0 me" aria-label="Ada">
-          A
-        </span>
+        {me && (
+          <span className={`avatar tint-${String(me.tint)} me`} aria-label={me.name}>
+            {me.name.charAt(0)}
+          </span>
+        )}
       </div>
     </div>
   );

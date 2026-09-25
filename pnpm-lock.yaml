@@ -132,6 +132,9 @@ importers:
       '@maple-kit/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@maple-kit/mock':
+        specifier: workspace:*
+        version: link:../../packages/mock
       '@maple-kit/react':
         specifier: workspace:*
         version: link:../../packages/react

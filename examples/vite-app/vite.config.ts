@@ -7,11 +7,13 @@ import { maple } from "@maple-kit/core/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv } from "vite";
 
+import { ROWS } from "./src/app/data.js";
 import { SEEDED_FRAMES } from "./src/app/frames.js";
 import { seedComments } from "./src/app/seed.js";
 
 import type { CommentStore } from "@maple-kit/core";
 import type { MediaConnector } from "@maple-kit/core/connectors";
+import type { Connect, Plugin } from "vite";
 
 /** A path inside this repository, for the workspace aliases below. */
 function here(path: string): string {
@@ -25,6 +27,7 @@ function here(path: string): string {
 const alias = [
   { find: /^@maple-kit\/core$/, replacement: here("../../packages/core/src/index.ts") },
   { find: /^@maple-kit\/core\/(.*)$/, replacement: here("../../packages/core/src/$1/index.ts") },
+  { find: /^@maple-kit\/mock$/, replacement: here("../../packages/mock/src/index.ts") },
   { find: /^@maple-kit\/react$/, replacement: here("../../packages/react/src/index.ts") },
   { find: /^@maple-kit\/ui$/, replacement: here("../../packages/ui/src/index.ts") },
   { find: /^@maple-kit\/ui\/maple$/, replacement: here("../../packages/ui/src/maple.ts") },
@@ -44,6 +47,28 @@ async function seeded(branch: string): Promise<{ store: CommentStore; media: Med
   const store = createCommentStore(memoryStore());
   for (const comment of seedComments(branch, shots)) await store.append(comment);
   return { store, media };
+}
+
+/** The page's own API, answered from `data.ts`: what a real app would fetch. */
+const API: Readonly<Record<string, unknown>> = {
+  "/api/reviews": { items: ROWS, total: ROWS.length, nextCursor: null },
+  "/api/session": { name: "Ada", tint: 0 },
+};
+
+const answerApi: Connect.NextHandleFunction = (request, response, next) => {
+  const body = request.method === "GET" ? API[request.url?.split("?")[0] ?? ""] : undefined;
+  if (body === undefined) return next();
+  response.setHeader("content-type", "application/json");
+  response.end(JSON.stringify(body));
+};
+
+/** Mounts the page's API on the dev and preview servers. */
+function exampleApi(): Plugin {
+  return {
+    name: "example-api",
+    configureServer: (server) => void server.middlewares.use(answerApi),
+    configurePreviewServer: (server) => void server.middlewares.use(answerApi),
+  };
 }
 
 const BRANCH = process.env["VITE_MAPLE_BRANCH"] ?? "feat/example";
@@ -68,8 +93,10 @@ export default defineConfig(async ({ command, mode }) => {
 
   return {
     resolve: { alias },
+    define: { __MAPLE_PREVIEW__: JSON.stringify(preview) },
     plugins: [
       react(),
+      exampleApi(),
       maple({
         tagger: preview,
         root: import.meta.dirname,
