@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { createShapeIndex, readSchemaDocument } from "@maple-kit/core/mock";
 import { describe, expect, it } from "vitest";
 
+import { MOCK_PLAN_USAGE } from "../src/commands/mock-plan.js";
 import { MOCK_SCHEMA_USAGE } from "../src/commands/mock-schema.js";
 import { run } from "../src/run.js";
 
@@ -38,20 +39,18 @@ describe("maple mock schema, over the real generator", () => {
 describe("maple mock schema's edges", () => {
   const options = (generate: () => Promise<unknown>) => ({ version: "0", generate });
 
-  it.each([[["mock"]], [["mock", "schema"]], [["mock", "other", "x.ts"]]])(
-    "prints its usage for %j",
-    async (argv) => {
-      expect(
-        await run(
-          argv,
-          options(() => Promise.resolve({})),
-        ),
-      ).toEqual({
-        output: MOCK_SCHEMA_USAGE,
-        exitCode: 1,
-      });
-    },
-  );
+  it.each([
+    [["mock", "schema"], MOCK_SCHEMA_USAGE],
+    [["mock"], `${MOCK_SCHEMA_USAGE}\n\n${MOCK_PLAN_USAGE}`],
+    [["mock", "other", "x.ts"], `${MOCK_SCHEMA_USAGE}\n\n${MOCK_PLAN_USAGE}`],
+  ])("prints its usage for %j", async (argv, output) => {
+    expect(
+      await run(
+        argv,
+        options(() => Promise.resolve({})),
+      ),
+    ).toEqual({ output, exitCode: 1 });
+  });
 
   it("prints the document when there is nowhere to write it, under the export asked for", async () => {
     const asked: unknown[] = [];

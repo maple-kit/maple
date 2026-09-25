@@ -1,6 +1,7 @@
 import { isSet, parseArgs } from "./args.js";
 import { connectorKindRows, renderConnectorKinds } from "./commands/connectors.js";
-import { mockSchema } from "./commands/mock-schema.js";
+import { MOCK_PLAN_USAGE, mockPlan } from "./commands/mock-plan.js";
+import { MOCK_SCHEMA_USAGE, mockSchema } from "./commands/mock-schema.js";
 import { HELP } from "./help.js";
 
 import type { Generate } from "./commands/mock-schema.js";
@@ -11,6 +12,8 @@ export interface RunOptions {
   readonly version: string;
   /** `maple mock schema`'s generator, in place of the optional peer. */
   readonly generate?: Generate;
+  /** `maple mock plan`'s way to the route. Defaults to the global `fetch`. */
+  readonly fetch?: typeof fetch;
 }
 
 /** What a command produced: text to print and the exit code to use. */
@@ -37,7 +40,7 @@ export async function run(argv: readonly string[], options: RunOptions): Promise
   if (isSet(flags, "version")) return { output: options.version, exitCode: 0 };
   if (isSet(flags, "help") || command === undefined) return { output: HELP, exitCode: 0 };
 
-  if (command === "mock") return mockSchema({ flags, positionals }, options.generate);
+  if (command === "mock") return mock({ flags, positionals }, options);
 
   if (command === "connectors") {
     const rows = connectorKindRows();
@@ -49,3 +52,16 @@ export async function run(argv: readonly string[], options: RunOptions): Promise
     exitCode: 1,
   };
 }
+
+/** `maple mock schema` and `maple mock plan`, by their first positional. */
+function mock(
+  args: { flags: RunResultFlags; positionals: readonly string[] },
+  options: RunOptions,
+): Promise<RunResult> {
+  const [subcommand] = args.positionals;
+  if (subcommand === "schema") return mockSchema(args, options.generate);
+  if (subcommand === "plan") return mockPlan(args, options.fetch);
+  return Promise.resolve({ output: `${MOCK_SCHEMA_USAGE}\n\n${MOCK_PLAN_USAGE}`, exitCode: 1 });
+}
+
+type RunResultFlags = ReturnType<typeof parseArgs>["flags"];

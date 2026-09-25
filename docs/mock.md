@@ -364,6 +364,21 @@ description, field names, and a list's item in brackets, two levels deep, so
 `rest:GET /api/roasts` reads `RoastPage: items [id, origin], nextCursor`. Only
 names reach the planner; a value never does.
 
+**`maple mock plan` asks a deployed route**, not a model:
+
+```sh
+maple mock plan "no projects yet" --url=https://preview.example.com/api/maple \
+  --route=/projects "--calls=trpc:project.list,trpc:user.me"
+```
+
+It prints the recipe the box's first chip would apply, `request` included, and
+exits 1 with the reason when the gate says nothing: a sentence that names no
+state, a plan under the floor, a route that plans nothing (404) or wants a
+signed-in reviewer (401). Asking the route rather than a local classifier keeps
+the model's key in the deployment, and gives CI the plan a reviewer would get,
+schema names included. The gate is one function for both, `readPlan`, which is
+why it lives in core rather than beside the box.
+
 **The keyword planner** is `keywordClassifier().plan`, the floor the plan eval
 measures against. State words pick the state (`no roasts`, `500`, `skeleton`,
 `hundreds of`), and nothing matched is `none`. Words the sentence shares with
@@ -435,7 +450,8 @@ the client asks it 500 ms after typing pauses, abandoning the request before.
 It sends every call recorded on the route with a summary of the names in its
 last answer, never a value. The list is not filtered while it plans.
 
-What comes back passes the calm-UI gate before anything is drawn:
+What comes back passes the calm-UI gate, `readPlan` in `@maple-kit/core/mock`,
+before anything is drawn:
 
 | The plan                                  | The box                                                 |
 | ----------------------------------------- | ------------------------------------------------------- |
