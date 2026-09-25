@@ -63,7 +63,8 @@ export async function resolve(
   inventory: Inventory,
   options: ResolveOptions,
 ): Promise<Response | undefined> {
-  const split = await splitRequest(request, recipe, options.codecs);
+  const applies = recipe?.route === undefined || recipe.route === options.route;
+  const split = await splitRequest(request, applies ? recipe : undefined, options.codecs);
   if (split === undefined || split.states.every((state) => state === undefined)) return undefined;
   if (split.states.includes("loading")) return hold(request.signal);
 

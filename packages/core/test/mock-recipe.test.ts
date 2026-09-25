@@ -9,6 +9,11 @@ describe("parseRecipe", () => {
     expect(parseRecipe(recipe)).toEqual(recipe);
   });
 
+  it("keeps the route it applies on", () => {
+    const recipe = { version: 1, calls: [call], route: "/projects/:id" };
+    expect(parseRecipe(recipe)).toEqual(recipe);
+  });
+
   it("accepts every state it lists", () => {
     const calls = MOCK_STATES.map((state, index) => ({ key: `rest:GET /${index}`, state }));
     expect(parseRecipe({ version: RECIPE_VERSION, calls }).calls).toEqual(calls);
@@ -54,6 +59,7 @@ describe("parseRecipe", () => {
       /calls\.1\.key: "trpc:project\.list" appears twice/,
     ],
     ["a request that is not text", { version: 1, calls: [], request: 3 }, /request: must be/],
+    ["a route that is not a path", { version: 1, calls: [], route: "projects" }, /route: must be/],
   ])("refuses %s", (_, input, message) => {
     expect(() => parseRecipe(input)).toThrow(InvalidRecipeError);
     expect(() => parseRecipe(input)).toThrow(message);

@@ -30,6 +30,11 @@ export interface Recipe {
   readonly version: typeof RECIPE_VERSION;
   /** Calls to rewrite. A call not named here passes through untouched. */
   readonly calls: readonly MockCall[];
+  /**
+   * The route pattern it applies on, such as `/projects/:id`. Absent, it
+   * applies on every route the tab visits.
+   */
+  readonly route?: string;
   /** The words the reviewer typed, when a sentence produced the recipe. */
   readonly request?: string;
 }
@@ -60,15 +65,19 @@ export function parseRecipe(input: unknown): Recipe {
 
   const issues = [...versionIssues(input["version"])];
   const calls = parseCalls(input["calls"], issues);
-  const request = input["request"];
+  const { request, route } = input;
   if (request !== undefined && typeof request !== "string") {
     issues.push("request: must be a string when present");
+  }
+  if (route !== undefined && !(typeof route === "string" && route.startsWith("/"))) {
+    issues.push('route: must be a path pattern starting with "/" when present');
   }
   if (issues.length > 0) throw new InvalidRecipeError(issues);
 
   return {
     version: RECIPE_VERSION,
     calls,
+    ...(typeof route === "string" ? { route } : {}),
     ...(typeof request === "string" ? { request } : {}),
   };
 }

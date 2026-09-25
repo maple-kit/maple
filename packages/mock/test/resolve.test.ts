@@ -38,6 +38,18 @@ describe("resolve", () => {
     expect(api.reached).toEqual([]);
   });
 
+  it.each([
+    ["on its own route", "/p", 403],
+    ["nowhere else", "/q", undefined],
+  ])("applies a recipe that names a route %s", async (_, route, status) => {
+    const active = { ...recipe("rest:GET /api/projects", "forbidden"), route: "/p" };
+    const response = await resolve(new Request(`${API}/projects`), active, createInventory(), {
+      ...options,
+      route,
+    });
+    expect(response?.status).toBe(status);
+  });
+
   it("lets through a call the recipe does not name", async () => {
     await expect(run("/me", recipe("rest:GET /api/projects", "empty"))).resolves.toBeUndefined();
     expect(api.reached).toEqual([]);

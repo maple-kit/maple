@@ -45,6 +45,7 @@ that read a newer format and passed.
 {
   version: 1,
   calls: [{ key: "trpc:project.list", state: "empty" }],
+  route: "/projects",
   request: "mock this page with an empty state",
 }
 ```
@@ -62,6 +63,10 @@ that read a newer format and passed.
   later layer be added to the record without an older reader rejecting it.
   Refusing a newer version stops a reader half-applying a format it does not
   know.
+- **`route` scopes it to one route pattern**, such as `/projects/:id`. A
+  recipe kept for the tab would otherwise follow the reviewer to every page,
+  and empty a list they never asked to see empty. Absent, it applies
+  everywhere.
 - **`request` is the reviewer's words**, kept for display. Nothing reads it to
   decide what to mock.
 
