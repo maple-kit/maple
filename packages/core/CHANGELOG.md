@@ -1,5 +1,26 @@
 # @maple-kit/core
 
+## 0.9.0
+
+### Minor Changes
+
+- 9371621: A recipe can name the route pattern it applies on: `route: "/projects/:id"`.
+  `parseRecipe` accepts it, and a recipe with a route mocks nothing on any other
+  route. A recipe without one applies everywhere, as before.
+- 8cfc7b5: **New package, `@maple-kit/mock`**, and a new core subpath,
+  `@maple-kit/core/mock`: the first piece of Maple Mock (#166).
+
+  `@maple-kit/core/mock` exports the recipe — the record of which calls a mock
+  rewrites and into which state — with `parseRecipe`, `InvalidRecipeError`,
+  `MOCK_STATES` and `RECIPE_VERSION`.
+
+  `@maple-kit/mock` reads and writes an active recipe: `readRecipe`,
+  `saveRecipe`, `forgetRecipe`, `linkRecipe`, `encodeRecipe` and `decodeRecipe`.
+  Its `./install`, `./msw` and `./node` entries exist and are empty; the
+  interceptor and codecs land next.
+
+  Nothing existing changed.
+
 ## 0.8.0
 
 ### Minor Changes
