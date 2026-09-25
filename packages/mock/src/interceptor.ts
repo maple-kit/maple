@@ -56,6 +56,8 @@ export interface MockHandle {
   readonly shape?: ShapeLookup;
   /** Plans a sentence through Maple's route, when the page names one. */
   readonly plan?: PlanLookup;
+  /** The recipe applying on the page's current route, which a comment records. */
+  current?(): Recipe | undefined;
   /** Restores `fetch` and `XMLHttpRequest`. */
   dispose(): void;
 }
@@ -121,6 +123,7 @@ export function installMock(options: InstallOptions = {}): MockHandle {
     inventory,
     ...(shape === undefined ? {} : { shape }),
     ...(plan === undefined ? {} : { plan }),
+    current: () => (recipe?.route === undefined || recipe.route === route() ? recipe : undefined),
     dispose() {
       interceptor.dispose();
       keepInstalled(undefined);

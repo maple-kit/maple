@@ -3,7 +3,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { githubStore } from "../src/connectors/github.js";
 import { parseFence } from "../src/export/markdown.js";
-import { sampleComment } from "../src/testing/fixtures.js";
+import { SAMPLE_CONTEXT, sampleComment } from "../src/testing/fixtures.js";
 import { createGitHubFake, pullFor } from "./msw/github.js";
 import { createTestServer, useTestServer } from "./msw/server.js";
 
@@ -53,6 +53,21 @@ describe("what gets written to the pull request", () => {
     expect(posted?.body).toContain("| # | Where | Comment | Viewport |");
     expect(posted?.body).toContain("```maple");
     expect(posted?.body).not.toContain("<!--");
+  });
+
+  it("gives back the recipe a comment was written under, identical", async () => {
+    const branch = "feature/mocked";
+    const mock = {
+      version: 1 as const,
+      calls: [{ key: "trpc:roast.list", state: "empty" as const }],
+      route: "/roasts",
+      request: "no roasts yet",
+    };
+    await store().append(sampleComment({ branch, context: { ...SAMPLE_CONTEXT, mock } }));
+
+    const { comments } = await store().list({ branch });
+    expect(comments[0]?.context.mock).toEqual(mock);
+    expect(github.commentsOn(pullFor(branch))[0]?.body).toContain("· mocked");
   });
 
   it("writes the id it assigned back into the fence", async () => {

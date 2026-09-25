@@ -10,7 +10,9 @@
  */
 
 import { stableStringify } from "../lib/stable-stringify.js";
+import { parseRecipe } from "../mock/recipe.js";
 
+import type { Recipe } from "../mock/recipe.js";
 import type {
   Approval,
   Comment,
@@ -28,13 +30,14 @@ export const FENCE_VERSION = 1;
 export const FENCE_BUDGET = 8192;
 
 /** Detail the exporter will shed, in the order it sheds it. */
-export type Reduction = "quote-context" | "regions" | "selector" | "context" | "quote";
+export type Reduction = "mock" | "quote-context" | "regions" | "selector" | "context" | "quote";
 
 /**
  * Regions shed before the selector, being the least load-bearing thing in the
  * fence. Content width never sheds: `essentialContext` keeps it.
  */
 const REDUCTIONS: readonly Reduction[] = [
+  "mock",
   "quote-context",
   "regions",
   "selector",
@@ -164,7 +167,9 @@ export function parseFence(markdown: string): ParsedFence | undefined {
   return {
     version,
     branch: typeof document["branch"] === "string" ? document["branch"] : "",
-    comments: Array.isArray(document["comments"]) ? (document["comments"] as Comment[]) : [],
+    comments: Array.isArray(document["comments"])
+      ? (document["comments"] as Comment[]).map(readMock)
+      : [],
     approvals: Array.isArray(document["approvals"]) ? (document["approvals"] as Approval[]) : [],
     raw: document,
   };
@@ -186,8 +191,10 @@ function fit(
   const applied: Reduction[] = [];
   let fence = encode(comments, branch, approvals, applied);
 
+  const mocked = comments.some((comment) => comment.context.mock !== undefined);
   for (const reduction of REDUCTIONS) {
     if (size(fence) <= budget) break;
+    if (reduction === "mock" && !mocked) continue;
     applied.push(reduction);
     fence = encode(comments, branch, approvals, applied);
   }
@@ -220,11 +227,29 @@ function reduce(comment: Comment, reduced: readonly Reduction[]): Comment {
 
 function reduceContext(context: CommentContext, reduced: readonly Reduction[]): CommentContext {
   if (reduced.includes("context")) return essentialContext(context);
-  if (!reduced.includes("regions")) return context;
 
-  const copy: { regions?: readonly RegionContext[] } & CommentContext = { ...context };
-  delete copy.regions;
+  const copy: { regions?: readonly RegionContext[]; mock?: Recipe } & CommentContext = {
+    ...context,
+  };
+  if (reduced.includes("regions")) delete copy.regions;
+  if (reduced.includes("mock")) delete copy.mock;
   return copy;
+}
+
+/**
+ * A stored recipe is read through the same validator the recipe is written
+ * with; one this build cannot read is dropped, and the comment kept.
+ */
+function readMock(comment: Comment): Comment {
+  const mock = (comment.context as { mock?: unknown } | undefined)?.mock;
+  if (mock === undefined) return comment;
+  try {
+    return { ...comment, context: { ...comment.context, mock: parseRecipe(mock) } };
+  } catch {
+    const context: { mock?: unknown } & CommentContext = { ...comment.context };
+    delete context.mock;
+    return { ...comment, context };
+  }
 }
 
 function reduceAnchor(anchor: CommentAnchor, reduced: readonly Reduction[]): CommentAnchor {
@@ -337,7 +362,7 @@ function row(comment: Comment, number: number, shape: RowShape): string {
     where(comment.anchor),
     cell(comment.body),
     ...(shape.withStatus ? [STATUS_WORDS[comment.status]] : []),
-    `${comment.context.viewportWidth}×${comment.context.viewportHeight}`,
+    `${comment.context.viewportWidth}×${comment.context.viewportHeight}${comment.context.mock ? " · mocked" : ""}`,
     ...(shape.shot === undefined ? [] : [shape.shot ? `[view](${shape.shot})` : ""]),
   ];
   return `| ${cells.join(" | ")} |`;

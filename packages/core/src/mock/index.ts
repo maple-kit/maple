@@ -6,6 +6,7 @@
  * `@maple-kit/mock`, which a host installs only when it mocks.
  */
 
+export { activeRecipe, MOCK_HANDLE_KEY } from "./active.js";
 export { PLAN_FLOOR, PLAN_TIE, readPlan } from "./reading.js";
 
 export type { MockSuggestion, PlanReading } from "./reading.js";

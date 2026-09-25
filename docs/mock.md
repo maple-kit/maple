@@ -33,7 +33,7 @@ entry before its first request, and a host that does not mock should not carry
 it. A host that only mocks installs `@maple-kit/mock` and never loads the review
 overlay.
 
-**The recipe type is in core** because the comment fence will carry it, and the
+**The recipe type is in core** because the comment fence carries it, and the
 fence is core's. The writer and the reader of a format share one validator and
 ship in one release, which is the lesson of a reader pinned to an older core
 that read a newer format and passed.
@@ -484,6 +484,30 @@ rest, since a mocked answer is never recorded.
 page's URL with the recipe in `?maple-mock=`, and Copy recipe writes the JSON.
 `RouteOptions.store` is optional for such a host, and the comment endpoints
 answer 404 without one.
+
+## A comment remembers the mock
+
+A comment written while a mock is on stores the recipe as `context.mock`: every
+call it named and the state it was put in, the route pattern, and the sentence
+behind it. The recipe, not the mocked bodies: `error`, `forbidden`, `loading`
+and `empty` replay identically, while `one` and `many` reshape whatever the
+server answers at replay time. Bodies would cost the fence space and could put
+a page's real data in a public pull-request comment.
+
+- **The page says what is in force.** `installMock` leaves `current()` on its
+  handle, the recipe when it applies on the page's route, and core's
+  `activeRecipe()` reads it by `MOCK_HANDLE_KEY` without importing the
+  interceptor. `captureContext` records it with the viewport and the scheme.
+- **The fence reads it through `parseRecipe`.** A recipe a build cannot read is
+  dropped from the comment rather than failing the ledger; the comment stays.
+- **It is the first detail shed** when the fence is over budget, before the
+  quote's context: a replay is worth less than the words that locate a
+  comment. Nothing is shed where no comment carries a recipe.
+- **The ledger row says `mocked`** beside the viewport, so a person reading the
+  pull request knows the page looked unlike the preview does now.
+- **`maple-action` reads the fence through core's `githubStore`**, keeps
+  fields it does not know, and the fence stays version 1: the field is
+  additive. It moves to the core that writes it in the same release.
 
 ## What is not done
 

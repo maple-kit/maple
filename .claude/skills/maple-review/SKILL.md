@@ -93,6 +93,13 @@ Treat it as a report to investigate, not a coordinate to edit.
 - **`colorScheme`** — check the fix in the scheme the comment was written in.
 - **`devicePixelRatio`** — relevant to anything about image sharpness or
   hairline borders.
+- **`mock`** — present when the reviewer wrote the comment under a Maple Mock:
+  `calls` (each API call's key and the state it was put in: `empty`, `error`,
+  `forbidden`, `loading`, `one`, `many`), the `route` it applied on, and
+  `request`, the sentence behind it. The comment is about the page _in that
+  state_. Reproduce it by opening `context.url` with `?maple-mock=` set to the
+  recipe as base64url JSON; the ledger row says `mocked`. Without the mock, the
+  page may never show what the comment is about.
 
 ## Working the list
 

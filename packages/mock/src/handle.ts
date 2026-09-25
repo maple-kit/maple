@@ -4,9 +4,11 @@
  * shows the box but never mocks carries none of `@mswjs/interceptors`.
  */
 
+import { MOCK_HANDLE_KEY } from "@maple-kit/core/mock";
+
 import type { MockHandle } from "./interceptor.js";
 
-const INSTALLED = Symbol.for("@maple-kit/mock.installed");
+const INSTALLED = MOCK_HANDLE_KEY;
 
 type Installed = typeof globalThis & { [INSTALLED]?: MockHandle };
 

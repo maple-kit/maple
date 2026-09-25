@@ -147,3 +147,23 @@ describe("installMock, in a real browser", () => {
     expect(globalThis.fetch).toBe(stub);
   });
 });
+
+describe("the recipe a comment records", () => {
+  it("is the recipe when it applies on this route, and nothing on another", () => {
+    const here = pathPattern(location.pathname);
+    const scoped = { ...recipe(["rest:GET /api/me", "empty"]), route: here };
+    expect(install(scoped).current?.()).toEqual(scoped);
+    handle?.dispose();
+
+    const elsewhere = { ...recipe(["rest:GET /api/me", "empty"]), route: "/somewhere-else" };
+    expect(install(elsewhere).current?.()).toBeUndefined();
+    handle?.dispose();
+
+    const everywhere = recipe(["rest:GET /api/me", "empty"]);
+    expect(install(everywhere).current?.()).toEqual(everywhere);
+  });
+
+  it("is nothing with no mock on", () => {
+    expect(install().current?.()).toBeUndefined();
+  });
+});

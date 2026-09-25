@@ -7,7 +7,10 @@
  * complaints without reopening anything.
  */
 
+import { activeRecipe } from "../mock/active.js";
+
 import type { Detail } from "../client/types.js";
+import type { Recipe } from "../mock/recipe.js";
 import type { CommentContext, RegionContext } from "../types.js";
 
 /**
@@ -43,6 +46,8 @@ export interface PageContext {
   readonly regions: readonly RegionContext[];
   /** Whatever the application's own hook returned. */
   readonly layout?: Readonly<Record<string, unknown>>;
+  /** The mock in force on the page, when `@maple-kit/mock` put one on. */
+  readonly mock?: Recipe;
   /** ISO 8601, UTC. */
   readonly capturedAt: string;
 }
@@ -65,6 +70,7 @@ const MINIMUM_REGION_WIDTH = 24;
 export function captureContext(options: CaptureOptions = {}): PageContext {
   const breakpoint = firstMatching(options.breakpoints);
   const layout = options.layout?.();
+  const mock = activeRecipe();
 
   return {
     url: location.href,
@@ -76,6 +82,7 @@ export function captureContext(options: CaptureOptions = {}): PageContext {
     reducedMotion: matches("(prefers-reduced-motion: reduce)"),
     regions: regions(),
     ...(layout === undefined ? {} : { layout }),
+    ...(mock === undefined ? {} : { mock }),
     capturedAt: new Date().toISOString(),
   };
 }
@@ -96,6 +103,7 @@ export function toCommentContext(page: PageContext): CommentContext {
     locale: page.locale,
     ...(page.breakpoint === undefined ? {} : { breakpoint: page.breakpoint }),
     ...(page.regions.length === 0 ? {} : { regions: page.regions }),
+    ...(page.mock === undefined ? {} : { mock: page.mock }),
   };
 }
 

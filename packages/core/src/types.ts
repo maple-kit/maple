@@ -6,6 +6,8 @@
  * breaking change for every connector, so fields are added, never repurposed.
  */
 
+import type { Recipe } from "./mock/recipe.js";
+
 /** A comment's position in the review lifecycle. */
 export type CommentStatus = "open" | "resolved" | "needs_reverify" | "orphaned";
 
@@ -139,6 +141,11 @@ export interface CommentContext {
   readonly breakpoint?: string;
   /** Regions open at capture time, so "the sidebar was open" survives storage. */
   readonly regions?: readonly RegionContext[];
+  /**
+   * The mock in force when it was written: which calls, in which state, and
+   * the sentence behind it. The recipe only, never a mocked response.
+   */
+  readonly mock?: Recipe;
 }
 
 /** The person who wrote a comment, as far as the identity connector could tell. */
