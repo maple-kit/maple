@@ -15,6 +15,20 @@ import type { MockPlan, MockPlanState, PlannedCall } from "./types.js";
  */
 export const MOCK_PLAN_STATES: readonly MockPlanState[] = [...MOCK_STATES, "none"];
 
+/**
+ * What each state means, in the words a model is asked to judge against. It
+ * lives beside the vocabulary so two providers cannot read `empty` two ways.
+ */
+export const MOCK_PLAN_STATE_DESCRIPTIONS: Readonly<Record<MockPlanState, string>> = {
+  empty: "The data exists but has nothing in it: no items, no results, a first visit.",
+  error: "Loading the data fails: the server errors, is down, or answers with a failure.",
+  forbidden: "The reviewer may not see the data: no permission, no access, a 403.",
+  loading: "The data has not arrived yet: a spinner, a skeleton, a slow answer.",
+  one: "Exactly one item: a single result, a lone entry.",
+  many: "A great many items: a long list, pagination, overflow, hundreds of rows.",
+  none: "The request names no state the data can be in, or not yet: a style, copy or layout change.",
+};
+
 /** A plan's state and its spread, without the calls. */
 export type StateGuess = Pick<MockPlan, "confidence" | "distribution" | "state">;
 

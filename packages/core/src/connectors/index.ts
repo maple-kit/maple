@@ -25,7 +25,12 @@ export type { PullCache, PullLookup } from "./github-pull.js";
 export { githubStore } from "./github.js";
 export type { GitHubStoreOptions } from "./github.js";
 export { keywordClassifier } from "./keyword.js";
-export { MOCK_PLAN_STATES, plannedCall, stateFromWeights } from "./plan.js";
+export {
+  MOCK_PLAN_STATE_DESCRIPTIONS,
+  MOCK_PLAN_STATES,
+  plannedCall,
+  stateFromWeights,
+} from "./plan.js";
 export type { StateGuess } from "./plan.js";
 export type {
   AnyConnector,

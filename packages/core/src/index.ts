@@ -46,6 +46,7 @@ export {
   kindFromWeights,
   MissingCapabilityError,
   missingRequirements,
+  MOCK_PLAN_STATE_DESCRIPTIONS,
   MOCK_PLAN_STATES,
   plannedCall,
   REQUIRED_METHODS,
