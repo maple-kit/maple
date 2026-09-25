@@ -80,7 +80,7 @@ function openapi(): unknown {
   return JSON.parse(readFileSync(here("openapi.json"), "utf8"));
 }
 
-export default defineConfig(async ({ command, mode }) => {
+export default defineConfig(async ({ command, isPreview, mode }) => {
   // Read here, in the config, which runs in Node. The empty prefix is what
   // makes `loadEnv` return unprefixed names, and only `VITE_` ones reach
   // client code, so the key cannot land in the bundle. Absent, `/assist`
@@ -90,11 +90,10 @@ export default defineConfig(async ({ command, mode }) => {
   const model = env["MAPLE_AI_MODEL"];
   const classifier = apiKey ? jevClassifier({ apiKey, ...(model ? { model } : {}) }) : undefined;
 
-  // The tagger is on for a preview build and off everywhere else, so a
-  // production build is correct even when the flag is forgotten. `vite dev`
-  // is a preview of a preview, so it tags too — without the attributes there
-  // is nothing on the page for a mark to anchor to.
-  const preview = process.env["MAPLE_PREVIEW"] === "1" || command === "serve";
+  // On for a preview build and off everywhere else, so a production build is
+  // correct even when the flag is forgotten. `vite dev` is a preview of a
+  // preview. `vite preview` runs as "serve" too, and is one only when its build was.
+  const preview = process.env["MAPLE_PREVIEW"] === "1" || (command === "serve" && !isPreview);
 
   const { media, store } = await seeded(BRANCH);
 
