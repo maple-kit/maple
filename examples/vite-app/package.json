@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
+    "predev": "pnpm --filter @maple-kit/core build && pnpm --filter @maple-kit/classifier build",
     "dev": "vite",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json",
