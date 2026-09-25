@@ -72,6 +72,8 @@ export interface MockHandle {
   current?(): Recipe | undefined;
   /** Each call a write sent to the server while the recipe's `as` was on. */
   readonly writes?: WriteLog;
+  /** The host's identity rules, read once, when the page has any. */
+  readonly identity?: () => Promise<IdentityRules | undefined>;
   /** Restores `fetch` and `XMLHttpRequest`. */
   dispose(): void;
 }
@@ -93,7 +95,8 @@ export function installMock(options: InstallOptions = {}): MockHandle {
   const ignored = (url: string) => ignores(options, new URL(url));
   const shape = shapeLookup(options, forward);
   const route = () => pathPattern(pageUrl()?.pathname ?? "/");
-  const identity = recipe?.as === undefined ? undefined : identityRules(options, forward, recipe);
+  const rules = identityLookup(options, forward);
+  const identity = recipe?.as === undefined ? undefined : checkedRules(options, rules, recipe);
   const writes = createWriteLog();
   const onWrite = (key: string) => {
     writes.add(key);
@@ -126,14 +129,14 @@ export function installMock(options: InstallOptions = {}): MockHandle {
           controller.respondWith(await answerFlags(request, source, named, forward));
         return;
       }
-      const rules = await identity;
+      const applied = await identity;
       const response = await resolve(request, recipe, inventory, {
         codecs,
         forward,
         route: route(),
         onWrite,
         ...(shape === undefined ? {} : { shape }),
-        ...(rules === undefined ? {} : { identity: rules }),
+        ...(applied === undefined ? {} : { identity: applied }),
       });
       if (response !== undefined) controller.respondWith(response);
     }),
@@ -170,6 +173,7 @@ export function installMock(options: InstallOptions = {}): MockHandle {
     ...(plan === undefined ? {} : { plan }),
     current: () => (recipe?.route === undefined || recipe.route === route() ? recipe : undefined),
     writes,
+    ...(rules === undefined ? {} : { identity: rules }),
     dispose() {
       interceptor.dispose();
       unhold();
@@ -223,20 +227,28 @@ function ignores(options: InstallOptions, url: URL): boolean {
   return options.ignore?.(url) ?? false;
 }
 
-/**
- * The rules `recipe.as` is applied through, read once. A recipe they cannot
- * apply is said: a page showing the real reviewer looks like a working `as`.
- */
-async function identityRules(
+/** The host's rules, from the options or read once from the route. */
+function identityLookup(
   options: InstallOptions,
   forward: typeof fetch,
+): (() => Promise<IdentityRules | undefined>) | undefined {
+  const { identity, route } = options;
+  if (identity !== undefined) return () => Promise.resolve(identity);
+  if (route === undefined) return undefined;
+  let read: Promise<IdentityRules | undefined> | undefined;
+  return () => (read ??= routeIdentity({ basePath: route, fetch: forward }));
+}
+
+/**
+ * The rules `recipe.as` is applied through. A recipe they cannot apply is
+ * said: a page showing the real reviewer looks like a working `as`.
+ */
+async function checkedRules(
+  options: InstallOptions,
+  lookup: (() => Promise<IdentityRules | undefined>) | undefined,
   recipe: Recipe,
 ): Promise<IdentityRules | undefined> {
-  const rules =
-    options.identity ??
-    (options.route === undefined
-      ? undefined
-      : await routeIdentity({ basePath: options.route, fetch: forward }));
+  const rules = await lookup?.();
   const role = recipe.as?.role;
   if (rules === undefined) {
     options.logger?.warn(

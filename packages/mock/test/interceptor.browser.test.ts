@@ -222,6 +222,24 @@ describe("the recipe a comment records", () => {
     expect(install().current?.()).toBeUndefined();
   });
 
+  it("offers the host's identity rules to the box without an `as`, reading the route once", async () => {
+    let asked = 0;
+    const routeFetch: typeof fetch = (input) => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (url.endsWith("/mock/identity")) asked += 1;
+      return Promise.resolve(Response.json({ identity: RULES }));
+    };
+    const mocked = install(undefined, { route: "/api/maple", fetch: routeFetch });
+
+    expect(await mocked.identity?.()).toEqual(RULES);
+    expect(await mocked.identity?.()).toEqual(RULES);
+    expect(asked).toBe(1);
+  });
+
+  it("offers no identity where the page names neither rules nor a route", () => {
+    expect(install().identity).toBeUndefined();
+  });
+
   it("shows the page who the recipe says, refuses what that identity may not do, and says when a write reaches the server", async () => {
     const sink = memorySink();
     sessionStorage.setItem(

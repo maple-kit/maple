@@ -10,15 +10,19 @@
 import { opensMock, watchEscape, watchTheme } from "@maple-kit/core/client";
 import { linkRecipe, MOCK_STATES, readPlan, RECIPE_VERSION } from "@maple-kit/core/mock";
 
+import { flagType } from "../flag-source.js";
+import { seenFlags } from "../flags.js";
 import { installedMock } from "../handle.js";
 import { forgetRecipe, keepRecipeCookie, saveRecipe } from "../link.js";
 import { pathPattern } from "../rest.js";
 import { PlanUnavailableError } from "../schema/plan.js";
 import { PLAN_DEBOUNCE_MS, PLAN_MIN_LENGTH, planCall } from "./plan.js";
 
+import type { SeenFlag } from "../flags.js";
 import type { MockHandle } from "../interceptor.js";
 import type { Scheme, ThemeView } from "@maple-kit/core/client";
 import type { MockSuggestion, PlanReading } from "@maple-kit/core/mock";
+import type { FlagValue, IdentityRules, MockIdentity } from "@maple-kit/core/mock";
 import type { MockCall, MockState, Recipe, ShapeSource } from "@maple-kit/core/mock";
 
 /** What the client attaches to. `window` satisfies it. */
@@ -55,6 +59,19 @@ export interface MockCallRow {
   readonly source?: ShapeSource;
 }
 
+/** One flag the box offers: its real value, and what the draft sets it to. */
+export interface MockFlagRow {
+  readonly key: string;
+  readonly type: SeenFlag["type"];
+  /** Its real value, when the page evaluated it. */
+  readonly value?: FlagValue;
+  readonly variants?: readonly FlagValue[];
+  /** What the draft answers it with; absent, it keeps its real value. */
+  readonly set?: FlagValue;
+  /** False for a flag the draft names that this page has not evaluated. */
+  readonly seen: boolean;
+}
+
 /** Everything a surface draws. Replaced whole on a change. */
 export interface MockClientState {
   /** False when no transport is installed: a surface draws nothing. */
@@ -80,6 +97,16 @@ export interface MockClientState {
   readonly active: Recipe | undefined;
   /** True when the draft differs from what is in force. */
   readonly changed: boolean;
+  /** The flags the page evaluated, then any the draft names that it did not. */
+  readonly flags: readonly MockFlagRow[];
+  /** What Apply would answer flags with. Starts as the active recipe's. */
+  readonly draftFlags: Readonly<Record<string, FlagValue>>;
+  /** The host's rules for who the page is told the reviewer is, once read. */
+  readonly identity: IdentityRules | undefined;
+  /** Who Apply would tell the page the reviewer is. Starts as the active recipe's. */
+  readonly draftAs: MockIdentity | undefined;
+  /** How many writes reached the server, which acts as the reviewer, under `as`. */
+  readonly writes: number;
   /** What a surface of its own is drawn in: the opposite of the page. */
   readonly scheme: Scheme;
 }
@@ -99,6 +126,13 @@ export interface MockClient {
   suggest(index: number): void;
   /** Puts a call in a state, or takes it out of the draft when undefined. */
   choose(key: string, state: MockState | undefined): void;
+  /** Answers a flag with `value`, or lets it keep its real value when undefined. */
+  setFlag(key: string, value: FlagValue | undefined): void;
+  /** Shows the page this role, or its real one when undefined. */
+  setRole(role: string | undefined): void;
+  /** Grants or takes away a permission, or leaves it as it really is when undefined. */
+  setPermission(name: string, granted: boolean | undefined): void;
+  /** Empties the draft: no calls, no flags, no identity. */
   clear(): void;
   /** The draft as a recipe for this route, or undefined when it names nothing. */
   recipe(): Recipe | undefined;
@@ -148,7 +182,12 @@ export function createMockClient(options: MockClientOptions = {}): MockClient {
     sources: new Map(),
     state,
   };
-  runtime.state = derive(runtime, { draft: activeOn(runtime, routeOf(view))?.calls ?? [] });
+  const active = activeOn(runtime, routeOf(view));
+  runtime.state = derive(runtime, {
+    draft: active?.calls ?? [],
+    draftFlags: active?.flags ?? {},
+    draftAs: active?.as,
+  });
 
   return {
     getState: () => runtime.state,
@@ -172,7 +211,13 @@ export function createMockClient(options: MockClientOptions = {}): MockClient {
     },
     suggest: (index) => suggest(runtime, index),
     choose: (key, state) => patch(runtime, { draft: chosen(runtime.state.draft, key, state) }),
-    clear: () => patch(runtime, { draft: [], request: undefined }),
+    setFlag: (key, value) =>
+      patch(runtime, { draftFlags: withEntry(runtime.state.draftFlags, key, value) }),
+    setRole: (role) => patch(runtime, { draftAs: withRole(runtime.state.draftAs, role) }),
+    setPermission: (name, granted) =>
+      patch(runtime, { draftAs: withPermission(runtime.state.draftAs, name, granted) }),
+    clear: () =>
+      patch(runtime, { draft: [], draftFlags: {}, draftAs: undefined, request: undefined }),
     recipe: () => recipeOf(runtime.state),
     link: () => linkRecipe(hrefOf(runtime), recipeOf(runtime.state)),
     apply: () => apply(runtime),
@@ -196,6 +241,11 @@ function initial(open: boolean): MockClientState {
     draft: [],
     active: undefined,
     changed: false,
+    flags: [],
+    draftFlags: {},
+    identity: undefined,
+    draftAs: undefined,
+    writes: 0,
     scheme: "light",
   };
 }
@@ -211,7 +261,9 @@ function derive(runtime: Runtime, next: Partial<MockClientState>): MockClientSta
     route,
     active,
     calls: rows(runtime, route, merged),
-    changed: !sameCalls(merged.draft, active?.calls ?? []),
+    flags: flagRows(merged.draftFlags),
+    writes: runtime.handle?.writes?.list().length ?? 0,
+    changed: changed(merged, active),
   };
 }
 
@@ -228,7 +280,13 @@ function start(runtime: Runtime): void {
   const abort = new AbortController();
   const signal = abort.signal;
   const theme = watchTheme({ view, onChange: (next) => patch(runtime, { scheme: next.overlay }) });
-  const unsubscribe = handle?.inventory.subscribe(() => patch(runtime, {})) ?? (() => undefined);
+  const refresh = () => patch(runtime, {});
+  const unsubscribe = [
+    handle?.inventory.subscribe(refresh),
+    handle === undefined ? undefined : seenFlags().subscribe(refresh),
+    handle?.writes?.subscribe(refresh),
+  ];
+  void handle?.identity?.().then((identity) => identity && patch(runtime, { identity }));
 
   view.addEventListener("popstate", () => patch(runtime, {}), { signal });
   if (handle !== undefined && options.shortcut !== false) {
@@ -239,7 +297,7 @@ function start(runtime: Runtime): void {
   runtime.stop = () => {
     abort.abort();
     theme.stop();
-    unsubscribe();
+    for (const stop of unsubscribe) stop?.();
   };
   patch(runtime, { scheme: theme.current().overlay });
 }
@@ -359,6 +417,69 @@ function chosen(draft: readonly MockCall[], key: string, state: MockState | unde
   return draft.map((call, at) => (at === index ? { key, state } : call));
 }
 
+/** The flags evaluated, most recent first, then those only the draft names. */
+function flagRows(draft: Readonly<Record<string, FlagValue>>): MockFlagRow[] {
+  const seen = seenFlags().list().toReversed();
+  const named = Object.entries(draft).filter(([key]) => !seen.some((flag) => flag.key === key));
+  return [
+    ...seen.map((flag): MockFlagRow => {
+      const set = draft[flag.key];
+      return { ...flag, seen: true, ...(set === undefined ? {} : { set }) };
+    }),
+    ...named.map(([key, set]): MockFlagRow => ({ key, type: flagType(set), set, seen: false })),
+  ];
+}
+
+function withEntry<V>(record: Readonly<Record<string, V>>, key: string, value: V | undefined) {
+  const next = Object.fromEntries(Object.entries(record).filter(([name]) => name !== key));
+  return value === undefined ? next : { ...next, [key]: value };
+}
+
+function withRole(as: MockIdentity | undefined, role: string | undefined) {
+  const permissions = as?.permissions;
+  return layer({
+    ...(role === undefined ? {} : { role }),
+    ...(permissions === undefined ? {} : { permissions }),
+  });
+}
+
+function withPermission(as: MockIdentity | undefined, name: string, granted: boolean | undefined) {
+  const permissions = withEntry(as?.permissions ?? {}, name, granted);
+  const role = as?.role;
+  return layer({
+    ...(role === undefined ? {} : { role }),
+    ...(Object.keys(permissions).length === 0 ? {} : { permissions }),
+  });
+}
+
+/** An identity that says nothing is no identity at all. */
+function layer(as: MockIdentity): MockIdentity | undefined {
+  return as.role === undefined && as.permissions === undefined ? undefined : as;
+}
+
+function changed(state: MockClientState, active: Recipe | undefined): boolean {
+  return (
+    !sameCalls(state.draft, active?.calls ?? []) ||
+    !sameJson(state.draftFlags, active?.flags ?? {}) ||
+    !sameJson(state.draftAs ?? {}, active?.as ?? {})
+  );
+}
+
+/** Equal as JSON, whatever order the keys were set in. */
+function sameJson(a: unknown, b: unknown): boolean {
+  return JSON.stringify(sorted(a)) === JSON.stringify(sorted(b));
+}
+
+function sorted(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(sorted);
+  if (value === null || typeof value !== "object") return value;
+  return Object.fromEntries(
+    Object.entries(value)
+      .toSorted(([a], [b]) => a.localeCompare(b))
+      .map(([key, inner]) => [key, sorted(inner)]),
+  );
+}
+
 function sameCalls(a: readonly MockCall[], b: readonly MockCall[]): boolean {
   if (a.length !== b.length) return false;
   const byKey = new Map(b.map((call) => [call.key, call.state]));
@@ -366,9 +487,17 @@ function sameCalls(a: readonly MockCall[], b: readonly MockCall[]): boolean {
 }
 
 function recipeOf(state: MockClientState): Recipe | undefined {
-  if (state.draft.length === 0) return undefined;
-  const { draft: calls, request, route } = state;
-  return { version: RECIPE_VERSION, calls, route, ...(request === undefined ? {} : { request }) };
+  const { draft: calls, draftAs: as, draftFlags: flags, request, route } = state;
+  const flagged = Object.keys(flags).length > 0;
+  if (calls.length === 0 && !flagged && as === undefined) return undefined;
+  return {
+    version: RECIPE_VERSION,
+    calls,
+    ...(flagged ? { flags } : {}),
+    ...(as === undefined ? {} : { as }),
+    route,
+    ...(request === undefined ? {} : { request }),
+  };
 }
 
 function apply(runtime: Runtime): void {
@@ -389,7 +518,7 @@ function turnOff(runtime: Runtime): void {
 
 async function copyDraft(runtime: Runtime, write: (recipe: Recipe) => string): Promise<void> {
   const recipe = recipeOf(runtime.state);
-  if (recipe === undefined) throw new MockClipboardError("The draft names no call to copy.");
+  if (recipe === undefined) throw new MockClipboardError("The draft is empty: nothing to copy.");
   const clipboard = runtime.view?.navigator?.clipboard;
   if (clipboard === undefined) throw new MockClipboardError("This page offers no clipboard.");
   await clipboard.writeText(write(recipe));

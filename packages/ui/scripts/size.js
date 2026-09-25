@@ -42,10 +42,19 @@ const BUDGETS = [
   { name: "picker, on top", entries: ["picker/index.js"], max: 3 * 1024 },
   { name: "notice, on top", entries: ["notice/index.js"], max: 1024 },
   { name: "the mock box, on top", entries: ["mock/index.js"], max: MOCK_MAX },
+  // Loaded by the box only on a page with evaluated flags or identity rules.
+  {
+    name: "the box's flags and identity, loaded later",
+    entries: ["mock/layers.js"],
+    max: 2 * 1024,
+  },
   { name: "the default composition, on top", entries: ["maple.js"], max: 1024 },
 ];
 
-const RELATIVE_IMPORT = /(?:from|import)[\s(]+["'](\.[^"']+)["']/g;
+// Static imports only: a dynamic `import("./x.js")` is a chunk loaded later,
+// weighed as an entry of its own rather than charged to whoever loads it.
+const RELATIVE_IMPORT = /(?:from|import)\s+["'](\.[^"']+)["']/g;
+const LAZY_IMPORT = /import\(\s*["'](\.[^"']+)["']\s*\)/g;
 const PACKAGE_IMPORT = /(?:from|import)[\s(]+["']([^."'][^"']*)["']/g;
 
 /**
@@ -100,6 +109,17 @@ function packagesOf(ids) {
 }
 
 let failed = false;
+
+// Every lazy chunk must be one a budget names, or it would be weighed nowhere.
+const budgeted = new Set(BUDGETS.flatMap((budget) => budget.entries));
+for (const id of graph(BUDGETS.flatMap((budget) => budget.entries))) {
+  for (const [, specifier] of read(id).matchAll(LAZY_IMPORT)) {
+    const lazy = normalize(join(dirname(id), specifier));
+    if (budgeted.has(lazy)) continue;
+    failed = true;
+    process.stderr.write(`${id} loads ${lazy} later, and no budget weighs it\n`);
+  }
+}
 
 for (const rule of FORBIDDEN) {
   const modules = graph([rule.entry]);

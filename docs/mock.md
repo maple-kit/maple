@@ -600,6 +600,23 @@ keeps it a filter.
 A call the recipe names that this route never recorded is listed after the
 rest, since a mocked answer is never recorded.
 
+**Flags and who the page is shown as are a second panel**, under the calls:
+a role picker and a Granted / Taken away pair per permission, from the
+host's identity rules (`handle.identity()`, read once from
+`/mock/identity`), and a toggle per flag the page evaluated (`seenFlags()`):
+On / Off for a boolean, its variants where the source lists them, and its
+real value, read-only, otherwise. Choosing the chosen option puts it back to
+real. The words are the host's and the page's; the box has no role list.
+
+- **It is a lazy chunk.** `mock/layers.js` is loaded by a dynamic import only
+  when the page has identity rules, has evaluated a flag, or has a recipe with
+  either layer, so the box alone stays under 7 KB. `scripts/size.js` weighs a
+  dynamic import as its own entry (2 KB), and fails on one no budget names.
+- **The banner says what `as` cannot do**, exactly: "Showing as barista. The
+  server still acts as you." It counts the flags set, and every write that
+  reached the server under `as`: "2 writes reached the server as you."
+- **A recipe can name no call.** Flags or `as` alone apply, copy and link.
+
 **Without a store, the box shares a mock by copying**: Copy link writes the
 page's URL with the recipe in `?maple-mock=`, and Copy recipe writes the JSON.
 `RouteOptions.store` is optional for such a host, and the comment endpoints
@@ -671,10 +688,10 @@ OpenFeature.setProvider(withMockFlags(provider, { recipe: () => requestRecipe(re
 
 ## What is not done
 
-- Flags in the box, and a vendor other than LaunchDarkly on the wire.
-- `as` in the box and the banner, and in `mockHandlers`, which takes no
-  rules. On the server `requestRecipe` gives the host the recipe's `as`, and
-  applying it there is the host's code.
+- A vendor other than LaunchDarkly on the wire, and a flag's value typed in
+  the box: a string or number flag with no variants listed is read-only.
+- `as` in `mockHandlers`, which takes no rules. On the server `requestRecipe`
+  gives the host the recipe's `as`, and applying it there is the host's code.
 
 - A recorded error body shape. REST `error` answers `{ message }`, and tRPC
   answers its default error shape.

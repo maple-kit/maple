@@ -108,19 +108,39 @@ interface SurfaceProps {
   readonly forwarded: ForwardedRef<HTMLDivElement>;
 }
 
+type LayerChunk = typeof import("./layers.js");
+
 function MockSurface(props: SurfaceProps): ReactElement {
   const { client, state } = props;
+  const layers = useLayers(state);
   return createElement(
     "div",
     { className: "mk-mock-surface" },
-    state.active === undefined ? null : createElement(Banner, { key: "banner", client, state }),
-    state.open ? createElement(Box, { key: "box", ...props }) : null,
+    state.active === undefined
+      ? null
+      : createElement(Banner, { key: "banner", client, state, layers }),
+    state.open ? createElement(Box, { key: "box", ...props, layers }) : null,
   );
 }
 
+/** The flags and identity chunk, loaded once something on the page needs it. */
+function useLayers(state: MockClientState): LayerChunk | undefined {
+  const [chunk, setChunk] = useState<LayerChunk>();
+  const { active } = state;
+  const needed = !!(state.identity ?? state.flags[0] ?? active?.as ?? active?.flags);
+  useEffect(() => {
+    if (needed) import("./layers.js").then(setChunk, () => undefined);
+  }, [needed]);
+  return chunk;
+}
+
 /** Always drawn while a mock is on. It has no dismiss, only Turn off. */
-function Banner(props: { state: MockClientState; client: MockClient }): ReactElement {
-  const { client, state } = props;
+function Banner(props: {
+  state: MockClientState;
+  client: MockClient;
+  layers: LayerChunk | undefined;
+}): ReactElement {
+  const { client, layers, state } = props;
   return createElement(
     "div",
     { className: "mk-mock-banner mk-live", role: "status" },
@@ -129,13 +149,14 @@ function Banner(props: { state: MockClientState; client: MockClient }): ReactEle
       { className: "mk-mock-banner-said" },
       bannerSentence(state.active!.calls),
     ),
+    layers && createElement(layers.LayerBanner, { state }),
     state.open ? null : button(MOCK_COPY.edit, () => client.setOpen(true)),
     button(MOCK_COPY.turnOff, () => client.turnOff()),
   );
 }
 
-function Box(props: SurfaceProps): ReactElement {
-  const { className, client, forwarded, state } = props;
+function Box(props: SurfaceProps & { layers: LayerChunk | undefined }): ReactElement {
+  const { className, client, forwarded, layers, state } = props;
   const field = useRef<HTMLInputElement>(null);
   useEffect(() => field.current?.focus(), []);
 
@@ -170,6 +191,7 @@ function Box(props: SurfaceProps): ReactElement {
       createElement("span", { className: "mk-mono" }, state.route),
     ),
     calls(state, client),
+    layers && createElement(layers.Layers, { state, client }),
     createElement(Foot, { client, state }),
   );
 }
@@ -267,7 +289,7 @@ interface Copied {
 function Foot(props: { state: MockClientState; client: MockClient }): ReactElement {
   const { client, state } = props;
   const [copied, setCopied] = useState<Copied>();
-  const empty = state.draft.length === 0;
+  const empty = client.recipe() === undefined;
 
   useEffect(() => {
     if (copied === undefined) return;

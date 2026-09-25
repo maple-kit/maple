@@ -1,5 +1,5 @@
 import { decodeRecipe } from "@maple-kit/core/mock";
-import { createInventory, createMockClient, installMock } from "@maple-kit/mock";
+import { createInventory, createMockClient, installMock, seenFlags } from "@maple-kit/mock";
 import { createElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
@@ -10,7 +10,7 @@ import { MapleMock } from "../src/mock/index.js";
 import { offlineFetch } from "./offline.js";
 
 import type { MockPlan, MockPlanState } from "@maple-kit/core/connectors";
-import type { Recipe } from "@maple-kit/core/mock";
+import type { IdentityRules, Recipe } from "@maple-kit/core/mock";
 import type { MockClient, MockHandle, MockView, PlanLookup } from "@maple-kit/mock";
 
 const LIST = "rest:GET /api/reviews";
@@ -404,6 +404,70 @@ describe("the box, reading a sentence", () => {
     expect(find(".mk-mock-calls")?.querySelectorAll(".mk-mock-call")).toHaveLength(2);
     expect(find<HTMLInputElement>(".mk-mock-field")?.placeholder).toBe(
       "Say a state, like “no items yet”",
+    );
+  });
+});
+
+describe("flags and who the page is told the reviewer is", () => {
+  const RULES: IdentityRules = {
+    call: USER,
+    role: { path: "role", values: ["owner", "barista"] },
+    permissions: { path: "grants", values: ["roasts.delete"] },
+    requires: {},
+  };
+
+  function layered(recipe?: Recipe): MockHandle {
+    return { ...handle(recipe), identity: () => Promise.resolve(RULES) };
+  }
+
+  it("loads no panel on a page with no rules and no flags", async () => {
+    const client = track(
+      createMockClient({ handle: handle(), view: fakePage().view, defaultOpen: true }),
+    );
+    client.start();
+    await render(createElement(MapleMock, { client }));
+    await vi.waitFor(() => expect(find(".mk-mock")).not.toBeNull());
+    expect(find(".mk-mock-layers")).toBeNull();
+  });
+
+  it("offers the host's roles, permissions and the page's flags, and applies them", async () => {
+    seenFlags().record({ key: "new-roaster", type: "boolean", value: false });
+    const { assign, view } = fakePage();
+    const client = track(createMockClient({ handle: layered(), view, defaultOpen: true }));
+    client.start();
+    await render(createElement(MapleMock, { client }));
+
+    await vi.waitFor(() => expect(find('[role="radiogroup"][aria-label="Role"]')).not.toBeNull());
+    const layers = find<HTMLElement>(".mk-mock-layers");
+    buttonNamed("barista", layers).click();
+    buttonNamed("Taken away", find('[aria-label="roasts.delete"]')).click();
+    buttonNamed("On", find('[aria-label="new-roaster"]')).click();
+    await vi.waitFor(() => expect(buttonNamed("Apply and reload").disabled).toBe(false));
+    buttonNamed("Apply and reload").click();
+
+    const next = new URL(assign.mock.calls[0]?.[0] as string);
+    expect(decodeRecipe(next.searchParams.get("maple-mock") ?? "")).toEqual({
+      version: 2,
+      calls: [],
+      flags: { "new-roaster": true },
+      as: { role: "barista", permissions: { "roasts.delete": false } },
+      route: HERE,
+    });
+  });
+
+  it("says who the page is shown as, that the server still acts as you, and every write", async () => {
+    const active: Recipe = { version: 2, calls: [], as: { role: "barista" }, route: HERE };
+    const writes = { list: () => [LIST, LIST], subscribe: () => () => undefined };
+    const client = track(
+      createMockClient({ handle: { ...layered(active), writes }, view: fakePage().view }),
+    );
+    client.start();
+    await render(createElement(MapleMock, { client }));
+
+    await vi.waitFor(() =>
+      expect(find(".mk-mock-banner")?.textContent).toContain(
+        "Showing as barista. The server still acts as you. 2 writes reached the server as you.",
+      ),
     );
   });
 });
