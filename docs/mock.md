@@ -344,6 +344,26 @@ plan({ request, route, calls: [{ key, summary }] });
 own. `runClassifierContract` checks a plan's shape for any connector that
 defines one.
 
+**The route plans, the page never reaches a model.**
+`RouteOptions.mock.plan` is `{ classifier, cacheSize?, rate? }`, and
+`POST {base}/mock/plan` takes `{ request, route, calls: [{ key, summary }] }`
+and answers `{ plan }`. It is gated as `/mock/schema` is: 404 unless `preview`
+is true, 404 when the classifier does not define `plan`, and 401 to a reviewer
+the identity connector does not resolve. A blank sentence is answered
+`{ plan: null }` without asking anyone. A sentence is at most 500 characters,
+and the calls at most a hundred.
+
+It shares `/assist`'s budget code, not its budget: a cache of 200 plans keyed
+by the whole request, and 40 plans a minute per reviewer. A classifier failure
+is logged and answered 502 with nothing of the cause, since a provider's error
+can name its key.
+
+**The shapes add to each summary.** Where the shape index describes a call,
+the route appends its schema in a line to the page's summary: title,
+description, field names, and a list's item in brackets, two levels deep, so
+`rest:GET /api/roasts` reads `RoastPage: items [id, origin], nextCursor`. Only
+names reach the planner; a value never does.
+
 **The keyword planner** is `keywordClassifier().plan`, the floor the plan eval
 measures against. State words pick the state (`no roasts`, `500`, `skeleton`,
 `hundreds of`), and nothing matched is `none`. Words the sentence shares with
@@ -415,7 +435,7 @@ answer 404 without one.
   answers its default error shape.
 - A delay for `loading`. It holds until the page reloads, and a held call in a
   batch holds the whole batch.
-- The plan's route, its model and its place in the box (#170). The box's
+- The plan's model and its place in the box (#170). The box's
   field filters; it does not read a sentence yet.
 - A second box on the same page. Each claims `m`, and the first to hear it
   opens.

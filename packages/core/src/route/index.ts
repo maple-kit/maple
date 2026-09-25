@@ -16,6 +16,7 @@ export type { MediaResolver, RouteOptions, StoreResolver } from "./handler.js";
 export { MOCK_SCHEMA_KEYS } from "./mock.js";
 
 export type { MockRouteOptions } from "./mock.js";
-
 export { toNodeMiddleware } from "./node.js";
+
 export type { NodeMiddleware } from "./node.js";
+export type { MockPlanAnswer, MockPlanOptions } from "./plan.js";

@@ -9,6 +9,7 @@
 import { createShapeIndex } from "../mock/shape.js";
 
 import type { SchemaDocument, Shape, ShapeIndex } from "../mock/shape.js";
+import type { MockPlanOptions } from "./plan.js";
 
 /** How the route serves shapes. */
 export interface MockRouteOptions {
@@ -19,6 +20,11 @@ export interface MockRouteOptions {
   readonly preview: boolean;
   /** OpenAPI documents, highest rung first, or a function that reads them once. */
   readonly schemas?: readonly SchemaDocument[] | (() => Promise<readonly SchemaDocument[]>);
+  /**
+   * Reads a reviewer's sentence at `/mock/plan`. Absent, or with a classifier
+   * that does not plan, that endpoint answers 404.
+   */
+  readonly plan?: MockPlanOptions;
 }
 
 /** The most keys one request may ask about: the box asks for a route's calls at once. */

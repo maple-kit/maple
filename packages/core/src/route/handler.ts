@@ -15,6 +15,7 @@ import { createAssist } from "./assist.js";
 import { endLink, finishLink, githubState, linkFailure, startLink } from "./auth.js";
 import { gateFor } from "./gate.js";
 import { createMockSchemas, MOCK_SCHEMA_KEYS, shapesFor } from "./mock.js";
+import { createMockPlanner } from "./plan.js";
 
 import type {
   GateConnector,
@@ -37,6 +38,7 @@ import type { Assist, AssistOptions } from "./assist.js";
 import type { GitHubAuthOptions } from "./auth.js";
 import type { GateResolver } from "./gate.js";
 import type { MockRouteOptions, MockSchemas } from "./mock.js";
+import type { MockPlanner } from "./plan.js";
 
 /**
  * Chooses the store for one request. The shape a per-reviewer credential
@@ -90,8 +92,8 @@ export interface RouteOptions {
    */
   readonly requireApproval?: boolean;
   /**
-   * Maple Mock's shapes, served at `/mock/schema` to a preview that asked.
-   * Absent, or with `preview` false, that endpoint answers 404.
+   * Maple Mock's shapes at `/mock/schema`, and its planner at `/mock/plan`,
+   * for a preview that asked. Absent, or with `preview` false, both answer 404.
    */
   readonly mock?: MockRouteOptions;
   /** Defaults to `/api/maple`. */
@@ -122,14 +124,19 @@ interface Mount {
   readonly assist: Assist | undefined;
   /** Undefined when the route serves no shapes. */
   readonly mock: MockSchemas | undefined;
+  /** Undefined when nothing plans: no `mock.plan`, or a classifier without `plan`. */
+  readonly planner: MockPlanner | undefined;
 }
 
 export function createMapleHandler(options: RouteOptions): (request: Request) => Promise<Response> {
   const base = options.basePath ?? DEFAULT_BASE_PATH;
+  const mock = options.mock === undefined ? undefined : createMockSchemas(options.mock);
+  const plan = options.mock?.plan;
   const mount: Mount = {
     options,
     assist: options.assist === undefined ? undefined : createAssist(options.assist),
-    mock: options.mock === undefined ? undefined : createMockSchemas(options.mock),
+    mock,
+    planner: mock && plan ? createMockPlanner(plan, () => mock.index()) : undefined,
   };
 
   return async function handle(request: Request): Promise<Response> {
@@ -154,6 +161,7 @@ async function dispatch(
   const { options } = mount;
   if (route === "/assist") return judge(mount, request);
   if (route === "/mock/schema") return mockSchema(mount, request, url);
+  if (route === "/mock/plan") return mockPlan(mount, request);
   if (route === "/auth/github") return link(options, request);
   if (route === "/media" || route.startsWith("/media/")) return media(options, request, route, url);
   if (route === "/approvals" || route.startsWith("/approvals/")) {
@@ -513,6 +521,23 @@ async function mockSchema(mount: Mount, request: Request, url: URL): Promise<Res
     return json({ error: `Ask for between 1 and ${MOCK_SCHEMA_KEYS} keys` }, 400);
   }
   return json({ shapes: await shapesFor(mock, keys) }, 200);
+}
+
+/**
+ * A sentence, planned. Gated as the shapes are, and counted against the
+ * reviewer's own id, so one person's typing cannot spend another's budget.
+ */
+async function mockPlan(mount: Mount, request: Request): Promise<Response> {
+  const { mock, options, planner } = mount;
+  if (mock === undefined || !mock.preview || planner === undefined) {
+    return json({ error: "Not found" }, 404);
+  }
+
+  const user = await options.identity?.resolveUser(identityRequest(request));
+  if (options.identity !== undefined && user === null) {
+    return json({ error: "Sign in to plan a mock" }, 401);
+  }
+  return planner.respond(request, user?.id ?? "anonymous", options.logger);
 }
 
 /** The identity connector sees headers and a URL, and nothing else. */
