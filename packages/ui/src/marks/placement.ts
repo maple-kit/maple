@@ -10,19 +10,29 @@
 import { kindOf, resolveAnchor } from "@maple-kit/core/anchor";
 
 import type { Comment } from "@maple-kit/core";
-import type { AnchorRegion } from "@maple-kit/core/anchor";
+import type { Anchor, AnchorRegion } from "@maple-kit/core/anchor";
+import type { Draft } from "@maple-kit/core/overlay";
 
-/** A comment the page still has somewhere to put. */
-export interface Placement {
-  readonly comment: Comment;
-  /** The address: its place in the branch's own order, counted from one. */
-  readonly address: number;
+/** Where on the page something is, whether it was published or not. */
+export interface Located {
   readonly element: Element;
   /** The passage itself, when a text rung placed it. */
   readonly range?: Range;
   /** The rectangle, when the comment is on a region rather than an element. */
   readonly region?: AnchorRegion;
   readonly confidence: number;
+}
+
+/** A comment the page still has somewhere to put. */
+export interface Placement extends Located {
+  readonly comment: Comment;
+  /** The address: its place in the branch's own order, counted from one. */
+  readonly address: number;
+}
+
+/** A draft the page still has somewhere to put. No address until it is sent. */
+export interface DraftPlacement extends Located {
+  readonly draft: Draft;
 }
 
 /** The address of every comment, which the list and the export share. */
@@ -44,19 +54,34 @@ export function placements(
 
   for (const comment of comments) {
     if (comment.status === "orphaned") continue;
-    const passage = kindOf(comment.anchor) === "text";
-    const found = resolveAnchor(comment.anchor, { root, passage });
-    if (found.status !== "resolved") continue;
-
-    placed.push({
-      comment,
-      address: address.get(comment.id) ?? 0,
-      element: found.element,
-      ...(found.range === undefined ? {} : { range: found.range }),
-      ...(comment.anchor.region === undefined ? {} : { region: comment.anchor.region }),
-      confidence: found.confidence,
-    });
+    const found = locate(comment.anchor, root);
+    if (found) placed.push({ ...found, comment, address: address.get(comment.id) ?? 0 });
   }
 
   return placed;
+}
+
+/** Every unsent comment the page still has, placed by the same rules. */
+export function draftPlacements(
+  drafts: readonly Draft[],
+  root: ParentNode,
+): readonly DraftPlacement[] {
+  return drafts.flatMap((draft) => {
+    const found = locate(draft.anchor, root);
+    return found ? [{ ...found, draft }] : [];
+  });
+}
+
+/** One anchor on the page, or nothing when the page no longer has it. */
+function locate(anchor: Anchor, root: ParentNode): Located | undefined {
+  const passage = kindOf(anchor) === "text";
+  const found = resolveAnchor(anchor, { root, passage });
+  if (found.status !== "resolved") return undefined;
+
+  return {
+    element: found.element,
+    ...(found.range === undefined ? {} : { range: found.range }),
+    ...(anchor.region === undefined ? {} : { region: anchor.region }),
+    confidence: found.confidence,
+  };
 }

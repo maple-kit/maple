@@ -11,6 +11,7 @@ import { useMaple, useMapleClient } from "@maple-kit/react";
 import { createElement, forwardRef, useEffect, useRef, useState } from "react";
 
 import { composeRefs, Slot } from "../slot.js";
+import { usePublish } from "./actions.js";
 import { searchEmoji, shortcodeAt, writeAt } from "./emoji.js";
 import { EmojiGrid, MapleEmoji } from "./picker-emoji.js";
 
@@ -31,8 +32,9 @@ export const COMPOSER_PLACEHOLDER = "What is wrong with this?";
 /** The comment itself. Focused on open; never cleared by a close. */
 export const MapleBody = /** @__PURE__ */ forwardRef<HTMLTextAreaElement, MapleBodyProps>(
   function MapleBody(props, ref) {
-    const { composer } = useMaple();
+    const { composer, publishing } = useMaple();
     const client = useMapleClient();
+    const publish = usePublish();
     const field = useRef<HTMLTextAreaElement>(null);
     const [open, setOpen] = useState(false);
     const suggest = useSuggestions(composer.body);
@@ -79,7 +81,11 @@ export const MapleBody = /** @__PURE__ */ forwardRef<HTMLTextAreaElement, MapleB
         client.setBody(event.target.value);
         suggest.read(event.target.value, event.target.selectionStart);
       },
-      onKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => suggest.onKeyDown(event, write),
+      onKeyDown: (event: KeyboardEvent<HTMLTextAreaElement>) => {
+        if (!isSend(event)) return suggest.onKeyDown(event, write);
+        event.preventDefault();
+        if (composer.body.trim() !== "" && !publishing) publish();
+      },
       onBlur: () => suggest.clear(),
     });
 
@@ -171,6 +177,17 @@ function useSuggestions(body: string): Suggestions {
   };
 
   return { at, found, active, read, clear, onKeyDown };
+}
+
+/**
+ * ⌘/Ctrl+Enter publishes, as it does in every chat field a reviewer knows.
+ * Enter and Shift+Enter still start a new line: a comment can be a list.
+ */
+function isSend(
+  event: Pick<KeyboardEvent, "key" | "metaKey" | "ctrlKey" | "shiftKey" | "altKey">,
+): boolean {
+  if (event.key !== "Enter" || event.shiftKey || event.altKey) return false;
+  return event.metaKey || event.ctrlKey;
 }
 
 /** Which way a key moves through the menu, or nowhere at all. */

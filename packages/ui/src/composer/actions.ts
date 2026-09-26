@@ -1,10 +1,12 @@
 /**
- * `Maple.Actions`: keep it, or publish it. Nothing here throws a draft away.
+ * `Maple.Actions`: save it as a draft, or publish it. Nothing here throws a
+ * draft away.
  *
  * A comment is a draft until it is published, so the quiet control is the
- * usual one: **Keep** closes the composer and leaves the comment unsent, on
- * the list with everything else waiting. **Publish** is the deliberate act
- * that puts it in the store. Both are disabled on a blank body.
+ * usual one: **Save as draft** closes the composer and leaves the comment
+ * unsent, on the list and on the page with everything else waiting.
+ * **Publish** (or ⌘/Ctrl+Enter in the field) is the deliberate act that puts
+ * it in the store. Both are disabled on a blank body.
  */
 
 import { useMaple, useMapleClient } from "@maple-kit/react";
@@ -23,7 +25,7 @@ export interface MapleActionsProps extends AsChildProps {
 }
 
 /** Closes the composer and keeps what was written, unsent. */
-export const KEEP_LABEL = "Keep";
+export const SAVE_DRAFT_LABEL = "Save as draft";
 
 /** The verb, because publishing is the act and the comment already exists. */
 export const PUBLISH_LABEL = "Publish";
@@ -40,15 +42,9 @@ export const MapleActions = /** @__PURE__ */ forwardRef<HTMLElement, MapleAction
   function MapleActions(props, ref) {
     const { composer, publishing } = useMaple();
     const client = useMapleClient();
-    const scope = useComposerScope("Maple.Actions");
     const Element = (props.asChild ? Slot : "footer") as "footer";
 
-    const publish = (): void => {
-      void client.publish().then(
-        () => scope.clear(),
-        () => undefined,
-      );
-    };
+    const publish = usePublish();
 
     const className = props.className ? `mk-composer-foot ${props.className}` : "mk-composer-foot";
 
@@ -78,7 +74,7 @@ export const MapleActions = /** @__PURE__ */ forwardRef<HTMLElement, MapleAction
           disabled: composer.body.trim() === "",
           onClick: () => client.keepDraft(),
         },
-        KEEP_LABEL,
+        SAVE_DRAFT_LABEL,
       ),
       createElement(
         "button",
@@ -93,6 +89,22 @@ export const MapleActions = /** @__PURE__ */ forwardRef<HTMLElement, MapleAction
     );
   },
 );
+
+/**
+ * Publishes what the composer holds and drops the pasted image with it. The
+ * button and ⌘/Ctrl+Enter in the field share it, so the two cannot drift.
+ */
+export function usePublish(): () => void {
+  const client = useMapleClient();
+  const scope = useComposerScope("Maple.Actions");
+
+  return () => {
+    void client.publish().then(
+      () => scope.clear(),
+      () => undefined,
+    );
+  };
+}
 
 /**
  * A comment already written: close it, or change where it is in its life.
