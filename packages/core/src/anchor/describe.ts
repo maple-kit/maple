@@ -7,9 +7,9 @@
  */
 
 import { cssPathTo } from "./selector.js";
-import { indexText, positionOf } from "./text-position.js";
+import { indexText, positionOf, spanOf } from "./text-position.js";
 
-import type { TextIndex } from "./text-position.js";
+import type { Span, TextIndex } from "./text-position.js";
 import type { Anchor, TextQuote } from "./types.js";
 
 /** How much surrounding text is kept, and how much of the passage itself. */
@@ -52,11 +52,6 @@ export function describeRange(range: Range, options: DescribeOptions = {}): Anch
   };
 }
 
-interface Span {
-  readonly start: number;
-  readonly end: number;
-}
-
 function attributesOf(element: Element): Pick<Anchor, "component" | "key" | "source"> {
   const key = closestAttribute(element, "data-maple-key");
   const source = closestAttribute(element, "data-maple-src");
@@ -95,13 +90,6 @@ function quoteAt(
     ...(suffix ? { suffix } : {}),
     offset: start,
   };
-}
-
-function spanOf(index: TextIndex, element: Element): Span | undefined {
-  const inside = index.segments.filter((segment) => element.contains(segment.node));
-  const first = inside[0];
-  const last = inside[inside.length - 1];
-  return first && last ? { start: first.start, end: last.end } : undefined;
 }
 
 function spanOfRange(index: TextIndex, range: Range): Span | undefined {

@@ -66,6 +66,20 @@ export function rangeAt(index: TextIndex, start: number, end: number): Range | u
   return range;
 }
 
+/** A stretch of the flat text, as `[start, end)`. */
+export interface Span {
+  readonly start: number;
+  readonly end: number;
+}
+
+/** Where an element's own text sits in the flat text, when it has any. */
+export function spanOf(index: TextIndex, element: Element): Span | undefined {
+  const inside = index.segments.filter((segment) => element.contains(segment.node));
+  const first = inside[0];
+  const last = inside[inside.length - 1];
+  return first && last ? { start: first.start, end: last.end } : undefined;
+}
+
 /** The offset in the flat text of a position in the DOM, when it is in it. */
 export function positionOf(index: TextIndex, node: Text, offset: number): number | undefined {
   const segment = index.segments.find((candidate) => candidate.node === node);
