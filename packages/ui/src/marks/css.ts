@@ -276,7 +276,9 @@ function ringCss(): string {
 
 
 /* Anchored to the ring's edge rather than offset by a number: the label is two
-   lines in developer detail and one line the rest of the time. */
+   lines in developer detail and one line the rest of the time. The shadow is
+   for the anchor with text in all four of its corners, where the label has to
+   cover something and has to read as floating over it rather than part of it. */
 .mk-ring-label {
   position: absolute;
   bottom: 100%;
@@ -288,6 +290,7 @@ function ringCss(): string {
   padding: 1px 7px 2px;
   border-radius: var(--mk-r-xs) var(--mk-r-xs) var(--mk-r-xs) 0;
   background: var(--mk-accent);
+  box-shadow: var(--mk-sh2);
   color: var(--mk-accent-ink);
   font-size: 10px;
   font-weight: 600;
@@ -298,6 +301,18 @@ function ringCss(): string {
   top: 100%;
   margin: 3px 0 0;
   border-radius: 0 var(--mk-r-xs) var(--mk-r-xs) var(--mk-r-xs);
+}
+
+/* The square corner is the one against the ring, so the label always points
+   back at what it names, from whichever of the four corners it took. */
+.mk-ring-label[data-mk-end] {
+  right: -2px;
+  left: auto;
+  border-radius: var(--mk-r-xs) var(--mk-r-xs) 0 var(--mk-r-xs);
+}
+
+.mk-ring-label[data-mk-below][data-mk-end] {
+  border-radius: var(--mk-r-xs) 0 var(--mk-r-xs) var(--mk-r-xs);
 }
 
 .mk-ring-name,

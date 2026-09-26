@@ -9,6 +9,8 @@ import {
   culled,
   initialsOf,
   kindPhrase,
+  LABEL_SPOTS,
+  labelBox,
   LEAF_OUTLINE,
   LEAF_ROTATION,
   LEAF_SOLID,
@@ -172,6 +174,29 @@ describe("where a mark and a ring go", () => {
       width: 50,
       height: 16,
     });
+  });
+
+  const RING = { x: 117, y: 297, width: 306, height: 96 };
+  const CORNERS = [
+    { x: 115, y: 277, width: 90, height: 17 },
+    { x: 115, y: 396, width: 90, height: 17 },
+    { x: 335, y: 277, width: 90, height: 17 },
+    { x: 335, y: 396, width: 90, height: 17 },
+  ];
+
+  /* Whichever corner it is measured at, the other three come out the same:
+     the gap it keeps and its distance from the ring's edge are read back off
+     the corner it is drawn at, so no number here is spelled twice. */
+  it.each([
+    ["above left", { below: false, end: false }, { x: 115, y: 277 }],
+    ["below left", { below: true, end: false }, { x: 115, y: 396 }],
+    ["above right", { below: false, end: true }, { x: 335, y: 277 }],
+    ["below right", { below: true, end: true }, { x: 335, y: 396 }],
+  ])("reads the label's four corners off the one it is drawn at, %s", (_where, drawn, at) => {
+    const label = { ...at, width: 90, height: 17 };
+    expect(LABEL_SPOTS.map((spot) => labelBox({ ring: RING, label, drawn }, spot))).toEqual(
+      CORNERS,
+    );
   });
 
   it.each([

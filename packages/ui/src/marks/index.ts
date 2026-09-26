@@ -14,6 +14,8 @@
 
 export { MapleAvatar, MapleAvatar as Avatar, initialsOf } from "./avatar.js";
 export type { AvatarProps } from "./avatar.js";
+export { LABEL_SPOTS, labelBox, labelSpotFor, pageTextIn } from "./clearance.js";
+export type { LabelPlacement, LabelSpot } from "./clearance.js";
 export { marksCss } from "./css.js";
 export { startFrameLoop, useFrameLoop, viewportHeight } from "./frame.js";
 export type { Paint } from "./frame.js";
@@ -45,7 +47,12 @@ export { flag, MOVING_ATTRIBUTE, OFF_ATTRIBUTE, place } from "./paint.js";
 export { PIXEL_LEAF_SHADES, PIXEL_LEAF_VIEW_BOX } from "./pixel-leaf.js";
 export { addresses, placements } from "./placement.js";
 export type { Placement } from "./placement.js";
-export { BELOW_ATTRIBUTE, MapleTargetRing, MapleTargetRing as TargetRing } from "./ring.js";
+export {
+  BELOW_ATTRIBUTE,
+  END_ATTRIBUTE,
+  MapleTargetRing,
+  MapleTargetRing as TargetRing,
+} from "./ring.js";
 export type { RingState, TargetRingProps } from "./ring.js";
 export { HALF, MapleLeaf, MapleLeaf as Leaf, nextClipId } from "./shape.js";
 export type { LeafProps } from "./shape.js";

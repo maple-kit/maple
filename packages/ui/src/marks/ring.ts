@@ -12,6 +12,7 @@ import { createElement, forwardRef, useCallback, useRef, useState } from "react"
 
 import { useMapleUi } from "../context.js";
 import { composeRefs } from "../slot.js";
+import { labelSpotFor } from "./clearance.js";
 import { useFrameLoop, viewportHeight } from "./frame.js";
 import { culled, ringBox, runBox } from "./geometry.js";
 import { flag, MOVING_ATTRIBUTE, OFF_ATTRIBUTE, place } from "./paint.js";
@@ -20,14 +21,11 @@ import type { Box } from "./geometry.js";
 import type { AnchorRegion } from "@maple-kit/core/anchor";
 import type { ReactElement } from "react";
 
-/** Set on the label when the anchor is too near the top to sit above it. */
+/** Set on the label when it was moved under the anchor to clear page text. */
 export const BELOW_ATTRIBUTE = "data-mk-below";
 
-/** How much room the label needs above the anchor before it moves below it. */
-const LABEL_ROOM_PX = 26;
-
-/** The same, once a note has given the label a second line. */
-const NOTE_ROOM_PX = 40;
+/** The same, for the move to the anchor's far end. The two combine. */
+export const END_ATTRIBUTE = "data-mk-end";
 
 const PART = "Maple.TargetRing";
 
@@ -68,7 +66,6 @@ function empty(rect: Box): boolean {
 export const MapleTargetRing = /** @__PURE__ */ forwardRef<HTMLDivElement, TargetRingProps>(
   function MapleTargetRing(props, ref) {
     const { className, label, note, region, state = "composing", target } = props;
-    const room = note === undefined ? LABEL_ROOM_PX : NOTE_ROOM_PX;
     const { container } = useMapleUi(PART);
 
     const ring = useRef<HTMLDivElement | null>(null);
@@ -88,8 +85,11 @@ export const MapleTargetRing = /** @__PURE__ */ forwardRef<HTMLDivElement, Targe
         flag(node, MOVING_ATTRIBUTE, moving);
         if (away) return;
 
-        place(node, ringBox(rect));
-        if (cap.current) flag(cap.current, BELOW_ATTRIBUTE, rect.y < room);
+        const drawn = ringBox(rect);
+        place(node, drawn);
+        // Skipped while the page is moving under the ring: a corner re-decided
+        // per scrolled frame flickers, and `scrollend` settles it again.
+        if (cap.current && !moving) corner(cap.current, drawn, container);
 
         const boxes = region === undefined ? linesOf(target) : [];
         if (boxes.length !== lines) setLines(boxes.length);
@@ -98,7 +98,7 @@ export const MapleTargetRing = /** @__PURE__ */ forwardRef<HTMLDivElement, Targe
           if (run) place(run, runBox(box, rect));
         });
       },
-      [container, lines, region, room, target],
+      [container, lines, region, target],
     );
 
     useFrameLoop(PART, paint);
@@ -120,6 +120,15 @@ export const MapleTargetRing = /** @__PURE__ */ forwardRef<HTMLDivElement, Targe
     );
   },
 );
+
+/** Puts the label at the first corner of the ring with no page text in it. */
+function corner(cap: HTMLSpanElement, ring: Box, overlay: Element): void {
+  const drawn = { below: cap.hasAttribute(BELOW_ATTRIBUTE), end: cap.hasAttribute(END_ATTRIBUTE) };
+  const spot = labelSpotFor({ ring, label: cap.getBoundingClientRect(), drawn }, overlay);
+
+  flag(cap, BELOW_ATTRIBUTE, spot.below);
+  flag(cap, END_ATTRIBUTE, spot.end);
+}
 
 /**
  * The name of the thing, and under it — in developer detail only — the file

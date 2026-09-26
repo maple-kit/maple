@@ -429,6 +429,62 @@ describe("the ring", () => {
 
     await vi.waitFor(() => expect(label.hasAttribute("data-mk-below")).toBe(true));
   });
+
+  /* The label is opaque, so one dropped into a line of the page's own text
+     hides its middle and leaves both ends showing. Developer detail is where
+     it bites: the source line gives it a row the gap cannot hold. */
+  it("leaves its label above the anchor while the gap above is the page's own", async () => {
+    const target = fixture("card", { x: 120, y: 400, w: 300, h: 90 });
+    await around({ target, label: "the Yield card", note: "src/app/cards.tsx:26:7" });
+    const label = root().querySelector(".mk-ring-label")!;
+
+    await vi.waitFor(() => expect(root().querySelector(".mk-ring")).not.toBeNull());
+    expect(label.hasAttribute("data-mk-below")).toBe(false);
+  });
+
+  it("moves it below when the page paints its own text where the label would go", async () => {
+    const above = fixture("subtitle", { x: 120, y: 360, w: 300, h: 24 });
+    above.textContent = "Every repository with a preview, over the last 28 days.";
+    const target = fixture("card", { x: 120, y: 400, w: 300, h: 90 });
+
+    await around({ target, label: "the Yield card", note: "src/app/cards.tsx:26:7" });
+    const label = root().querySelector(".mk-ring-label")!;
+
+    await vi.waitFor(() => expect(label.hasAttribute("data-mk-below")).toBe(true));
+    expect(label.getBoundingClientRect().top).toBeGreaterThan(above.getBoundingClientRect().bottom);
+  });
+
+  /* A short line of text leaves the far end of a wide anchor clear, and the
+     far end still points back at the thing the label is naming. */
+  it("moves it to the anchor's far end when both edges are written on", async () => {
+    const above = fixture("subtitle", { x: 120, y: 360, w: 150, h: 24 });
+    above.textContent = "Every repository.";
+    const target = fixture("card", { x: 120, y: 400, w: 420, h: 90 });
+    const under = fixture("caption", { x: 120, y: 494, w: 150, h: 24 });
+    under.textContent = "Twelve weeks.";
+
+    await around({ target, label: "the Yield card", note: "src/app/cards.tsx:26:7" });
+    const label = root().querySelector(".mk-ring-label")!;
+
+    await vi.waitFor(() => expect(label.hasAttribute("data-mk-end")).toBe(true));
+    expect(label.getBoundingClientRect().left).toBeGreaterThan(above.getBoundingClientRect().right);
+  });
+
+  /** Nowhere is better, so it stays where a reader looks for it. */
+  it("keeps it above when the page has written on every corner", async () => {
+    const above = fixture("subtitle", { x: 120, y: 360, w: 300, h: 24 });
+    above.textContent = "Every repository with a preview, over the last 28 days.";
+    const target = fixture("card", { x: 120, y: 400, w: 300, h: 90 });
+    const under = fixture("caption", { x: 120, y: 494, w: 300, h: 24 });
+    under.textContent = "Twelve weeks. The gate landed in week seven, and held.";
+
+    await around({ target, label: "the Yield card", note: "src/app/cards.tsx:26:7" });
+    const label = root().querySelector(".mk-ring-label")!;
+
+    await vi.waitFor(() => expect(root().querySelector(".mk-ring")).not.toBeNull());
+    expect(label.hasAttribute("data-mk-below")).toBe(false);
+    expect(label.hasAttribute("data-mk-end")).toBe(false);
+  });
 });
 
 /** Every mark on the page, placed so no two of them can be clicked wrong. */
