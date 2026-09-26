@@ -143,6 +143,7 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
+  getSelection()?.removeAllRanges();
   client.destroy();
   document.documentElement.removeAttribute("data-theme");
   for (const node of document.querySelectorAll(".fixture")) node.remove();
@@ -247,6 +248,23 @@ describe("an armed pick", () => {
 
     press("c");
     await vi.waitFor(() => expect(client.getState().pick).toEqual({ armed: true, kind: "region" }));
+  });
+
+  it("opens the composer on text selected before c was pressed, as if Maple had picked it", async () => {
+    const node = fixture();
+    const range = document.createRange();
+    range.setStart(node.firstChild!, 4);
+    range.setEnd(node.firstChild!, 22);
+    getSelection()?.removeAllRanges();
+    getSelection()?.addRange(range);
+
+    press("c");
+
+    await vi.waitFor(() => expect(client.getState().composer.open).toBe(true));
+    const target = client.getState().composer.target;
+    expect(target?.kind).toBe("text");
+    expect(target?.anchor.quote?.exact).toBe("yield on this card");
+    expect(client.getState().pick.armed).toBe(false);
   });
 
   it("switches kind from the bar as well as from the keyboard", async () => {

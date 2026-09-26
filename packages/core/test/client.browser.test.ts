@@ -19,6 +19,7 @@ function client(debounceMs = 0): MapleClient {
 
 beforeEach(() => localStorage.clear());
 afterEach(() => {
+  getSelection()?.removeAllRanges();
   maple?.destroy();
   maple = undefined;
   document.documentElement.removeAttribute("data-theme");
@@ -115,24 +116,51 @@ describe("a storage event from another tab", () => {
   });
 });
 
+/** A paragraph on the page, selected the way a reviewer's drag selects it. */
+function selectParagraph(): HTMLElement {
+  const paragraph = document.createElement("p");
+  paragraph.textContent = "The spacing under the heading is inconsistent.";
+  paragraph.dataset["test"] = "";
+  document.body.append(paragraph);
+
+  const range = document.createRange();
+  range.selectNodeContents(paragraph);
+  getSelection()?.removeAllRanges();
+  getSelection()?.addRange(range);
+  return paragraph;
+}
+
 /** Copying a paragraph must not close the composer. This is that test. */
 describe("the c shortcut over a real page", () => {
-  it("arms element picking with text selected on the page", () => {
+  it("arms a text pick of the passage already selected on the page", () => {
     const maple = client();
-    const paragraph = document.createElement("p");
-    paragraph.textContent = "The spacing under the heading is inconsistent.";
-    paragraph.dataset["test"] = "";
-    document.body.append(paragraph);
-
-    const range = document.createRange();
-    range.selectNodeContents(paragraph);
-    getSelection()?.removeAllRanges();
-    getSelection()?.addRange(range);
+    const paragraph = selectParagraph();
 
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "c", bubbles: true }));
-    expect(maple.getState().pick).toEqual({ armed: true, kind: "element" });
+    expect(maple.getState().pick).toEqual({ armed: true, kind: "text" });
 
     paragraph.remove();
+  });
+
+  it("does not remember a text pick it took from a selection as the viewer's choice", () => {
+    const maple = client();
+    maple.arm("region");
+    maple.disarm();
+    const paragraph = selectParagraph();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "c", bubbles: true }));
+    maple.disarm();
+
+    getSelection()?.removeAllRanges();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "c", bubbles: true }));
+    expect(maple.getState().pick).toEqual({ armed: true, kind: "region" });
+    paragraph.remove();
+  });
+
+  it("arms the remembered kind when the selection is collapsed", () => {
+    const maple = client();
+    getSelection()?.removeAllRanges();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "c", bubbles: true }));
+    expect(maple.getState().pick).toEqual({ armed: true, kind: "element" });
   });
 
   it("moves on to the next kind when pressed again while armed", () => {

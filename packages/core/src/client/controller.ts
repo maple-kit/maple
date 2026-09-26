@@ -11,6 +11,7 @@
 import { kindOf } from "../anchor/kind.js";
 import { labelFor } from "../anchor/label.js";
 import { exportDrafts } from "../export/drafts.js";
+import { selectedText } from "../overlay/pick.js";
 import { pageIsTagged } from "../overlay/tagged.js";
 import { ASSIST_IDLE, createAssistRunner } from "./assist.js";
 import { createDraftKeeper, draftIdFor } from "./drafts.js";
@@ -541,14 +542,18 @@ function destroy(runtime: Runtime): void {
 }
 
 /**
- * `c` arms the kind armed last, and pressed again moves to the next, so one
- * key starts a comment and changes its kind. `Ctrl`+`C` is copy, not this.
+ * `c` arms the kind armed last, and again moves to the next. Over a selection
+ * it picks that passage, not remembered as a choice. `Ctrl`+`C` is copy.
  */
 function onKeydown(runtime: Runtime, event: Event): void {
   if (runtime.state.composer.open) return;
   if (!opensComposer(event as KeyboardEvent, runtime.config.shortcut)) return;
   const { pick } = runtime.state;
-  arm(runtime, pick.armed && pick.kind ? nextPick(pick.kind) : runtime.lastPick);
+  if (pick.armed && pick.kind) return arm(runtime, nextPick(pick.kind));
+
+  const view = runtime.options.view ?? (globalThis as { window?: ClientView }).window;
+  if (view && selectedText(view.document)) return arm(runtime, "text", { remember: false });
+  arm(runtime, runtime.lastPick);
 }
 
 /** The kind after this one in {@link PICK_ORDER}, wrapping at the end. */
@@ -1022,11 +1027,11 @@ async function setStatus(
 
 /** Asked again on every arm: a client-routed page can navigate from a tagged
  * view into one rendered by something the loader never saw. */
-function arm(runtime: Runtime, kind: PickKind): void {
+function arm(runtime: Runtime, kind: PickKind, how: { remember?: boolean } = {}): void {
   const view = runtime.options.view ?? (globalThis as { window?: ClientView }).window;
   if (view) checkTagged(runtime, view.document);
   patch(runtime, { pick: { armed: true, kind }, hidden: false });
-  if (kind === runtime.lastPick) return;
+  if (how.remember === false || kind === runtime.lastPick) return;
   runtime.lastPick = kind;
   writePreferences({ lastPick: kind }, storageOf(runtime.options));
 }

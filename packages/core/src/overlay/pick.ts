@@ -67,8 +67,8 @@ export function containerFor(rect: Rect): Element {
 }
 
 /** The current text selection, when there is one and it is not in the overlay. */
-export function selectedText(): Pick | undefined {
-  const selection = document.getSelection();
+export function selectedText(page: Document = document): Pick | undefined {
+  const selection = page.getSelection();
   if (!selection || selection.isCollapsed || selection.rangeCount === 0) return undefined;
 
   const range = selection.getRangeAt(0);
@@ -170,8 +170,8 @@ export interface TextPickingOptions {
 
 /**
  * Commits a passage when the pointer comes up, not on every selection change:
- * a selection is still being made while it is dragged, and committing its
- * first character is how a reviewer ends up quoting one letter.
+ * a selection still being dragged would quote one letter. One made before the
+ * pick was armed is finished, and is committed as soon as the listeners are up.
  */
 export function startTextPicking(options: TextPickingOptions): void {
   const ignored = options.ignore ?? (() => false);
@@ -191,6 +191,11 @@ export function startTextPicking(options: TextPickingOptions): void {
   );
 
   listen("selectionchange", () => options.onHover?.(selectedText()), when);
+
+  setTimeout(() => {
+    const already = options.signal?.aborted === true ? undefined : selectedText();
+    if (already) options.onPick(already);
+  }, 0);
 }
 
 /** What the picker's own keys do while a pick is armed. */
