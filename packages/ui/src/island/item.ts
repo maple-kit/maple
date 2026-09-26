@@ -15,6 +15,7 @@ import { createElement, forwardRef, useCallback, useRef, useState } from "react"
 
 import { cx } from "../cx.js";
 import { dataAttributes, formFor } from "../data.js";
+import { hoverHandlers } from "../hover.js";
 import { PROVENANCE_SENTENCES, STATUS_LABELS, STATUS_SENTENCES } from "../language.js";
 import { MapleLeaf } from "../marks/shape.js";
 import { renderPart } from "../part.js";
@@ -63,8 +64,10 @@ export const Item = /** @__PURE__ */ forwardRef<HTMLElement, ItemProps>(function
       "data-mk-selected": String(selected),
       className: cx("mk-row", className),
       onClick: () => client.viewComment(comment.id),
-      onPointerEnter: () => client.peek(comment.id),
-      onPointerLeave: () => client.peek(null),
+      ...hoverHandlers(
+        () => client.peek(comment.id),
+        () => client.peek(null),
+      ),
       onFocus: () => client.peek(comment.id),
       onBlur: () => client.peek(null),
       ref: composeRefs<HTMLElement>(ref, useReveal(selected)),

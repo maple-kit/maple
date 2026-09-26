@@ -1,4 +1,6 @@
 import { createElement } from "react";
+import { flushSync } from "react-dom";
+import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
@@ -8,6 +10,7 @@ import { fixtureFetch } from "./fixtures.js";
 
 import type { Comment } from "@maple-kit/core";
 import type { ReactElement } from "react";
+import type { Root } from "react-dom/client";
 
 const BRANCH = "feat/ui-pointing";
 
@@ -100,6 +103,7 @@ async function ring(): Promise<HTMLElement> {
 }
 
 let search = "";
+let host: Root | undefined;
 
 beforeEach(async () => {
   localStorage.clear();
@@ -107,13 +111,20 @@ beforeEach(async () => {
   await page.viewport(1180, 860);
   const fixture = document.createElement("div");
   fixture.setAttribute("data-fixture-page", "");
-  fixture.innerHTML = PAGE;
   document.body.append(fixture);
+  // The page is an application's own React tree, as it is in every example:
+  // React treats a pointer arriving from a node it manages differently.
+  host = createRoot(fixture);
+  flushSync(() =>
+    host?.render(createElement("div", { dangerouslySetInnerHTML: { __html: PAGE } })),
+  );
   history.replaceState({}, "", search === "" ? location.pathname : `?${search}`);
   await render(tree());
 });
 
 afterEach(() => {
+  host?.unmount();
+  host = undefined;
   search = "";
   history.replaceState({}, "", location.pathname);
   document.documentElement.removeAttribute("data-theme");
@@ -145,6 +156,21 @@ describe("pointing at a mark", () => {
     node.click();
     await vi.waitFor(() => expect(find(".mk-ring").getAttribute("data-mk-state")).toBe("selected"));
     expect(hovered).toBe(getComputedStyle(find(".mk-ring")).boxShadow);
+  });
+
+  it("rings what it is on when the pointer arrives from the application's own React tree", async () => {
+    const node = await mark(1);
+    const card = document.querySelector<HTMLElement>('[data-maple-name="YieldCard"]');
+    if (!card) throw new Error("no card on the page");
+
+    await userEvent.hover(card);
+    await userEvent.hover(node);
+
+    await vi.waitFor(() => expect(peeked()).toMatch(/^Comment 1/));
+    expect((await ring()).getAttribute("data-mk-state")).toBe("hovered");
+
+    await userEvent.hover(card);
+    await vi.waitFor(() => expect(root().querySelector(".mk-ring")).toBeNull());
   });
 
   it("rings what it is on when the keyboard lands on it, and lets go on the way off", async () => {

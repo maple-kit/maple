@@ -12,6 +12,7 @@ import { useMaple, useMapleClient } from "@maple-kit/react";
 import { createElement, forwardRef, useCallback, useEffect, useMemo, useRef } from "react";
 
 import { useMapleUi } from "../context.js";
+import { hoverHandlers } from "../hover.js";
 import { useFrameLoop, viewportHeight } from "./frame.js";
 import { culled, markSpot, placeMark } from "./geometry.js";
 import { ringLabel } from "./label.js";
@@ -27,7 +28,7 @@ import type { Placement } from "./placement.js";
 import type { RingState, TargetRingProps } from "./ring.js";
 import type { Comment } from "@maple-kit/core";
 import type { LabelSource } from "@maple-kit/core/anchor";
-import type { ClientState, ComposerTarget, Detail } from "@maple-kit/core/client";
+import type { ClientState, ComposerTarget, Detail, MapleClient } from "@maple-kit/core/client";
 
 const PART = "Maple.MarkLayer";
 
@@ -95,10 +96,7 @@ export const MapleMarkLayer = /** @__PURE__ */ forwardRef<HTMLDivElement, MarkLa
             key: placement.comment.id,
             ref: keep(nodes.current, placement.comment.id),
             onClick: () => onSelect(placement.comment),
-            onPointerEnter: () => client.peek(placement.comment.id),
-            onPointerLeave: () => client.peek(null),
-            onFocus: () => client.peek(placement.comment.id),
-            onBlur: () => client.peek(null),
+            ...pointing(client, placement.comment.id),
           }),
         ),
       [client, nudges, onSelect, peeked, placed, selectedId],
@@ -132,6 +130,18 @@ function useScrollTo(placed: readonly Placement[], selectedId: string | undefine
   useEffect(() => {
     target?.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
   }, [target]);
+}
+
+/** Pointing at a mark or tabbing onto it peeks; leaving it lets go. */
+function pointing(client: MapleClient, id: string) {
+  return {
+    ...hoverHandlers(
+      () => client.peek(id),
+      () => client.peek(null),
+    ),
+    onFocus: () => client.peek(id),
+    onBlur: () => client.peek(null),
+  };
 }
 
 /** The box a comment is drawn against: its rectangle, or the element itself. */
