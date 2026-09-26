@@ -1,5 +1,44 @@
 # @maple-kit/ui
 
+## 0.11.0
+
+### Minor Changes
+
+- b7a0f25: Pressing `c` while a pick is armed moves to the next kind (element, text,
+  region), so the key that starts a comment also changes its kind. `c` from
+  nothing arms the kind armed last, which is remembered per origin as
+  `StoredPreferences.lastPick`.
+
+  Breaking: `t` no longer cycles. `watchPickKeys` in `@maple-kit/core/overlay`
+  takes only `onCancel`, since `onCycle` is gone and the controller owns the key.
+  `PICK_ORDER` moved from `@maple-kit/ui`'s island language to
+  `@maple-kit/core/client`. `writePreferences` now merges into what was stored
+  instead of replacing it, so changing the theme no longer drops the stored
+  assist choice.
+
+- 2bf7ed3: Pressing `c` with text already selected on the page opens the composer on that
+  passage, as if it had been selected through Maple's text pick. A text pick
+  armed over an existing selection commits that selection straight away, which
+  also covers arming Text from the island. A text pick taken from a selection is
+  not remembered as the viewer's chosen kind, so the next `c` with nothing
+  selected still arms the kind they picked last. `selectedText()` in
+  `@maple-kit/core/overlay` takes an optional document.
+
+### Patch Changes
+
+- b7a0f25: Pointing at a mark or tabbing onto it now draws the same ring a click does,
+  around the element, the passage or the region the comment is on. The hovered
+  ring was a faint 1.5px line that read as nothing, so the ring looked like it
+  only appeared after a click.
+- Updated dependencies [b7a0f25]
+- Updated dependencies [2bf7ed3]
+- Updated dependencies [b7a0f25]
+- Updated dependencies [6ac8d9b]
+- Updated dependencies [b7a0f25]
+  - @maple-kit/core@0.11.0
+  - @maple-kit/mock@0.11.0
+  - @maple-kit/react@0.11.0
+
 ## 0.10.0
 
 ### Minor Changes

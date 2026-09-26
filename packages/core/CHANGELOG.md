@@ -1,5 +1,50 @@
 # @maple-kit/core
 
+## 0.11.0
+
+### Minor Changes
+
+- b7a0f25: Pressing `c` while a pick is armed moves to the next kind (element, text,
+  region), so the key that starts a comment also changes its kind. `c` from
+  nothing arms the kind armed last, which is remembered per origin as
+  `StoredPreferences.lastPick`.
+
+  Breaking: `t` no longer cycles. `watchPickKeys` in `@maple-kit/core/overlay`
+  takes only `onCancel`, since `onCycle` is gone and the controller owns the key.
+  `PICK_ORDER` moved from `@maple-kit/ui`'s island language to
+  `@maple-kit/core/client`. `writePreferences` now merges into what was stored
+  instead of replacing it, so changing the theme no longer drops the stored
+  assist choice.
+
+- 2bf7ed3: Pressing `c` with text already selected on the page opens the composer on that
+  passage, as if it had been selected through Maple's text pick. A text pick
+  armed over an existing selection commits that selection straight away, which
+  also covers arming Text from the island. A text pick taken from a selection is
+  not remembered as the viewer's chosen kind, so the next `c` with nothing
+  selected still arms the kind they picked last. `selectedText()` in
+  `@maple-kit/core/overlay` takes an optional document.
+- b7a0f25: A started client reads the branch's comments again every 15 seconds, so a
+  comment an agent resolved shows as resolved without a reload. A hidden tab
+  makes no requests and asks again as soon as it is shown. A failed read keeps
+  the last list and only logs a warning, and a list changed locally while the
+  read was in flight is kept. `MapleClientOptions.pollMs` sets the interval
+  (`0` turns it off), and `MapleClient.refresh()` runs one quiet read.
+- 6ac8d9b: Apply and reload, and Turn off, in the mock box and its banner reload the page
+  without the browser's "Leave site?" dialog, even while a comment draft is
+  open. The reviewer chose to reload, and the draft is saved first as it always
+  was. `navigateOnPurpose(view, url)` joins `@maple-kit/core/client` for any
+  surface that navigates on the reviewer's say-so; Discard in the leave prompt
+  uses it too.
+
+### Patch Changes
+
+- b7a0f25: A comment on one of two copies of a component (a `planned` badge in each of two
+  cards, with the same source line, name and text) now comes back on the copy
+  that was picked. Before, the first copy on the page won every time. When
+  several elements match the key, source or component rung, each one is now
+  scored with the text recorded around it. An exact tie falls to the recorded
+  offset, then to the recorded selector.
+
 ## 0.10.0
 
 ### Minor Changes
