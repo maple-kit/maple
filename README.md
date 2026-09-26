@@ -19,9 +19,28 @@ Maple captures where they pointed, what they were looking at and who they are,
 hands it to a coding agent in a form it can act on, and holds the merge until
 every comment is resolved.
 
-**Status: 0.x.** All six packages are published, with provenance, through a
+**Status: 0.x.** All eight packages are published, with provenance, through a
 trusted publisher. 0.x makes no compatibility promise: a public interface is
 broken when breaking it is the right shape, and the changeset says what broke.
+
+## What it does
+
+<table>
+<tr>
+<td width="33%" valign="top"><a href="packages/ui"><img src="docs/assets/features/three-types.gif" alt="Three picks in a row: a metric card, a box dragged over part of a chart, and a sentence selected under it." width="100%"></a><br><b>An element, an area, or a passage.</b> Pick a component, drag a box, or select the words that are wrong. The anchor finds it again after a redeploy.</td>
+<td width="33%" valign="top"><a href="packages/mcp"><img src="docs/assets/features/agentic-tooling.gif" alt="A terminal: the agent waits for comments, receives one naming a file and line, edits one line, and resolves the comment in a commit." width="100%"></a><br><b>Your agent picks it up over MCP.</b> It waits for comments, reads each with its context, makes the change, and resolves it against the commit.</td>
+<td width="33%" valign="top"><a href="docs/gate.md"><img src="docs/assets/features/merge-gate.gif" alt="A pull request's checks: maple/visual-review fails with two comments open, they resolve, the check passes and the merge button wakes up." width="100%"></a><br><b>A merge gate.</b> <code>maple/visual-review</code> fails while a comment is open and, if you want, until the reviewer approves.</td>
+</tr>
+<tr>
+<td valign="top"><a href="packages/core"><img src="docs/assets/features/tagger.gif" alt="In developer mode, hovering the page shows each element's component name and its file, line and column." width="100%"></a><br><b>The file and the line.</b> A build-time tagger marks every JSX element with where it was written, so a comment arrives pointing at source.</td>
+<td valign="top"><a href="packages/mock"><img src="docs/assets/features/edge-case-states.gif" alt="A table of open reviews loads with real data, then empty, then failing, with a banner naming the state each time." width="100%"></a><br><b>Any state, on request.</b> Type empty, failing or a thousand rows, and the page's API calls return it. A model picks the state; code writes every byte.</td>
+<td valign="top"><a href="packages/classifier"><img src="docs/assets/features/assist-scoring.gif" alt="A reviewer types a comment on a chart and it is scored as a request, rated on being specific, actionable, concise, standalone and placed." width="100%"></a><br><b>A score, if you want one.</b> The comment is judged as it is typed, against five pillars, by a classifier you supply.</td>
+</tr>
+</table>
+
+Each package's README shows the rest: [the CLI](packages/cli), [the design
+lint](packages/lint), [flags and roles in a mock](packages/mock#flags-and-roles)
+and [the connectors](packages/core#connectors).
 
 ## Why another one
 
@@ -36,6 +55,54 @@ this. None combines all four of:
 - **A merge gate** — CI blocks while a visual comment is unresolved, and
   optionally until somebody says they looked. See [`docs/gate.md`](docs/gate.md).
 - **An agent loop** — the agent reads comments, fixes, and resolves them.
+
+## Add it to an app
+
+```sh
+npm install @maple-kit/core @maple-kit/ui
+```
+
+Mount the route and the tagger from the build, then render the overlay:
+
+```ts
+// vite.config.ts
+import { createCommentStore } from "@maple-kit/core";
+import { githubStore } from "@maple-kit/core/connectors";
+import { maple } from "@maple-kit/core/vite";
+
+const preview = process.env.MAPLE_PREVIEW === "1";
+
+export default defineConfig({
+  plugins: [
+    react(),
+    maple({
+      tagger: preview,
+      route: {
+        store: createCommentStore(
+          githubStore({ owner: "acme", repo: "web", token: process.env.GITHUB_TOKEN! }),
+        ),
+      },
+    }),
+  ],
+});
+```
+
+```tsx
+// main.tsx
+import { Maple } from "@maple-kit/ui/maple";
+
+createRoot(root).render(
+  <>
+    <App />
+    <Maple branch={import.meta.env.VITE_MAPLE_BRANCH} />
+  </>,
+);
+```
+
+Next.js uses `withMaple` from `@maple-kit/core/next` and a catch-all route at
+`app/api/maple/[...maple]/route.ts`; [`examples/next-app`](examples/next-app)
+has both. The `setup-maple-org` skill walks through the GitHub App a reviewer
+signs in with.
 
 ## Vendor-agnostic by construction
 
@@ -65,15 +132,16 @@ Run `maple connectors` to print the matrix from the code, or see
 
 ## Packages
 
-| Package                 | What it is                                              |
-| ----------------------- | ------------------------------------------------------- |
-| `@maple-kit/core`       | Server SDK, overlay controller and connector contracts. |
-| `@maple-kit/react`      | Hooks over the controller. No styles, no components.    |
-| `@maple-kit/ui`         | The marks, the island and the composer.                 |
-| `@maple-kit/cli`        | The `maple` command.                                    |
-| `@maple-kit/mcp`        | The MCP server an agent talks to.                       |
-| `@maple-kit/classifier` | Scores a comment as it is written.                      |
-| `@maple-kit/mock`       | Rewrites a page's API responses into a named state.     |
+| Package                                        | What it is                                                           |
+| ---------------------------------------------- | -------------------------------------------------------------------- |
+| [`@maple-kit/core`](packages/core)             | Server SDK, overlay controller, connector contracts, build plugins.  |
+| [`@maple-kit/ui`](packages/ui)                 | The marks, the island and the composer: the overlay a reviewer uses. |
+| [`@maple-kit/react`](packages/react)           | Hooks over the controller, for an overlay in your own design system. |
+| [`@maple-kit/mcp`](packages/mcp)               | The MCP server an agent talks to, and a Stop hook.                   |
+| [`@maple-kit/cli`](packages/cli)               | The `maple` command.                                                 |
+| [`@maple-kit/mock`](packages/mock)             | Rewrites a page's API responses, flags and role into a named state.  |
+| [`@maple-kit/classifier`](packages/classifier) | Scores a comment as it is written, and plans a mock from a sentence. |
+| [`@maple-kit/lint`](packages/lint)             | Design-system rules read off the page the browser laid out.          |
 
 ## Documentation
 
@@ -83,6 +151,9 @@ Run `maple connectors` to print the matrix from the code, or see
 - [The agent loop](docs/agent-loop.md) — the MCP tools and the Stop hook
 - [Drafts and publishing](docs/drafts.md) — why a comment is unsent until it is not
 - [The merge gate](docs/gate.md) — what blocks a merge, and what approving does
+- [Maple Mock](docs/mock.md) — a model picks the state, code writes every byte
+- [The assist tier](docs/assist.md) — what a score is, and what it is never allowed to be
+- [Design lint](docs/lint.md) — the rendered rules and the tiers around them
 
 ## See it running
 
