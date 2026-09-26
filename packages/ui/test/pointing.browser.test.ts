@@ -1,7 +1,7 @@
 import { createElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
-import { page } from "vitest/browser";
+import { page, userEvent } from "vitest/browser";
 
 import { Maple } from "../src/maple.js";
 import { fixtureFetch } from "./fixtures.js";
@@ -133,6 +133,37 @@ describe("pointing at a mark", () => {
 
     expect(node.getAttribute("data-mk-state")).toBe("hovered");
     expect(find(".mk-ring-name").textContent).toBe("the Yield card");
+  });
+
+  it("draws the same ring a click does under a real pointer, not a fainter one", async () => {
+    const node = await mark(1);
+    await userEvent.hover(node);
+    const hovered = getComputedStyle(await ring()).boxShadow;
+    await userEvent.unhover(node);
+    await vi.waitFor(() => expect(root().querySelector(".mk-ring")).toBeNull());
+
+    node.click();
+    await vi.waitFor(() => expect(find(".mk-ring").getAttribute("data-mk-state")).toBe("selected"));
+    expect(hovered).toBe(getComputedStyle(find(".mk-ring")).boxShadow);
+  });
+
+  it("rings what it is on when the keyboard lands on it, and lets go on the way off", async () => {
+    const node = await mark(1);
+    node.focus();
+    const held = await ring();
+    expect(held.getAttribute("data-mk-state")).toBe("hovered");
+    expect(find(".mk-ring-name").textContent).toBe("the Yield card");
+
+    node.blur();
+    await vi.waitFor(() => expect(root().querySelector(".mk-ring")).toBeNull());
+  });
+
+  it("highlights the passage a text comment is on under a real pointer", async () => {
+    await userEvent.hover(await mark(2));
+    const node = await ring();
+
+    expect(node.getAttribute("data-mk-passage")).toBe("true");
+    await vi.waitFor(() => expect(node.querySelectorAll(".mk-ring-run").length).toBeGreaterThan(0));
   });
 
   it("lets the ring go again the moment the pointer leaves", async () => {
