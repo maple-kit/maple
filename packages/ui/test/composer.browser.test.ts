@@ -3,7 +3,7 @@ import { toCommentContext } from "@maple-kit/core/overlay";
 import { createElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
-import { page } from "vitest/browser";
+import { page, userEvent } from "vitest/browser";
 
 import { MapleActions } from "../src/composer/actions.js";
 import { ATTACH_WORDS, MapleAttachments } from "../src/composer/attachments.js";
@@ -612,6 +612,41 @@ describe("writing a comment", () => {
 
     await vi.waitFor(() => expect(client.getState().composer.open).toBe(false));
     expect(client.getState().drafts).toHaveLength(1);
+    expect(client.getState().comments).toHaveLength(0);
+  });
+
+  it("publishes on Cmd+Enter or Ctrl+Enter, and leaves Enter and Shift+Enter a new line", async () => {
+    started();
+    const surface = await open();
+    const field = surface.querySelector<HTMLTextAreaElement>("textarea");
+    field?.focus();
+
+    await userEvent.keyboard("First line{Shift>}{Enter}{/Shift}second{Enter}third");
+    await vi.waitFor(() =>
+      expect(client.getState().composer.body).toBe("First line\nsecond\nthird"),
+    );
+    expect(client.getState().comments).toHaveLength(0);
+
+    await userEvent.keyboard("{Meta>}{Enter}{/Meta}");
+    await vi.waitFor(() => expect(client.getState().comments).toHaveLength(1));
+    expect(client.getState().comments[0]?.body).toBe("First line\nsecond\nthird");
+    expect(client.getState().composer.open).toBe(false);
+
+    client.openComposer({ kind: "element", anchor: { component: "GateNotice" } });
+    await vi.waitFor(() => expect(panel().getAttribute("data-mk-open")).toBe("true"));
+    panel().querySelector<HTMLTextAreaElement>("textarea")?.focus();
+    await userEvent.keyboard("Another{Control>}{Enter}{/Control}");
+    await vi.waitFor(() => expect(client.getState().comments).toHaveLength(2));
+  });
+
+  it("does nothing on Cmd+Enter while the body is blank", async () => {
+    started();
+    const surface = await open();
+    surface.querySelector<HTMLTextAreaElement>("textarea")?.focus();
+
+    await userEvent.keyboard("{Meta>}{Enter}{/Meta}");
+
+    expect(client.getState().composer.open).toBe(true);
     expect(client.getState().comments).toHaveLength(0);
   });
 
