@@ -131,7 +131,8 @@ jobs:
           HEAD: ${{ github.event.pull_request.head.sha }}
         run: |
           missing=0
-          for sha in $(git rev-list "$BASE..$HEAD"); do
+          # Merge commits carry no authored change; "Update branch" writes them unsigned.
+          for sha in $(git rev-list --no-merges "$BASE..$HEAD"); do
             if ! git log -1 --format=%B "$sha" | grep -qE '^Signed-off-by: .+ <.+@.+>'; then
               echo "::error::$sha is missing a DCO sign-off"
               missing=1
