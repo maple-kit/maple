@@ -18,10 +18,11 @@ import { detailOf, failureFrom } from "./failure.js";
 import { openCount, visibleComments } from "./filters.js";
 import { startLink } from "./link.js";
 import { createNavigationGuard } from "./navigation.js";
-import { readMapleConfig, writePreferences } from "./preferences.js";
+import { readMapleConfig, readPreferences, writePreferences } from "./preferences.js";
 import { opensComposer } from "./shortcut.js";
 import { themeFrom, watchTheme } from "./theme.js";
 import { createTransport } from "./transport.js";
+import { PICK_ORDER } from "./types.js";
 
 import type { CommentKind } from "../connectors/types.js";
 import type { Logger } from "../logger/types.js";
@@ -234,6 +235,8 @@ interface Runtime {
   judges: AssistConfig | null;
   /** Whether the viewer wants judging at all, whatever the route offers. */
   assistOn: boolean;
+  /** What `c` arms from nothing: the kind the viewer armed last, remembered. */
+  lastPick: PickKind;
   readonly listeners: Set<(state: ClientState) => void>;
   readonly now: () => number;
   guard: NavigationGuard | undefined;
@@ -321,6 +324,7 @@ function runtimeFor(options: MapleClientOptions): Runtime {
     }),
     judges: null,
     assistOn: config.assist,
+    lastPick: readPreferences(storageOf(options)).lastPick ?? "element",
     listeners: new Set(),
     now: options.now ?? Date.now,
     guard: undefined,
@@ -515,11 +519,21 @@ function destroy(runtime: Runtime): void {
   runtime.link = undefined;
 }
 
-/** `c` arms element picking; `Ctrl`+`C` is copy and must not reach this. */
+/**
+ * `c` arms the kind armed last, and pressed again moves to the next, so one
+ * key starts a comment and changes its kind. `Ctrl`+`C` is copy, not this.
+ */
 function onKeydown(runtime: Runtime, event: Event): void {
   if (runtime.state.composer.open) return;
   if (!opensComposer(event as KeyboardEvent, runtime.config.shortcut)) return;
-  patch(runtime, { pick: { armed: true, kind: "element" }, hidden: false });
+  const { pick } = runtime.state;
+  arm(runtime, pick.armed && pick.kind ? nextPick(pick.kind) : runtime.lastPick);
+}
+
+/** The kind after this one in {@link PICK_ORDER}, wrapping at the end. */
+function nextPick(kind: PickKind): PickKind {
+  const at = PICK_ORDER.indexOf(kind);
+  return PICK_ORDER[(at + 1) % PICK_ORDER.length] ?? "element";
 }
 
 /** Another tab wrote. Re-read rather than trusting what is in memory here. */
@@ -964,6 +978,9 @@ function arm(runtime: Runtime, kind: PickKind): void {
   const view = runtime.options.view ?? (globalThis as { window?: ClientView }).window;
   if (view) checkTagged(runtime, view.document);
   patch(runtime, { pick: { armed: true, kind }, hidden: false });
+  if (kind === runtime.lastPick) return;
+  runtime.lastPick = kind;
+  writePreferences({ lastPick: kind }, storageOf(runtime.options));
 }
 
 /** Said once to the log, because it is a build to fix rather than a page. */

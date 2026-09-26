@@ -10,13 +10,13 @@
  */
 
 import { sourceFor } from "@maple-kit/core/anchor";
+import { PICK_ORDER } from "@maple-kit/core/client";
 import { captureContext, watchPickKeys } from "@maple-kit/core/overlay";
 import { captureElement } from "@maple-kit/core/screenshot";
 import { useMaple, useMapleClient } from "@maple-kit/react";
-import { createElement, Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { createElement, Fragment, useCallback, useEffect, useState } from "react";
 
 import { useMapleUi } from "../context.js";
-import { PICK_ORDER } from "../island/language.js";
 import { ringLabel } from "../marks/label.js";
 import { MapleTargetRing } from "../marks/ring.js";
 import { useShots } from "../shots.js";
@@ -66,7 +66,7 @@ export function MaplePicker(props: MaplePickerProps): ReactNode {
     };
   }, [commit, kind, pick.armed, root]);
 
-  useKeys(pick.armed, kind, client);
+  useKeys(pick.armed, client);
 
   if (!pick.armed || !kind) return null;
 
@@ -118,24 +118,13 @@ function reasonOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-/** Escape leaves picking; `t` cycles the three without going back to the island. */
-function useKeys(
-  armed: boolean,
-  kind: PickKind | undefined,
-  client: ReturnType<typeof useMapleClient>,
-): void {
-  const latest = useRef(kind);
-  latest.current = kind;
-
+/** Escape leaves picking. `c` again cycles the kind, and the controller owns that. */
+function useKeys(armed: boolean, client: ReturnType<typeof useMapleClient>): void {
   useEffect(() => {
     if (!armed) return;
     const stop = new AbortController();
 
-    watchPickKeys({
-      signal: stop.signal,
-      onCancel: () => client.disarm(),
-      onCycle: () => client.arm(next(latest.current)),
-    });
+    watchPickKeys({ signal: stop.signal, onCancel: () => client.disarm() });
     return () => stop.abort();
   }, [armed, client]);
 }
@@ -150,12 +139,6 @@ export function onOwnControl(event: Event, root: ShadowRoot): boolean {
   const target = event.composedPath()[0];
   if (!(target instanceof Element) || target.getRootNode() !== root) return false;
   return !target.classList.contains("mk-shield");
-}
-
-/** The next kind in the order the island shows them, wrapping at the end. */
-function next(kind: PickKind | undefined): PickKind {
-  const at = kind === undefined ? -1 : PICK_ORDER.indexOf(kind);
-  return PICK_ORDER[(at + 1) % PICK_ORDER.length] ?? "element";
 }
 
 interface HintProps {

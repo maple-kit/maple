@@ -191,6 +191,24 @@ describe("arming a pick", () => {
 
     expect(maple.getState().pick.armed).toBe(false);
   });
+
+  it("remembers the kind armed last across a second controller", () => {
+    const storage = memoryStorage();
+    client({ storage, origin: "https://preview.example" }).arm("text");
+
+    const stored = JSON.parse(storage.getItem("maple:prefs:https://preview.example") ?? "{}");
+    expect(stored).toMatchObject({ lastPick: "text" });
+  });
+
+  it("keeps the other preferences when it remembers the kind", () => {
+    const storage = memoryStorage();
+    const maple = client({ storage, origin: "https://preview.example" });
+    maple.setPosition("top-left");
+    maple.arm("region");
+
+    const stored = JSON.parse(storage.getItem("maple:prefs:https://preview.example") ?? "{}");
+    expect(stored).toMatchObject({ position: "top-left", lastPick: "region" });
+  });
 });
 
 describe("the composer", () => {

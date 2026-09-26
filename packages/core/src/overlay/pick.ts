@@ -197,14 +197,13 @@ export function startTextPicking(options: TextPickingOptions): void {
 export interface PickKeyOptions {
   /** Escape: the way out that needs no control on screen. */
   onCancel(): void;
-  /** `t`: the three kinds, cycled without going back to the island. */
-  onCycle(): void;
   readonly signal?: AbortSignal;
 }
 
 /**
- * `c` opens comment mode and `Ctrl`+`C` is copy, so a bare key here checks its
- * modifiers for the same reason the shortcut in the controller does.
+ * Escape, in the capture phase so it wins over the page's own. Cycling the
+ * kinds is the comment shortcut's, pressed again, and lives in the controller
+ * with the rest of what that key does.
  */
 export function watchPickKeys(options: PickKeyOptions): void {
   const when = options.signal === undefined ? {} : { signal: options.signal };
@@ -212,10 +211,7 @@ export function watchPickKeys(options: PickKeyOptions): void {
   document.addEventListener(
     "keydown",
     (event: KeyboardEvent) => {
-      if (event.key === "Escape") return options.onCancel();
-      if (event.key !== "t" || event.metaKey || event.ctrlKey || event.altKey) return;
-      event.preventDefault();
-      options.onCycle();
+      if (event.key === "Escape") options.onCancel();
     },
     { capture: true, ...when },
   );

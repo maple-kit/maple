@@ -20,7 +20,7 @@ export const PICKER_COPY = {
   cancel: "Cancel",
   cancelHint: "Esc",
   bar: "Choosing what to comment on",
-  cycle: "Press t to cycle",
+  cycle: "Press c again to cycle",
 } as const;
 
 /** What a screen reader hears on the bar while a pick is armed. */

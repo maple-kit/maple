@@ -182,6 +182,25 @@ describe("what the viewer is remembered for", () => {
     expect(warn).toHaveBeenCalledTimes(1);
   });
 
+  it("keeps what an earlier write stored when a later one names other fields", () => {
+    const storage = memoryStorage();
+    writePreferences({ position: "top-left", assist: false }, { storage, origin: ORIGIN });
+    writePreferences({ lastPick: "region" }, { storage, origin: ORIGIN });
+
+    expect(readPreferences({ storage, origin: ORIGIN })).toEqual({
+      position: "top-left",
+      assist: false,
+      lastPick: "region",
+    });
+  });
+
+  it("drops a remembered kind that is not one of the three", () => {
+    const storage = memoryStorage({
+      [`maple:prefs:${ORIGIN}`]: JSON.stringify({ lastPick: "lasso", detail: "developer" }),
+    });
+    expect(readPreferences({ storage, origin: ORIGIN })).toEqual({ detail: "developer" });
+  });
+
   it("loses a write to a storage that throws rather than the page", () => {
     expect(() =>
       writePreferences({ detail: "developer" }, { storage: hostileStorage(), origin: ORIGIN }),

@@ -7,6 +7,7 @@
  * decision to take every part.
  */
 
+import { PICK_ORDER } from "@maple-kit/core/client";
 import { createElement, forwardRef } from "react";
 
 import {
@@ -35,7 +36,6 @@ import {
   Settings,
   Unsent,
 } from "./island/index.js";
-import { PICK_ORDER } from "./island/language.js";
 import { MapleMarkLayer } from "./marks/index.js";
 import { MapleMock } from "./mock/index.js";
 import { MapleNotice } from "./notice/index.js";

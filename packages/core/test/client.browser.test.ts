@@ -134,6 +134,30 @@ describe("the c shortcut over a real page", () => {
     paragraph.remove();
   });
 
+  it("moves on to the next kind when pressed again while armed", () => {
+    const maple = client();
+    const press = () =>
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "c", bubbles: true }));
+
+    press();
+    expect(maple.getState().pick).toEqual({ armed: true, kind: "element" });
+    press();
+    expect(maple.getState().pick.kind).toBe("text");
+    press();
+    expect(maple.getState().pick.kind).toBe("region");
+    press();
+    expect(maple.getState().pick.kind).toBe("element");
+  });
+
+  it("starts from the kind armed last, on this controller or the one before", () => {
+    client().arm("region");
+    maple?.destroy();
+
+    const next = client();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "c", bubbles: true }));
+    expect(next.getState().pick).toEqual({ armed: true, kind: "region" });
+  });
+
   it("does nothing for the copy shortcut", () => {
     const maple = client();
     document.dispatchEvent(

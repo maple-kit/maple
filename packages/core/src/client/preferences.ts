@@ -10,7 +10,7 @@
  */
 
 import { COMMENT_SHORTCUT } from "./shortcut.js";
-import { CORNERS, DETAILS, THEME_PREFERENCES } from "./types.js";
+import { CORNERS, DETAILS, PICK_ORDER, THEME_PREFERENCES } from "./types.js";
 
 import type { Logger } from "../logger/types.js";
 import type { Corner, Detail, PickKind, ThemePreference } from "./types.js";
@@ -73,6 +73,8 @@ export interface StoredPreferences {
   readonly position?: Corner;
   readonly theme?: ThemePreference;
   readonly assist?: boolean;
+  /** The pick `c` arms next time, which is the one the viewer armed last. */
+  readonly lastPick?: PickKind;
 }
 
 /** Everything a surface needs before it renders anything. */
@@ -105,8 +107,6 @@ export interface PreferencesOptions {
   readonly origin?: string;
   readonly logger?: Logger;
 }
-
-const PICKS: readonly PickKind[] = ["element", "region", "text"];
 
 /** Narrows a query value to one of a list, or to nothing at all. */
 function oneOf<T extends string>(value: string | null, allowed: readonly T[]): T | undefined {
@@ -143,7 +143,7 @@ export function parseMapleQuery(search: string): MapleQuery {
     detail: oneOf(query.get("maple-detail"), DETAILS),
     theme: oneOf(query.get("maple-theme"), THEME_PREFERENCES),
     comment: comment === null || comment === "" ? undefined : comment,
-    pick: oneOf(query.get("maple-new"), PICKS),
+    pick: oneOf(query.get("maple-new"), PICK_ORDER),
     assist: switched(query.get("maple-assist")),
   });
 }
@@ -227,16 +227,21 @@ function sanitised(stored: StoredPreferences): StoredPreferences {
     position: oneOf(stored.position ?? null, CORNERS),
     theme: oneOf(stored.theme ?? null, THEME_PREFERENCES),
     assist: typeof stored.assist === "boolean" ? stored.assist : undefined,
+    lastPick: oneOf(stored.lastPick ?? null, PICK_ORDER),
   });
 }
 
-/** Remembers what the viewer chose. A write that throws is a write that did not. */
+/**
+ * Remembers what the viewer chose, over what they chose before: a write names
+ * the fields it changes and leaves the rest. A write that throws did not.
+ */
 export function writePreferences(next: StoredPreferences, options: PreferencesOptions = {}): void {
   const storage = reach(options);
   if (!storage) return;
 
   try {
-    storage.setItem(keyFor(options), JSON.stringify(sanitised(next)));
+    const merged = { ...readPreferences(options), ...present(next) };
+    storage.setItem(keyFor(options), JSON.stringify(sanitised(merged)));
   } catch {
     options.logger?.warn("A Maple preference could not be stored; it lasts this page only.");
   }

@@ -219,16 +219,34 @@ describe("an armed pick", () => {
     expect(root().querySelector(".mk-shield")).toBeNull();
   });
 
-  it("cycles the three kinds on t, without going back to the island", async () => {
-    await arm("element");
-    await vi.waitFor(() => expect(root().querySelector(".mk-shield")).not.toBeNull());
+  it("cycles the three kinds on c pressed again, without going back to the island", async () => {
+    press("c");
+    await vi.waitFor(() =>
+      expect(client.getState().pick).toEqual({ armed: true, kind: "element" }),
+    );
 
-    press("t");
+    press("c");
     await vi.waitFor(() => expect(client.getState().pick.kind).toBe("text"));
-    press("t");
+    press("c");
     await vi.waitFor(() => expect(client.getState().pick.kind).toBe("region"));
-    press("t");
+    press("c");
     await vi.waitFor(() => expect(client.getState().pick.kind).toBe("element"));
+  });
+
+  it("no longer cycles on t, which is a letter a reviewer types", async () => {
+    await arm("element");
+    press("t");
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(client.getState().pick.kind).toBe("element");
+  });
+
+  it("starts the next comment on the kind the last one was armed as", async () => {
+    await arm("region");
+    press("Escape");
+    await vi.waitFor(() => expect(client.getState().pick.armed).toBe(false));
+
+    press("c");
+    await vi.waitFor(() => expect(client.getState().pick).toEqual({ armed: true, kind: "region" }));
   });
 
   it("switches kind from the bar as well as from the keyboard", async () => {
