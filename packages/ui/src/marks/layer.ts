@@ -19,16 +19,17 @@ import { ringLabel } from "./label.js";
 import { MapleMark } from "./mark.js";
 import { useNudges } from "./nudge.js";
 import { flag, OFF_ATTRIBUTE, place } from "./paint.js";
-import { addresses, placements } from "./placement.js";
+import { addresses, draftPlacements, placements } from "./placement.js";
 import { MapleTargetRing } from "./ring.js";
 
 import type { Box } from "./geometry.js";
 import type { Nudge, Nudges } from "./nudge.js";
-import type { Placement } from "./placement.js";
+import type { DraftPlacement, Located, Placement } from "./placement.js";
 import type { RingState, TargetRingProps } from "./ring.js";
 import type { Comment } from "@maple-kit/core";
-import type { LabelSource } from "@maple-kit/core/anchor";
+import type { Anchor, LabelSource } from "@maple-kit/core/anchor";
 import type { ClientState, ComposerTarget, Detail, MapleClient } from "@maple-kit/core/client";
+import type { Draft } from "@maple-kit/core/overlay";
 
 const PART = "Maple.MarkLayer";
 
@@ -70,17 +71,23 @@ export const MapleMarkLayer = /** @__PURE__ */ forwardRef<HTMLDivElement, MarkLa
       [visible, address, container],
     );
 
+    const drafts = useWaiting(state);
+    const drafted = useMemo(
+      () => draftPlacements(drafts, container.ownerDocument),
+      [drafts, container],
+    );
+
     const nudges = useNudges();
     const nodes = useRef(new Map<string, HTMLButtonElement>());
     const paint = useCallback(() => {
       const height = viewportHeight(container);
       const taken: Box[] = [];
-      for (const placement of placed) {
-        const node = nodes.current.get(placement.comment.id);
-        const moved = nudges.of(placement.comment.id);
-        if (node) taken.push(step(node, placement, { height, taken, ...(moved ? { moved } : {}) }));
+      for (const [id, located] of everything(placed, drafted)) {
+        const node = nodes.current.get(id);
+        const moved = nudges.of(id);
+        if (node) taken.push(step(node, located, { height, taken, ...(moved ? { moved } : {}) }));
       }
-    }, [container, nudges, placed]);
+    }, [container, drafted, nudges, placed]);
 
     useFrameLoop(PART, paint);
     useScrollTo(placed, selectedId);
@@ -101,16 +108,32 @@ export const MapleMarkLayer = /** @__PURE__ */ forwardRef<HTMLDivElement, MarkLa
         ),
       [client, nudges, onSelect, peeked, placed, selectedId],
     );
+    const unsent = useMemo(
+      () =>
+        drafted.map((placement) =>
+          createElement(MapleMark, {
+            ...draftProps(placement, { peeked, nudges }),
+            ...nudges.handlersFor(placement.draft.id),
+            key: placement.draft.id,
+            ref: keep(nodes.current, placement.draft.id),
+            onClick: () => client.resumeDraft(placement.draft.id),
+            ...pointing(client, placement.draft.id),
+          }),
+        ),
+      [client, drafted, nudges, peeked],
+    );
 
     return createElement(
       "div",
       { className: className ? `mk-marks ${className}` : "mk-marks", ref },
+      ...unsent,
       ...marks,
       createElement(
         MapleTargetRing,
         ringFor({
           client: state,
           placed,
+          drafted,
           pointing: { peeked, selected: selectedId },
           root: container.ownerDocument,
         }),
@@ -132,6 +155,30 @@ function useScrollTo(placed: readonly Placement[], selectedId: string | undefine
   }, [target]);
 }
 
+/**
+ * The drafts that get a leaf: all of them but the one being written, which the
+ * composer's own ring is already standing on.
+ */
+function useWaiting(state: ClientState): readonly Draft[] {
+  const { composer, drafts } = state;
+  const writing = composer.open ? composer.draftId : undefined;
+  return useMemo(
+    () => (writing === undefined ? drafts : drafts.filter((draft) => draft.id !== writing)),
+    [drafts, writing],
+  );
+}
+
+/** Comments first, then drafts: the order the collision resolver yields in. */
+function everything(
+  placed: readonly Placement[],
+  drafted: readonly DraftPlacement[],
+): readonly (readonly [string, Located])[] {
+  return [
+    ...placed.map((one) => [one.comment.id, one] as const),
+    ...drafted.map((one) => [one.draft.id, one] as const),
+  ];
+}
+
 /** Pointing at a mark or tabbing onto it peeks; leaving it lets go. */
 function pointing(client: MapleClient, id: string) {
   return {
@@ -145,7 +192,7 @@ function pointing(client: MapleClient, id: string) {
 }
 
 /** The box a comment is drawn against: its rectangle, or the element itself. */
-function boxOf(placement: Placement): Box {
+function boxOf(placement: Located): Box {
   const box = placement.range?.getBoundingClientRect() ?? placement.element.getBoundingClientRect();
   return placement.region === undefined ? box : regionBox(box, placement.region);
 }
@@ -161,7 +208,7 @@ interface Frame {
  * What one frame does to one mark: cull it, or clear it of its neighbours. One
  * that was dragged holds where it was put; the resolver undoes no decision.
  */
-function step(node: HTMLButtonElement, placement: Placement, frame: Frame): Box {
+function step(node: HTMLButtonElement, placement: Located, frame: Frame): Box {
   const rect = boxOf(placement);
   const away = culled(rect, frame.height);
   flag(node, OFF_ATTRIBUTE, away);
@@ -206,6 +253,19 @@ function markProps(placement: Placement, view: MarkView) {
   };
 }
 
+/** A draft's mark: the muted outline, no number, and what it is on. */
+function draftProps(placement: DraftPlacement, view: Omit<MarkView, "selectedId">) {
+  const { draft } = placement;
+  return {
+    sent: false,
+    confidence: placement.confidence,
+    on: ringLabel({ kind: kindOf(draft.anchor), element: placement.element }),
+    peeked: draft.id === view.peeked,
+    nudged: view.nudges.of(draft.id) !== undefined,
+    dragging: view.nudges.dragging === draft.id,
+  };
+}
+
 /** Which comment each of the two pointers is on, neither of them the composer's. */
 interface Pointing {
   readonly peeked: string | undefined;
@@ -216,6 +276,7 @@ interface Pointing {
 interface RingInput {
   readonly client: ClientState;
   readonly placed: readonly Placement[];
+  readonly drafted: readonly DraftPlacement[];
   readonly pointing: Pointing;
   readonly root: ParentNode;
 }
@@ -236,16 +297,28 @@ function ringFor(input: RingInput): TargetRingProps {
 
 /** The ring around one drawn mark, or nothing when the page has no such mark. */
 function marked(input: RingInput, id: string | undefined, state: RingState) {
-  const hit = input.placed.find((placement) => placement.comment.id === id);
+  const hit = drawn(input, id);
   if (!hit) return undefined;
 
   return {
     target: hit.range ?? hit.element,
     ...(hit.region === undefined ? {} : { region: hit.region }),
-    label: ringLabel({ kind: kindOf(hit.comment.anchor), element: hit.element }),
-    ...noteFor({ anchor: hit.comment.anchor, element: hit.element }, input.client.detail),
+    label: ringLabel({ kind: kindOf(hit.anchor), element: hit.element }),
+    ...noteFor({ anchor: hit.anchor, element: hit.element }, input.client.detail),
     state,
   };
+}
+
+/** The drawn mark with this id, comment or draft, and the anchor it stands for. */
+function drawn(
+  input: RingInput,
+  id: string | undefined,
+): (Located & { anchor: Anchor }) | undefined {
+  if (id === undefined) return undefined;
+  const comment = input.placed.find((placement) => placement.comment.id === id);
+  if (comment) return { ...comment, anchor: comment.comment.anchor };
+  const draft = input.drafted.find((placement) => placement.draft.id === id);
+  return draft ? { ...draft, anchor: draft.draft.anchor } : undefined;
 }
 
 /** A composer on something the page no longer has gets no ring, and no guess. */

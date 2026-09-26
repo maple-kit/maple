@@ -50,17 +50,28 @@ function joined(parts: readonly (string | undefined)[]): string {
   return parts.filter(Boolean).join(" · ");
 }
 
+/** What an unsent comment is called wherever a status would otherwise go. */
+export const DRAFT_LABEL = "Draft";
+
 /** The mark's tooltip: who, where in its life, and what it is on. */
-export function markTitle(author: string | undefined, status: CommentStatus, on?: string): string {
-  return joined([author, STATUS_LABELS[status], on]);
+export function markTitle(
+  author: string | undefined,
+  status: CommentStatus | "draft",
+  on?: string,
+): string {
+  return joined([author, status === "draft" ? DRAFT_LABEL : STATUS_LABELS[status], on]);
 }
 
-/** The mark's accessible name. The address comes first, because it is the address. */
+/**
+ * The mark's accessible name. The address comes first, because it is the
+ * address; a draft has none yet, and says it is one instead.
+ */
 export function markLabel(
-  address: number,
+  address: number | undefined,
   author: string | undefined,
   status: CommentStatus,
 ): string {
   const who = author ? ` by ${author}` : "";
+  if (address === undefined) return `${DRAFT_LABEL} comment${who}`;
   return `Comment ${address}${who}, ${STATUS_LABELS[status]}`;
 }

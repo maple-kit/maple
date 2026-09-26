@@ -601,7 +601,7 @@ describe("writing a comment", () => {
     expect(client.getState().drafts).toHaveLength(0);
   });
 
-  it("keeps the comment unsent when Keep is pressed, and closes", async () => {
+  it("keeps the comment unsent when Save as draft is pressed, and closes", async () => {
     started();
     const surface = await open();
     client.setBody("Worth saying, not yet.");

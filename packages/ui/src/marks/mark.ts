@@ -21,8 +21,8 @@ import type { ButtonHTMLAttributes } from "react";
 
 /** Everything the mark says, and nothing about how it should look. */
 export interface MarkProps extends AsChildProps, ButtonHTMLAttributes<HTMLButtonElement> {
-  /** The address: the number the list and the export table also show. */
-  readonly address: number;
+  /** The address: the number the list and the export table also show. A draft has none. */
+  readonly address?: number;
   readonly status?: CommentStatus;
   /** False for a comment still being written, which is the dashed form. */
   readonly sent?: boolean;
@@ -89,21 +89,23 @@ export const MapleMark = /** @__PURE__ */ forwardRef<HTMLButtonElement, MarkProp
         }),
         "aria-label": markLabel(address, author, status),
         "aria-pressed": selected ?? false,
-        title: markTitle(author, status, on),
+        title: markTitle(author, sent === false ? "draft" : status, on),
         className: className ? `mk-mark mk-hit ${className}` : "mk-mark mk-hit",
         ref: composeRefs<HTMLButtonElement>(ref, paint),
       },
       ...inside(asChild, children, [
         createElement(MapleLeaf, { key: "leaf", form }),
-        createElement(
-          "span",
-          {
-            key: "n",
-            className: "mk-mark-n mk-num",
-            "data-mk-digits": String(String(address).length),
-          },
-          address,
-        ),
+        address === undefined
+          ? null
+          : createElement(
+              "span",
+              {
+                key: "n",
+                className: "mk-mark-n mk-num",
+                "data-mk-digits": String(String(address).length),
+              },
+              address,
+            ),
       ]),
     );
   },

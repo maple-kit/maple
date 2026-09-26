@@ -248,6 +248,8 @@ describe("the words", () => {
     expect(markTitle("Sam", "resolved")).toBe("Sam · Resolved");
     expect(markLabel(3, "Priya", "needs_reverify")).toBe("Comment 3 by Priya, Needs re-verify");
     expect(markLabel(3, undefined, "open")).toBe("Comment 3, Open");
+    expect(markLabel(undefined, undefined, "open")).toBe("Draft comment");
+    expect(markTitle(undefined, "draft", "the Yield card")).toBe("Draft · the Yield card");
   });
 
   it("reduces a name to two initials, and never says the word guest", () => {

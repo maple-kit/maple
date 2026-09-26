@@ -46,7 +46,7 @@ export type { Nudge, NudgeHandlers, NudgePointer, Nudges } from "./nudge.js";
 export { flag, MOVING_ATTRIBUTE, OFF_ATTRIBUTE, place } from "./paint.js";
 export { PIXEL_LEAF_SHADES, PIXEL_LEAF_VIEW_BOX } from "./pixel-leaf.js";
 export { addresses, placements } from "./placement.js";
-export type { Placement } from "./placement.js";
+export type { DraftPlacement, Located, Placement } from "./placement.js";
 export {
   BELOW_ATTRIBUTE,
   END_ATTRIBUTE,

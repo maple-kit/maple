@@ -1,3 +1,4 @@
+import { draftIdFor } from "@maple-kit/core/client";
 import { createElement } from "react";
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
@@ -440,5 +441,51 @@ describe("the ring in developer detail", () => {
     await vi.waitFor(() =>
       expect(find(".mk-ring-note").textContent).toBe("app/dashboard/page.tsx:42:7"),
     );
+  });
+});
+
+/** A draft is a comment that has not left, and it still stands where it is about. */
+describe("a draft on the page", () => {
+  const DRAFTS = `maple:drafts:${BRANCH}`;
+
+  /** Writes a draft the way another tab would, and waits for its leaf. */
+  async function drafted(): Promise<HTMLElement> {
+    const anchor = { source: "app/dashboard/page.tsx:42:7", component: "YieldCard" };
+    const draft = {
+      id: draftIdFor(anchor, Date.now()),
+      body: "Not sure about this yet.",
+      anchor,
+      updatedAt: new Date().toISOString(),
+    };
+    localStorage.setItem(DRAFTS, JSON.stringify([draft]));
+    window.dispatchEvent(new StorageEvent("storage", { key: DRAFTS }));
+    await vi.waitFor(() => expect(root().querySelectorAll(".mk-mark")).toHaveLength(3));
+    return find<HTMLElement>('.mk-mark[data-sent="false"]');
+  }
+
+  it("stands on the page as a muted leaf with no number", async () => {
+    const node = await drafted();
+    const sent = find<HTMLElement>('.mk-mark[aria-label^="Comment 1"]');
+    const paint = (one: HTMLElement) => getComputedStyle(one).getPropertyValue("--mk-paint");
+
+    expect(node.getAttribute("aria-label")).toBe("Draft comment");
+    expect(node.querySelector(".mk-mark-n")).toBeNull();
+    expect(paint(node)).not.toBe(paint(sent));
+  });
+
+  it("rings what it is on under the pointer, as a sent one does", async () => {
+    const node = await drafted();
+    await userEvent.hover(node);
+
+    expect((await ring()).getAttribute("data-mk-state")).toBe("hovered");
+    expect(find(".mk-ring-name").textContent).toBe("the Yield card");
+  });
+
+  it("opens the composer on what was written when clicked", async () => {
+    (await drafted()).click();
+
+    await vi.waitFor(() => expect(find(".mk-composer").getAttribute("data-mk-open")).toBe("true"));
+    expect(find<HTMLTextAreaElement>("textarea").value).toBe("Not sure about this yet.");
+    await vi.waitFor(() => expect(root().querySelectorAll(".mk-mark")).toHaveLength(2));
   });
 });
