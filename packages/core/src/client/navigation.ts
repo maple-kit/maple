@@ -87,6 +87,21 @@ export interface NavigationGuard {
   stop(): void;
 }
 
+/** Windows a Maple surface is taking away on the reviewer's say-so. */
+const chosen = new WeakSet<object>();
+
+/**
+ * Goes to `url` because the reviewer chose to, such as Apply and reload. Every
+ * guard on `view` still saves, and none asks the browser to confirm.
+ */
+export function navigateOnPurpose(
+  view: { readonly location: { assign(url: string): void } },
+  url: string,
+): void {
+  chosen.add(view);
+  view.location.assign(url);
+}
+
 /** Builds the guard. Attaches nothing until `start()`. */
 export function createNavigationGuard(options: NavigationGuardOptions): NavigationGuard {
   const { view } = options;
@@ -118,7 +133,8 @@ export function createNavigationGuard(options: NavigationGuardOptions): Navigati
 
   const onUnload = (event: Event): void => {
     leave("unload");
-    if (options.confirmOnUnload) event.preventDefault();
+    const onPurpose = chosen.delete(view);
+    if (options.confirmOnUnload && !onPurpose) event.preventDefault();
   };
 
   const setDirty = (dirty: boolean): void => {
@@ -179,7 +195,7 @@ function answer(prompt: LeavePrompt, question: LeaveQuestion, view: NavigationVi
     (given) => {
       if (given !== "discard") return;
       prompt.discard();
-      view.location.assign(question.href);
+      navigateOnPurpose(view, question.href);
     },
     () => undefined,
   );

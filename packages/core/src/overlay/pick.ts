@@ -67,8 +67,8 @@ export function containerFor(rect: Rect): Element {
 }
 
 /** The current text selection, when there is one and it is not in the overlay. */
-export function selectedText(): Pick | undefined {
-  const selection = document.getSelection();
+export function selectedText(page: Document = document): Pick | undefined {
+  const selection = page.getSelection();
   if (!selection || selection.isCollapsed || selection.rangeCount === 0) return undefined;
 
   const range = selection.getRangeAt(0);
@@ -170,8 +170,8 @@ export interface TextPickingOptions {
 
 /**
  * Commits a passage when the pointer comes up, not on every selection change:
- * a selection is still being made while it is dragged, and committing its
- * first character is how a reviewer ends up quoting one letter.
+ * a selection still being dragged would quote one letter. One made before the
+ * pick was armed is finished, and is committed as soon as the listeners are up.
  */
 export function startTextPicking(options: TextPickingOptions): void {
   const ignored = options.ignore ?? (() => false);
@@ -191,20 +191,24 @@ export function startTextPicking(options: TextPickingOptions): void {
   );
 
   listen("selectionchange", () => options.onHover?.(selectedText()), when);
+
+  setTimeout(() => {
+    const already = options.signal?.aborted === true ? undefined : selectedText();
+    if (already) options.onPick(already);
+  }, 0);
 }
 
 /** What the picker's own keys do while a pick is armed. */
 export interface PickKeyOptions {
   /** Escape: the way out that needs no control on screen. */
   onCancel(): void;
-  /** `t`: the three kinds, cycled without going back to the island. */
-  onCycle(): void;
   readonly signal?: AbortSignal;
 }
 
 /**
- * `c` opens comment mode and `Ctrl`+`C` is copy, so a bare key here checks its
- * modifiers for the same reason the shortcut in the controller does.
+ * Escape, in the capture phase so it wins over the page's own. Cycling the
+ * kinds is the comment shortcut's, pressed again, and lives in the controller
+ * with the rest of what that key does.
  */
 export function watchPickKeys(options: PickKeyOptions): void {
   const when = options.signal === undefined ? {} : { signal: options.signal };
@@ -212,10 +216,7 @@ export function watchPickKeys(options: PickKeyOptions): void {
   document.addEventListener(
     "keydown",
     (event: KeyboardEvent) => {
-      if (event.key === "Escape") return options.onCancel();
-      if (event.key !== "t" || event.metaKey || event.ctrlKey || event.altKey) return;
-      event.preventDefault();
-      options.onCycle();
+      if (event.key === "Escape") options.onCancel();
     },
     { capture: true, ...when },
   );

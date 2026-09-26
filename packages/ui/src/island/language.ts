@@ -7,6 +7,8 @@
  * tooltip, because a list of comments is scanned rather than read.
  */
 
+import { COMMENT_SHORTCUT } from "@maple-kit/core/client";
+
 import type { CommentFilter, Corner, PickKind, ThemePreference } from "@maple-kit/core/client";
 
 /** The five filters, in the words the pills show. `unpinned` is `orphaned`. */
@@ -40,9 +42,6 @@ export function tallyTitle(filter: CommentFilter, count: number): string {
   const many = count === 1 ? "comment" : "comments";
   return `${String(count)} ${FILTER_LABELS[filter].toLowerCase()} ${many} — click to show only these`;
 }
-
-/** The three picks, in the order the island's bottom edge shows them. */
-export const PICK_ORDER: readonly PickKind[] = ["element", "text", "region"];
 
 /** The word on each pick button. */
 export const PICK_LABELS: Readonly<Record<PickKind, string>> = {
@@ -188,9 +187,9 @@ export function triggerLabel(count: number): string {
   return `Open Maple: ${openLabel(count)}`;
 }
 
-/** A pick button's tooltip. `t` cycles the three while one is armed. */
-export function pickTitle(kind: PickKind): string {
-  return `Comment on ${kind} — press t while picking to cycle`;
+/** A pick button's tooltip. The comment key, pressed again, cycles the three. */
+export function pickTitle(kind: PickKind, key: string = COMMENT_SHORTCUT): string {
+  return `Comment on ${kind} — press ${key} again while picking to cycle`;
 }
 
 /**

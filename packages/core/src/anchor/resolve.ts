@@ -8,7 +8,7 @@
  */
 
 import { matchQuote } from "../lib/match-quote.js";
-import { indexText, rangeAt } from "./text-position.js";
+import { indexText, rangeAt, spanOf } from "./text-position.js";
 import { RUNGS } from "./types.js";
 
 import type { TextIndex } from "./text-position.js";
@@ -104,7 +104,7 @@ function byAttribute(rung: Rung, anchor: Anchor, scope: Scope): Resolution {
   }
   if (matches.length === 0) return orphan("missing", rung);
 
-  const narrowed = narrow(matches, anchor);
+  const narrowed = narrow(matches, anchor, scope.root);
   return narrowed
     ? {
         status: "resolved",
@@ -120,17 +120,77 @@ interface Narrowed {
   readonly score: number;
 }
 
-/** Picks between several elements carrying the same attribute, using the quote. */
-function narrow(matches: readonly Element[], anchor: Anchor): Narrowed | undefined {
+interface Candidate extends Narrowed {
+  /** Where its text starts in the page's flat text. */
+  readonly start: number;
+}
+
+/** Two scores closer than this are the same score, and something else decides. */
+const TIE = 1e-9;
+
+/**
+ * Picks between elements sharing an attribute — a component rendered twice
+ * shares a line and often a text — by the context around each, then offset.
+ */
+function narrow(
+  matches: readonly Element[],
+  anchor: Anchor,
+  root: ParentNode,
+): Narrowed | undefined {
   const quote = anchor.quote;
   if (!quote?.exact) return undefined;
 
-  let best: Narrowed | undefined;
+  const index = indexText(root);
+  const preferred = anchor.selector === undefined ? undefined : only(anchor.selector, root);
+  let best: Candidate | undefined;
   for (const element of matches) {
-    const found = matchQuote(element.textContent ?? "", quote.exact);
-    if (found && (!best || found.score > best.score)) best = { element, score: found.score };
+    const scored = scoreIn(index, element, quote);
+    if (scored && (!best || beats(scored, best, { offset: quote.offset, preferred }))) {
+      best = scored;
+    }
   }
-  return best;
+  return best && { element: best.element, score: best.score };
+}
+
+/** The quote scored where this element sits, with the page around it as context. */
+function scoreIn(
+  index: TextIndex,
+  element: Element,
+  quote: NonNullable<Anchor["quote"]>,
+): Candidate | undefined {
+  const span = spanOf(index, element);
+  if (!span) return undefined;
+
+  const from = Math.max(0, span.start - (quote.prefix?.length ?? 0));
+  const to = span.end + (quote.suffix?.length ?? 0);
+  // No offset hint: it is an offset into the page, and this is a window of it.
+  const around = {
+    ...(quote.prefix === undefined ? {} : { prefix: quote.prefix }),
+    ...(quote.suffix === undefined ? {} : { suffix: quote.suffix }),
+  };
+  const found = matchQuote(index.text.slice(from, to), quote.exact, around);
+  return found && { element, score: found.score, start: span.start };
+}
+
+interface Tiebreak {
+  readonly offset: number | undefined;
+  readonly preferred: Element | undefined;
+}
+
+function beats(one: Candidate, other: Candidate, tiebreak: Tiebreak): boolean {
+  if (Math.abs(one.score - other.score) > TIE) return one.score > other.score;
+  const { offset } = tiebreak;
+  if (offset !== undefined) {
+    const nearer = Math.abs(one.start - offset) - Math.abs(other.start - offset);
+    if (nearer !== 0) return nearer < 0;
+  }
+  return one.element === tiebreak.preferred;
+}
+
+/** The one element a selector names, or nothing when it names none or several. */
+function only(selector: string, root: ParentNode): Element | undefined {
+  const found = root.querySelectorAll(selector);
+  return found.length === 1 ? found[0] : undefined;
 }
 
 function byQuote(anchor: Anchor, scope: Scope): Resolution {

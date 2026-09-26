@@ -120,8 +120,8 @@ describe("the words", () => {
     expect(Object.values(FILTER_LABELS)).not.toContain("Orphaned");
   });
 
-  it("tells a picker that t cycles the three", () => {
-    expect(pickTitle("text")).toBe("Comment on text — press t while picking to cycle");
+  it("tells a picker that the comment key, pressed again, cycles the three", () => {
+    expect(pickTitle("text")).toBe("Comment on text — press c again while picking to cycle");
   });
 });
 

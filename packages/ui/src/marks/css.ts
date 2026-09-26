@@ -255,9 +255,8 @@ function ringCss(): string {
   will-change: transform;
 }
 
-.mk-ring[data-mk-state="hovered"] {
-  box-shadow: 0 0 0 1.5px color-mix(in oklab, var(--mk-accent) 60%, transparent);
-}
+/* No quieter hovered ring: pointing at a mark or tabbing onto it is asking
+   "which one", and a hairline answered it too faintly to be seen. */
 
 /* A passage is its own lines and nothing else: the box around them is the
    paragraph, and outlining that says the comment is on the paragraph. */

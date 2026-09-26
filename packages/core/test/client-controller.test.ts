@@ -3,10 +3,12 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 
 import { createMapleClient } from "../src/client/index.js";
 import { storedComment } from "../src/testing/fixtures.js";
-import { createMapleFake, MAPLE_BASE } from "./msw/maple.js";
+import { createMapleFake, MAPLE_BASE, mapleUnavailable } from "./msw/maple.js";
 import { createTestServer, useTestServer } from "./msw/server.js";
 
 import type { ComposerTarget, MapleClient, MapleClientOptions } from "../src/client/index.js";
+import type { Comment } from "../src/index.js";
+import type { Logger } from "../src/logger/types.js";
 import type { MapleFake } from "./msw/maple.js";
 
 const NOW = Date.parse("2026-09-18T10:00:00.000Z");
@@ -190,6 +192,91 @@ describe("arming a pick", () => {
     maple.openComposer(TARGET);
 
     expect(maple.getState().pick.armed).toBe(false);
+  });
+
+  it("remembers the kind armed last across a second controller", () => {
+    const storage = memoryStorage();
+    client({ storage, origin: "https://preview.example" }).arm("text");
+
+    const stored = JSON.parse(storage.getItem("maple:prefs:https://preview.example") ?? "{}");
+    expect(stored).toMatchObject({ lastPick: "text" });
+  });
+
+  it("keeps the other preferences when it remembers the kind", () => {
+    const storage = memoryStorage();
+    const maple = client({ storage, origin: "https://preview.example" });
+    maple.setPosition("top-left");
+    maple.arm("region");
+
+    const stored = JSON.parse(storage.getItem("maple:prefs:https://preview.example") ?? "{}");
+    expect(stored).toMatchObject({ position: "top-left", lastPick: "region" });
+  });
+});
+
+/**
+ * An agent resolves a comment while the reviewer is looking at the page. The
+ * poll is what shows it without a reload; `refresh` is what the poll calls.
+ */
+describe("reading the comments again", () => {
+  it("shows a comment resolved elsewhere, without a loading phase", async () => {
+    fake.seed(storedComment({ id: "c_1" }));
+    const maple = client();
+    await maple.load();
+
+    const stored = fake.comments() as Comment[];
+    stored[0] = { ...stored[0]!, status: "resolved" };
+    const phases: string[] = [];
+    maple.subscribe((state) => phases.push(state.phase));
+    await maple.refresh();
+
+    expect(maple.getState().comments[0]?.status).toBe("resolved");
+    expect(maple.getState().openCount).toBe(0);
+    expect(phases).not.toContain("loading");
+  });
+
+  it("leaves the list alone when nothing changed, so no mark re-measures", async () => {
+    fake.seed(storedComment({ id: "c_1" }));
+    const maple = client();
+    await maple.load();
+    const before = maple.getState().comments;
+
+    await maple.refresh();
+    expect(maple.getState().comments).toBe(before);
+  });
+
+  it("does nothing before the first load has finished", async () => {
+    fake.seed(storedComment({ id: "c_1" }));
+    const maple = client();
+    await maple.refresh();
+
+    expect(maple.getState().phase).toBe("idle");
+    expect(maple.getState().comments).toEqual([]);
+  });
+
+  it("keeps the last list and puts no failure on the surface when the route fails", async () => {
+    fake.seed(storedComment({ id: "c_1" }));
+    const warn = vi.fn();
+    const logger: Logger = { debug() {}, info() {}, warn, error() {}, child: () => logger };
+    const maple = client({ logger });
+    await maple.load();
+
+    server.use(mapleUnavailable());
+    await maple.refresh();
+
+    expect(maple.getState().comments).toHaveLength(1);
+    expect(maple.getState().error).toBeNull();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("refresh"), expect.anything());
+  });
+
+  it("keeps a status set here while the read was out, which is newer", async () => {
+    fake.seed(storedComment({ id: "c_1" }));
+    const maple = client();
+    await maple.load();
+
+    const reading = maple.refresh();
+    await maple.setStatus("c_1", "resolved", { sha: "abc123" });
+    await reading;
+    expect(maple.getState().comments[0]?.status).toBe("resolved");
   });
 });
 

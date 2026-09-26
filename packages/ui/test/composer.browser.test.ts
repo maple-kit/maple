@@ -197,10 +197,20 @@ describe("the bare-key shortcut, with a real selection on the page", () => {
     expect(selection.toString()).toContain("Retention fell");
   });
 
-  it("arms element picking on a bare c, selection or not", async () => {
+  it("takes the selected passage as a text pick on a bare c", async () => {
     started();
     await render(tree());
     selectAPassage();
+
+    press({});
+
+    expect(client.getState().pick).toEqual({ armed: true, kind: "text" });
+  });
+
+  it("arms element picking on a bare c with nothing selected", async () => {
+    started();
+    await render(tree());
+    window.getSelection()?.removeAllRanges();
 
     press({});
 

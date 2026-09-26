@@ -40,6 +40,12 @@ export const DETAILS = ["default", "developer"] as const;
  */
 export type Detail = (typeof DETAILS)[number];
 
+/**
+ * The three picks, in the order the island shows them and `c` cycles them.
+ * One list, so the keyboard and the buttons never disagree about "next".
+ */
+export const PICK_ORDER = ["element", "text", "region"] as const satisfies readonly PickKind[];
+
 /** Light or dark, for the host page and for the overlay drawn over it. */
 export type Scheme = "dark" | "light";
 

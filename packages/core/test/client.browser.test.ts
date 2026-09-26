@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createDraftKeeper, createMapleClient, watchTheme } from "../src/client/index.js";
+import { storedComment } from "../src/testing/fixtures.js";
 
 import type { ComposerTarget, MapleClient, ThemeState } from "../src/client/index.js";
 
@@ -18,6 +19,7 @@ function client(debounceMs = 0): MapleClient {
 
 beforeEach(() => localStorage.clear());
 afterEach(() => {
+  getSelection()?.removeAllRanges();
   maple?.destroy();
   maple = undefined;
   document.documentElement.removeAttribute("data-theme");
@@ -114,24 +116,75 @@ describe("a storage event from another tab", () => {
   });
 });
 
+/** A paragraph on the page, selected the way a reviewer's drag selects it. */
+function selectParagraph(): HTMLElement {
+  const paragraph = document.createElement("p");
+  paragraph.textContent = "The spacing under the heading is inconsistent.";
+  paragraph.dataset["test"] = "";
+  document.body.append(paragraph);
+
+  const range = document.createRange();
+  range.selectNodeContents(paragraph);
+  getSelection()?.removeAllRanges();
+  getSelection()?.addRange(range);
+  return paragraph;
+}
+
 /** Copying a paragraph must not close the composer. This is that test. */
 describe("the c shortcut over a real page", () => {
-  it("arms element picking with text selected on the page", () => {
+  it("arms a text pick of the passage already selected on the page", () => {
     const maple = client();
-    const paragraph = document.createElement("p");
-    paragraph.textContent = "The spacing under the heading is inconsistent.";
-    paragraph.dataset["test"] = "";
-    document.body.append(paragraph);
-
-    const range = document.createRange();
-    range.selectNodeContents(paragraph);
-    getSelection()?.removeAllRanges();
-    getSelection()?.addRange(range);
+    const paragraph = selectParagraph();
 
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "c", bubbles: true }));
-    expect(maple.getState().pick).toEqual({ armed: true, kind: "element" });
+    expect(maple.getState().pick).toEqual({ armed: true, kind: "text" });
 
     paragraph.remove();
+  });
+
+  it("does not remember a text pick it took from a selection as the viewer's choice", () => {
+    const maple = client();
+    maple.arm("region");
+    maple.disarm();
+    const paragraph = selectParagraph();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "c", bubbles: true }));
+    maple.disarm();
+
+    getSelection()?.removeAllRanges();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "c", bubbles: true }));
+    expect(maple.getState().pick).toEqual({ armed: true, kind: "region" });
+    paragraph.remove();
+  });
+
+  it("arms the remembered kind when the selection is collapsed", () => {
+    const maple = client();
+    getSelection()?.removeAllRanges();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "c", bubbles: true }));
+    expect(maple.getState().pick).toEqual({ armed: true, kind: "element" });
+  });
+
+  it("moves on to the next kind when pressed again while armed", () => {
+    const maple = client();
+    const press = () =>
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "c", bubbles: true }));
+
+    press();
+    expect(maple.getState().pick).toEqual({ armed: true, kind: "element" });
+    press();
+    expect(maple.getState().pick.kind).toBe("text");
+    press();
+    expect(maple.getState().pick.kind).toBe("region");
+    press();
+    expect(maple.getState().pick.kind).toBe("element");
+  });
+
+  it("starts from the kind armed last, on this controller or the one before", () => {
+    client().arm("region");
+    maple?.destroy();
+
+    const next = client();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "c", bubbles: true }));
+    expect(next.getState().pick).toEqual({ armed: true, kind: "region" });
   });
 
   it("does nothing for the copy shortcut", () => {
@@ -168,5 +221,45 @@ describe("the c shortcut over a real page", () => {
 
     expect(maple.getState().pick.armed).toBe(false);
     host.remove();
+  });
+});
+
+/** The poll a started controller runs, over the fetch seam so no origin is reached. */
+describe("polling once started", () => {
+  function route(status: () => string): typeof globalThis.fetch {
+    return (input: RequestInfo | URL) => {
+      const url = String(input instanceof Request ? input.url : input);
+      const comments = [storedComment({ id: "c_1", status: status() as "open" })];
+      const body = url.includes("/comments") ? { comments } : { user: null };
+      const ok = !url.includes("/approvals");
+      return Promise.resolve(
+        new Response(JSON.stringify(ok ? body : { error: "none" }), {
+          status: ok ? 200 : 501,
+          headers: { "content-type": "application/json" },
+        }),
+      );
+    };
+  }
+
+  it("shows a comment resolved elsewhere without a reload, and stops on destroy", async () => {
+    let status = "open";
+    maple = createMapleClient({
+      branch: BRANCH,
+      now: () => NOW,
+      pollMs: 20,
+      fetch: route(() => status),
+    });
+    maple.start();
+    await maple.load();
+    expect(maple.getState().openCount).toBe(1);
+
+    status = "resolved";
+    await vi.waitFor(() => expect(maple?.getState().comments[0]?.status).toBe("resolved"));
+
+    const stopped = maple;
+    stopped.destroy();
+    status = "open";
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    expect(stopped.getState().comments[0]?.status).toBe("resolved");
   });
 });

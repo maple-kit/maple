@@ -138,6 +138,51 @@ describe("resolving an anchor", () => {
   });
 });
 
+/**
+ * One component rendered twice: the same source line, the same name and the
+ * same text. The reviewer picked the second; the first is what came back.
+ */
+describe("choosing between one component rendered twice", () => {
+  const BADGE = `data-maple-src="src/Roadmap.tsx:31:9" data-maple-name="Badge"`;
+  const CARDS = `
+    <article><h3>More connectors</h3><span ${BADGE}>planned</span><p>More forges and stores.</p></article>
+    <article><h3>The maple CLI, and a TUI</h3><span ${BADGE}>planned</span><p>Setup, review, lint.</p></article>`;
+
+  it("finds the one that was picked, by the text recorded around it", () => {
+    const root = mount(CARDS);
+    const second = root.querySelectorAll("span")[1]!;
+
+    const found = resolved(describeElement(second, { root }));
+    expect(found.element).toBe(second);
+    expect(found.by).toBe("source");
+  });
+
+  it("finds the first as well, so the fix is not a preference for the last", () => {
+    const root = mount(CARDS);
+    const first = root.querySelectorAll("span")[0]!;
+    expect(resolved(describeElement(first, { root })).element).toBe(first);
+  });
+
+  it("falls to the recorded offset when the text around both reads the same", () => {
+    const root = mount(`<i ${BADGE}>planned</i> and <i ${BADGE}>planned</i>`);
+    const [first, second] = root.querySelectorAll("i");
+    const exact = { exact: "planned", offset: 20 };
+
+    expect(resolved({ source: "src/Roadmap.tsx:31:9", quote: exact }).element).toBe(second);
+    expect(
+      resolved({ source: "src/Roadmap.tsx:31:9", quote: { ...exact, offset: 0 } }).element,
+    ).toBe(first);
+  });
+
+  it("falls to the selector when nothing else separates them", () => {
+    const root = mount(`<b ${BADGE}>planned</b><b ${BADGE}>planned</b>`);
+    const second = root.querySelectorAll("b")[1]!;
+    const anchor = { source: "src/Roadmap.tsx:31:9", quote: { exact: "planned" } };
+
+    expect(resolved({ ...anchor, selector: "b:nth-of-type(2)" }).element).toBe(second);
+  });
+});
+
 describe("orphaning", () => {
   it("says so when nothing was recorded", () => {
     mount(`<p>Text</p>`);

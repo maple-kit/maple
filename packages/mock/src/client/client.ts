@@ -7,7 +7,7 @@
  * until `start()`. Applying a recipe reloads the page: see `docs/mock.md`.
  */
 
-import { opensMock, watchEscape, watchTheme } from "@maple-kit/core/client";
+import { navigateOnPurpose, opensMock, watchEscape, watchTheme } from "@maple-kit/core/client";
 import { linkRecipe, MOCK_STATES, readPlan, RECIPE_VERSION } from "@maple-kit/core/mock";
 
 import { flagType } from "../flag-source.js";
@@ -581,14 +581,14 @@ function apply(runtime: Runtime): void {
   const storage = tabStorage(runtime.view);
   if (storage !== undefined) saveRecipe(storage, recipe);
   keepRecipeCookie(runtime.view, recipe);
-  runtime.view?.location.assign(linkRecipe(hrefOf(runtime), recipe).href);
+  if (runtime.view) navigateOnPurpose(runtime.view, linkRecipe(hrefOf(runtime), recipe).href);
 }
 
 function turnOff(runtime: Runtime): void {
   const storage = tabStorage(runtime.view);
   if (storage !== undefined) forgetRecipe(storage);
   keepRecipeCookie(runtime.view, undefined);
-  runtime.view?.location.assign(linkRecipe(hrefOf(runtime), undefined).href);
+  if (runtime.view) navigateOnPurpose(runtime.view, linkRecipe(hrefOf(runtime), undefined).href);
 }
 
 async function copyDraft(runtime: Runtime, write: (recipe: Recipe) => string): Promise<void> {
