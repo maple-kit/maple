@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createDraftKeeper, createMapleClient, watchTheme } from "../src/client/index.js";
+import { storedComment } from "../src/testing/fixtures.js";
 
 import type { ComposerTarget, MapleClient, ThemeState } from "../src/client/index.js";
 
@@ -192,5 +193,45 @@ describe("the c shortcut over a real page", () => {
 
     expect(maple.getState().pick.armed).toBe(false);
     host.remove();
+  });
+});
+
+/** The poll a started controller runs, over the fetch seam so no origin is reached. */
+describe("polling once started", () => {
+  function route(status: () => string): typeof globalThis.fetch {
+    return (input: RequestInfo | URL) => {
+      const url = String(input instanceof Request ? input.url : input);
+      const comments = [storedComment({ id: "c_1", status: status() as "open" })];
+      const body = url.includes("/comments") ? { comments } : { user: null };
+      const ok = !url.includes("/approvals");
+      return Promise.resolve(
+        new Response(JSON.stringify(ok ? body : { error: "none" }), {
+          status: ok ? 200 : 501,
+          headers: { "content-type": "application/json" },
+        }),
+      );
+    };
+  }
+
+  it("shows a comment resolved elsewhere without a reload, and stops on destroy", async () => {
+    let status = "open";
+    maple = createMapleClient({
+      branch: BRANCH,
+      now: () => NOW,
+      pollMs: 20,
+      fetch: route(() => status),
+    });
+    maple.start();
+    await maple.load();
+    expect(maple.getState().openCount).toBe(1);
+
+    status = "resolved";
+    await vi.waitFor(() => expect(maple?.getState().comments[0]?.status).toBe("resolved"));
+
+    const stopped = maple;
+    stopped.destroy();
+    status = "open";
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    expect(stopped.getState().comments[0]?.status).toBe("resolved");
   });
 });

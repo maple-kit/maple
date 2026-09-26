@@ -18,6 +18,7 @@ import { detailOf, failureFrom } from "./failure.js";
 import { openCount, visibleComments } from "./filters.js";
 import { startLink } from "./link.js";
 import { createNavigationGuard } from "./navigation.js";
+import { POLL_MS, startPolling } from "./poll.js";
 import { readMapleConfig, readPreferences, writePreferences } from "./preferences.js";
 import { opensComposer } from "./shortcut.js";
 import { themeFrom, watchTheme } from "./theme.js";
@@ -102,6 +103,11 @@ export interface MapleClientOptions extends MapleProps {
   readonly config?: MapleConfig;
   /** Which origin a preference belongs to. Defaults to the page's own. */
   readonly origin?: string;
+  /**
+   * How often the comments are read again once loaded, so a resolution shows
+   * without a reload. Defaults to 15 seconds; zero switches it off.
+   */
+  readonly pollMs?: number;
   /** Called after a draft was saved on the way out of the page. */
   onLeave?(reason: LeaveReason): void;
   /**
@@ -122,6 +128,11 @@ export interface MapleClient {
 
   /** Loads the branch's comments and asks the route who the reviewer is. */
   load(): Promise<void>;
+  /**
+   * Reads the comments again without a loading phase, which is what the poll
+   * calls. Does nothing before the first load has finished.
+   */
+  refresh(): Promise<void>;
   /**
    * Puts an image where this deployment keeps them and returns the reference
    * a comment carries. Rejects when it has nowhere to keep one.
@@ -237,6 +248,8 @@ interface Runtime {
   assistOn: boolean;
   /** What `c` arms from nothing: the kind the viewer armed last, remembered. */
   lastPick: PickKind;
+  /** True while a quiet re-read is out, so a slow route never stacks them. */
+  polling: boolean;
   readonly listeners: Set<(state: ClientState) => void>;
   readonly now: () => number;
   guard: NavigationGuard | undefined;
@@ -260,6 +273,7 @@ export function createMapleClient(options: MapleClientOptions): MapleClient {
     destroy: () => destroy(runtime),
 
     load: () => load(runtime),
+    refresh: () => refresh(runtime),
     uploadMedia: (blob, contentType) => runtime.transport.putMedia(blob, contentType),
     mediaUrl: (ref) => runtime.transport.mediaUrl(ref),
     clearError: () => patch(runtime, { error: null }),
@@ -325,6 +339,7 @@ function runtimeFor(options: MapleClientOptions): Runtime {
     judges: null,
     assistOn: config.assist,
     lastPick: readPreferences(storageOf(options)).lastPick ?? "element",
+    polling: false,
     listeners: new Set(),
     now: options.now ?? Date.now,
     guard: undefined,
@@ -448,6 +463,12 @@ function start(runtime: Runtime): void {
   const { signal } = abort;
   view.document.addEventListener("keydown", (event) => onKeydown(runtime, event), { signal });
   view.addEventListener("storage", (event) => onStorage(runtime, event), { signal });
+  startPolling({
+    intervalMs: runtime.options.pollMs ?? POLL_MS,
+    document: view.document,
+    onTick: () => void refresh(runtime),
+    signal,
+  });
 
   const unsubscribe = runtime.drafts.subscribe(() =>
     patch(runtime, { drafts: runtime.drafts.list() }),
@@ -566,6 +587,33 @@ async function load(runtime: Runtime): Promise<void> {
     fail(runtime, error, "load");
     patch(runtime, { phase: "error" });
   }
+}
+
+/**
+ * A quiet re-read: no loading phase and no failure on the surface. A list
+ * that changed here while the request was out is newer, and is kept.
+ */
+async function refresh(runtime: Runtime): Promise<void> {
+  if (runtime.state.phase !== "ready" || runtime.polling) return;
+  const before = runtime.state.comments;
+  runtime.polling = true;
+
+  try {
+    const comments = await runtime.transport.list();
+    if (runtime.state.comments !== before || sameList(before, comments)) return;
+    patch(runtime, { comments });
+  } catch (error) {
+    runtime.options.logger?.warn("Could not refresh the comments; showing the last list.", {
+      error: String(error),
+    });
+  } finally {
+    runtime.polling = false;
+  }
+}
+
+/** Unchanged is left alone, so a quiet poll re-measures no mark on the page. */
+function sameList(was: readonly Comment[], now: readonly Comment[]): boolean {
+  return JSON.stringify(was) === JSON.stringify(now);
 }
 
 /** A route that cannot say who this is means a guest, not a failed load. */
