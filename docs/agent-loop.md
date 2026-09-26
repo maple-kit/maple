@@ -37,7 +37,7 @@ finished; Maple's answers with the open comments.
 {
   "hooks": {
     "Stop": [
-      { "hooks": [{ "type": "command", "command": "npx -y @maple-kit/mcp maple-stop-hook" }] }
+      { "hooks": [{ "type": "command", "command": "npx -y -p @maple-kit/mcp maple-stop-hook" }] }
     ]
   }
 }
