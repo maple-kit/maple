@@ -41,7 +41,7 @@ jobs:
         #
         # `pnpm build` is explicit because ignore-scripts=true means a prepack
         # would never fire: nothing else rebuilds dist before it is packed.
-        uses: changesets/action@v1
+        uses: changesets/action@v2
         with:
           version: pnpm changeset version
           publish: pnpm release
