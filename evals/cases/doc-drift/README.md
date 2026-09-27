@@ -58,7 +58,7 @@ incomplete rather than false.
 | trigger (audit) | Recall: stale paragraphs `findCandidates` picks from their own hunk. | 0.538        | 0.53      |
 | trigger (all)   | The same, over every stale paragraph.                                | 0.265        | 0.26      |
 | word list       | Accuracy of "a quoted name is removed and not re-added".             | 0.521        | 0.52      |
-| jev             | Accuracy at `FLAG_AT` (0.5) in `tools/doc-drift/run.ts`.             | 0.654, 0.692 | 0.65      |
+| jev             | Accuracy at `FLAG_AT` (0.4) in `tools/doc-drift/run.ts`.             | 0.779, 0.784 | 0.77      |
 
 The trigger misses six of the audit's thirteen, and every miss is a paragraph
 that names nothing the hunk contains: `cookieKey` never existed in code, and
@@ -77,13 +77,35 @@ is the one drift a word list can see, and no stale paragraph here names
 something its hunk removes without adding back: most hunks add code where
 there was none. It is the floor jev has to clear, not a rival.
 
-jev was measured twice, in the `eval` job of `.github/workflows/doc-drift-eval.yml`, the one
-place `TYPESAFE_API_KEY` is set; one case moved between the runs, so that job
-scores three samples. Its misses are mostly stale paragraphs scored between
-0.26 and 0.49: the ones naming nothing the hunk shows. At 0.45 it would score
-0.769, but choosing `FLAG_AT` on the same 26 cases it is scored on would be
-tuning to the set, so it stays at 0.5 until the set grows. Until a threshold
-here justifies more, the comment the job posts stays advice.
+jev is measured in the `eval` job of `.github/workflows/doc-drift-eval.yml`,
+the one place `TYPESAFE_API_KEY` is set, over three samples, because a case
+can move between runs. On the audit's 26 it scored 0.654 and 0.692 at 0.5; the
+set was too small to choose `FLAG_AT` on without tuning to it.
+
+On 71 cases, two runs of three samples (426 answers), cut at each point:
+
+| `FLAG_AT` | All 71 | Audit (26) | History (45) |
+| --------- | ------ | ---------- | ------------ |
+| 0.30      | 0.772  | 0.731      | 0.796        |
+| 0.35      | 0.784  | 0.744      | 0.807        |
+| **0.40**  | 0.782  | 0.782      | 0.781        |
+| 0.45      | 0.779  | 0.750      | 0.796        |
+| 0.50      | 0.756  | 0.692      | 0.793        |
+| 0.55      | 0.742  | 0.667      | 0.785        |
+
+Every cut from 0.35 to 0.45 beats 0.5, on each half of the set as well as on
+the whole. 0.35 leads the whole by one answer in 426, which is noise, and
+drops to 0.744 on the audit's half; 0.40 is the only cut at 0.78 or more on
+both halves, and scored 0.779 and 0.784 on the two runs. So `FLAG_AT` is 0.4,
+and the threshold is 0.77, just under the lower run.
+
+What it still misses is mostly stale paragraphs scored under 0.4 that state
+something no hunk line spells out: "eight times" against a cap that became
+"in a row" (`drift-027`), a fallback that moved from the route into the store
+(`drift-070`), a kinds table short of three methods (`drift-041`). The
+current paragraphs it flags quote the very lines the hunk changes, such as the
+comment-id sentence against #51 (`drift-045`, 0.68). Until a threshold here
+justifies more, the comment the job posts stays advice.
 
 ## Adding a case
 
