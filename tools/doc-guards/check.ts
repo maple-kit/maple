@@ -1,15 +1,15 @@
 /**
  * Two small guards on the prose in every tracked Markdown file. A `0.x.y`
- * next to an `@maple-kit/*` name that is older than that package's newest
- * release tag is stale. A paragraph
- * of 40 words or more that repeats another in the same file, word for word
- * or nearly, is one edit that landed twice. IGNORE on a line exempts that
- * line's versions, and on the line above a paragraph exempts the paragraph.
- * Run it as `node tools/doc-guards/check.ts`.
+ * next to an `@maple-kit/*` name that is older than that package's
+ * package.json version is stale, and so is a plugin MCP pin that is not the
+ * current @maple-kit/mcp. A paragraph of 40 words or more that repeats another
+ * in the same file is one edit that landed twice. IGNORE on a line exempts its
+ * versions; on the line above a paragraph, the paragraph. sync-versions.ts is
+ * what the version pull request runs to move them all.
  */
 
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -34,6 +34,8 @@ export function compareVersions(a: string, b: string): number {
 
 /** A version in prose, with the package it sits next to. */
 export interface VersionMention {
+  /** Where the version starts on its line, from 0. */
+  column: number;
   line: number;
   name: string;
   version: string;
@@ -55,7 +57,7 @@ export function versionMentions(text: string): VersionMention[] {
         at >= name.end ? at - name.end : name.start - (at + match[0].length);
       const nearest = names.toSorted((a, b) => distance(a) - distance(b))[0];
       if (nearest !== undefined && distance(nearest) <= NEAR) {
-        found.push({ line, name: nearest.name, version: match[0] });
+        found.push({ column: at, line, name: nearest.name, version: match[0] });
       }
     }
   });
@@ -151,20 +153,38 @@ function git(root: string, ...args: string[]): string {
 }
 
 /**
- * Each package's newest release, from its `@maple-kit/<name>@x.y.z` tags. Not
- * package.json: on the version pull request that is a version nobody can
- * install yet. A package with no tag here, as in a shallow clone, is skipped.
+ * Each package's version from its package.json. The version pull request
+ * carries the new versions and the docs sync-versions.ts rewrote together, so
+ * between releases this is the newest published version.
  */
-export function releasedVersions(root: string): Map<string, string> {
-  const released = new Map<string, string>();
-  for (const tag of git(root, "tag", "--list", "@maple-kit/*").split("\n")) {
-    const at = tag.lastIndexOf("@");
-    const [name, version] = [tag.slice(0, at), tag.slice(at + 1)];
-    if (!/^\d+\.\d+\.\d+$/.test(version)) continue;
-    const newest = released.get(name);
-    if (newest === undefined || compareVersions(version, newest) > 0) released.set(name, version);
+export function packageVersions(root: string): Map<string, string> {
+  const versions = new Map<string, string>();
+  for (const dir of readdirSync(join(root, "packages"))) {
+    const manifest = join(root, "packages", dir, "package.json");
+    if (!existsSync(manifest)) continue;
+    const { name, version } = JSON.parse(readFileSync(manifest, "utf8")) as Record<string, string>;
+    if (name !== undefined && version !== undefined) versions.set(name, version);
   }
-  return released;
+  return versions;
+}
+
+/** Where the plugin's MCP server config lives, relative to the root. */
+export const MCP_CONFIG = "plugins/maple/.mcp.json";
+
+/** Every `@maple-kit/mcp@x.y.z` pin in `text`, as `{ index, version }`. */
+export function mcpPins(text: string): { index: number; version: string }[] {
+  return [...text.matchAll(/@maple-kit\/mcp@(\d+\.\d+\.\d+)/g)].map((match) => ({
+    index: match.index + match[0].length - (match[1] ?? "").length,
+    version: match[1] ?? "",
+  }));
+}
+
+/** A problem for each MCP pin in the plugin config that is not `current`. */
+export function stalePins(text: string, current: string | undefined): string[] {
+  if (current === undefined) return [];
+  return mcpPins(text)
+    .filter((pin) => pin.version !== current)
+    .map((pin) => `${MCP_CONFIG}: pins @maple-kit/mcp@${pin.version}, not ${current}.`);
 }
 
 /** Markdown this check reads: all of it except changelogs and vendored skills. */
@@ -172,21 +192,35 @@ export function isChecked(file: string): boolean {
   return file.endsWith(".md") && !file.endsWith("CHANGELOG.md") && !file.startsWith(".agents/");
 }
 
-/** Runs both guards on every Markdown file git knows under `root`. */
-export function checkRepository(root: string): string[] {
-  const current = releasedVersions(root);
+/** Every Markdown file git knows under `root` that this check reads. */
+export function markdownFiles(root: string): string[] {
   return git(root, "ls-files", "-z", "--cached", "--others", "--exclude-standard")
     .split("\0")
-    .filter((file) => isChecked(file) && existsSync(join(root, file)))
-    .flatMap((file) => {
+    .filter((file) => isChecked(file) && existsSync(join(root, file)));
+}
+
+/** Runs every guard on `root`. */
+export function checkRepository(root: string): string[] {
+  const current = packageVersions(root);
+  const config = join(root, MCP_CONFIG);
+  const pins = existsSync(config)
+    ? stalePins(readFileSync(config, "utf8"), current.get("@maple-kit/mcp"))
+    : [];
+  return [
+    ...pins,
+    ...markdownFiles(root).flatMap((file) => {
       const text = readFileSync(join(root, file), "utf8");
       return [...staleVersions(file, text, current), ...duplicateParagraphs(file, text)];
-    });
+    }),
+  ];
 }
 
 function main(): void {
   const problems = checkRepository(fileURLToPath(new URL("../..", import.meta.url)));
   for (const problem of problems) process.stderr.write(`${problem}\n`);
+  if (problems.some((problem) => / is older than |pins @maple-kit/.test(problem))) {
+    process.stderr.write("pnpm docs:sync-versions moves every pin to the current version.\n");
+  }
   if (problems.length > 0) process.exitCode = 1;
 }
 

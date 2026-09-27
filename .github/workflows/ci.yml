@@ -123,14 +123,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-        with:
-          # The release tags are what "current version" means, and a shallow
-          # clone has none; without them the version guard checks nothing.
-          fetch-depth: 0
       - uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
-      - name: No stale version in prose, no paragraph repeated in a file
+      - name: No stale version pin, no paragraph repeated in a file
         # Node builtins only, so no install.
         run: node tools/doc-guards/check.ts
 

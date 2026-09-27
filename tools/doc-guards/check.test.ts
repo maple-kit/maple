@@ -1,18 +1,17 @@
-import { execFileSync } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import {
+  checkRepository,
   compareVersions,
   duplicateParagraphs,
   IGNORE,
   isChecked,
   overlap,
+  packageVersions,
   paragraphs,
-  releasedVersions,
+  stalePins,
   staleVersions,
   versionMentions,
 } from "./check.js";
@@ -145,41 +144,25 @@ describe("isChecked", () => {
   });
 });
 
-describe("releasedVersions", () => {
-  const roots: string[] = [];
-  afterEach(async () => {
-    await Promise.all(roots.splice(0).map((root) => rm(root, { force: true, recursive: true })));
+describe("stalePins", () => {
+  const config = '{ "args": ["-y", "-p", "@maple-kit/mcp@0.11.0", "maple-mcp"] }';
+  it.each<[string, string | undefined, string[]]>([
+    ["behind", "0.12.0", ["plugins/maple/.mcp.json: pins @maple-kit/mcp@0.11.0, not 0.12.0."]],
+    ["current", "0.11.0", []],
+    ["no mcp package", undefined, []],
+  ])("%s", (_case, current, expected) => {
+    expect(stalePins(config, current)).toEqual(expected);
+  });
+});
+
+describe("this repository", () => {
+  const root = join(import.meta.dirname, "../..");
+
+  it("reads every package's version", () => {
+    expect(packageVersions(root).get("@maple-kit/mcp")).toMatch(/^\d+\.\d+\.\d+$/);
   });
 
-  it("takes each package's newest tag, by version rather than by name", async () => {
-    const root = await mkdtemp(join(tmpdir(), "maple-doc-guards-"));
-    roots.push(root);
-    const git = (...args: string[]) =>
-      // eslint-disable-next-line sonarjs/no-os-command-from-path -- the test drives the same git.
-      execFileSync("git", args, { cwd: root, stdio: "ignore" });
-    git("init", "-q");
-    git(
-      "-c",
-      "user.email=t@example.com",
-      "-c",
-      "user.name=t",
-      "commit",
-      "-q",
-      "--allow-empty",
-      "-m",
-      "x",
-    );
-    for (const tag of [
-      "@maple-kit/a@0.9.0",
-      "@maple-kit/a@0.10.0",
-      "@maple-kit/b@0.1.0",
-      "other@1.0.0",
-    ]) {
-      git("tag", tag);
-    }
-    expect(Object.fromEntries(releasedVersions(root))).toEqual({
-      "@maple-kit/a": "0.10.0",
-      "@maple-kit/b": "0.1.0",
-    });
+  it("passes", () => {
+    expect(checkRepository(root)).toEqual([]);
   });
 });

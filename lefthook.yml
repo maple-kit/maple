@@ -46,9 +46,9 @@ pre-commit:
       run: node tools/doc-references/check.ts
 
     - name: doc-guards
-      glob: "*.md"
-      # Versions are compared with the local release tags, which lag until
-      # fetched; CI fetches them all.
+      glob: "*.{md,json}"
+      # Pins in docs and plugins/maple/.mcp.json against package.json versions;
+      # the version pull request moves them with `pnpm docs:sync-versions`.
       run: node tools/doc-guards/check.ts
 
     - name: commit-identity
