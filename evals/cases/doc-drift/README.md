@@ -53,12 +53,12 @@ incomplete rather than false.
 
 `evals/doc-drift.eval.test.ts` scores three tiers over the 71 cases.
 
-| Tier            | Measures                                                             | Measured     | Threshold |
-| --------------- | -------------------------------------------------------------------- | ------------ | --------- |
-| trigger (audit) | Recall: stale paragraphs `findCandidates` picks from their own hunk. | 0.538        | 0.53      |
-| trigger (all)   | The same, over every stale paragraph.                                | 0.265        | 0.26      |
-| word list       | Accuracy of "a quoted name is removed and not re-added".             | 0.521        | 0.52      |
-| jev             | Accuracy at `FLAG_AT` (0.4) in `tools/doc-drift/run.ts`.             | 0.779, 0.784 | 0.77      |
+| Tier            | Measures                                                             | Measured    | Threshold |
+| --------------- | -------------------------------------------------------------------- | ----------- | --------- |
+| trigger (audit) | Recall: stale paragraphs `findCandidates` picks from their own hunk. | 0.538       | 0.53      |
+| trigger (all)   | The same, over every stale paragraph.                                | 0.265       | 0.26      |
+| word list       | Accuracy of "a quoted name is removed and not re-added".             | 0.521       | 0.52      |
+| jev             | Accuracy at `FLAG_AT` (0.4) in `tools/doc-drift/run.ts`.             | 0.765–0.798 | 0.75      |
 
 The trigger misses six of the audit's thirteen, and every miss is a paragraph
 that names nothing the hunk contains: `cookieKey` never existed in code, and
@@ -96,8 +96,8 @@ On 71 cases, two runs of three samples (426 answers), cut at each point:
 Every cut from 0.35 to 0.45 beats 0.5, on each half of the set as well as on
 the whole. 0.35 leads the whole by one answer in 426, which is noise, and
 drops to 0.744 on the audit's half; 0.40 is the only cut at 0.78 or more on
-both halves, and scored 0.779 and 0.784 on the two runs. So `FLAG_AT` is 0.4,
-and the threshold is 0.77, just under the lower run.
+both halves. Five runs at 0.4 scored 0.765 to 0.798, so `FLAG_AT` is 0.4 and
+the threshold is 0.75, under the lowest run rather than inside the spread.
 
 What it still misses is mostly stale paragraphs scored under 0.4 that state
 something no hunk line spells out: "eight times" against a cap that became

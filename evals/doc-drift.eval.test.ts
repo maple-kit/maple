@@ -46,7 +46,7 @@ const THRESHOLDS = {
   /** `audit` is the recall first measured, on the audit's cases alone; `all` is the whole set's. */
   trigger: { audit: 0.53, all: 0.26 },
   names: { accuracy: 0.52 },
-  jev: { accuracy: 0.77 },
+  jev: { accuracy: 0.75 },
 };
 
 /** The commits the setup-docs audit's paragraphs are quoted from, before and after #270. */
