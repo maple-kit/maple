@@ -181,6 +181,14 @@ PascalCase identifier is a warning. A name the docs mention on purpose — anoth
 product's variable, a file in a host application — goes in
 `tools/doc-references/allowlist.json` with the reason.
 
+## Versions and repeats in prose
+
+`pnpm check:doc-guards` fails on a `0.x.y` next to an `@maple-kit/*` name that
+is older than that package's newest release tag, so a pin in a doc moves when a
+release does. It also fails on a paragraph of 40 words or more that repeats
+another in the same file. `<!-- doc-guards: ignore -->` on the line, or on the
+line above the paragraph, says it is deliberate.
+
 ## Changesets
 
 If you changed a published package:
