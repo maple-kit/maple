@@ -17,6 +17,27 @@ code change had made false is a pair of cases here:
 Both carry the same `change`: the real hunk, from the commit named in it, that
 decides the claim. The removed and added lines are as that commit wrote them.
 
+`drift-027` onwards come from the history rather than the audit: commits where
+a doc was corrected after, or alongside, the code that made it false. Each is
+one of three kinds:
+
+- **A pair**, as above: the paragraph at the fixing commit's parent, labelled
+  `stale`, and as that commit left it, labelled `current`, with the same hunk.
+  Renamed scopes and subpaths, a changed default, a moved fallback, a list
+  that gained a member, a status line the build overtook, a version pin.
+- **A hard negative**: a paragraph the commit left alone that names what the
+  hunk touches and is still true, such as the `--json` sentence beside a flag
+  parser rewrite, or the banner's controls beside a change to where it docks.
+  These are what a judge that flags every name it recognises gets wrong.
+- **One paragraph, two hunks**: the comment-id sentence is `current` against
+  #51, which left ids alone, and `stale` against #100, which changed them.
+
+`drift-069` is drift that is still in the tree: the setup skill says flags take
+`--flag=value` only, and #292 made the CLI accept `--flag value` too.
+
+A hunk is quoted with three lines of context, or one where three merged the
+deciding lines into a hunk longer than the 60 lines the judge reads.
+
 Nothing was written for the set. Paragraphs are quoted as the maintainer wrote
 them, so `by` is `maintainer` throughout, and every `change` is a hunk from the
 repository's own history.
@@ -30,19 +51,26 @@ incomplete rather than false.
 
 ## What is scored
 
-`evals/doc-drift.eval.test.ts` scores three tiers over the 26 cases.
+`evals/doc-drift.eval.test.ts` scores three tiers over the 71 cases.
 
-| Tier      | Measures                                                             | Measured     | Threshold |
-| --------- | -------------------------------------------------------------------- | ------------ | --------- |
-| trigger   | Recall: stale paragraphs `findCandidates` picks from their own hunk. | 0.538        | 0.53      |
-| word list | Accuracy of "a quoted name is removed and not re-added".             | 0.500        | 0.5       |
-| jev       | Accuracy at `FLAG_AT` (0.5) in `tools/doc-drift/run.ts`.             | 0.654, 0.692 | 0.65      |
+| Tier            | Measures                                                             | Measured     | Threshold |
+| --------------- | -------------------------------------------------------------------- | ------------ | --------- |
+| trigger (audit) | Recall: stale paragraphs `findCandidates` picks from their own hunk. | 0.538        | 0.53      |
+| trigger (all)   | The same, over every stale paragraph.                                | 0.265        | 0.26      |
+| word list       | Accuracy of "a quoted name is removed and not re-added".             | 0.521        | 0.52      |
+| jev             | Accuracy at `FLAG_AT` (0.5) in `tools/doc-drift/run.ts`.             | 0.654, 0.692 | 0.65      |
 
-The trigger misses six of thirteen, and every miss is a paragraph that names
-nothing the hunk contains: `cookieKey` never existed in code, and "Maple reads
-none of these itself" quotes no name at all. That is the limit of reading
-references, not a bug in reading them, and is why jev is scored on every case
-rather than only on those the trigger reaches.
+The trigger misses six of the audit's thirteen, and every miss is a paragraph
+that names nothing the hunk contains: `cookieKey` never existed in code, and
+"Maple reads none of these itself" quotes no name at all. That is the limit of
+reading references, not a bug in reading them, and is why jev is scored on
+every case rather than only on those the trigger reaches.
+
+Over the whole set it reaches 9 of 34. The history's stale paragraphs mostly
+state a count, a version or a status ("eight times", "Node 22.13", "not built
+yet") that no reference carries. The audit's 0.53 is still gated on the audit's cases,
+where it was measured; the whole set's recall has a threshold of its own
+rather than lowering that one.
 
 The word list scores exactly what saying "current" every time scores. A rename
 is the one drift a word list can see, and no stale paragraph here names
