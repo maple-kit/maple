@@ -71,6 +71,9 @@ jobs:
     env:
       TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
       EVAL_VERBOSE: "1"
+      # jev is not deterministic: one case moved between two runs. Three samples
+      # score the rate rather than one draw of it.
+      EVAL_SAMPLES: "3"
     steps:
       - name: Skip without the key
         if: env.TYPESAFE_API_KEY == ''

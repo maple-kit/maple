@@ -32,11 +32,11 @@ incomplete rather than false.
 
 `evals/doc-drift.eval.test.ts` scores three tiers over the 26 cases.
 
-| Tier      | Measures                                                             | Measured | Threshold   |
-| --------- | -------------------------------------------------------------------- | -------- | ----------- |
-| trigger   | Recall: stale paragraphs `findCandidates` picks from their own hunk. | 0.538    | 0.53        |
-| word list | Accuracy of "a quoted name is removed and not re-added".             | 0.500    | 0.5         |
-| jev       | Accuracy at `FLAG_AT` in `tools/doc-drift/run.ts`.                   | —        | > word list |
+| Tier      | Measures                                                             | Measured     | Threshold |
+| --------- | -------------------------------------------------------------------- | ------------ | --------- |
+| trigger   | Recall: stale paragraphs `findCandidates` picks from their own hunk. | 0.538        | 0.53      |
+| word list | Accuracy of "a quoted name is removed and not re-added".             | 0.500        | 0.5       |
+| jev       | Accuracy at `FLAG_AT` (0.5) in `tools/doc-drift/run.ts`.             | 0.654, 0.692 | 0.65      |
 
 The trigger misses six of thirteen, and every miss is a paragraph that names
 nothing the hunk contains: `cookieKey` never existed in code, and "Maple reads
@@ -49,9 +49,13 @@ is the one drift a word list can see, and no stale paragraph here names
 something its hunk removes without adding back: most hunks add code where
 there was none. It is the floor jev has to clear, not a rival.
 
-jev has no number yet: it runs only where `TYPESAFE_API_KEY` is set, which is
-the `eval` job in the doc-drift workflow. Until that number is in this table
-with a threshold just under it, the comment the job posts stays advice.
+jev was measured twice, in the `eval` job of the doc-drift workflow, the one
+place `TYPESAFE_API_KEY` is set; one case moved between the runs, so that job
+scores three samples. Its misses are mostly stale paragraphs scored between
+0.26 and 0.49: the ones naming nothing the hunk shows. At 0.45 it would score
+0.769, but choosing `FLAG_AT` on the same 26 cases it is scored on would be
+tuning to the set, so it stays at 0.5 until the set grows. Until a threshold
+here justifies more, the comment the job posts stays advice.
 
 ## Adding a case
 

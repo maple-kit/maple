@@ -45,6 +45,7 @@ const CASES = JSON.parse(
 const THRESHOLDS = {
   trigger: { recall: 0.53 },
   names: { accuracy: 0.5 },
+  jev: { accuracy: 0.65 },
 };
 
 const ids = process.env["EVAL_IDS"]?.split(",").map((id) => id.trim());
@@ -123,16 +124,18 @@ const apiKey = process.env["TYPESAFE_API_KEY"] ?? "";
 
 /** Skipped rather than failed without a credential, as the other model tiers are. */
 describe.skipIf(apiKey === "")("doc drift · jev", () => {
-  it("beats the word list, and reports what it measured", async () => {
+  it("clears its threshold and beats the word list", async () => {
     const model = process.env["MAPLE_AI_MODEL"];
     const judge = createJudge({ apiKey, ...(model === undefined ? {} : { model }) });
-    const runs = Array.from({ length: samples }, () => chosen).flat();
-    const results = await Promise.all(
-      runs.map(async (one) => {
+    const results = [];
+    // One sample at a time: the whole set at once is as much as one run should send.
+    for (let sample = 0; sample < samples; sample++) {
+      const run = chosen.map(async (one) => {
         const verdict = await judge(stateFor(one.doc, one.paragraph, hunksOf(one)));
         return { one, p: verdict.stale, reason: verdict.reason, stale: verdict.stale >= FLAG_AT };
-      }),
-    );
+      });
+      results.push(...(await Promise.all(run)));
+    }
     if (verbose) {
       for (const { one, p, reason } of results) {
         process.stdout.write(`${one.id} ${one.label} p=${p.toFixed(3)} ${reason}\n`);
@@ -142,6 +145,7 @@ describe.skipIf(apiKey === "")("doc drift · jev", () => {
       );
     }
     const floor = accuracy(chosen.map((one) => ({ one, stale: namesJudge(one) })));
+    expect(accuracy(results)).toBeGreaterThanOrEqual(THRESHOLDS.jev.accuracy);
     expect(accuracy(results)).toBeGreaterThan(floor);
   }, 180_000);
 });
