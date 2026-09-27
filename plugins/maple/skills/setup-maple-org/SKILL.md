@@ -26,7 +26,8 @@ Nothing else differs.
 
 Read `docs/github-auth.md` before or after, depending on whether you want the
 reasoning first. This file is the sequence; that file is why the sequence is
-this one.
+this one. Every `docs/` path here is in the Maple repository, at
+<https://github.com/maple-kit/maple/tree/main/docs>.
 
 Throughout, `acme` is your organisation and `acme/web` a repository you want
 reviewable. Substitute your own.
