@@ -49,7 +49,7 @@ is the one drift a word list can see, and no stale paragraph here names
 something its hunk removes without adding back: most hunks add code where
 there was none. It is the floor jev has to clear, not a rival.
 
-jev was measured twice, in the `eval` job of the doc-drift workflow, the one
+jev was measured twice, in the `eval` job of `.github/workflows/doc-drift-eval.yml`, the one
 place `TYPESAFE_API_KEY` is set; one case moved between the runs, so that job
 scores three samples. Its misses are mostly stale paragraphs scored between
 0.26 and 0.49: the ones naming nothing the hunk shows. At 0.45 it would score
