@@ -128,6 +128,12 @@ that are not the page's data, such as Maple's own route.
   carries none of it.
 - **With no recipe it changes nothing.** Every request goes through untouched,
   and its answer is recorded.
+- **It says why a named call was not mocked**, at `debug` on its logger: a
+  request its codec could name no call in, a response it could not read, or
+  a body state with no data, sample or shape to reshape, which keeps the
+  server's answer. Not louder: a persisted query's first request is one of
+  those on every fresh tab, and a warning there would be noise in the host's
+  monitoring.
 
 ## The MSW transport
 
@@ -153,20 +159,21 @@ request sent on when its response will be rewritten. Everything a protocol does
 differently stays inside those, so nothing else in the package reads a URL or a
 header.
 
-The default codecs are tRPC at `/api/trpc`, then REST. `installMock({ codecs })`
-replaces them, for example with `trpcCodec({ endpoint: "/trpc" })`.
+The default codecs are tRPC at `/api/trpc`, GraphQL at `/graphql`, then REST.
+`installMock({ codecs })` replaces them, for example with
+`trpcCodec({ endpoint: "/trpc" })`.
 
 For each request, the calls the recipe names are answered and the rest keep
 the server's answer:
 
-| State                  | What is sent to the server | What the page gets                            |
-| ---------------------- | -------------------------- | --------------------------------------------- |
-| not named              | the request, as it was     | the server's answer                           |
-| `error`, `forbidden`   | nothing                    | 500 or 403, in the protocol's own error shape |
-| `loading`              | nothing                    | nothing, until the request is abandoned       |
-| `empty`, `one`, `many` | the request, as it was     | the server's own answer, reshaped             |
-| `long`, `sparse`       | the request, as it was     | the server's own answer, reshaped             |
-| `mixed`                | the request, as it was     | the server's own answer, reshaped             |
+| State                  | What is sent to the server | What the page gets                          |
+| ---------------------- | -------------------------- | ------------------------------------------- |
+| not named              | the request, as it was     | the server's answer                         |
+| `error`, `forbidden`   | nothing                    | a failure in the protocol's own error shape |
+| `loading`              | nothing                    | nothing, until the request is abandoned     |
+| `empty`, `one`, `many` | the request, as it was     | the server's own answer, reshaped           |
+| `long`, `sparse`       | the request, as it was     | the server's own answer, reshaped           |
+| `mixed`                | the request, as it was     | the server's own answer, reshaped           |
 
 - **A body state reshapes the live answer**, so the mock is as fresh as the
   page. When the server fails, the last recorded answer is reshaped instead;
@@ -242,6 +249,56 @@ never reaches the interceptor at all. A polyfill that reads the stream over
 `fetch` or `XMLHttpRequest` does, and its events arrive as the server sends them.
 The interceptor cancels its own copy of any body it did not read, since a
 stream copied and left open cannot be closed by the page.
+
+## The GraphQL codec
+
+One request is one operation, keyed by its name: `graphql:GetProjects`. The
+name is the request's `operationName`, else the one named operation in the
+document. An anonymous operation is keyed by a hash of its text with comments,
+commas and whitespace dropped, so the same operation printed two ways is one
+call: `graphql:4b04480d`. Variables are not part of the key. A persisted
+request carrying no text is keyed by its id, APQ's `sha256Hash` or a
+`documentId`, unless `graphqlCodec({ manifest })` holds the host's persisted
+documents, id to text as graphql-codegen's `persistedDocuments` writes them,
+in which case it is named like any other. `readGraphqlOperation` in
+`@maple-kit/core/mock` computes the key, since the route will name the same
+operations when it serves their shapes.
+
+It owns every request at its endpoints, `/graphql` and `/api/graphql` unless
+`graphqlCodec({ endpoint })` names others, and reads `operationName`, `query`,
+`documentId` and `extensions` from a `POST`'s JSON body or a `GET`'s query
+string. A request there that it cannot name, a batch of operations, a
+multipart upload, a body that is not JSON or one naming no operation, has no
+call in it: it goes through as it came, and never reaches the REST codec, so
+no state applies to it and no write is reported for it. Subscriptions over a
+websocket never reach the interceptor.
+
+**The page's own operation runs on the server.** A body state reshapes the
+`data` the server answered, which matches the selection set exactly, so the
+page gets the fields it asked for and nothing else. A response without
+`data`, a persisted-query miss or a validation error, is not an answer: it is
+never recorded, and it goes back as it came, at the server's own status. That
+is how APQ keeps working under a mock: the first request misses, the page
+retries with the text, and both are the same call. Once the call has been
+recorded, a miss is answered from its sample and the page never retries. A
+partial result, `data` beside `errors`, is reshaped like any other, without
+its `errors`, but never recorded: a later failure falls back to the last whole
+answer, not to a field the server could not resolve.
+
+**A failure is written as a GraphQL server writes one**: `data: null` beside
+one error whose `extensions.code` is `INTERNAL_SERVER_ERROR` or `FORBIDDEN`,
+at HTTP 200. A client reads a 200 with `errors` as the operation failing,
+which is the page's error state; a 500 would be a network error, a different
+path in every client. The content type mirrors the server's,
+`application/graphql-response+json` or `application/json`, and is
+`application/json` when nothing was fetched.
+
+**A mutation is a write, whatever its method.** Every GraphQL request is a
+`POST`, so the call says whether it writes and the report of a write reaching
+the server under `as` believes that over the method. A persisted request
+without a manifest says nothing, and its method decides, so under `as` a
+persisted query sent by `POST` is reported as a write. A `manifest` names it,
+and the report stops.
 
 ## Transforms
 

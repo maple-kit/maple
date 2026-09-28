@@ -34,6 +34,23 @@ export interface ResolveOptions {
   readonly identity?: IdentityRules;
   /** Told of each call a write sends to the server while a recipe's `as` is on. */
   readonly onWrite?: (key: string) => void;
+  /** Told why a request, or a call the recipe gives a state, went through unmocked. */
+  readonly onUnmocked?: (unmocked: Unmocked) => void;
+}
+
+/** Why a request, or one call in it, went through unmocked while a recipe applied. */
+export interface Unmocked {
+  /** The name of the codec that owns the request. */
+  readonly codec: string;
+  /** The call, absent when the codec could name none in the request. */
+  readonly key?: string;
+  /**
+   * `no call`: nothing in the request could be named. `unreadable`: the response
+   * could not be read. `nothing to reshape`: no data came, and no sample or shape.
+   */
+  readonly reason: "no call" | "unreadable" | "nothing to reshape";
+  /** The server's HTTP status, when it was asked. */
+  readonly status?: number;
 }
 
 /** A request taken apart: its codec, its calls, and each call's state. */
@@ -84,9 +101,12 @@ export async function resolve(
   const active = applies ? recipe : undefined;
   const taken = await splitRequest(request, active, options.codecs);
   if (taken === undefined) return undefined;
+  if (active !== undefined && taken.calls.length === 0) {
+    options.onUnmocked?.({ codec: taken.codec.name, reason: "no call" });
+  }
   const layer = identityLayer(active?.as, options.identity);
   const split = layer === undefined ? taken : withNeeds(taken, layer, inventory, options.route);
-  if (layer !== undefined && WRITES.test(request.method)) tellWrites(split, options.onWrite);
+  if (layer !== undefined) tellWrites(split, request.method, options.onWrite);
   const imposed = split.calls.map((call) => call.key === layer?.rules.call);
   const untouched = split.states.every((state) => state === undefined);
   if (untouched && !imposed.includes(true)) return undefined;
@@ -96,7 +116,10 @@ export async function resolve(
   const sent = split.codec.prepare?.(request) ?? request;
   const real = needsServer ? await options.forward(sent) : undefined;
   const live = real === undefined ? undefined : await split.codec.read(real.clone(), split.calls);
-  if (real !== undefined && live === undefined) return real;
+  if (real !== undefined && live === undefined) {
+    tellUnmocked(split, "unreadable", real, options.onUnmocked);
+    return real;
+  }
 
   record(inventory, split.calls, live, options);
   const shapes = await shapesOf(split, options.shape);
@@ -109,6 +132,8 @@ export async function resolve(
     );
     return imposed[index] && layer !== undefined ? withIdentity(one, layer) : one;
   });
+  const states = split.states.map((state, index) => kept(state, answers[index]));
+  tellUnmocked({ ...split, states }, "nothing to reshape", real, options.onUnmocked);
   return split.codec.join(split.calls, answers, real);
 }
 
@@ -139,19 +164,42 @@ function withNeeds(split: Split, layer: IdentityLayer, inventory: Inventory, rou
   return { ...split, states };
 }
 
-/** A write that reaches the server under `as` still acts as the reviewer: say so. */
-function tellWrites(split: Split, onWrite: ResolveOptions["onWrite"]): void {
+/**
+ * A write that reaches the server under `as` still acts as the reviewer: say
+ * so. A call that says whether it writes is believed over the method.
+ */
+function tellWrites(split: Split, method: string, onWrite: ResolveOptions["onWrite"]): void {
   split.calls.forEach((call, index) => {
     const state = split.states[index];
-    if (state === undefined || BODY_STATES.has(state)) onWrite?.(call.key);
+    const writes = call.mutates ?? WRITES.test(method);
+    if (writes && (state === undefined || BODY_STATES.has(state))) onWrite?.(call.key);
   });
+}
+
+/** Tells of each call that has a state, for `reason`, with the server's status. */
+function tellUnmocked(
+  split: Split,
+  reason: Unmocked["reason"],
+  real: Response | undefined,
+  onUnmocked: ResolveOptions["onUnmocked"],
+): void {
+  const status = real === undefined ? {} : { status: real.status };
+  split.calls.forEach((call, index) => {
+    if (split.states[index] === undefined) return;
+    onUnmocked?.({ codec: split.codec.name, key: call.key, reason, ...status });
+  });
+}
+
+/** The body state that kept the server's answer, having nothing to reshape. */
+function kept(state: MockState | undefined, answer: Answer | undefined): MockState | undefined {
+  return state !== undefined && BODY_STATES.has(state) && !isData(answer) ? state : undefined;
 }
 
 function withIdentity(answer: Answer, layer: IdentityLayer): Answer {
   return isData(answer) ? { ...answer, body: impose(answer.body, layer.as, layer.rules) } : answer;
 }
 
-/** Records every real 2xx answer. A mocked one is never recorded. */
+/** Records every real, whole 2xx answer. A mocked or partial one is never recorded. */
 export function record(
   inventory: Inventory,
   calls: readonly Call[],
@@ -161,7 +209,7 @@ export function record(
   const at = (options.now ?? Date.now)();
   calls.forEach((call, index) => {
     const answer = answers?.[index];
-    if (!isData(answer)) return;
+    if (!isData(answer) || answer.partial === true) return;
     const { body, meta, status } = answer;
     inventory.record(options.route, { key: call.key, status, body, at, ...(meta ? { meta } : {}) });
   });
