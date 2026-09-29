@@ -101,6 +101,9 @@ a process rather than a library. `docs/agent-loop.md` covers it.
 
 <!-- /generated:mcp-environment -->
 
+`maple review` reads `MAPLE_STORE` and the forge variables the same way, and
+uses the local files when none is set (`docs/review.md`).
+
 This token is an agent's, not a reviewer's, and it belongs on a developer's
 machine or in CI — never in a preview environment.
 

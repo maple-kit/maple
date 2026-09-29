@@ -71,7 +71,10 @@ Work down the cascade and stop at the first rung present. Each rung is weaker
 than the one above it.
 
 1. **`anchor.source`** — `path:line:col` from the build-time tagger. Open that
-   file at that line. This is the only rung that is unambiguous.
+   file at that line. This is the only rung that is unambiguous. When
+   `anchor.locatedBy` is `owner-stack` (a `maple review` comment on an app with
+   no tagger), it is where React's dev stack says the JSX was written: open it,
+   but confirm the element is the one the quote names.
 2. **`anchor.component`** — the display name. Search the repository for the
    component definition.
 3. **`anchor.quote.exact`** — the text the reviewer selected. Search for the
