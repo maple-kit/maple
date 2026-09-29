@@ -21,8 +21,10 @@ build/
 *.p8
 *.p12
 
-# Maple local artifacts (screenshots may contain application data)
+# Maple local artifacts (screenshots may contain application data). The file
+# store's comments and media live in .maple/<branch>/, and both are private.
 .maple/shots/
+.maple/*/
 # A preview build artifact, written by `maple mock schema` before the build
 **/.maple/schema.json
 

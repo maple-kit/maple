@@ -82,7 +82,7 @@ What the server reads, from `packages/mcp/src/config.ts`:
 | `GITHUB_TOKEN`           | yes      | Section 2.                                                                                                      |
 | `MAPLE_GITHUB_OWNER`     | yes      | Organisation or user.                                                                                           |
 | `MAPLE_GITHUB_REPO`      | yes      | Repository name.                                                                                                |
-| `MAPLE_STORE`            | no       | `github`, the default and the only value accepted. Anything else fails.                                         |
+| `MAPLE_STORE`            | no       | `github` when a forge variable is set, else `file`, the comments under `.maple/`. Anything else fails.          |
 | `MAPLE_GITHUB_API`       | no       | API base URL, for GitHub Enterprise Server.                                                                     |
 | `MAPLE_URL`              | no       | Section 2. The route's mount URL. Unset means no gate refresh on resolve.                                       |
 | `MAPLE_GATE_TOKEN`       | no       | Section 2. CI only; not with `MAPLE_URL`.                                                                       |

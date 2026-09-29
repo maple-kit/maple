@@ -18,15 +18,25 @@ export const ENVIRONMENT: readonly EnvironmentVariable[] = [
   {
     name: "GITHUB_TOKEN",
     secret: true,
-    description: "A token that can read and write pull-request comments. Required.",
+    description:
+      "A token that can read and write pull-request comments. Required for the `github` store.",
   },
-  { name: "MAPLE_GITHUB_OWNER", secret: false, description: "The repository's owner. Required." },
-  { name: "MAPLE_GITHUB_REPO", secret: false, description: "The repository. Required." },
+  {
+    name: "MAPLE_GITHUB_OWNER",
+    secret: false,
+    description: "The repository's owner. Required for the `github` store.",
+  },
+  {
+    name: "MAPLE_GITHUB_REPO",
+    secret: false,
+    description: "The repository. Required for the `github` store.",
+  },
   { name: "MAPLE_GITHUB_API", secret: false, description: "The API root, for Enterprise Server." },
   {
     name: "MAPLE_STORE",
     secret: false,
-    description: "`github`, the default and so far the only one.",
+    description:
+      "`github`, the default when a forge is configured, or `file`, the default when none is: the comments under `.maple/`.",
   },
   {
     name: "MAPLE_BRANCH",

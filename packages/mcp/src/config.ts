@@ -8,6 +8,7 @@
 
 import { createCommentStore } from "@maple-kit/core";
 import { githubGate, githubStore } from "@maple-kit/core/connectors";
+import { fileStore } from "@maple-kit/core/local";
 
 import { describeVariable } from "./environment.js";
 import { routeRefresh } from "./refresh.js";
@@ -15,12 +16,23 @@ import { routeRefresh } from "./refresh.js";
 import type { GateRefresh } from "./refresh.js";
 import type { CommentStore, GateConnector } from "@maple-kit/core";
 
-/** Builds the store named by `MAPLE_STORE`, or the default, wrapped for use. */
+/** The variables that mean a forge is configured, so `github` is what was meant. */
+const FORGE_VARIABLES = ["GITHUB_TOKEN", "MAPLE_GITHUB_OWNER", "MAPLE_GITHUB_REPO"] as const;
+
+/**
+ * Builds the store named by `MAPLE_STORE`, wrapped for use. Unset, it is
+ * `github` when any forge variable is set, so a half-written configuration
+ * still fails naming what is missing, and `file` when none is: the comments
+ * under `.maple/` in `cwd`, which is where a laptop's overlay wrote them.
+ */
 export function storeFromEnvironment(
   env: Readonly<Record<string, string | undefined>>,
+  cwd: string = process.cwd(),
 ): CommentStore {
-  const kind = env["MAPLE_STORE"] ?? "github";
-  if (kind !== "github") throw new Error(`Unknown MAPLE_STORE ${kind}; only "github" exists yet.`);
+  const forge = FORGE_VARIABLES.some((name) => env[name]);
+  const kind = env["MAPLE_STORE"] ?? (forge ? "github" : "file");
+  if (kind === "file") return createCommentStore(fileStore({ cwd }));
+  if (kind !== "github") throw new Error(`Unknown MAPLE_STORE ${kind}; "github" and "file" exist.`);
 
   return createCommentStore(
     githubStore({

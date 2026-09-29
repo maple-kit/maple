@@ -31,6 +31,7 @@
     "./logger": "./dist/logger/index.js",
     "./mock": "./dist/mock/index.js",
     "./loader": "./dist/loader/index.js",
+    "./local": "./dist/local/index.js",
     "./next": "./dist/next/index.js",
     "./config": "./dist/config/index.js",
     "./overlay": "./dist/overlay/index.js",

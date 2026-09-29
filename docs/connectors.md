@@ -147,8 +147,13 @@ below the table.
 | -------------------- | ---- | ------ | --------- | ---- | ----- | --------- | ------- | --------- | ------- | ------ | ------------- | ----------- | ----------- | ------- | ---- | ----- | -------- | ---- |
 | `github` (store)     | ✓    | ✓      | ✓         | ✓    | —     | ✓         | ✓       | ✓         | —       | —      | —             | —           | —           | —       | —    | —     | —        | —    |
 | `github` (gate)      | —    | —      | —         | —    | —     | —         | —       | —         | —       | —      | —             | —           | —           | ✓       | ✓    | —     | —        | —    |
+| `file` (store)       | ✓    | ✓      | ✓         | —    | —     | ✓         | ✓       | ✓         | —       | —      | —             | —           | —           | —       | —    | —     | —        | —    |
+| `file` (media)       | —    | —      | —         | —    | —     | —         | —       | —         | ✓       | ✓      | —             | —           | —           | —       | —    | —     | —        | —    |
 | `memory` (reference) | ✓    | ✓      | ✓         | ✓    | —     | ✓         | ✓       | ✓         | —       | —      | —             | —           | —           | ✓       | ✓    | ✓     | ✓        | ✓    |
 | `keyword` (baseline) | —    | —      | —         | —    | —     | —         | —       | —         | —       | —      | —             | —           | —           | —       | —    | ✓     | ✓        | ✓    |
+
+`file` ships from `@maple-kit/core/local` and is the local store: see
+[A local store, for a laptop](#a-local-store-for-a-laptop).
 
 The reference connector lives in `@maple-kit/core/testing` and exists so the
 contract suite has something to run against. It is not for production.
@@ -156,6 +161,60 @@ contract suite has something to run against. It is not for production.
 `keyword` is the exception that is: it ships from `@maple-kit/core/connectors`,
 needs no network, no model and no configuration, and is what the assist tier
 does with the model tier switched off. See `docs/assist.md`.
+
+## A local store, for a laptop
+
+`fileStore()` and `fileMedia()` keep comments and screenshots as plain files:
+
+```
+.maple/<branch-slug>/comments.json
+.maple/<branch-slug>/media/<key>.<ext>
+```
+
+Both are in `@maple-kit/core/local`, not `/connectors`: they need Node's `fs` and a
+`git` binary on the path, and `/connectors` is imported by browser code. They add
+no dependency. Every write goes to a temporary file that is
+renamed over the target, so a crash mid-write leaves the old file, never half of
+a new one. A `comments.json` that cannot be parsed is refused rather than
+overwritten.
+
+### Why a laptop, and only a laptop
+
+The reasons GitHub is the default for a preview do not hold on a laptop. There
+is no pod whose disk goes with it, and there may be no pull request yet. A file
+you can read, diff and delete is the whole store, and the agent loop works with
+no forge configured.
+
+It is wrong in a preview pod for the same reason a SQLite file there is: the
+disk lives exactly as long as the pod, so the comments are lost when the
+preview is replaced, which is when people have just written them. It also has
+no answer for two writers on two machines. One process serialises its own
+writes; another process is not covered. A store several people share is #134's
+job, not this one's.
+
+### The key is the branch, not the URL
+
+`localhost:3000` is shared by every branch that ever runs on it, so a URL key
+would show one branch's comments on another. The route runs in the dev server
+and reads the branch from its working directory's git, on every call, so
+switching branches switches folders without a restart.
+
+- **No branch to read** — a detached HEAD, or a directory that is not a
+  repository — falls back to the normalized URL, `localhost:3000` becoming
+  `localhost-3000`. Pass `url` to name it; without one the folder is `default`.
+- **The root is the main checkout**, found through
+  `git rev-parse --git-common-dir`. Every worktree of a repository writes to one
+  `.maple/`, and removing a worktree keeps its comments. `.maple/` is gitignored.
+- **The slug is lossy**: `feat/x` and `feat-x` share a folder. That is safe
+  because each comment carries its own branch and a listing filters on it.
+
+`cwd` and `root` override the first two for a test or an unusual layout.
+
+### What it leaves out
+
+No `head`, so a gate has no commit to publish against, and no `watch`, so the
+agent polls. The MCP server reads the same folder when no forge is configured;
+see `packages/mcp/README.md`.
 
 ## GitHub
 

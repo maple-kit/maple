@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 
 import { jevClassifier } from "@maple-kit/classifier";
 import { createCommentStore, keywordClassifier } from "@maple-kit/core";
-import { memoryMedia, memoryStore } from "@maple-kit/core/testing";
+import { fileMedia, fileStore } from "@maple-kit/core/local";
 import { maple } from "@maple-kit/core/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv } from "vite";
@@ -37,17 +37,20 @@ const alias = [
   { find: /^@maple-kit\/ui\/(.*)$/, replacement: here("../../packages/ui/src/$1/index.ts") },
 ];
 
-/** Store and blobs, both in memory and both seeded. The screenshots go in
- * through the same putBlob a capture uses, so the demo exercises the real path. */
+/**
+ * Store and blobs, files under `.maple/<branch>/` that survive a restart.
+ * Seeded only into an empty store, through the putBlob a capture uses.
+ */
 async function seeded(branch: string): Promise<{ store: CommentStore; media: MediaConnector }> {
-  const media = memoryMedia();
+  const media = fileMedia();
+  const store = createCommentStore(fileStore());
+  if ((await store.list({ branch, limit: 1 })).comments.length > 0) return { store, media };
+
   const shots = await Promise.all(
     SEEDED_FRAMES.map((svg) =>
       media.putBlob({ data: new TextEncoder().encode(svg), contentType: "image/svg+xml" }),
     ),
   );
-
-  const store = createCommentStore(memoryStore());
   for (const comment of seedComments(branch, shots)) await store.append(comment);
   return { store, media };
 }
@@ -123,8 +126,8 @@ export default defineConfig(async ({ command, isPreview, mode }) => {
         tagger: preview,
         root: import.meta.dirname,
         // Only the dev and preview servers mount this; a static build has no
-        // server, so a deployed copy hosts the route elsewhere. In memory and
-        // seeded, so a restart is a clean slate with something in it.
+        // server, so a deployed copy hosts the route elsewhere. Files under
+        // `.maple/`, so a restart keeps what was written; seeded once.
         route: {
           store,
           media,
