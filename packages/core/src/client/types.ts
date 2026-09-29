@@ -189,6 +189,11 @@ export interface ClientState {
    * waiting for one. Null until `GET /me` has answered.
    */
   readonly approval: ApprovalConfig | null;
+  /**
+   * True while this page is paired with a bridge on the reviewer's machine:
+   * comments and screenshots go there, and only there.
+   */
+  readonly solo: boolean;
   /** Every approval on this surface, newest first. Empty when none was left. */
   readonly approvals: readonly Approval[];
   /** This reviewer's own approval of the commit on show, when they left one. */
