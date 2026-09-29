@@ -136,7 +136,7 @@ function textBetween(
     text += index.text.slice(position, Math.max(position, segment.start));
     position = Math.max(position, Math.min(segment.end, to));
   }
-  return text + index.text.slice(position, to);
+  return (text + index.text.slice(position, to)).replace(/ {2,}/g, " ");
 }
 
 function spanOfRange(index: TextIndex, range: Range): Span | undefined {
