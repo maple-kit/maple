@@ -1,6 +1,6 @@
 /**
  * Maple's route answering `/mock/identity`. `broken` makes it fail with a
- * 500 and `absent` with a 404, so a lookup's error paths are exercised.
+ * 500 and `absent` with a 404, `none` with `identity: null`, so a lookup's error paths are exercised.
  */
 
 import { http, HttpResponse } from "msw";
@@ -20,13 +20,16 @@ export const RULES: IdentityRules = {
   },
 };
 
-export function createIdentityRoute(answer: "rules" | "broken" | "absent" | "junk" = "rules") {
+export function createIdentityRoute(
+  answer: "rules" | "none" | "broken" | "absent" | "junk" = "rules",
+) {
   let asked = 0;
   const handlers: RequestHandler[] = [
     http.get(`${ROUTE_ORIGIN}/api/maple/mock/identity`, () => {
       asked += 1;
       if (answer === "broken") return HttpResponse.json({ error: "upstream" }, { status: 500 });
       if (answer === "absent") return HttpResponse.json({ error: "Not found" }, { status: 404 });
+      if (answer === "none") return HttpResponse.json({ identity: null });
       return HttpResponse.json({ identity: answer === "junk" ? { call: 3 } : RULES });
     }),
   ];

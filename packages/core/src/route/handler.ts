@@ -566,11 +566,14 @@ async function mockSchema(mount: Mount, request: Request, url: URL): Promise<Res
   return json({ shapes: await shapesFor(mock, keys) }, 200);
 }
 
-/** The host's identity rules, gated as the shapes are. */
+/**
+ * The host's identity rules, gated as the shapes are. A preview with no rules
+ * answers `{ identity: null }`, so a page's console is not left with a 404.
+ */
 async function mockIdentity(mount: Mount, request: Request): Promise<Response> {
   const { mock, options } = mount;
-  const identity = mock?.preview === true ? await mock.identity() : undefined;
-  if (identity === undefined) return json({ error: "Not found" }, 404);
+  if (mock?.preview !== true) return json({ error: "Not found" }, 404);
+  const identity = (await mock.identity()) ?? null;
   if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
 
   if (options.identity !== undefined) {

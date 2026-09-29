@@ -543,7 +543,9 @@ identity: {
   granted. It is what turns a call into the page's own 403 under `as`.
 
 `GET {base}/mock/identity` serves the rules with each vocabulary filled in,
-gated as `/mock/schema` is, and answers 404 when the host declares none.
+gated as `/mock/schema` is. A preview that declares none answers
+`200 { "identity": null }`, so a page's console shows no failed request; 404
+means the mock is off (`preview` is false).
 
 **The page applies them.** `installMock({ route })` reads the rules once, and
 only when the recipe has `as`; `installMock({ identity })` supplies them

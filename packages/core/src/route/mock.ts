@@ -29,7 +29,7 @@ export interface MockRouteOptions {
   readonly plan?: MockPlanOptions;
   /**
    * Who a reviewer is, for a recipe's `as`, served at `/mock/identity`.
-   * Absent, that endpoint answers 404.
+   * Absent, a preview answers `{ "identity": null }`; not a preview, 404.
    */
   readonly identity?: IdentitySource;
 }
