@@ -51,6 +51,47 @@ describe("describing an element", () => {
     expect(anchor.quote?.prefix).toBe("Costs rose sharply");
   });
 
+  it("keeps the context inside the landmark, so it never reaches the chrome", () => {
+    const root = mount(
+      `<div>Signed in as Ada Reviewer</div><main><p>Today's pour-over lineup</p><p>Ask the barista</p></main><div>Footer links</div>`,
+    );
+    const first = describeElement(root.querySelectorAll("p")[0]!, { root });
+    const last = describeElement(root.querySelectorAll("p")[1]!, { root });
+
+    expect(first.quote?.prefix).toBeUndefined();
+    expect(first.quote?.suffix).toBe("Ask the barista");
+    expect(last.quote?.prefix).toBe("Today's pour-over lineup");
+    expect(last.quote?.suffix).toBeUndefined();
+  });
+
+  it("clamps to the component around the pick when there is no landmark", () => {
+    const root = mount(
+      `<p>Before</p><section data-maple-name="Menu"><p>One</p><p>Two</p></section><p>After</p>`,
+    );
+    const quote = describeElement(root.querySelectorAll("p")[1]!, { root }).quote;
+    expect(quote).toMatchObject({ exact: "One", suffix: "Two" });
+    expect(quote?.prefix).toBeUndefined();
+  });
+
+  it.each([
+    ["nav", `<nav>Ada Reviewer</nav>`],
+    ["header", `<header>Ada Reviewer</header>`],
+    ["aside", `<aside>Ada Reviewer</aside>`],
+    ["private", `<div data-maple-private>Ada Reviewer</div>`],
+  ])("leaves %s text out of the context", (_name, chrome) => {
+    const root = mount(`<p>Menu</p>${chrome}<p>Loyalty card</p>${chrome}<p>Refills</p>`);
+    const quote = describeElement(root.querySelectorAll("p")[1]!, { root }).quote;
+
+    expect(quote?.prefix).toBe("Menu");
+    expect(quote?.suffix).toBe("Refills");
+  });
+
+  it("keeps the context of a pick made inside the chrome itself", () => {
+    const root = mount(`<nav><a>Menu</a><a>Orders</a></nav><p>Body</p>`);
+    const quote = describeElement(root.querySelectorAll("a")[1]!, { root }).quote;
+    expect(quote?.prefix).toBe("Menu");
+  });
+
   it("caps a long passage but still records where it started", () => {
     const root = mount(`<p>${"word ".repeat(200)}</p>`);
     const anchor = describeElement(root.querySelector("p")!, { root, maximumQuote: 50 });
