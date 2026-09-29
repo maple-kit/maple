@@ -12,6 +12,7 @@ import {
   describeElement,
   describeRange,
   labelFor,
+  locateSource,
   regionOf,
 } from "@maple-kit/core/anchor";
 import { toCommentContext } from "@maple-kit/core/overlay";
@@ -46,7 +47,7 @@ export function targetFor(pick: Pick, options: TargetOptions = {}): ComposerTarg
   const element = elementOf(pick);
   if (!element) return undefined;
 
-  const anchor = anchorFor(pick, element, options.root);
+  const anchor = located(anchorFor(pick, element, options.root), element);
   // The bare name, not the phrase: `ComposerTarget.label` is "the Yield card",
   // and every surface that shows it wraps it in its own words. Storing "an area
   // of the Yield card" here is how the panel came to read "on an area of an
@@ -76,6 +77,23 @@ function anchorFor(pick: Pick, element: Element, root: ParentNode | undefined): 
     ...described,
     region: regionOf(pick.rect, element.getBoundingClientRect()),
     ...(members.length === 0 ? {} : { members }),
+  };
+}
+
+/**
+ * Says which rung supplied the file and line: the tagger's attribute, or,
+ * on a page that installed a locator (`maple review`), its source maps.
+ */
+function located(anchor: Anchor, element: Element): Anchor {
+  if (anchor.source !== undefined) return { ...anchor, locatedBy: "tagger" };
+  const found = locateSource(element);
+  if (found === undefined) return anchor;
+  const component = anchor.component ?? found.component;
+  return {
+    ...anchor,
+    source: found.source,
+    ...(component === undefined ? {} : { component }),
+    locatedBy: "owner-stack",
   };
 }
 
