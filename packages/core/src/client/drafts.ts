@@ -49,6 +49,11 @@ export interface DraftKeeper {
   save(draft: Draft): void;
   /** Writes anything pending now. Cheap when nothing is. */
   flush(): void;
+  /**
+   * True while a reload would lose a draft: a save still inside its debounce
+   * window, or drafts held only in memory because storage is blocked.
+   */
+  atRisk(): boolean;
   /** Forgets a draft the reviewer threw away. */
   discard(id: string): void;
   /** Forgets a draft that became a comment, and remembers that it did. */
@@ -95,6 +100,7 @@ export function createDraftKeeper(options: DraftKeeperOptions): DraftKeeper {
     if (!pending) return;
     store.save(pending);
     pending = undefined;
+    announce();
   };
 
   const all = (): readonly Draft[] => (pending ? merge(store.list(), pending) : store.list());
@@ -109,6 +115,7 @@ export function createDraftKeeper(options: DraftKeeperOptions): DraftKeeper {
       announce();
     },
     flush,
+    atRisk: () => pending !== undefined || (storage === undefined && all().length > 0),
     discard(id) {
       if (pending?.id === id) pending = undefined;
       flush();

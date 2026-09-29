@@ -72,7 +72,7 @@ describe("the tab closing on something nobody else has seen", () => {
     expect(page.guarded()).toBe(false);
   });
 
-  it("stays guarded after the composer closes on a kept comment", () => {
+  it("lets go once a kept comment is saved, because a reload loses nothing", () => {
     const page = counting();
     const one = client(page.view);
 
@@ -81,7 +81,7 @@ describe("the tab closing on something nobody else has seen", () => {
     one.keepDraft();
 
     expect(one.getState().composer.open).toBe(false);
-    expect(page.guarded()).toBe(true);
+    expect(page.guarded()).toBe(false);
   });
 
   it("lets go once everything kept has been published", async () => {

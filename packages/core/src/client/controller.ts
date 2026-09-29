@@ -437,7 +437,9 @@ function composer(runtime: Runtime, change: Partial<ComposerState>): void {
 /** The draft stays; the judgement does not. Nothing off-screen is worth a call. */
 function closeComposer(runtime: Runtime): void {
   runtime.assist.cancel();
+  runtime.drafts.flush();
   composer(runtime, { open: false, assist: ASSIST_IDLE });
+  reconsiderDirty(runtime);
 }
 
 /**
@@ -471,9 +473,10 @@ function start(runtime: Runtime): void {
     signal,
   });
 
-  const unsubscribe = runtime.drafts.subscribe(() =>
-    patch(runtime, { drafts: runtime.drafts.list() }),
-  );
+  const unsubscribe = runtime.drafts.subscribe(() => {
+    patch(runtime, { drafts: runtime.drafts.list() });
+    reconsiderDirty(runtime);
+  });
   runtime.release = () => {
     abort.abort();
     unsubscribe();
@@ -496,11 +499,12 @@ function navigationFor(runtime: Runtime, view: ClientView): NavigationGuard {
 }
 
 /**
- * Anything nobody else can see yet: a draft being typed, or one kept. Safe
- * from a reload is not delivered, and the guard says so before a tab closes.
+ * Anything a reload would lose: input in an open composer, a save still inside
+ * its debounce, or drafts with no storage behind them. A stored draft is safe.
  */
 function unpublished(runtime: Runtime): boolean {
-  return runtime.state.composer.dirty || runtime.state.drafts.length > 0;
+  const { composer } = runtime.state;
+  return (composer.open && composer.dirty) || runtime.drafts.atRisk();
 }
 
 /** Told to the guard wherever a draft is made, kept, thrown away or published. */
