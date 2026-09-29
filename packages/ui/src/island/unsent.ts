@@ -18,7 +18,7 @@ import { UNSENT_COPY } from "./language.js";
 import type { PartProps } from "../part.js";
 import type { MapleClient } from "@maple-kit/core/client";
 import type { Draft } from "@maple-kit/core/overlay";
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 
 /** The section. Its children replace everything inside it. */
 export interface UnsentProps extends PartProps {
@@ -49,6 +49,9 @@ export const Unsent = /** @__PURE__ */ forwardRef<HTMLDivElement, UnsentProps>(
       );
     };
 
+    const save = (event: MouseEvent<HTMLButtonElement>): void =>
+      download(event.currentTarget.ownerDocument, "maple-drafts.json", client.draftsAsJson());
+
     return renderPart(
       "div",
       asChild,
@@ -76,6 +79,16 @@ export const Unsent = /** @__PURE__ */ forwardRef<HTMLDivElement, UnsentProps>(
             "button",
             {
               type: "button",
+              className: "mk-unsent-copy",
+              title: UNSENT_COPY.exportHint,
+              onClick: save,
+            },
+            UNSENT_COPY.export,
+          ),
+          createElement(
+            "button",
+            {
+              type: "button",
               className: "mk-btn mk-btn-primary mk-press mk-unsent-publish",
               disabled: publishing,
               onClick: () => void client.publish().catch(() => undefined),
@@ -92,6 +105,16 @@ export const Unsent = /** @__PURE__ */ forwardRef<HTMLDivElement, UnsentProps>(
     );
   },
 );
+
+/** Hands the browser a file to save. */
+function download(page: Document, name: string, text: string): void {
+  const url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
+  const link = page.createElement("a");
+  link.href = url;
+  link.download = name;
+  link.click();
+  URL.revokeObjectURL(url);
+}
 
 /** One waiting comment: what it says, where it belongs, and what to do with it. */
 function row(draft: Draft, client: MapleClient, pathname: string): ReactNode {
