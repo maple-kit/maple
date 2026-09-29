@@ -66,8 +66,10 @@ Set none of `GITHUB_TOKEN`, `MAPLE_GITHUB_OWNER` and `MAPLE_GITHUB_REPO` and the
 server reads and writes the comments `fileStore()` keeps under `.maple/` in its
 working directory's repository, so the loop works on a laptop with no pull
 request. `MAPLE_STORE=file` says so explicitly. It is a laptop's store, not a
-preview pod's: `docs/connectors.md` has the argument. The Stop hook still needs
-a forge configured and stays silent without one.
+preview pod's: `docs/connectors.md` has the argument. The Stop hook reads the
+same folder for the branch checked out in the session's working directory, and
+stays silent where there is no `.maple/` folder, no comments for the branch or
+no repository.
 
 ## Tools
 
@@ -115,8 +117,9 @@ temp directory, and a stop no block caused starts it again.
 server alone; a hook runs in the client's own environment. So
 `MAPLE_GITHUB_OWNER`, `MAPLE_GITHUB_REPO` and `GITHUB_TOKEN` have to be set
 where the client itself starts — under the same `op run --env-file` — or the
-hook fails naming the one missing. With neither of the first two set, it lets
-every stop through. `MAPLE_BRANCH` defaults to the branch checked out in the
+hook fails naming the one missing. With neither of the first two set, it reads
+the comments under `.maple/` for the current branch instead, and lets every
+stop through where there are none. `MAPLE_BRANCH` defaults to the branch checked out in the
 session's working directory.
 
 ## Resolving clears the gate
