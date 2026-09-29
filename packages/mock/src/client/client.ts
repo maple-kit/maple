@@ -13,7 +13,7 @@ import { linkRecipe, MOCK_STATES, readPlan, RECIPE_VERSION } from "@maple-kit/co
 import { flagType } from "../flag-source.js";
 import { seenFlags } from "../flags.js";
 import { installedMock } from "../handle.js";
-import { realIdentity } from "../identity.js";
+import { knownIdentity } from "../identity.js";
 import { forgetRecipe, keepRecipeCookie, saveRecipe } from "../link.js";
 import { pathPattern } from "../rest.js";
 import { PlanUnavailableError } from "../schema/plan.js";
@@ -141,7 +141,7 @@ export interface MockClient {
   choose(key: string, state: MockState | undefined): void;
   /** Answers a flag with `value`, or lets it keep its real value when undefined. */
   setFlag(key: string, value: FlagValue | undefined): void;
-  /** Shows the page this role, or its real one when undefined. */
+  /** Shows the page this role, or its real one when undefined. Reloads when the server renders identity. */
   setRole(role: string | undefined): void;
   /** Grants or takes away a permission, or leaves it as it really is when undefined. */
   setPermission(name: string, granted: boolean | undefined): void;
@@ -228,9 +228,9 @@ export function createMockClient(options: MockClientOptions = {}): MockClient {
     choose: (key, state) => edit(runtime, { draft: chosen(runtime.state.draft, key, state) }),
     setFlag: (key, value) =>
       edit(runtime, { draftFlags: withEntry(runtime.state.draftFlags, key, value) }),
-    setRole: (role) => edit(runtime, { draftAs: withRole(runtime.state.draftAs, role) }),
+    setRole: (role) => switchAs(runtime, withRole(runtime.state.draftAs, role)),
     setPermission: (name, granted) =>
-      edit(runtime, { draftAs: withPermission(runtime.state.draftAs, name, granted) }),
+      switchAs(runtime, withPermission(runtime.state.draftAs, name, granted)),
     clear: () =>
       edit(runtime, { draft: [], draftFlags: {}, draftAs: undefined, request: undefined }),
     recipe: () => recipeOf(runtime.state),
@@ -434,6 +434,15 @@ function restore(runtime: Runtime): void {
   patch(runtime, { ...base, request: undefined, suggestions: [], unnamed: false });
 }
 
+/**
+ * A new `as` in the draft. A server renders its identity, so the page has to
+ * be reloaded to see it: the change is applied at once.
+ */
+function switchAs(runtime: Runtime, draftAs: MockIdentity | undefined): void {
+  edit(runtime, { draftAs });
+  if (runtime.state.identity?.server !== undefined) apply(runtime);
+}
+
 /** A change by hand: what the sentence put there is the reviewer's now. */
 function edit(runtime: Runtime, next: Partial<Draft & { request: undefined }>): void {
   delete runtime.base;
@@ -444,11 +453,16 @@ function pick(state: MockClientState): Draft {
   return { draft: state.draft, draftFlags: state.draftFlags, draftAs: state.draftAs };
 }
 
-/** Read from the identity call's last real answer; a mocked answer is never recorded. */
+/**
+ * What the server rendered, else the identity call's last real answer: a
+ * mocked answer is never recorded. Nothing while nobody is known.
+ */
 function realAsOn(runtime: Runtime, route: string, rules: IdentityRules | undefined) {
-  const sample = rules && runtime.handle?.inventory.sample(rules.call, route);
-  if (rules === undefined || sample === undefined) return undefined;
-  const real = realIdentity(sample.body, rules);
+  if (rules === undefined || rules.server?.current === null) return undefined;
+  const sample =
+    rules.call === undefined ? undefined : runtime.handle?.inventory.sample(rules.call, route);
+  if (sample === undefined && rules.server === undefined) return undefined;
+  const real = knownIdentity(rules, sample?.body);
   return {
     ...(real.role === undefined ? {} : { role: real.role }),
     permissions: [...(real.permissions ?? [])],

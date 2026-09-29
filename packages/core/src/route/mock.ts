@@ -6,7 +6,7 @@
  * connector resolves. The documents are normalised once, on first request.
  */
 
-import { identityRules } from "../mock/identity.js";
+import { identityRules, isServerIdentity, serverIdentityRules } from "../mock/identity.js";
 import { createShapeIndex } from "../mock/shape.js";
 
 import type { IdentityRules, IdentitySource } from "../mock/identity.js";
@@ -28,8 +28,8 @@ export interface MockRouteOptions {
    */
   readonly plan?: MockPlanOptions;
   /**
-   * Who a reviewer is, for a recipe's `as`, served at `/mock/identity`.
-   * Absent, a preview answers `{ "identity": null }`; not a preview, 404.
+   * Who a reviewer is, for `as`, at `/mock/identity`: a session call or a
+   * server render's `read`. Absent, `{ "identity": null }`; no preview, 404.
    */
   readonly identity?: IdentitySource;
 }
@@ -41,8 +41,11 @@ export const MOCK_SCHEMA_KEYS = 100;
 export interface MockSchemas {
   readonly preview: boolean;
   index(): Promise<ShapeIndex>;
-  /** The identity rules, vocabularies filled in from the shapes; undefined when the host declares none. */
-  identity(): Promise<IdentityRules | undefined>;
+  /**
+   * The identity rules; undefined when the host declares none. A server
+   * render's `read` runs only when given the request.
+   */
+  identity(request?: Request): Promise<IdentityRules | undefined>;
 }
 
 /** Builds the lazily normalised index once, when the handler is. */
@@ -56,8 +59,12 @@ export function createMockSchemas(options: MockRouteOptions): MockSchemas {
   return {
     preview: options.preview,
     index,
-    async identity() {
+    async identity(request) {
       if (source === undefined) return undefined;
+      if (isServerIdentity(source)) {
+        const current = request === undefined ? null : await source.read(request);
+        return serverIdentityRules(source, current);
+      }
       return identityRules(source, (await index()).find(source.call));
     },
   };

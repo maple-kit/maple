@@ -573,14 +573,13 @@ async function mockSchema(mount: Mount, request: Request, url: URL): Promise<Res
 async function mockIdentity(mount: Mount, request: Request): Promise<Response> {
   const { mock, options } = mount;
   if (mock?.preview !== true) return json({ error: "Not found" }, 404);
-  const identity = (await mock.identity()) ?? null;
   if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
 
   if (options.identity !== undefined) {
     const user = await options.identity.resolveUser(identityRequest(request));
     if (user === null) return json({ error: "Sign in to read identity rules" }, 401);
   }
-  return json({ identity }, 200);
+  return json({ identity: (await mock.identity(request)) ?? null }, 200);
 }
 
 /**

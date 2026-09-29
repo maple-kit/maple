@@ -10,7 +10,7 @@ import { handlerFetch } from "./msw/fetch.js";
 import { RULES } from "./msw/identity.js";
 import { createLaunchDarklyFake, LD_BASE, LD_ENV } from "./msw/launchdarkly.js";
 
-import type { MockState, Recipe } from "@maple-kit/core/mock";
+import type { IdentityRules, MockState, Recipe } from "@maple-kit/core/mock";
 import type { MockHandle } from "@maple-kit/mock";
 
 const api = createApiFake();
@@ -257,6 +257,22 @@ describe("the recipe a comment records", () => {
 
   it("offers no identity where the page names neither rules nor a route", () => {
     expect(install().identity).toBeUndefined();
+  });
+
+  it("refuses by the recipe's role against rules a server render supplies, with no identity call", async () => {
+    const rendered: IdentityRules = {
+      role: { values: ["owner", "guest"] },
+      requires: RULES.requires,
+      server: { current: { role: "owner" } },
+    };
+    install({ version: 2, calls: [], as: { role: "guest" } }, { identity: rendered });
+
+    const audit = await fetch(`${API}/audit`);
+    const projects = await fetch(`${API}/projects`);
+
+    expect(audit.status).toBe(403);
+    expect(projects.status).toBe(200);
+    expect(api.reached).toEqual(["GET /api/projects"]);
   });
 
   it("shows the page who the recipe says, refuses what that identity may not do, and says when a write reaches the server", async () => {

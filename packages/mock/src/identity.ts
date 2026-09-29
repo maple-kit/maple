@@ -4,22 +4,44 @@
  * does not meet answers 403. The server still acts as the reviewer.
  */
 
-import type { IdentityRules, MockIdentity } from "@maple-kit/core/mock";
+import type { CurrentIdentity, IdentityRules, MockIdentity } from "@maple-kit/core/mock";
 
 /** Who the reviewer really is, as the identity call last answered. */
 export interface RealIdentity {
   readonly role?: string;
+  /** Every role, when the server rendered several. */
+  readonly roles?: readonly string[];
   readonly permissions?: ReadonlySet<string>;
 }
 
 /** Reads the real role and permissions out of the identity call's answer. */
 export function realIdentity(body: unknown, rules: IdentityRules): RealIdentity {
-  const role = rules.role && valueAt(body, rules.role.path);
-  const held = rules.permissions && valueAt(body, rules.permissions.path);
+  const role = rules.role?.path === undefined ? undefined : valueAt(body, rules.role.path);
+  const held =
+    rules.permissions?.path === undefined ? undefined : valueAt(body, rules.permissions.path);
   const permissions = granted(held);
   return {
     ...(typeof role === "string" ? { role } : {}),
     ...(permissions === undefined ? {} : { permissions }),
+  };
+}
+
+/**
+ * Who the reviewer really is: what the server rendered, else what the identity
+ * call last answered (`sample`, when it has answered).
+ */
+export function knownIdentity(rules: IdentityRules, sample: unknown): RealIdentity {
+  if (rules.server !== undefined) return currentIdentity(rules.server.current);
+  return sample === undefined ? {} : realIdentity(sample, rules);
+}
+
+function currentIdentity(current: CurrentIdentity): RealIdentity {
+  if (current === null) return {};
+  const role = current.role ?? current.roles?.[0];
+  return {
+    ...(role === undefined ? {} : { role }),
+    ...(current.roles === undefined ? {} : { roles: current.roles }),
+    ...(current.permissions === undefined ? {} : { permissions: new Set(current.permissions) }),
   };
 }
 
@@ -35,11 +57,17 @@ export function meetsNeed(
 ): boolean {
   const need = rules.requires[key];
   if (need === undefined) return true;
-  const role = as.role ?? real.role;
-  const roleMet = need.roles === undefined || role === undefined || need.roles.includes(role);
+  const held = as.role === undefined ? (real.roles ?? roleList(real.role)) : [as.role];
+  const roles = need.roles;
+  const roleMet =
+    roles === undefined || held.length === 0 || held.some((role) => roles.includes(role));
   const permission = need.permission;
   const shown = permission === undefined ? undefined : shownPermission(permission, as, real);
   return roleMet && shown !== false;
+}
+
+function roleList(role: string | undefined): readonly string[] {
+  return role === undefined ? [] : [role];
 }
 
 function shownPermission(permission: string, as: MockIdentity, real: RealIdentity) {
@@ -53,10 +81,10 @@ function shownPermission(permission: string, as: MockIdentity, real: RealIdentit
 export function impose(body: unknown, as: MockIdentity, rules: IdentityRules): unknown {
   const copy = structuredClone(body);
   const { permissions, role } = rules;
-  if (as.role !== undefined && role !== undefined && knows(role.values, as.role)) {
+  if (as.role !== undefined && role?.path !== undefined && knows(role.values, as.role)) {
     setAt(copy, role.path, as.role);
   }
-  if (as.permissions !== undefined && permissions !== undefined) {
+  if (as.permissions !== undefined && permissions?.path !== undefined) {
     const held = valueAt(copy, permissions.path);
     const next = rewritten(held, as.permissions);
     if (next !== held) setAt(copy, permissions.path, next);

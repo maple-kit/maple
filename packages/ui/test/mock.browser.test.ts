@@ -707,6 +707,54 @@ describe("flags and who the page is told the reviewer is", () => {
   });
 });
 
+describe("the box, with an identity a server rendered", () => {
+  const RENDERED: IdentityRules = {
+    role: { values: ["owner", "barista"] },
+    requires: {},
+    server: { current: { role: "barista" } },
+  };
+  const rendered = (rules: IdentityRules): MockHandle => ({
+    ...handle(),
+    identity: () => Promise.resolve(rules),
+  });
+
+  it("marks the role as reloading the page, shows the real role, and reloads on a switch", async () => {
+    const { assign, view } = fakePage();
+    const client = track(createMockClient({ handle: rendered(RENDERED), view, defaultOpen: true }));
+    client.start();
+    await render(createElement(MapleMock, { client }));
+
+    await vi.waitFor(() => expect(find('[role="radiogroup"][aria-label="Role"]')).not.toBeNull());
+    expect(find('[aria-label="Shown as · reloads the page"]')).not.toBeNull();
+    expect(client.getState().realAs).toEqual({ role: "barista", permissions: [] });
+    expect(assign).not.toHaveBeenCalled();
+
+    buttonNamed("owner", find(".mk-mock-layers")).click();
+    await vi.waitFor(() => expect(assign).toHaveBeenCalledOnce());
+    const next = new URL(assign.mock.calls[0]?.[0] as string);
+    expect(decodeRecipe(next.searchParams.get("maple-mock") ?? "")).toMatchObject({
+      as: { role: "owner" },
+    });
+  });
+
+  it("leaves the switch to Apply, and says nothing of reloading, when a call carries the identity", async () => {
+    const { assign, view } = fakePage();
+    const called: IdentityRules = {
+      call: USER,
+      role: { path: "role", values: ["owner", "barista"] },
+      requires: {},
+    };
+    const client = track(createMockClient({ handle: rendered(called), view, defaultOpen: true }));
+    client.start();
+    await render(createElement(MapleMock, { client }));
+
+    await vi.waitFor(() => expect(find('[role="radiogroup"][aria-label="Role"]')).not.toBeNull());
+    expect(find('[aria-label="Shown as"]')).not.toBeNull();
+    buttonNamed("owner", find(".mk-mock-layers")).click();
+    expect(assign).not.toHaveBeenCalled();
+  });
+});
+
 describe("the box, reading a sentence that names a role or a flag", () => {
   const RULES: IdentityRules = {
     call: USER,

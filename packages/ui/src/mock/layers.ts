@@ -26,6 +26,7 @@ export const LAYER_COPY = {
   realValue: "Real value",
   notEvaluated: "Named by the mock, not evaluated on this page",
   serverActs: "The server still acts as you.",
+  reloads: "reloads the page",
 } as const;
 
 interface LayerProps {
@@ -43,6 +44,8 @@ export function Layers(props: LayerProps): ReactElement {
   const grants: Folded[] = [];
   const real = state.realAs;
   const roles = identity?.role?.values ?? [];
+  const reloading = identity?.server !== undefined;
+  const titled = (title: string) => (reloading ? `${title} · ${LAYER_COPY.reloads}` : title);
   if (roles.length > 0) {
     const role = state.draftAs?.role;
     rows.push(
@@ -80,10 +83,10 @@ export function Layers(props: LayerProps): ReactElement {
   return createElement(
     "div",
     { className: "mk-mock-layers", ref: panel },
-    rows.length === 0 ? null : section(LAYER_COPY.shownAs, rows),
+    rows.length === 0 ? null : section(titled(LAYER_COPY.shownAs), rows),
     grants.length === 0
       ? null
-      : createElement(Fold, { title: LAYER_COPY.permissions, rows: grants }),
+      : createElement(Fold, { title: titled(LAYER_COPY.permissions), rows: grants }),
     flags.length === 0 ? null : createElement(Fold, { title: LAYER_COPY.flags, rows: flags }),
   );
 }

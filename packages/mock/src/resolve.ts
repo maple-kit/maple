@@ -7,7 +7,7 @@
  */
 
 import { isData } from "./codec.js";
-import { impose, meetsNeed, realIdentity } from "./identity.js";
+import { impose, knownIdentity, meetsNeed } from "./identity.js";
 import { sampleSchema } from "./schema/sample.js";
 import { deflate } from "./superjson.js";
 import { reshape, reshapeTyped } from "./transform.js";
@@ -129,8 +129,9 @@ function identityLayer(as?: MockIdentity, rules?: IdentityRules): IdentityLayer 
  * names it. The real identity is the one the identity call last answered.
  */
 function withNeeds(split: Split, layer: IdentityLayer, inventory: Inventory, route: string): Split {
-  const sample = inventory.sample(layer.rules.call, route);
-  const real = sample === undefined ? {} : realIdentity(sample.body, layer.rules);
+  const { call } = layer.rules;
+  const sample = call === undefined ? undefined : inventory.sample(call, route);
+  const real = knownIdentity(layer.rules, sample?.body);
   const states = split.calls.map((call, index) => {
     const named = split.states[index];
     if (named !== undefined) return named;
