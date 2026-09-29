@@ -22,6 +22,7 @@ import { createNavigationGuard } from "./navigation.js";
 import { POLL_MS, startPolling } from "./poll.js";
 import { readMapleConfig, readPreferences, writePreferences } from "./preferences.js";
 import { opensComposer } from "./shortcut.js";
+import { capturePairing, forgetPairing, SOLO_PARAM } from "./solo.js";
 import { themeFrom, watchTheme } from "./theme.js";
 import { readDraftExport, writeDraftExport } from "./transfer.js";
 import { createTransport } from "./transport.js";
@@ -70,6 +71,12 @@ import type {
   ResolutionClaim,
   ThemePreference,
 } from "./types.js";
+
+/**
+ * The script's first act. A host application's router may rewrite the address
+ * before the first controller is built, and the pairing lives in the fragment.
+ */
+if (globalThis.location?.hash.includes(SOLO_PARAM)) capturePairing();
 
 /** Everything the controller attaches to. `window` satisfies it. */
 export type ClientView = NavigationView & ThemeView;
@@ -240,6 +247,11 @@ export interface MapleClient {
   linkGitHub(): Promise<void>;
   /** Forgets the token on this deployment. GitHub keeps the authorisation. */
   unlinkGitHub(): Promise<void>;
+  /**
+   * Leaves solo mode: forgets the pairing, goes back to the host's own route
+   * and reads its comments. For a bridge that is gone.
+   */
+  endSolo(): Promise<void>;
 }
 
 const CLOSED: ComposerState = {
@@ -262,7 +274,7 @@ export const UNTAGGED =
 interface Runtime {
   readonly options: MapleClientOptions;
   readonly config: MapleConfig;
-  readonly transport: Transport;
+  transport: Transport;
   readonly drafts: DraftKeeper;
   readonly assist: AssistRunner;
   /** What the route said it can judge. Null until `/me` has answered. */
@@ -343,11 +355,13 @@ export function createMapleClient(options: MapleClientOptions): MapleClient {
 
     linkGitHub: () => linkGitHub(runtime),
     unlinkGitHub: () => unlinkGitHub(runtime),
+    endSolo: () => endSolo(runtime),
   };
 }
 
 function runtimeFor(options: MapleClientOptions): Runtime {
   const config = options.config ?? readMapleConfig(options, storageOf(options));
+  const pairing = capturePairing(storageOf(options));
   const drafts = createDraftKeeper({
     branch: options.branch,
     ...(options.storage === undefined ? {} : { storage: options.storage }),
@@ -359,7 +373,7 @@ function runtimeFor(options: MapleClientOptions): Runtime {
   const runtime: Runtime = {
     options,
     config,
-    transport: createTransport(options),
+    transport: createTransport({ ...options, ...(pairing ? { solo: pairing } : {}) }),
     drafts,
     assist: createAssistRunner({
       judge: (body, signal) => runtime.transport.assist(body, signal),
@@ -402,6 +416,7 @@ function runtimeFor(options: MapleClientOptions): Runtime {
       approval: null,
       approvals: [],
       myApproval: null,
+      solo: pairing !== undefined,
     }),
   };
 
@@ -728,6 +743,13 @@ async function linkGitHub(runtime: Runtime): Promise<void> {
       error instanceof Error ? error : new Error(detailOf(error)),
     );
   }
+}
+
+async function endSolo(runtime: Runtime): Promise<void> {
+  forgetPairing(storageOf(runtime.options));
+  runtime.transport = createTransport(runtime.options);
+  patch(runtime, { solo: false });
+  await load(runtime);
 }
 
 async function unlinkGitHub(runtime: Runtime): Promise<void> {

@@ -18,10 +18,10 @@ describe("the advertised tool list", () => {
     }
   });
 
-  it("marks only resolve_comment as writing", () => {
+  it("marks only resolve_comment and start_solo as writing", () => {
     const writers = TOOLS.filter((tool) => !tool.readOnly).map((tool) => tool.name);
 
-    expect(writers).toEqual(["resolve_comment"]);
+    expect(writers).toEqual(["resolve_comment", "start_solo"]);
   });
 
   it("says in wait_for_comments' description that a timeout is not a failure", () => {

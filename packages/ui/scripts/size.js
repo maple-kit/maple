@@ -27,11 +27,12 @@ const BUDGETS = [
   { name: "the adopted stylesheet", entries: ["stylesheet.js"], max: 16 * 1024 },
   // 22 KB until the wordmark (1.7 KB of path data); 24 KB until the sign-off
   // and the unsent list; 26 KB until the pixel leaf (1.3 KB, docs/branding.md);
-  // 28 KB, then 29 KB once a draft knows its page; 30 KB for import and export.
+  // 28 KB, then 29 KB once a draft knows its page; 30 KB for import and export;
+  // 31 KB for the solo offer, which the unsent list and the notice both draw.
   {
     name: "root + marks + island + icons",
     entries: ["index.js", "marks/index.js", "island/index.js", "icons/index.js"],
-    max: 30 * 1024,
+    max: 31 * 1024,
   },
   // 9 KB until the score card. The extra 1 KB is the card, the kind control
   // and the context card's disclosure. Every byte of it is inert on a

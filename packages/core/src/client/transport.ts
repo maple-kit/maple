@@ -8,9 +8,12 @@
  * 500 without importing anything of ours.
  */
 
+import { SOLO_HEADER, SOLO_PARAM } from "./solo.js";
+
 import type { Pillar } from "../connectors/types.js";
 import type { AssistAnswer } from "../route/assist.js";
 import type { Approval, Comment, CommentStatus, MapleUser, MediaRef } from "../types.js";
+import type { Pairing } from "./solo.js";
 import type { PostedComment, ResolutionClaim } from "./types.js";
 
 /** The default mount point, matched by the route, the Vite plugin and the codemod. */
@@ -39,6 +42,11 @@ export interface TransportOptions {
   readonly basePath?: string;
   /** Injectable so a test drives the route without reaching for a global. */
   readonly fetch?: typeof globalThis.fetch;
+  /**
+   * A paired bridge on the reviewer's machine, which answers in place of the
+   * route: the same endpoints, the token on every request, no cookies.
+   */
+  readonly solo?: Pairing;
 }
 
 /** What `POST /auth/github` hands back for the reviewer to act on. */
@@ -128,7 +136,7 @@ export function createTransport(options: TransportOptions): Transport {
         body: blob,
         headers: { "content-type": contentType },
       }),
-    mediaUrl: (ref) => mediaUrl(options.basePath ?? DEFAULT_BASE_PATH, ref),
+    mediaUrl: (ref) => mediaUrl(baseOf(options), ref, options.solo),
     approvals: async () => {
       const query = new URLSearchParams({ branch: options.branch });
       try {
@@ -162,18 +170,20 @@ export function createTransport(options: TransportOptions): Transport {
  * The key is in the path and the type is a query, because `getUrl` takes a
  * whole `MediaRef` and the connector is the route's own.
  */
-function mediaUrl(base: string, ref: MediaRef): string {
+function mediaUrl(base: string, ref: MediaRef, solo: Pairing | undefined): string {
   const query = new URLSearchParams({ type: ref.contentType });
+  // An `img` cannot send a header, so the token rides in the query.
+  if (solo) query.set(SOLO_PARAM, solo.token);
   return `${base}/media/${encodeURIComponent(ref.key)}?${query.toString()}`;
 }
 
 /** Binds the base path and the fetch to use, so no call site repeats either. */
 function requester(options: TransportOptions): Requester {
-  const base = options.basePath ?? DEFAULT_BASE_PATH;
+  const base = baseOf(options);
   const send = options.fetch ?? ((...args: Parameters<typeof fetch>) => fetch(...args));
 
   return async function request<T>(path: string, init: RequestInit): Promise<T> {
-    const response = await send(base + path, withDefaults(init));
+    const response = await send(base + path, withDefaults(init, options.solo));
     const body: unknown = await readJson(response);
     if (!response.ok) throw new MapleRequestError(response.status, path, messageOf(body));
     return body as T;
@@ -209,14 +219,24 @@ async function listAll(
   return comments;
 }
 
-/** Same-origin credentials: the point of mounting the route on the host. */
-function withDefaults(init: RequestInit): RequestInit {
+/** Where the calls go: the bridge when paired, otherwise the host's own route. */
+function baseOf(options: TransportOptions): string {
+  if (options.solo) return `${options.solo.bridge}${DEFAULT_BASE_PATH}`;
+  return options.basePath ?? DEFAULT_BASE_PATH;
+}
+
+/**
+ * Same-origin credentials: the point of mounting the route on the host. A
+ * bridge gets none: it is another origin and wants a token, not a session.
+ */
+function withDefaults(init: RequestInit, solo: Pairing | undefined): RequestInit {
   return {
-    credentials: "same-origin",
+    credentials: solo ? "omit" : "same-origin",
     ...init,
     headers: {
       accept: "application/json",
       ...(init.body === undefined ? {} : { "content-type": "application/json" }),
+      ...(solo ? { [SOLO_HEADER]: solo.token } : {}),
       ...init.headers,
     },
   };

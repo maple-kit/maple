@@ -63,6 +63,18 @@ export {
 } from "./shortcut.js";
 export type { EscapeOptions, ShortcutEvent } from "./shortcut.js";
 export {
+  BRIDGE_PARAM,
+  capturePairing,
+  forgetPairing,
+  isBridgeAddress,
+  isSoloToken,
+  parsePairing,
+  SOLO_HEADER,
+  SOLO_PARAM,
+  soloLink,
+} from "./solo.js";
+export type { CaptureOptions, Pairing } from "./solo.js";
+export {
   hostScheme,
   overlaySchemeFor,
   readThemeSignals,

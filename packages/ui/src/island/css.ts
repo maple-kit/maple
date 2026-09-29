@@ -23,6 +23,7 @@ export function islandCss(): string {
     rowDetail(),
     developer(),
     ledger(),
+    solo(),
     transfer(),
     newComment(),
     keyframes(),
@@ -1049,6 +1050,36 @@ function transfer(): string {
 .mk-unsent-copy:disabled {
   opacity: 0.5;
   cursor: default;
+}
+`;
+}
+
+/** The guest's one line about `maple solo`, under the unsent list and in the notice. */
+function solo(): string {
+  return `
+.mk-solo {
+  display: block;
+  margin: 0;
+  padding: 0 10px 7px;
+  color: var(--mk-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.mk-notice .mk-solo {
+  padding: 4px 0 0;
+}
+
+.mk-solo-command {
+  padding: 0 4px;
+  border: 1px solid var(--mk-line);
+  border-radius: 4px;
+  background: var(--mk-bg);
+  color: var(--mk-fg);
+  font: inherit;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10.5px;
+  cursor: pointer;
 }
 `;
 }

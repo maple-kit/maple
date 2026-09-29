@@ -9,6 +9,7 @@ import {
 } from "./config.js";
 import { serverLogger } from "./logger.js";
 import { createMapleServer } from "./server.js";
+import { createSoloStarter } from "./solo.js";
 
 const gate = gateFromEnvironment(process.env);
 const refresh = refreshFromEnvironment(process.env);
@@ -16,6 +17,7 @@ const server = createMapleServer({
   store: storeFromEnvironment(process.env),
   requireApproval: requireApprovalFromEnvironment(process.env),
   logger: serverLogger(),
+  solo: createSoloStarter(),
   ...(gate === undefined ? {} : { gate }),
   ...(refresh === undefined ? {} : { refresh }),
 });

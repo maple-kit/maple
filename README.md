@@ -175,6 +175,7 @@ Run `maple connectors` to print the matrix from the code, or see
 - [The overlay and CSP](docs/overlay-csp.md) — what Maple asks of your policy
 - [The agent loop](docs/agent-loop.md) — the MCP tools and the Stop hook
 - [Drafts and publishing](docs/drafts.md) — why a comment is unsent until it is not
+- [Solo mode](docs/solo.md) — a guest's comments on their own machine, and why they cannot gate a merge
 - [The merge gate](docs/gate.md) — what blocks a merge, and what approving does
 - [Maple Mock](docs/mock.md) — a model picks the state, code writes every byte
 - [The assist tier](docs/assist.md) — what a score is, and what it is never allowed to be

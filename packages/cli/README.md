@@ -24,14 +24,15 @@ npm install -g @maple-kit/cli
 
 <!-- generated:cli-commands -->
 
-| Command              | What it does                                                           |
-| -------------------- | ---------------------------------------------------------------------- |
-| `maple connectors`   | Show the connector kinds and the methods each one may implement        |
-| `maple mock schema`  | Write an OpenAPI document of a tRPC router's response types            |
-| `maple mock plan`    | Print the recipe a preview's route plans for a sentence                |
-| `maple setup app`    | Print the prefilled GitHub App registration URL and the steps after it |
-| `maple setup verify` | Check that a comment App's Device Flow is on                           |
-| `maple setup ci`     | Print or write the gate workflow, and the ruleset that requires it     |
+| Command              | What it does                                                                |
+| -------------------- | --------------------------------------------------------------------------- |
+| `maple connectors`   | Show the connector kinds and the methods each one may implement             |
+| `maple mock schema`  | Write an OpenAPI document of a tRPC router's response types                 |
+| `maple mock plan`    | Print the recipe a preview's route plans for a sentence                     |
+| `maple setup app`    | Print the prefilled GitHub App registration URL and the steps after it      |
+| `maple setup verify` | Check that a comment App's Device Flow is on                                |
+| `maple setup ci`     | Print or write the gate workflow, and the ruleset that requires it          |
+| `maple solo`         | Keep a preview's comments on this machine: start the bridge, print the link |
 
 <!-- /generated:cli-commands -->
 
