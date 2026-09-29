@@ -1,5 +1,13 @@
 # @maple-kit/ui
 
+## 0.17.0
+
+### Patch Changes
+
+- @maple-kit/core@0.17.0
+  - @maple-kit/mock@0.17.0
+  - @maple-kit/react@0.17.0
+
 ## 0.16.0
 
 ### Minor Changes
