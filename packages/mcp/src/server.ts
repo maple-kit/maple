@@ -48,6 +48,12 @@ export function createMapleServer(options: HandlerOptions): McpServer {
     async (args) => text(await handlers.getCommentContext(args)),
   );
 
+  server.registerTool(
+    "start_solo",
+    { ...meta(describe("start_solo")), inputSchema: SHAPES.start_solo },
+    async (args) => text(await handlers.startSolo(defined(args))),
+  );
+
   return server;
 }
 

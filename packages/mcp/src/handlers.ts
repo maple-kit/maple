@@ -12,9 +12,11 @@ import { describeIdentity, linkRecipe } from "@maple-kit/core/mock";
 import { clampWaitMs } from "./timeout.js";
 
 import type { GateRefresh } from "./refresh.js";
+import type { SoloLink, SoloStarter } from "./solo.js";
 import type {
   ListCommentsArgs,
   ResolveCommentArgs,
+  StartSoloArgs,
   WaitForCommentsArgs,
   WaitResult,
 } from "./tools.js";
@@ -38,6 +40,11 @@ export interface HandlerOptions {
   readonly requireApproval?: boolean;
   /** Where a failed publish is reported. Silent when absent. */
   readonly logger?: Logger;
+  /**
+   * Starts the solo bridge for `start_solo`. Without one the tool says solo
+   * mode is not available here.
+   */
+  readonly solo?: SoloStarter;
   /** How long to leave between polls while waiting. Defaults to two seconds. */
   readonly pollIntervalMs?: number;
   /** Injected in tests, so a wait does not really wait. */
@@ -73,6 +80,7 @@ export interface ToolHandlers {
   waitForComments(args: WaitForCommentsArgs): Promise<WaitResult>;
   resolveComment(args: ResolveCommentArgs): Promise<Comment>;
   getCommentContext(args: { id: string; branch: string }): Promise<CommentContext>;
+  startSolo(args: StartSoloArgs): Promise<SoloLink>;
 }
 
 const DEFAULT_POLL_MS = 2_000;
@@ -145,6 +153,21 @@ export function createToolHandlers(options: HandlerOptions): ToolHandlers {
 
       await report(options, updated.branch);
       return updated;
+    },
+
+    /**
+     * Solo comments land in `.maple/`, so a server reading a forge would never
+     * see them: refuse rather than hand back a link that leads nowhere.
+     */
+    async startSolo(args): Promise<SoloLink> {
+      if (options.solo === undefined) throw new Error("Solo mode is not available in this server.");
+      if (options.store.name !== "file") {
+        throw new Error(
+          `This server reads the ${options.store.name} store, but solo comments are written under ` +
+            ".maple/. Set MAPLE_STORE=file to read them.",
+        );
+      }
+      return options.solo(args.previewUrl);
     },
 
     async getCommentContext(args): Promise<CommentContext> {

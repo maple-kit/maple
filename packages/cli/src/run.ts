@@ -5,11 +5,13 @@ import { MOCK_SCHEMA_FLAGS, MOCK_SCHEMA_USAGE, mockSchema } from "./commands/moc
 import { SETUP_APP_FLAGS, SETUP_APP_USAGE, setupApp } from "./commands/setup-app.js";
 import { SETUP_CI_FLAGS, SETUP_CI_USAGE, setupCi } from "./commands/setup-ci.js";
 import { SETUP_VERIFY_FLAGS, SETUP_VERIFY_USAGE, setupVerify } from "./commands/setup-verify.js";
+import { solo, SOLO_FLAGS } from "./commands/solo.js";
 import { HELP } from "./help.js";
 
 import type { FlagSpec, ParsedArgs } from "./args.js";
 import type { Generate } from "./commands/mock-schema.js";
 import type { WorkflowFs } from "./commands/setup-ci.js";
+import type { SoloOptions } from "./commands/solo.js";
 
 /** What the CLI needs from its environment, so tests can supply their own. */
 export interface RunOptions {
@@ -23,6 +25,8 @@ export interface RunOptions {
   readonly cwd?: string;
   /** The filesystem `maple setup ci --write` writes through. */
   readonly fs?: WorkflowFs;
+  /** How `maple solo` starts its bridge. Defaults to core's. */
+  readonly start?: SoloOptions["start"];
 }
 
 /** What a command produced: text to print and the exit code to use. */
@@ -59,6 +63,7 @@ export const COMMANDS: Readonly<Record<string, Command>> = {
     flags: SETUP_VERIFY_FLAGS,
     run: ({ flags }, options) => setupVerify(flags, options.fetch),
   },
+  solo: { flags: SOLO_FLAGS, run: (args, options) => solo(args, soloOptions(options)) },
   "setup ci": { flags: SETUP_CI_FLAGS, run: ({ flags }, options) => setupCi(flags, pick(options)) },
 };
 
@@ -112,6 +117,10 @@ export async function run(argv: readonly string[], options: RunOptions): Promise
     };
   }
   return found.run(args, options);
+}
+
+function soloOptions({ cwd, start }: RunOptions): SoloOptions {
+  return { ...(cwd === undefined ? {} : { cwd }), ...(start === undefined ? {} : { start }) };
 }
 
 function pick({ cwd, fs }: RunOptions): { cwd?: string; fs?: WorkflowFs } {

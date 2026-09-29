@@ -48,4 +48,13 @@ export const SHAPES = {
   },
 
   get_comment_context: { id, branch },
+
+  start_solo: {
+    previewUrl: z
+      .string()
+      .describe(
+        "The deployed preview's URL, such as `https://feat-login.preview.example`. " +
+          "Only that origin is paired with the bridge.",
+      ),
+  },
 } as const;

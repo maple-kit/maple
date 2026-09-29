@@ -152,7 +152,7 @@ branch, because an unknown branch returns an empty list rather than an error.
 1. Pick a pull request whose conversation has a Maple comment (one with a
    ` ```maple ` fence) and at least one open comment in it. Note its head
    branch.
-2. Restart the client and confirm `maple` is listed as connected with four
+2. Restart the client and confirm `maple` is listed as connected with five
    tools (`/mcp` in Claude Code).
 3. Ask the agent to call `list_comments` with that branch and
    `statuses: ["open"]`. It should return the comments you see in the fence,

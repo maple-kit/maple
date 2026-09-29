@@ -9,6 +9,8 @@ export { createToolHandlers } from "./handlers.js";
 export type { CommentContext, HandlerOptions, ToolHandlers } from "./handlers.js";
 export { routeRefresh } from "./refresh.js";
 export type { GateRefresh, RouteRefreshOptions } from "./refresh.js";
+export { createSoloStarter } from "./solo.js";
+export type { SoloLink, SoloStarter, SoloStarterOptions } from "./solo.js";
 export {
   currentBranch,
   decideSessionStop,
@@ -29,6 +31,7 @@ export { findTool, TOOL_NAMES, TOOLS } from "./tools.js";
 export type {
   ListCommentsArgs,
   ResolveCommentArgs,
+  StartSoloArgs,
   ToolDescriptor,
   ToolName,
   WaitForCommentsArgs,

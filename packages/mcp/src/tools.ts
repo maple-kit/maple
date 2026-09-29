@@ -14,6 +14,7 @@ export const TOOL_NAMES = [
   "wait_for_comments",
   "resolve_comment",
   "get_comment_context",
+  "start_solo",
 ] as const;
 
 /** One of Maple's tool names. */
@@ -51,6 +52,12 @@ export interface ResolveCommentArgs {
   /** Commit the agent believes resolves the comment. */
   readonly sha: string;
   readonly note?: string;
+}
+
+/** Arguments to `start_solo`. */
+export interface StartSoloArgs {
+  /** The preview's address, as the reviewer has it open. */
+  readonly previewUrl: string;
 }
 
 /** A tool as it is advertised to a client. */
@@ -92,6 +99,15 @@ export const TOOLS: readonly ToolDescriptor[] = [
       "surrounding markup and any replay link. A comment written under a Maple " +
       "Mock carries `mock.recipe` and `mock.replay`, a link to the page in that state.",
     readOnly: true,
+  },
+  {
+    name: "start_solo",
+    title: "Keep a preview's comments on this machine",
+    description:
+      "Start a bridge on localhost and return the link that pairs a deployed preview with it. " +
+      "The reviewer opens the link in their browser and the comments they write there land in " +
+      ".maple/ for list_comments and wait_for_comments to read. They never count toward the merge gate.",
+    readOnly: false,
   },
 ];
 
