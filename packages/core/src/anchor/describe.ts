@@ -33,7 +33,7 @@ export function describeElement(element: Element, options: DescribeOptions = {})
 
   return {
     ...attributesOf(element),
-    ...(span ? { quote: quoteAt(index, span.start, span.end, options) } : {}),
+    ...(span ? { quote: quoteAt(index, span, element, options) } : {}),
     ...withSelector(element, root),
   };
 }
@@ -47,7 +47,7 @@ export function describeRange(range: Range, options: DescribeOptions = {}): Anch
 
   return {
     ...attributesOf(element),
-    ...(span ? { quote: quoteAt(index, span.start, span.end, options) } : {}),
+    ...(span ? { quote: quoteAt(index, span, element, options) } : {}),
     ...withSelector(element, root),
   };
 }
@@ -72,24 +72,71 @@ function closestAttribute(element: Element, name: string): string | undefined {
   return element.closest(`[${name}]`)?.getAttribute(name) ?? undefined;
 }
 
+/** Page chrome whose text is not the passage's context, and often names the viewer. */
+const CHROME = "nav, header, aside, [data-maple-private]";
+
+/** The nearest container context may not cross: a landmark, else a tagged component. */
+const LANDMARK = "main, [role=main]";
+const COMPONENT = "[data-maple-src], [data-maple-name]";
+
 function quoteAt(
   index: TextIndex,
-  start: number,
-  end: number,
+  span: Span,
+  element: Element,
   options: DescribeOptions,
 ): TextQuote {
   const context = options.contextLength ?? CONTEXT_LENGTH;
   const limit = options.maximumQuote ?? MAXIMUM_QUOTE;
-  const stop = Math.min(end, start + limit);
+  const { start } = span;
+  const stop = Math.min(span.end, start + limit);
 
-  const prefix = index.text.slice(Math.max(0, start - context), start);
-  const suffix = index.text.slice(stop, stop + context);
+  const bounds = boundsOf(index, element, span);
+  const hidden = chromeOutside(element);
+  const prefix = textBetween(index, bounds.start, start, hidden).slice(-context);
+  const suffix = textBetween(index, stop, bounds.end, hidden).slice(0, context);
   return {
     exact: index.text.slice(start, stop),
     ...(prefix ? { prefix } : {}),
     ...(suffix ? { suffix } : {}),
     offset: start,
   };
+}
+
+/**
+ * The stretch of the page context is drawn from: the element's landmark, or
+ * the component around it, or the whole page when it sits in neither.
+ */
+function boundsOf(index: TextIndex, element: Element, span: Span): Span {
+  const container = element.closest(LANDMARK) ?? element.parentElement?.closest(COMPONENT);
+  const within = container ? spanOf(index, container) : undefined;
+  const whole = { start: 0, end: index.text.length };
+  if (!within || within.start > span.start || within.end < span.end) return whole;
+  return within;
+}
+
+/** Text inside a chrome element is skipped, unless the pick is inside it too. */
+function chromeOutside(element: Element): (node: Text) => boolean {
+  return (node) => {
+    const chrome = node.parentElement?.closest(CHROME);
+    return chrome !== null && chrome !== undefined && !chrome.contains(element);
+  };
+}
+
+/** `[from, to)` of the flat text, with the text of every skipped node cut out. */
+function textBetween(
+  index: TextIndex,
+  from: number,
+  to: number,
+  skipped: (node: Text) => boolean,
+): string {
+  let text = "";
+  let position = from;
+  for (const segment of index.segments) {
+    if (segment.end <= from || segment.start >= to || !skipped(segment.node)) continue;
+    text += index.text.slice(position, Math.max(position, segment.start));
+    position = Math.max(position, Math.min(segment.end, to));
+  }
+  return (text + index.text.slice(position, to)).replace(/ {2,}/g, " ");
 }
 
 function spanOfRange(index: TextIndex, range: Range): Span | undefined {

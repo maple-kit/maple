@@ -99,9 +99,7 @@ function byAttribute(rung: Rung, anchor: Anchor, scope: Scope): Resolution {
   const value = anchor[rung] as string;
   const matches = [...scope.root.querySelectorAll(`[${name}="${CSS.escape(value)}"]`)];
 
-  if (matches.length === 1) {
-    return { status: "resolved", element: matches[0]!, by: rung, confidence: CONFIDENCE[rung] };
-  }
+  if (matches.length === 1) return single(matches[0]!, rung, anchor, scope);
   if (matches.length === 0) return orphan("missing", rung);
 
   const narrowed = narrow(matches, anchor, scope.root);
@@ -113,6 +111,20 @@ function byAttribute(rung: Rung, anchor: Anchor, scope: Scope): Resolution {
         confidence: CONFIDENCE[rung] * narrowed.score,
       }
     : orphan("ambiguous", rung);
+}
+
+// A layout component is unique on every route; only its text says which page
+// the comment belongs to. A key is an identity the app chose, so it is trusted.
+function single(element: Element, rung: Rung, anchor: Anchor, scope: Scope): Resolution {
+  const confidence = CONFIDENCE[rung];
+  const quote = anchor.quote;
+  if (rung === "key" || !quote?.exact) return { status: "resolved", element, by: rung, confidence };
+
+  const scored = scoreIn(indexText(scope.root), element, quote);
+  if (!scored || scored.score < (scope.minimumScore ?? MINIMUM_SCORE)) {
+    return orphan("changed", rung);
+  }
+  return { status: "resolved", element, by: rung, confidence: confidence * scored.score };
 }
 
 interface Narrowed {

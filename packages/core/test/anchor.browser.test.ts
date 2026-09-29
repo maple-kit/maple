@@ -6,6 +6,7 @@ import {
   OVERLAY_MARKER,
   resolveAnchor,
 } from "../src/anchor/index.js";
+import { indexText, positionOf, rangeAt } from "../src/anchor/text-position.js";
 
 import type { Anchor, Resolved } from "../src/anchor/index.js";
 
@@ -48,7 +49,48 @@ describe("describing an element", () => {
   it("records surrounding text so two identical passages can be told apart", () => {
     const root = mount(`<p>Costs rose sharply</p><p>Revenue rose sharply</p>`);
     const anchor = describeElement(root.querySelectorAll("p")[1]!, { root });
-    expect(anchor.quote?.prefix).toBe("Costs rose sharply");
+    expect(anchor.quote?.prefix).toBe("Costs rose sharply ");
+  });
+
+  it("keeps the context inside the landmark, so it never reaches the chrome", () => {
+    const root = mount(
+      `<div>Signed in as Ada Reviewer</div><main><p>Today's pour-over lineup</p><p>Ask the barista</p></main><div>Footer links</div>`,
+    );
+    const first = describeElement(root.querySelectorAll("p")[0]!, { root });
+    const last = describeElement(root.querySelectorAll("p")[1]!, { root });
+
+    expect(first.quote?.prefix).toBeUndefined();
+    expect(first.quote?.suffix).toBe(" Ask the barista");
+    expect(last.quote?.prefix).toBe("Today's pour-over lineup ");
+    expect(last.quote?.suffix).toBeUndefined();
+  });
+
+  it("clamps to the component around the pick when there is no landmark", () => {
+    const root = mount(
+      `<p>Before</p><section data-maple-name="Menu"><p>One</p><p>Two</p></section><p>After</p>`,
+    );
+    const quote = describeElement(root.querySelectorAll("p")[1]!, { root }).quote;
+    expect(quote).toMatchObject({ exact: "One", suffix: " Two" });
+    expect(quote?.prefix).toBeUndefined();
+  });
+
+  it.each([
+    ["nav", `<nav>Ada Reviewer</nav>`],
+    ["header", `<header>Ada Reviewer</header>`],
+    ["aside", `<aside>Ada Reviewer</aside>`],
+    ["private", `<div data-maple-private>Ada Reviewer</div>`],
+  ])("leaves %s text out of the context", (_name, chrome) => {
+    const root = mount(`<p>Menu</p>${chrome}<p>Loyalty card</p>${chrome}<p>Refills</p>`);
+    const quote = describeElement(root.querySelectorAll("p")[1]!, { root }).quote;
+
+    expect(quote?.prefix).toBe("Menu ");
+    expect(quote?.suffix).toBe(" Refills");
+  });
+
+  it("keeps the context of a pick made inside the chrome itself", () => {
+    const root = mount(`<nav><a>Menu</a><a>Orders</a></nav><p>Body</p>`);
+    const quote = describeElement(root.querySelectorAll("a")[1]!, { root }).quote;
+    expect(quote?.prefix).toBe("Menu");
   });
 
   it("caps a long passage but still records where it started", () => {
@@ -66,6 +108,74 @@ describe("describing an element", () => {
     range.setEnd(text, 27);
 
     expect(describeRange(range, { root }).quote?.exact).toBe("approved the plan");
+  });
+});
+
+describe("the text index", () => {
+  it.each([
+    ["sibling blocks", `<p>a</p><p>b</p>`, "a b"],
+    ["headings and cards", `<h2>Brew</h2><div>Methods</div>`, "Brew Methods"],
+    ["list items", `<ul><li>one</li><li>two</li></ul>`, "one two"],
+    ["a break", `<p>one<br>two</p>`, "one two"],
+    ["inline markup inside a word", `<p>un<b>bro</b>ken</p>`, "unbroken"],
+    ["a block nested in a block", `<div>a<p>b</p>c</div>`, "a b c"],
+    ["a run of whitespace", `<p>a \n   b</p>`, "a b"],
+    ["formatting whitespace between blocks", `<div>\n  <p>x</p>\n  <p>y</p>\n</div>`, "x y"],
+    ["whitespace across inline nodes", `<p>a <b> b</b></p>`, "a b"],
+  ])("reads %s as it is shown", (_name, html, text) => {
+    mount(html);
+    expect(indexText(container).text.trim()).toBe(text);
+  });
+
+  it("maps a range over a block boundary back to the real nodes", () => {
+    mount(`<p>ab</p><p>cd</p>`);
+    const index = indexText(container);
+
+    expect(rangeAt(index, 1, 4)?.toString()).toBe("bc");
+    expect(rangeAt(index, 0, 2)?.toString()).toBe("ab");
+    expect(rangeAt(index, 3, 5)?.toString()).toBe("cd");
+  });
+
+  it("puts a range that starts or ends on a separator on the side it belongs to", () => {
+    mount(`<p>ab</p><p>cd</p>`);
+    const index = indexText(container);
+
+    expect(rangeAt(index, 2, 5)?.toString()).toBe("cd");
+    expect(rangeAt(index, 0, 3)?.toString()).toBe("ab");
+  });
+
+  it("maps offsets through collapsed whitespace", () => {
+    mount(`<p>a  \n b</p>`);
+    const index = indexText(container);
+    const text = container.querySelector("p")!.firstChild as Text;
+
+    expect(index.text).toBe("a b");
+    expect(rangeAt(index, 2, 3)?.toString()).toBe("b");
+    expect(rangeAt(index, 0, 3)?.toString()).toBe("a  \n b");
+    expect(positionOf(index, text, 5)).toBe(2);
+  });
+
+  it("describes and resolves a passage that spans two blocks", () => {
+    const root = mount(`<h2>Grind size</h2><p>Dose and yield for this roast.</p>`);
+    const first = root.querySelector("h2")!.firstChild as Text;
+    const last = root.querySelector("p")!.firstChild as Text;
+    const range = document.createRange();
+    range.setStart(first, 6);
+    range.setEnd(last, 8);
+
+    const anchor = describeRange(range, { root });
+    expect(anchor.quote?.exact).toBe("size Dose and");
+    expect(resolved({ quote: anchor.quote! }).range?.toString()).toBe("sizeDose and");
+  });
+
+  it("still resolves a quote recorded before blocks were separated", () => {
+    mount(`<h2>How to dial in your espresso</h2><p>Grind size, dose and yield.</p>`);
+    const found = resolved({
+      quote: { exact: "How to dial in your espressoGrind size, dose and yield." },
+    });
+
+    expect(found.by).toBe("quote");
+    expect(found.confidence).toBeGreaterThan(0.5);
   });
 });
 
@@ -183,6 +293,56 @@ describe("choosing between one component rendered twice", () => {
   });
 });
 
+/**
+ * A layout component renders once on every route, so its source location is
+ * unique on all of them. Only its text says which page a comment was left on.
+ */
+describe("a single match with a quote", () => {
+  const SHELL = `data-maple-src="src/layout/coffee-shell.tsx:42:3" data-maple-name="CoffeeShell"`;
+  const yirgacheffe = `<main ${SHELL}><h1>Brew a Yirgacheffe</h1><p>Grind size for this roast.</p></main>`;
+  const sumatra = `<main ${SHELL}><h1>Steam a cortado</h1><p>Milk temperature and texture.</p></main>`;
+
+  it("resolves on the page it was described on", () => {
+    const root = mount(yirgacheffe);
+    const found = resolved(describeElement(root.querySelector("main")!, { root }));
+    expect(found.by).toBe("source");
+    expect(found.confidence).toBeCloseTo(0.9);
+  });
+
+  it("does not resolve on another page that renders the same component", () => {
+    const { quote } = describeElement(mount(yirgacheffe).querySelector("main")!, {
+      root: container,
+    });
+    container.remove();
+    mount(sumatra);
+
+    const anchor = {
+      source: "src/layout/coffee-shell.tsx:42:3",
+      component: "CoffeeShell",
+      quote: quote!,
+    };
+    expect(resolveAnchor(anchor, { root: container })).toMatchObject({
+      status: "orphaned",
+      reason: "changed",
+      tried: ["source", "component", "quote"],
+    });
+  });
+
+  it("falls through to a rung that can still place it", () => {
+    mount(`<main ${SHELL}><p>Other text</p></main><p>approved the plan</p>`);
+    const found = resolved({
+      source: "src/layout/coffee-shell.tsx:42:3",
+      quote: { exact: "approved the plan" },
+    });
+    expect(found.by).toBe("quote");
+  });
+
+  it("trusts a key without asking the text", () => {
+    mount(`<p data-maple-key="msg:1">Now reads differently</p>`);
+    expect(resolved({ key: "msg:1", quote: { exact: "Before the edit" } }).by).toBe("key");
+  });
+});
+
 describe("orphaning", () => {
   it("says so when nothing was recorded", () => {
     mount(`<p>Text</p>`);
@@ -275,15 +435,14 @@ describe("narrowing to the passage", () => {
     expect(found.status === "resolved" && found.by).toBe("source");
   });
 
-  it("stands on the element when the quote is no longer in it", () => {
+  it("orphans the anchor when the quote is no longer in the element", () => {
     mount(PARAGRAPH);
     const found = resolveAnchor(anchorOn("a sentence nobody wrote here at all"), {
       root: container,
       passage: true,
     });
 
-    expect(found.status).toBe("resolved");
-    expect(found.status === "resolved" && found.range).toBeUndefined();
+    expect(found).toMatchObject({ status: "orphaned", reason: "changed" });
   });
 
   it("changes nothing for an anchor with no quote to narrow to", () => {
