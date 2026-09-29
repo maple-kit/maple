@@ -1,5 +1,29 @@
 # @maple-kit/mock
 
+## 0.15.0
+
+### Minor Changes
+
+- 1aac368: A plan request no longer grows with the page. `routePlan` gzips the body (`Content-Encoding: gzip`) where the browser has `CompressionStream`, and sends the recorded calls in consecutive batches of at most about 6 KB on the wire, then merges the readings, so no request approaches the 8 KB a managed web application firewall rule allows. `POST /mock/plan` inflates a gzipped body (up to 512 KB inflated) and still reads a plain one; any other `Content-Encoding` answers 415. A sentence on a busy page now spends one plan of the per-session rate limit for each batch.
+- b8e0ad8: An app that renders the reviewer's roles on the server can now use a recipe's `as`. `RouteOptions.mock.identity` takes a `ServerIdentity` (`read(request)`, `roles`, optional `permissions` and `requires`) in place of a `CallIdentity`, and `/mock/identity` serves the rules with `server.current`, who `read` says the reviewer really is (`current: null` when nobody is signed in). `displayedIdentity` in `@maple-kit/mock/server` applies the recipe's `as` to that identity in a preview, for display only; never authorise with it. The client enforces `requires` with the recipe's role and no identity call, and the box says the role control reloads the page and reloads on a switch.
+
+  Breaking: `IdentitySource` is now `CallIdentity | ServerIdentity`, and `IdentityRules.call` is optional, absent when the server renders the identity. `IdentityRules.role` and `permissions` have an optional `path`. `MockSchemas.identity` takes the request.
+
+### Patch Changes
+
+- 1aac368: A mock sentence that could not be planned is no longer silent. The box says it did not read the sentence, tells a refusal (401, 403) from a failure worth retrying, and leaves the calls to set by hand; the failure and its status go to the logger passed to `installMock`. `routePlan` now throws `PlanFailedError`, carrying the status, instead of a plain `Error`, and `MockClientState` gains `planFailure`.
+- Updated dependencies [797fc01]
+- Updated dependencies [ba6c9c4]
+- Updated dependencies [ad204b9]
+- Updated dependencies [2a29886]
+- Updated dependencies [1aac368]
+- Updated dependencies [b8e0ad8]
+- Updated dependencies [3ca2d5f]
+- Updated dependencies [92158b6]
+- Updated dependencies [3ca2d5f]
+- Updated dependencies [3ca2d5f]
+  - @maple-kit/core@0.15.0
+
 ## 0.14.1
 
 ### Patch Changes

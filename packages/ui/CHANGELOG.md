@@ -1,5 +1,42 @@
 # @maple-kit/ui
 
+## 0.15.0
+
+### Minor Changes
+
+- ba6c9c4: Unsent comments can move between browsers. The unsent list has an **Export** button that saves `{ version, branch, drafts }` as JSON, and the island has **Import drafts**, which takes a paste or a dropped file, skips ids already here or already sent, reports entries that are not drafts, and asks before adding drafts written on another branch. When the island opens and another `maple:drafts:*` key on the origin holds live drafts, a quiet row offers **Move here** or **Dismiss**; nothing is merged automatically. `MapleClient` gains `draftsAsJson`, `previewDraftImport`, `importDrafts`, `foreignDrafts`, `moveDrafts` and `dismissDrafts`, `DraftKeeper` gains `importDrafts`, `foreign`, `adopt` and `dismiss`, and `@maple-kit/core/client` exports `readDraftExport` and `writeDraftExport`. A stored draft without an `updatedAt` string is now dropped as malformed.
+- 92158b6: A region now anchors to the elements it covers, not only to the box it was measured in. A rectangle drawn over a card used to be stored as fractions of the smallest element that held all of it, and when that was the page shell the rectangle drifted whenever the page's height changed.
+
+  `CommentAnchor` gains an optional `members` (`RegionMember[]`: an anchor, pixel offsets and overlap per element, at most four, tagged elements first). `resolveAnchor` resolves each member through the normal cascade and returns them on `Resolved.members`; a partly found or spread-out region is drawn from the members that resolved at lowered confidence, and with none found it uses the container fractions as before. Anchors stored without `members` resolve as they did.
+
+  New exports from `@maple-kit/core/anchor`: `captureMembers`, `membersBox`, `nameMembers`, `MAXIMUM_MEMBERS`, `MINIMUM_OVERLAP`. The ring, the markdown export, the gate's open-comment list, the Stop hook and `get_comment_context` name a region by its members ("BrewGuideCard +1"). `TargetRing` takes a `members` prop, and `Located` carries `members`.
+
+### Patch Changes
+
+- 797fc01: A failed screenshot upload no longer breaks the composer's attachment row. The caption stays on one line (truncated if it must be), the error sits on its own line under it inside the sheet, and Remove stays where it is when the upload succeeds.
+- 797fc01: The composer's context card shows the same page-environment rows in every detail mode: Width (with the covered amount), Content, Breakpoint, Theme, Pixel ratio, Locale and Open, each hidden when its value was not captured. Developer detail adds only the rows about how Maple anchored the comment. **Breaking:** `contextRows(context, detail)` no longer takes a `detail` argument, and the developer-only labels "Window", "Scheme" and "DPR" are gone in favour of the plain ones.
+- ad204b9: An unsent comment only tries to place its mark on the route it was written on. The host and query string are ignored, and a draft that recorded no page is still tried everywhere. In the unsent list, a draft from another page is tagged "On another page" with a link to its path. `draftPlacements` now takes the current pathname as a third argument.
+- 797fc01: On a deployment with no store, where the notice already says there is nowhere to put comments and no sign-in is on offer, the island's list shows its ordinary empty state instead of also claiming the comments could not be read. That line stays for a server error, a network error or an unparseable ledger.
+- 1aac368: A mock sentence that could not be planned is no longer silent. The box says it did not read the sentence, tells a refusal (401, 403) from a failure worth retrying, and leaves the calls to set by hand; the failure and its status go to the logger passed to `installMock`. `routePlan` now throws `PlanFailedError`, carrying the status, instead of a plain `Error`, and `MockClientState` gains `planFailure`.
+- b8e0ad8: An app that renders the reviewer's roles on the server can now use a recipe's `as`. `RouteOptions.mock.identity` takes a `ServerIdentity` (`read(request)`, `roles`, optional `permissions` and `requires`) in place of a `CallIdentity`, and `/mock/identity` serves the rules with `server.current`, who `read` says the reviewer really is (`current: null` when nobody is signed in). `displayedIdentity` in `@maple-kit/mock/server` applies the recipe's `as` to that identity in a preview, for display only; never authorise with it. The client enforces `requires` with the recipe's role and no identity call, and the box says the role control reloads the page and reloads on a switch.
+
+  Breaking: `IdentitySource` is now `CallIdentity | ServerIdentity`, and `IdentityRules.call` is optional, absent when the server renders the identity. `IdentityRules.role` and `permissions` have an optional `path`. `MockSchemas.identity` takes the request.
+
+- Updated dependencies [797fc01]
+- Updated dependencies [ba6c9c4]
+- Updated dependencies [ad204b9]
+- Updated dependencies [2a29886]
+- Updated dependencies [1aac368]
+- Updated dependencies [1aac368]
+- Updated dependencies [b8e0ad8]
+- Updated dependencies [3ca2d5f]
+- Updated dependencies [92158b6]
+- Updated dependencies [3ca2d5f]
+- Updated dependencies [3ca2d5f]
+  - @maple-kit/core@0.15.0
+  - @maple-kit/mock@0.15.0
+  - @maple-kit/react@0.15.0
+
 ## 0.14.1
 
 ### Patch Changes

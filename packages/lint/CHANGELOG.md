@@ -1,5 +1,21 @@
 # @maple-kit/lint
 
+## 0.1.7
+
+### Patch Changes
+
+- Updated dependencies [797fc01]
+- Updated dependencies [ba6c9c4]
+- Updated dependencies [ad204b9]
+- Updated dependencies [2a29886]
+- Updated dependencies [1aac368]
+- Updated dependencies [b8e0ad8]
+- Updated dependencies [3ca2d5f]
+- Updated dependencies [92158b6]
+- Updated dependencies [3ca2d5f]
+- Updated dependencies [3ca2d5f]
+  - @maple-kit/core@0.15.0
+
 ## 0.1.6
 
 ### Patch Changes
