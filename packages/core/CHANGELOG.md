@@ -1,5 +1,27 @@
 # @maple-kit/core
 
+## 0.16.0
+
+### Minor Changes
+
+- 191b4ab: Add `fileStore()` and `fileMedia()` in a new `@maple-kit/core/local` entrypoint, Node only and kept out of `/connectors` because browser code imports that: a store and a media connector that keep a branch's comments and screenshots as plain files in `.maple/<branch-slug>/comments.json` and `.maple/<branch-slug>/media/<key>.<ext>`, with no server and no new dependency.
+
+  The folder is keyed by the branch checked out in the working directory, falling back to the normalized URL (`localhost:3000` becomes `localhost-3000`) when there is no repository or HEAD is detached. It is rooted at the main checkout through `git rev-parse --git-common-dir`, so every worktree shares one `.maple/`. Writes are atomic. `@maple-kit/core/testing` also gains `runMediaContract`, the contract suite for media connectors.
+
+  Nothing that existed changed.
+
+- 94880d9: Add `maple review`: the overlay on a running app with nothing wired into it. It runs the app's `dev` script with the package manager its lockfile names (or attaches with `--port` or `--url`) and opens a local reverse proxy that injects the overlay into HTML, serves the SDK route itself and passes WebSockets through, so HMR keeps working. The page's Content-Security-Policy is relaxed only as far as the overlay needs (`script-src-elem`, `connect-src`, `img-src blob:`), reusing the page's nonce, and only on the proxied response. It stands down when the page already mounts Maple. With no store configured, comments go to the local file store under `.maple/<branch>/`; `MAPLE_STORE` and the forge variables choose otherwise, as for the MCP server. There is no `maple use` yet.
+
+  `@maple-kit/cli` now depends on `@maple-kit/ui`, which builds the overlay as one script (`dist/standalone.iife.js`, React bundled in). `CommentAnchor` gains an optional `locatedBy` (`tagger` or `owner-stack`), and `@maple-kit/core/anchor` gains `installSourceLocator`, `createSourceLocator` and `locateSource`, which find the file and line of an element on an untagged page from React 19's owner stack and the dev server's source map. `resolveLocalPlace` also returns the branch it keyed by. The MCP context marks an owner-stack location as one to check.
+
+  Nothing that existed changed.
+
+- 6e998d1: Solo mode: a guest on a preview who cannot sign in can keep their comments on the machine that runs their agent. `maple solo <preview-url>` (and the new MCP tool `start_solo`) starts a bridge on `127.0.0.1` in front of the file store and prints `<preview-url>#maple-solo=<token>&maple-bridge=<address>`. The overlay reads the fragment as its script runs, removes it with `history.replaceState`, keeps the pairing in `localStorage` under the same guard as drafts, and posts comments and screenshots to the bridge as real comments in `.maple/<branch>/`. The bridge serves only requests that carry the token, from the paired origin, addressed to a loopback name. An unpaired overlay never requests localhost and shows one line offering `maple solo`. `docs/solo.md` has the design, including why solo cannot gate a merge.
+
+  New: `startBridge` and `refusalFor` in `@maple-kit/core/local`; `capturePairing`, `forgetPairing`, `parsePairing`, `soloLink` in `@maple-kit/core/client`; `MapleClient.endSolo()` and `ClientState.solo`; `SoloOffer` in `@maple-kit/ui/island`; `start_solo` in `@maple-kit/mcp`.
+
+  Breaking: `ClientState` has a new required `solo` field, and `MapleClient` a new required `endSolo` method, for anyone who implements either.
+
 ## 0.15.0
 
 ### Minor Changes

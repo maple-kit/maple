@@ -1,5 +1,14 @@
 # @maple-kit/mock
 
+## 0.16.0
+
+### Patch Changes
+
+- Updated dependencies [191b4ab]
+- Updated dependencies [94880d9]
+- Updated dependencies [6e998d1]
+  - @maple-kit/core@0.16.0
+
 ## 0.15.0
 
 ### Minor Changes
