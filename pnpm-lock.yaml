@@ -203,6 +203,9 @@ importers:
       '@maple-kit/core':
         specifier: workspace:*
         version: link:../core
+      '@maple-kit/ui':
+        specifier: workspace:*
+        version: link:../ui
     devDependencies:
       '@trpc/openapi':
         specifier: 11.19.0-alpha

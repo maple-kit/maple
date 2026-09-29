@@ -26,6 +26,7 @@ npm install -g @maple-kit/cli
 
 | Command              | What it does                                                                |
 | -------------------- | --------------------------------------------------------------------------- |
+| `maple review`       | Put the overlay on your running app through a proxy, with nothing wired in  |
 | `maple connectors`   | Show the connector kinds and the methods each one may implement             |
 | `maple mock schema`  | Write an OpenAPI document of a tRPC router's response types                 |
 | `maple mock plan`    | Print the recipe a preview's route plans for a sentence                     |
