@@ -293,32 +293,24 @@ describe("the context badge", () => {
     expect(rows(".probe-page")).toEqual(rows(".probe-stored"));
   });
 
-  it("states how much of the width was covered rather than two numbers to subtract", async () => {
+  it("shows the same environment rows in both details, and states the covered width", async () => {
     started();
     await open();
-
-    expect(rows(".probe-page")).toEqual({
+    const expected = {
       Width: "1440px · 420px covered",
-      Theme: "dark",
-      Open: "Copilot",
-    });
-  });
-
-  it("names the layout width, the breakpoint, the ratio and the locale in developer detail", async () => {
-    started();
-    await open();
-    client.setDetail("developer");
-
-    await vi.waitFor(() => expect(rows(".probe-page")["Window"]).toBe("1440px"));
-    expect(rows(".probe-page")).toEqual({
-      Window: "1440px",
       Content: "1020px",
       Breakpoint: "lg",
-      Scheme: "dark",
-      DPR: "2×",
+      Theme: "dark",
+      "Pixel ratio": "2×",
       Locale: "en-GB",
       Open: "Copilot",
-    });
+    };
+
+    expect(rows(".probe-page")).toEqual(expected);
+    client.setDetail("developer");
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(rows(".probe-page")).toEqual(expected);
   });
 
   it("is a labelled list inside its card, so its values line up in one column", async () => {
@@ -387,6 +379,33 @@ describe("attachments", () => {
     );
     expect(client.getState().composer.attachments).toHaveLength(0);
     expect(root().querySelector("img.mk-shot")).not.toBeNull();
+  });
+
+  it("keeps the success row's layout when the upload fails", async () => {
+    started();
+    const surface = await open({ upload: uploadThrough(fetchThrough([uploadUnavailable()])) });
+
+    pasteAnImage(surface);
+
+    const chip = await vi.waitFor(() => {
+      const found = root().querySelector<HTMLElement>(".mk-shots .mk-chip");
+      if (!found) throw new Error("no failure yet");
+      return found;
+    });
+    const at = (selector: string) => root().querySelector(selector)!.getBoundingClientRect();
+    const sheet = surface.getBoundingClientRect();
+    const chipBox = chip.getBoundingClientRect();
+    const words = root().querySelector<HTMLElement>(".mk-shots .mk-shot-words")!;
+
+    expect(chipBox.left).toBeGreaterThanOrEqual(sheet.left);
+    expect(chipBox.right).toBeLessThanOrEqual(sheet.right);
+    expect(words.getClientRects()).toHaveLength(1);
+    expect(words.getBoundingClientRect().height).toBeLessThan(20);
+    expect(chipBox.top).toBeGreaterThanOrEqual(words.getBoundingClientRect().bottom);
+    expect(at(".mk-shots .mk-btn").left).toBeGreaterThanOrEqual(
+      at(".mk-shots .mk-shot-body").right,
+    );
+    expect(at(".mk-shots .mk-btn").right).toBeLessThanOrEqual(sheet.right);
   });
 
   it("asks for a paste or a drop, and offers no button to do it with", async () => {

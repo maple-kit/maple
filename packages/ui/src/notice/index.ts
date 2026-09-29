@@ -7,6 +7,6 @@
  */
 
 export { noticeCss } from "./css.js";
-export { NOTICE_COPY, offersSignIn } from "./language.js";
+export { isSetupGap, NOTICE_COPY, offersSignIn } from "./language.js";
 export { MapleNotice, MapleNotice as Notice } from "./notice.js";
 export type { MapleNoticeProps } from "./notice.js";

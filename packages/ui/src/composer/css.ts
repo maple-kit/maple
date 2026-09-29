@@ -268,6 +268,44 @@ function scoreCard(): string {
 `.trim();
 }
 
+/** The held image's caption and failure, in one column beside the thumbnail. */
+function shotBodyCss(): string {
+  return `
+/* The held image's caption and its failure share one column between the
+   thumbnail and Remove, so a failure adds a line rather than a layout. */
+.mk-shot-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.mk-shot-body .mk-shot-said {
+  flex: none;
+  max-width: 100%;
+}
+
+.mk-shot-line .mk-shot-words {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.mk-shot-body .mk-chip {
+  max-width: 100%;
+  white-space: normal;
+  border-radius: var(--mk-r-xs);
+}
+
+.mk-shots > .mk-btn {
+  flex: none;
+}
+`.trim();
+}
+
 /** The kind chip, which is a control wearing a pill. */
 function kindChip(): string {
   return `
@@ -591,6 +629,8 @@ ${contextAndShots()}
 ${scoreCard()}
 
 ${kindChip()}
+
+${shotBodyCss()}
 
 .mk-leave {
   position: absolute;
