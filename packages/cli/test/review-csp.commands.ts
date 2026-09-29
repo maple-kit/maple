@@ -74,7 +74,7 @@ export async function startCspFixture(): Promise<{
     target,
     overlay: OVERLAY,
     route: (_request: unknown, response: { end(body: string): void }) => response.end("{}"),
-    tag: { branch: "feat/x", basePath: "/__maple/api", root: "/work" },
+    tag: { branch: "feat/x", basePath: "/__maple/api", root: "/work", appDir: "" },
   };
   const proxy = createServer(createProxyListener(settings as never));
   proxy.on("upgrade", createUpgradeListener(settings as never));
