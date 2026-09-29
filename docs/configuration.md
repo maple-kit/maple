@@ -109,6 +109,26 @@ resolve asks the route to republish the gate, and the gate App's credentials
 stay on the route. `MAPLE_GATE_TOKEN` is for CI, where a job lasts less than the
 hour an installation token lives. The server refuses to start with both.
 
+## A web application firewall in front of the route
+
+A firewall rule on request body size can reject Maple's requests before they
+reach the route. AWS WAF's managed Common Rule Set, for one, blocks a body over
+8 KB (`SizeRestrictions_BODY`), and the load balancer answers 403 with an HTML
+page. Two routes carry bodies that large:
+
+- `POST {base}/mock/plan` sends a summary of every call a page recorded. Maple
+  keeps each request under about 6 KB on the wire by gzipping it and splitting
+  it into batches, so it passes the default rule, but a stricter one can still
+  block it.
+- `POST {base}/media` uploads a screenshot, which is far larger than any rule.
+
+Exempt the route's path from the body-size rule, or mount the route under a
+prefix the firewall already exempts, using `basePath` on both the route
+(`createMapleHandler({ basePath })`), the overlay and `installMock({ route })`.
+A blocked plan shows in
+the mock box as "The server refused that", and in the host's logger as a
+warning with the status.
+
 ## Where each one goes
 
 A secret goes wherever that deployment keeps secrets, and the rest can sit in
