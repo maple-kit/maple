@@ -11,7 +11,7 @@ pnpm --filter @maple-kit/example-vite dev   # http://localhost:5173
 
 Open it and there are already three comments on the page: a leaf mark on each,
 a pill reading `3 open`, and rows in the island. They are seeded into the
-in-memory store at startup by `src/app/seed.ts`, because an empty store is
+store the first time it starts, by `src/app/seed.ts`, because an empty store is
 both the least interesting state the overlay has and the one a first run
 always lands in.
 
@@ -30,8 +30,9 @@ server starts. After a change to the plugin, the route or a classifier, stop
 the server and run `dev` again so `predev` rebuilds it.
 
 Two more things worth knowing: `?maple=off` turns the overlay off without a
-rebuild, and the store is in memory, so restarting the server puts the three
-seeded comments back and drops anything written since.
+rebuild, and the store is `fileStore()`, so comments and screenshots are files
+under `.maple/<branch>/` at the repository's main checkout and survive a
+restart. Delete that folder to get the three seeded comments back.
 
 `pnpm verify` is the other half — it builds the app twice and asserts on the
 output, so what this example claims is checked rather than described:
@@ -85,6 +86,6 @@ pnpm --filter @maple-kit/example-vite verify
 The CSP contrast with the Next example: this one is not yet run under the same
 policy, so `docs/overlay-csp.md`'s claim is still described rather than tested.
 
-The route here is `memoryStore()`, mounted by the Vite plugin on the dev and
+The route here is `fileStore()` and `fileMedia()`, mounted by the Vite plugin on the dev and
 preview servers only. A statically deployed copy of this example has no server
 and has to host the route elsewhere.
