@@ -381,6 +381,33 @@ describe("attachments", () => {
     expect(root().querySelector("img.mk-shot")).not.toBeNull();
   });
 
+  it("keeps the success row's layout when the upload fails", async () => {
+    started();
+    const surface = await open({ upload: uploadThrough(fetchThrough([uploadUnavailable()])) });
+
+    pasteAnImage(surface);
+
+    const chip = await vi.waitFor(() => {
+      const found = root().querySelector<HTMLElement>(".mk-shots .mk-chip");
+      if (!found) throw new Error("no failure yet");
+      return found;
+    });
+    const at = (selector: string) => root().querySelector(selector)!.getBoundingClientRect();
+    const sheet = surface.getBoundingClientRect();
+    const chipBox = chip.getBoundingClientRect();
+    const words = root().querySelector<HTMLElement>(".mk-shots .mk-shot-words")!;
+
+    expect(chipBox.left).toBeGreaterThanOrEqual(sheet.left);
+    expect(chipBox.right).toBeLessThanOrEqual(sheet.right);
+    expect(words.getClientRects()).toHaveLength(1);
+    expect(words.getBoundingClientRect().height).toBeLessThan(20);
+    expect(chipBox.top).toBeGreaterThanOrEqual(words.getBoundingClientRect().bottom);
+    expect(at(".mk-shots .mk-btn").left).toBeGreaterThanOrEqual(
+      at(".mk-shots .mk-shot-body").right,
+    );
+    expect(at(".mk-shots .mk-btn").right).toBeLessThanOrEqual(sheet.right);
+  });
+
   it("asks for a paste or a drop, and offers no button to do it with", async () => {
     started();
     await open();

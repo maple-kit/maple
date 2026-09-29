@@ -152,7 +152,14 @@ function filled(scope: ComposerScopeValue, held: Held): ReactNode[] {
       src: scope.pending?.preview.url,
       alt: ATTACH_WORDS.alt,
     }),
-    said(taking(held), captured && keeps, "said"),
+    createElement(
+      "span",
+      { key: "body", className: "mk-shot-body" },
+      said(taking(held), captured && keeps, "said", "mk-shot-said mk-shot-line"),
+      failed
+        ? createElement("span", { key: "bad", className: "mk-chip" }, ATTACH_WORDS.failed)
+        : null,
+    ),
     createElement(
       "button",
       {
@@ -163,9 +170,6 @@ function filled(scope: ComposerScopeValue, held: Held): ReactNode[] {
       },
       ATTACH_WORDS.remove,
     ),
-    failed
-      ? createElement("span", { key: "bad", className: "mk-chip" }, ATTACH_WORDS.failed)
-      : null,
   ];
 }
 
@@ -173,12 +177,17 @@ function filled(scope: ComposerScopeValue, held: Held): ReactNode[] {
  * The sparkle marks the one Maple took by itself, in the one warm colour: a
  * reviewer did everything else here, and this happened without them.
  */
-function said(words: string, byMaple: boolean, key: string): ReactElement {
+function said(
+  words: string,
+  byMaple: boolean,
+  key: string,
+  className = "mk-shot-said",
+): ReactElement {
   return createElement(
     "span",
-    { key, className: "mk-shot-said", ...(byMaple ? { "data-mk-maple": "true" } : {}) },
+    { key, className, ...(byMaple ? { "data-mk-maple": "true" } : {}) },
     byMaple ? createElement(SparkleIcon, { key: "spark", size: 12 }) : null,
-    words,
+    createElement("span", { key: "words", className: "mk-shot-words" }, words),
   );
 }
 
