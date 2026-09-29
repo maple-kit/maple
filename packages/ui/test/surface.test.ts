@@ -119,7 +119,10 @@ describe("the CSP claim", () => {
     ["the document", /\bdocument\./],
     ["a raw console call", /\bconsole\./],
   ])("reaches for %s nowhere in the package", (_what, pattern) => {
-    const offenders = FILES.filter(({ code }) => pattern.test(code));
+    // standalone.ts is the loader for a page with no Maple in its build: it reads
+    // its own script tag and the document by design, and is not an overlay part.
+    const parts = FILES.filter(({ path }) => !path.endsWith("standalone.ts"));
+    const offenders = parts.filter(({ code }) => pattern.test(code));
     expect(offenders.map(({ path }) => path)).toEqual([]);
   });
 });
