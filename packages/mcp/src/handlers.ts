@@ -217,12 +217,17 @@ function anchorsOf(comment: Comment): string[] {
 
   const { anchor } = comment;
   return [
-    anchor.source && `source ${anchor.source}`,
+    anchor.source && `source ${anchor.source}${trustNote(anchor.locatedBy)}`,
     anchor.component && `component ${anchor.component}`,
     anchor.quote && `quote ${JSON.stringify(anchor.quote.exact)}`,
     anchor.selector && `selector ${anchor.selector}`,
     ...(anchor.members ?? []).map(memberRung),
   ].filter((rung): rung is string => typeof rung === "string");
+}
+
+/** A location read off React's dev stack is where the JSX was written, not proof it is what to edit. */
+function trustNote(locatedBy: Comment["anchor"]["locatedBy"]): string {
+  return locatedBy === "owner-stack" ? " (found through React's owner stack; check it)" : "";
 }
 
 /** A region member, named by the first thing recorded for it, with how much of it was covered. */

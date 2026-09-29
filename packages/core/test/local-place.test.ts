@@ -53,6 +53,7 @@ describe("resolveLocalPlace", () => {
       key: "feat-one",
       dir: join(repo, ".maple", "feat-one"),
       source: "branch",
+      branch: "feat/one",
     });
   });
 

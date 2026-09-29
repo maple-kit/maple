@@ -6,12 +6,21 @@
  * not a failure, which is why an orphan carries a reason a reviewer can read.
  */
 
-export type { AnchorRegion, MemberAnchor, MemberOffset, PickKind, RegionMember } from "../types.js";
+export type {
+  AnchorRegion,
+  LocatedBy,
+  MemberAnchor,
+  MemberOffset,
+  PickKind,
+  RegionMember,
+} from "../types.js";
 export { describeElement, describeRange } from "./describe.js";
 export type { DescribeOptions } from "./describe.js";
 export { kindOf } from "./kind.js";
 export { labelFor, nameMembers, sourceFor, unpickCamelCase } from "./label.js";
 export type { LabelSource } from "./label.js";
+export { createSourceLocator, installSourceLocator, locateSource } from "./locate.js";
+export type { SourceLocation, SourceLocator, SourceLocatorOptions } from "./locate.js";
 export { membersBox } from "./members-resolve.js";
 export { captureMembers, MAXIMUM_MEMBERS, MINIMUM_OVERLAP } from "./members.js";
 export type { CaptureOptions } from "./members.js";

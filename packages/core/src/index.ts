@@ -89,6 +89,7 @@ export type {
   GateReason,
   GateVerdict,
   IdentityProvenance,
+  LocatedBy,
   MapleUser,
   MediaBlob,
   MediaRef,

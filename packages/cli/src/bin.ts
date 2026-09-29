@@ -9,3 +9,11 @@ const stream = result.exitCode === 0 ? process.stdout : process.stderr;
 
 stream.write(`${result.output}\n`);
 process.exitCode = result.exitCode;
+
+// A command that keeps running holds the process open by itself; Ctrl-C ends it cleanly.
+const running = result.running;
+if (running !== undefined) {
+  for (const signal of ["SIGINT", "SIGTERM"] as const) {
+    process.once(signal, () => void running.stop().then(() => process.exit(0)));
+  }
+}

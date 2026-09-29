@@ -44,6 +44,11 @@ export interface LocalPlace {
   readonly dir: string;
   /** Whether the key came from a branch or fell back to the URL. */
   readonly source: "branch" | "url";
+  /**
+   * The branch as git names it, where `source` is `branch`. The key is a
+   * lossy slug of it, and a comment carries the name itself.
+   */
+  readonly branch?: string;
 }
 
 /**
@@ -113,5 +118,6 @@ export async function resolveLocalPlace(options: LocalPlaceOptions = {}): Promis
     key,
     dir: join(root, LOCAL_FOLDER, key),
     source: branch === undefined ? "url" : "branch",
+    ...(branch === undefined ? {} : { branch }),
   };
 }

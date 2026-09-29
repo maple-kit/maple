@@ -78,6 +78,13 @@ export type IdentityProvenance = "server" | "client" | "guest";
  */
 export type PickKind = "element" | "region" | "text";
 
+/**
+ * How a comment's `source` was found. `tagger` is the build's own attribute, exact.
+ * `owner-stack` is React's development stack read through the served source map:
+ * the line the JSX was written on, on a page nothing tagged.
+ */
+export type LocatedBy = "owner-stack" | "tagger";
+
 /** Where a comment was attached, most durable identifier first. */
 export interface CommentAnchor {
   /** Value of `data-maple-key` when the application sets one on the element. */
@@ -86,6 +93,11 @@ export interface CommentAnchor {
   readonly source?: string;
   /** Component display name, from the tagger or the framework's own tree. */
   readonly component?: string;
+  /**
+   * Which rung supplied `source`, so a reader knows how far to trust it. Absent
+   * when nothing supplied one, and on comments written before this existed.
+   */
+  readonly locatedBy?: LocatedBy;
   /** Text quote selector: the exact run plus surrounding context. */
   readonly quote?: TextQuote;
   /** CSS selector, the least durable fallback in the cascade. */

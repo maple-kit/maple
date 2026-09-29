@@ -5,6 +5,7 @@ Usage
   maple <command> [options]
 
 Commands
+  review            Put the overlay on your running app through a proxy, with nothing wired in
   connectors        Show the connector kinds and the methods each one may implement
   mock schema       Write an OpenAPI document of a tRPC router's response types
   mock plan         Print the recipe a preview's route plans for a sentence

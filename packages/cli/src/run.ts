@@ -2,6 +2,7 @@ import { ArgsError, describeFlags, GLOBAL_FLAGS, isSet, parseArgs } from "./args
 import { connectorKindRows, renderConnectorKinds } from "./commands/connectors.js";
 import { MOCK_PLAN_FLAGS, MOCK_PLAN_USAGE, mockPlan } from "./commands/mock-plan.js";
 import { MOCK_SCHEMA_FLAGS, MOCK_SCHEMA_USAGE, mockSchema } from "./commands/mock-schema.js";
+import { review, REVIEW_FLAGS } from "./commands/review.js";
 import { SETUP_APP_FLAGS, SETUP_APP_USAGE, setupApp } from "./commands/setup-app.js";
 import { SETUP_CI_FLAGS, SETUP_CI_USAGE, setupCi } from "./commands/setup-ci.js";
 import { SETUP_VERIFY_FLAGS, SETUP_VERIFY_USAGE, setupVerify } from "./commands/setup-verify.js";
@@ -33,6 +34,8 @@ export interface RunOptions {
 export interface RunResult {
   readonly output: string;
   readonly exitCode: number;
+  /** Set by a command that keeps running after it has printed, such as `maple review`. */
+  readonly running?: { stop(): Promise<void> };
 }
 
 /** One command: the flags it accepts beyond the global ones, and what it does. */
@@ -55,6 +58,10 @@ export const COMMANDS: Readonly<Record<string, Command>> = {
     run: (args, options) => mockSchema(args, options.generate),
   },
   "mock plan": { flags: MOCK_PLAN_FLAGS, run: (args, options) => mockPlan(args, options.fetch) },
+  review: {
+    flags: REVIEW_FLAGS,
+    run: (args, options) => review(args, options.cwd === undefined ? {} : { cwd: options.cwd }),
+  },
   "setup app": {
     flags: SETUP_APP_FLAGS,
     run: ({ flags }) => setupApp(flags, isSet(flags, "json")),

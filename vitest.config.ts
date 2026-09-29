@@ -3,6 +3,12 @@ import { fileURLToPath } from "node:url";
 import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
 
+import {
+  readProbe,
+  startCspFixture,
+  stopCspFixture,
+} from "./packages/cli/test/review-csp.commands.js";
+
 /** Absolute path to a file in this repository. */
 function here(path: string): string {
   return fileURLToPath(new URL(path, import.meta.url));
@@ -49,6 +55,8 @@ export default defineConfig({
             enabled: true,
             headless: true,
             provider: playwright(),
+            // Node-side servers a browser test points a page at.
+            commands: { startCspFixture, readProbe, stopCspFixture },
             instances: [{ browser: "chromium" }],
           },
         },

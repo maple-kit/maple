@@ -31,7 +31,8 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@maple-kit/core": "workspace:*"
+    "@maple-kit/core": "workspace:*",
+    "@maple-kit/ui": "workspace:*"
   },
   "publishConfig": {
     "access": "public"

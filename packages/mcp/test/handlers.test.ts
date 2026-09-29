@@ -186,6 +186,27 @@ describe("get_comment_context", () => {
     ]);
   });
 
+  it.each([
+    ["tagger", "source src/App.tsx:4:3"],
+    ["owner-stack", "source src/App.tsx:4:3 (found through React's owner stack; check it)"],
+    [undefined, "source src/App.tsx:4:3"],
+  ] as const)("says how far to trust a location found by %s", async (locatedBy, expected) => {
+    const store = await seeded();
+    const stored = await store.append(
+      sampleComment({
+        branch: BRANCH,
+        anchor: { source: "src/App.tsx:4:3", ...(locatedBy === undefined ? {} : { locatedBy }) },
+      }),
+    );
+
+    const context = await createToolHandlers({ store }).getCommentContext({
+      id: stored.id,
+      branch: BRANCH,
+    });
+
+    expect(context.anchors).toEqual([expected]);
+  });
+
   it("names each region member and how much of it the rectangle covered", async () => {
     const store = await seeded();
     const stored = await store.append(
