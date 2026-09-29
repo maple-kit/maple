@@ -12,7 +12,8 @@ describe("identity rules read from Maple's route", () => {
   it.each([
     ["the rules it serves", "rules", RULES],
     ["nothing when it fails", "broken", undefined],
-    ["nothing when it declares none", "absent", undefined],
+    ["nothing when it declares none", "none", undefined],
+    ["nothing when the route is off", "absent", undefined],
     ["nothing for an answer that is not rules", "junk", undefined],
   ] as const)("gives back %s", async (_, answer, expected) => {
     server.use(...createIdentityRoute(answer).handlers);

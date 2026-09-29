@@ -122,10 +122,25 @@ describe("GET /mock/identity", () => {
   });
 
   it.each([
-    ["no identity rules", { mock: { preview: true, schemas: [SESSION] } }],
     ["a build that is not a preview", { mock: { preview: false, identity } }],
+    ["a build that is not a preview and has no rules", { mock: { preview: false } }],
+    ["no mock options", {}],
   ])("answers 404 with %s", async (_name, options) => {
     expect((await createMapleHandler(options)(read())).status).toBe(404);
+  });
+
+  it("answers 200 with no rules when a preview declares none", async () => {
+    const handle = createMapleHandler({ mock: { preview: true, schemas: [SESSION] } });
+    const response = await handle(read());
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ identity: null });
+  });
+
+  it("still gates a preview with no rules to a reviewer the connector resolves", async () => {
+    const gated = createMapleHandler({ identity: signedIn, mock: { preview: true } });
+    expect((await gated(read())).status).toBe(401);
+    expect((await gated(read({ headers: { cookie: "session=ok" } }))).status).toBe(200);
   });
 
   it("answers 405 to anything but GET, and 401 to a reviewer nobody resolves", async () => {

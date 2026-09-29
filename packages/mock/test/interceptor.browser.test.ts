@@ -234,6 +234,13 @@ describe("the recipe a comment records", () => {
     expect(install().current?.()).toBeUndefined();
   });
 
+  it("offers no identity rules when the route answers `identity: null`", async () => {
+    const routeFetch: typeof fetch = () => Promise.resolve(Response.json({ identity: null }));
+    const mocked = install(undefined, { route: "/api/maple", fetch: routeFetch });
+
+    expect(await mocked.identity?.()).toBeUndefined();
+  });
+
   it("offers the host's identity rules to the box without an `as`, reading the route once", async () => {
     let asked = 0;
     const routeFetch: typeof fetch = (input) => {
