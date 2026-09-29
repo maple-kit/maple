@@ -8,11 +8,19 @@
  * line. docs/tagger.md covers the two attributes a build can supply.
  */
 
+import type { MemberOffset } from "../types.js";
+
 /**
  * An anchor is the wire type. The cascade and a store connector have to mean
  * the same thing by it, and two definitions of one concept always drift.
  */
 export type { CommentAnchor as Anchor, TextQuote } from "../types.js";
+
+/** A region member the page still has, with the offsets that regrow the rectangle. */
+export interface PlacedMember {
+  readonly element: Element;
+  readonly offset: MemberOffset;
+}
 
 /** The rungs of the cascade, in the order they are tried. */
 export const RUNGS = ["key", "source", "component", "quote", "selector"] as const;
@@ -42,6 +50,11 @@ export interface Resolved {
   readonly by: Rung;
   /** Between 0 and 1. A lower rung is worth less even when it matched exactly. */
   readonly confidence: number;
+  /**
+   * The elements a region covers, when its members placed it. `element` is then
+   * the one that holds them all, and the rectangle comes from these instead.
+   */
+  readonly members?: readonly PlacedMember[];
 }
 
 /** The anchor could not be placed, and says so rather than guessing. */

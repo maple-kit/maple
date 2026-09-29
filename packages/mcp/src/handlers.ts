@@ -198,7 +198,18 @@ function anchorsOf(comment: Comment): string[] {
     anchor.component && `component ${anchor.component}`,
     anchor.quote && `quote ${JSON.stringify(anchor.quote.exact)}`,
     anchor.selector && `selector ${anchor.selector}`,
+    ...(anchor.members ?? []).map(memberRung),
   ].filter((rung): rung is string => typeof rung === "string");
+}
+
+/** A region member, named by the first thing recorded for it, with how much of it was covered. */
+function memberRung({
+  anchor,
+  overlap,
+}: NonNullable<Comment["anchor"]["members"]>[number]): string {
+  const where =
+    anchor.source ?? anchor.component ?? (anchor.quote ? JSON.stringify(anchor.quote.exact) : "?");
+  return `covers ${where} (${String(Math.round(overlap * 100))}% inside the rectangle)`;
 }
 
 /** Most Maple comments are conditional on these, so they are never optional here. */

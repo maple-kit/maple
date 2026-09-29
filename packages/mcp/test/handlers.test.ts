@@ -186,6 +186,42 @@ describe("get_comment_context", () => {
     ]);
   });
 
+  it("names each region member and how much of it the rectangle covered", async () => {
+    const store = await seeded();
+    const stored = await store.append(
+      sampleComment({
+        branch: BRANCH,
+        anchor: {
+          selector: "main",
+          region: { x: 0, y: 0, width: 1, height: 0.2 },
+          members: [
+            {
+              anchor: { source: "src/BrewGuideCard.tsx:9:3", component: "BrewGuideCard" },
+              offset: { top: 6, left: 6, right: 6, bottom: 6 },
+              overlap: 0.95,
+            },
+            {
+              anchor: { quote: { exact: "How to dial in" }, selector: "main > h2" },
+              offset: { top: 2, left: 2, right: 2, bottom: 2 },
+              overlap: 1,
+            },
+          ],
+        },
+      }),
+    );
+
+    const context = await createToolHandlers({ store }).getCommentContext({
+      id: stored.id,
+      branch: BRANCH,
+    });
+
+    expect(context.anchors).toEqual([
+      "selector main",
+      "covers src/BrewGuideCard.tsx:9:3 (95% inside the rectangle)",
+      'covers "How to dial in" (100% inside the rectangle)',
+    ]);
+  });
+
   it("offers no anchor at all for an orphan, rather than a stale one", async () => {
     const store = await seeded();
     const stored = await store.append(

@@ -7,7 +7,7 @@
  * clicked wrong. Marks are drawn from the filter's list; the addresses are not.
  */
 
-import { kindOf, regionBox, resolveAnchor, sourceFor } from "@maple-kit/core/anchor";
+import { kindOf, membersBox, regionBox, resolveAnchor, sourceFor } from "@maple-kit/core/anchor";
 import { useMaple, useMapleClient } from "@maple-kit/react";
 import { createElement, forwardRef, useCallback, useEffect, useMemo, useRef } from "react";
 
@@ -19,7 +19,7 @@ import { ringLabel } from "./label.js";
 import { MapleMark } from "./mark.js";
 import { useNudges } from "./nudge.js";
 import { flag, OFF_ATTRIBUTE, place } from "./paint.js";
-import { addresses, draftPlacements, placements } from "./placement.js";
+import { addresses, draftPlacements, placements, rectangleOf } from "./placement.js";
 import { MapleTargetRing } from "./ring.js";
 import { usePathname } from "./route.js";
 
@@ -195,6 +195,7 @@ function pointing(client: MapleClient, id: string) {
 
 /** The box a comment is drawn against: its rectangle, or the element itself. */
 function boxOf(placement: Located): Box {
+  if (placement.members) return membersBox(placement.members);
   const box = placement.range?.getBoundingClientRect() ?? placement.element.getBoundingClientRect();
   return placement.region === undefined ? box : regionBox(box, placement.region);
 }
@@ -246,7 +247,11 @@ function markProps(placement: Placement, view: MarkView) {
     status: comment.status,
     confidence: placement.confidence,
     author: comment.author.name,
-    on: ringLabel({ kind: kindOf(comment.anchor), element: placement.element }),
+    on: ringLabel({
+      kind: kindOf(comment.anchor),
+      anchor: comment.anchor,
+      element: placement.element,
+    }),
     selected: comment.id === view.selectedId,
     peeked: comment.id === view.peeked,
     nudged: view.nudges.of(comment.id) !== undefined,
@@ -261,7 +266,7 @@ function draftProps(placement: DraftPlacement, view: Omit<MarkView, "selectedId"
   return {
     sent: false,
     confidence: placement.confidence,
-    on: ringLabel({ kind: kindOf(draft.anchor), element: placement.element }),
+    on: ringLabel({ kind: kindOf(draft.anchor), anchor: draft.anchor, element: placement.element }),
     peeked: draft.id === view.peeked,
     nudged: view.nudges.of(draft.id) !== undefined,
     dragging: view.nudges.dragging === draft.id,
@@ -305,7 +310,8 @@ function marked(input: RingInput, id: string | undefined, state: RingState) {
   return {
     target: hit.range ?? hit.element,
     ...(hit.region === undefined ? {} : { region: hit.region }),
-    label: ringLabel({ kind: kindOf(hit.anchor), element: hit.element }),
+    ...(hit.members === undefined ? {} : { members: hit.members }),
+    label: ringLabel({ kind: kindOf(hit.anchor), anchor: hit.anchor, element: hit.element }),
     ...noteFor({ anchor: hit.anchor, element: hit.element }, input.client.detail),
     state,
   };
@@ -336,7 +342,7 @@ function composing(target: ComposerTarget, input: RingInput): TargetRingProps {
   if (found.status !== "resolved") return {};
   return {
     target: found.range ?? found.element,
-    ...(target.anchor.region === undefined ? {} : { region: target.anchor.region }),
+    ...rectangleOf(target.anchor, found),
     label,
     ...noteFor({ anchor: target.anchor, element: found.element }, input.client.detail),
     // A panel opened on a comment is reading it, not answering it, and the

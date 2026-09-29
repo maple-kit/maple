@@ -1,12 +1,11 @@
 /**
  * A rectangle a reviewer drew, kept as fractions of the box it was drawn in.
  *
- * A region is not an element. It is an area that crosses several of them, and
- * recording the element under its middle threw away the whole point — the
- * comment came back as "the third metric card" when it was about the gap
- * between two of them. Fractions of a container survive a reflow that pixels
- * do not: the container is the smallest element that holds the whole rectangle,
- * so a page that lays out wider moves the region with the thing it was over.
+ * A region is an area that crosses several elements, not the one under its
+ * middle. Fractions of a container survive a reflow that pixels do not, but
+ * not when the container is the whole page, whose height is what a reflow
+ * changes. The anchor also records `members` (`members.ts`); these fractions
+ * are the last resort.
  */
 
 import type { AnchorRegion } from "../types.js";

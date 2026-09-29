@@ -75,6 +75,9 @@ export { createCommentStore } from "./store.js";
 export type { CommentStore } from "./store.js";
 export type {
   AnchorRegion,
+  MemberAnchor,
+  MemberOffset,
+  RegionMember,
   Approval,
   Comment,
   CommentAnchor,

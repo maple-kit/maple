@@ -9,6 +9,7 @@
  * `docs/branding.md` covers the chrome around them.
  */
 
+import { nameMembers } from "../anchor/label.js";
 import { stableStringify } from "../lib/stable-stringify.js";
 import { describeIdentity, parseRecipe } from "../mock/recipe.js";
 
@@ -20,6 +21,7 @@ import type {
   CommentContext,
   CommentStatus,
   RegionContext,
+  RegionMember,
   TextQuote,
 } from "../types.js";
 
@@ -253,13 +255,31 @@ function readMock(comment: Comment): Comment {
 }
 
 function reduceAnchor(anchor: CommentAnchor, reduced: readonly Reduction[]): CommentAnchor {
-  const { quote, selector, ...rest } = anchor;
+  const { quote, selector, members, ...rest } = anchor;
   const kept = reduced.includes("quote") ? undefined : trimQuote(quote, reduced);
 
   return {
     ...rest,
+    ...(members === undefined
+      ? {}
+      : { members: members.map((member) => reduceMember(member, reduced)) }),
     ...(selector === undefined || reduced.includes("selector") ? {} : { selector }),
     ...(kept === undefined ? {} : { quote: kept }),
+  };
+}
+
+/** A member sheds what the anchor does, so the fence gets smaller by the same steps. */
+function reduceMember(member: RegionMember, reduced: readonly Reduction[]): RegionMember {
+  const { quote, selector, ...rest } = member.anchor;
+  const kept = reduced.includes("quote") ? undefined : trimQuote(quote, reduced);
+
+  return {
+    ...member,
+    anchor: {
+      ...rest,
+      ...(selector === undefined || reduced.includes("selector") ? {} : { selector }),
+      ...(kept === undefined ? {} : { quote: kept }),
+    },
   };
 }
 
@@ -384,7 +404,7 @@ const STATUS_WORDS: Readonly<Record<CommentStatus, string>> = {
 };
 
 function where(anchor: CommentAnchor): string {
-  const name = anchor.component ?? anchor.source ?? anchor.selector;
+  const name = nameMembers(anchor) ?? anchor.component ?? anchor.source ?? anchor.selector;
   return name ? `\`${cell(name)}\`` : "—";
 }
 

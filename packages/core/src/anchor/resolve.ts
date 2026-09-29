@@ -8,6 +8,7 @@
  */
 
 import { matchQuote } from "../lib/match-quote.js";
+import { resolveMembers } from "./members-resolve.js";
 import { indexText, rangeAt, spanOf } from "./text-position.js";
 import { RUNGS } from "./types.js";
 
@@ -51,6 +52,13 @@ export function resolveAnchor(anchor: Anchor, options: ResolveOptions = {}): Res
   let ambiguous = false;
 
   if (isEmpty(anchor)) return { status: "orphaned", reason: "empty", tried };
+
+  // A region follows what it covered. With none of that left it is measured in
+  // its container as before, and the container's own rungs decide the rest.
+  const placed = anchor.members?.length
+    ? resolveMembers(anchor.members, { ...options, root }, resolveAnchor)
+    : undefined;
+  if (placed) return placed;
 
   let changed = false;
   for (const rung of RUNGS) {

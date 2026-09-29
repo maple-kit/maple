@@ -386,6 +386,23 @@ describe("the ring", () => {
     expect(node.style.getPropertyValue("--mk-h")).toBe("56px");
   });
 
+  it("draws a region from the members that hold it, wherever they have moved", async () => {
+    const card = fixture("card", { x: 100, y: 200, w: 200, h: 100 });
+    const heading = fixture("heading", { x: 100, y: 320, w: 200, h: 40 });
+    // Both were drawn over by one rectangle from (96, 196) to (304, 364).
+    const members = [
+      { element: card, offset: { top: 4, left: 4, right: 4, bottom: 64 } },
+      { element: heading, offset: { top: 124, left: 4, right: 4, bottom: 4 } },
+    ];
+    const node = await around({ target: card, members, label: "an area of Card +1" });
+
+    expect(node.getAttribute("data-mk-region")).toBe("true");
+    card.style.top = "300px";
+    heading.style.top = "420px";
+    window.dispatchEvent(new Event("resize"));
+    await vi.waitFor(() => expect(node.style.getPropertyValue("--mk-y")).toBe("293px"));
+  });
+
   it("fills a region as well as outlining it, because an area is not a thing", async () => {
     const target = fixture("split", { x: 100, y: 200, w: 400, h: 200 });
     const node = await around({ target, region: { x: 0, y: 0, width: 1, height: 1 } });

@@ -17,7 +17,7 @@ export interface LabelSource {
   /** The element the comment resolved to, when the page still has one. */
   readonly element?: Element | null;
   /** The anchor the comment recorded, read when there is no element left. */
-  readonly anchor?: Pick<Anchor, "component" | "source">;
+  readonly anchor?: Pick<Anchor, "component" | "members" | "source">;
 }
 
 /** An acronym, a capitalised or lowercase word, or a run of digits. */
@@ -33,12 +33,37 @@ const ACRONYM = /^[A-Z\d]{2,}$/;
  */
 export function labelFor(source: LabelSource): string | undefined {
   const { anchor, element } = source;
+  // A region is about what it covers, not the box it was measured in.
+  const covered = anchor ? nameMembers(anchor, { human: true }) : undefined;
+  if (covered) return covered;
+
   const written = element ? closestAttribute(element, LABEL_ATTRIBUTE) : undefined;
   if (written) return written;
 
   const component =
     anchor?.component ?? (element ? closestAttribute(element, NAME_ATTRIBUTE) : undefined);
   return component ? unpickCamelCase(component) : undefined;
+}
+
+/** Longest stretch of a quote used to name a member that no tag names. */
+const QUOTE_NAME = 24;
+
+/**
+ * What a region covers, as its first member and a count: `BrewGuideCard +1`.
+ * With `human`, a component name is unpicked the way `labelFor` does it.
+ */
+export function nameMembers(
+  anchor: Pick<Anchor, "members">,
+  options: { readonly human?: boolean } = {},
+): string | undefined {
+  const [first, ...rest] = anchor.members ?? [];
+  if (!first) return undefined;
+
+  const { component, quote, selector, source } = first.anchor;
+  const quoted = quote ? `“${quote.exact.trim().slice(0, QUOTE_NAME)}”` : undefined;
+  const tagged = options.human === true && component ? unpickCamelCase(component) : component;
+  const name = tagged ?? quoted ?? source ?? selector;
+  return name && (rest.length === 0 ? name : `${name} +${String(rest.length)}`);
 }
 
 /**

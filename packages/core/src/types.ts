@@ -92,6 +92,33 @@ export interface CommentAnchor {
   readonly selector?: string;
   /** The rectangle a region pick drew, in fractions of the element above. */
   readonly region?: AnchorRegion;
+  /**
+   * What the rectangle covers, so it can follow those elements. Absent when
+   * nothing qualified or on older anchors, which resolve through `region`.
+   */
+  readonly members?: readonly RegionMember[];
+}
+
+/** An anchor for an element inside a region: the rungs, and never a region. */
+export type MemberAnchor = Omit<CommentAnchor, "members" | "region">;
+
+/**
+ * Pixels from a member's border box out to the rectangle's edges. Positive
+ * when the rectangle reaches past the member, negative when it cuts into it.
+ */
+export interface MemberOffset {
+  readonly top: number;
+  readonly left: number;
+  readonly right: number;
+  readonly bottom: number;
+}
+
+/** One element a region covers, and where the drawn edges sat around it. */
+export interface RegionMember {
+  readonly anchor: MemberAnchor;
+  readonly offset: MemberOffset;
+  /** Share of the member's area inside the rectangle, between 0 and 1. */
+  readonly overlap: number;
 }
 
 /**
