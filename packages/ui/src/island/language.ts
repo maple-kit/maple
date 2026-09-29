@@ -153,11 +153,41 @@ export const UNSENT_COPY = {
   copy: "Copy",
   copied: "Copied",
   copyHint: "Every unsent comment as markdown, to paste into an agent or a ticket.",
+  export: "Export",
+  exportHint: "Every unsent comment as a file another browser can import.",
   resumeHint: "Open it again",
   discard: "Throw this one away",
   discardGlyph: "✕",
   blank: "(nothing written yet)",
   elsewhere: (path: string) => `On another page · ${path}`,
+} as const;
+
+/** Drafts arriving: from a file, or from another branch's key on this origin. */
+export const TRANSFER_COPY = {
+  open: "Import drafts",
+  close: "Close import",
+  boxLabel: "An exported drafts file",
+  boxHint: "Paste an export here, or drop its file",
+  fileLabel: "Choose an exported drafts file",
+  add: "Add",
+  addHere: "Add here",
+  cancel: "Cancel",
+  unreadable: "That is not a Maple drafts export.",
+  unsupported: "That export is from a newer Maple than this page.",
+  ask: (branch: string, count: number) =>
+    `${String(count)} ${count === 1 ? "draft was" : "drafts were"} written on ${branch}. Add ${count === 1 ? "it" : "them"} here?`,
+  result: (result: { added: number; skipped: number; expired: number; invalid: number }) =>
+    [
+      `Added ${String(result.added)}`,
+      result.skipped > 0 ? `${String(result.skipped)} already here` : "",
+      result.expired > 0 ? `${String(result.expired)} too old` : "",
+      result.invalid > 0 ? `${String(result.invalid)} not drafts` : "",
+    ]
+      .filter(Boolean)
+      .join(" · "),
+  found: (count: number) => `${String(count)} ${count === 1 ? "draft" : "drafts"} saved under`,
+  move: "Move here",
+  dismiss: "Dismiss",
 } as const;
 
 /** Copy with no better home than a name. */

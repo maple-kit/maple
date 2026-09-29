@@ -124,8 +124,14 @@ function write(
   }
 }
 
-function isDraft(value: unknown): value is Draft {
+/** True for anything shaped like a draft, which is all storage and an import trust. */
+export function isDraft(value: unknown): value is Draft {
   if (typeof value !== "object" || value === null) return false;
   const draft = value as Partial<Draft>;
-  return typeof draft.id === "string" && typeof draft.body === "string" && !!draft.anchor;
+  return (
+    typeof draft.id === "string" &&
+    typeof draft.body === "string" &&
+    !!draft.anchor &&
+    typeof draft.updatedAt === "string"
+  );
 }

@@ -16,6 +16,7 @@ import { createDraftStore } from "../overlay/drafts.js";
 import type { Anchor } from "../anchor/types.js";
 import type { Logger } from "../logger/types.js";
 import type { Draft, DraftStore } from "../overlay/drafts.js";
+import type { DraftImportResult, ForeignDrafts } from "./transfer.js";
 
 /** How long a keystroke waits before it reaches storage. */
 export const DRAFT_DEBOUNCE_MS = 400;
@@ -25,6 +26,7 @@ export const DRAFT_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000;
 
 const DRAFTS_PREFIX = "maple:drafts:";
 const SENT_PREFIX = "maple:sent:";
+const DISMISSED_PREFIX = "maple:dismissed:";
 
 /** How the keeper is scoped and where it writes. */
 export interface DraftKeeperOptions {
@@ -58,6 +60,17 @@ export interface DraftKeeper {
   discard(id: string): void;
   /** Forgets a draft that became a comment, and remembers that it did. */
   markSent(id: string): void;
+  /**
+   * Saves drafts that came from elsewhere, as they are. Skips an id already
+   * here or sent from here, and one too old to survive the next load.
+   */
+  importDrafts(drafts: readonly Draft[]): DraftImportResult;
+  /** Other branches' keys on this origin that still hold live drafts. */
+  foreign(): readonly ForeignDrafts[];
+  /** Brings another branch's live drafts here and empties its key. */
+  adopt(branch: string): DraftImportResult;
+  /** Stops offering another branch's drafts until one newer appears. */
+  dismiss(branch: string): void;
   /** Re-reads storage after another tab wrote to it. */
   reconcile(): void;
   /** True when a `storage` event's key belongs to this branch. */
@@ -105,6 +118,23 @@ export function createDraftKeeper(options: DraftKeeperOptions): DraftKeeper {
 
   const all = (): readonly Draft[] => (pending ? merge(store.list(), pending) : store.list());
 
+  const importDrafts = (drafts: readonly Draft[]): DraftImportResult => {
+    const held = new Set(all().map((draft) => draft.id));
+    const sent = sentIds(storage, options.branch, now());
+    let [added, skipped, expired] = [0, 0, 0];
+    for (const draft of drafts) {
+      if (held.has(draft.id) || sent.has(draft.id)) skipped += 1;
+      else if (isStale(draft, now())) expired += 1;
+      else {
+        store.save(draft);
+        held.add(draft.id);
+        added += 1;
+      }
+    }
+    if (added > 0) announce();
+    return { added, skipped, expired, invalid: 0 };
+  };
+
   return {
     list: all,
     get: (id) => all().find((draft) => draft.id === id),
@@ -128,6 +158,16 @@ export function createDraftKeeper(options: DraftKeeperOptions): DraftKeeper {
       store.remove(id);
       remember(storage, options.branch, { id, at: now() }, options.logger);
       announce();
+    },
+    importDrafts,
+    foreign: () => foreignBranches(storage, options.branch, now()),
+    adopt(branch) {
+      const result = importDrafts(liveDrafts(storage, branch, now()));
+      if (storage) createDraftStore({ branch, storage }).clear();
+      return result;
+    },
+    dismiss(branch) {
+      dismissForeign(storage, options.branch, branch, now());
     },
     reconcile() {
       store = prune(openStore(options, storage), storage, options.branch, now());
@@ -163,10 +203,85 @@ function prune(
 ): DraftStore {
   const sent = sentIds(storage, branch, at);
   for (const draft of store.list()) {
-    const stale = at - Date.parse(draft.updatedAt) > DRAFT_LIFETIME_MS;
-    if (sent.has(draft.id) || stale) store.remove(draft.id);
+    if (sent.has(draft.id) || isStale(draft, at)) store.remove(draft.id);
   }
   return store;
+}
+
+function isStale(draft: Draft, at: number): boolean {
+  return at - Date.parse(draft.updatedAt) > DRAFT_LIFETIME_MS;
+}
+
+/** What another branch's key holds that a reload here would still keep. */
+function liveDrafts(storage: Storage | undefined, branch: string, at: number): readonly Draft[] {
+  if (!storage) return [];
+  const sent = sentIds(storage, branch, at);
+  return createDraftStore({ branch, storage })
+    .list()
+    .filter((draft) => !sent.has(draft.id) && !isStale(draft, at));
+}
+
+/** Every branch but this one with something live under its key, undismissed. */
+function foreignBranches(
+  storage: Storage | undefined,
+  own: string,
+  at: number,
+): readonly ForeignDrafts[] {
+  const dismissed = dismissals(storage, own);
+  return storedBranches(storage)
+    .filter((branch) => branch !== own)
+    .flatMap((branch) => {
+      const live = liveDrafts(storage, branch, at);
+      const latest = newest(live);
+      const hidden = latest !== undefined && latest <= (dismissed[branch] ?? "");
+      return live.length === 0 || hidden ? [] : [{ branch, count: live.length }];
+    });
+}
+
+function storedBranches(storage: Storage | undefined): readonly string[] {
+  if (!storage) return [];
+  try {
+    const keys = Array.from({ length: storage.length }, (_, index) => storage.key(index));
+    return keys.flatMap((key) =>
+      key?.startsWith(DRAFTS_PREFIX) ? [key.slice(DRAFTS_PREFIX.length)] : [],
+    );
+  } catch {
+    return [];
+  }
+}
+
+/** The latest edit among drafts, which is what a dismissal is remembered against. */
+function newest(drafts: readonly Draft[]): string | undefined {
+  return drafts
+    .map((draft) => draft.updatedAt)
+    .sort((a, b) => a.localeCompare(b))
+    .at(-1);
+}
+
+function dismissals(storage: Storage | undefined, own: string): Record<string, string> {
+  if (!storage) return {};
+  try {
+    const parsed: unknown = JSON.parse(storage.getItem(DISMISSED_PREFIX + own) ?? "{}");
+    return typeof parsed === "object" && parsed !== null ? (parsed as Record<string, string>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function dismissForeign(
+  storage: Storage | undefined,
+  own: string,
+  branch: string,
+  at: number,
+): void {
+  const latest = newest(liveDrafts(storage, branch, at));
+  if (!storage || latest === undefined) return;
+  try {
+    const kept = { ...dismissals(storage, own), [branch]: latest };
+    storage.setItem(DISMISSED_PREFIX + own, JSON.stringify(kept));
+  } catch {
+    // Unwritable storage means the row comes back next time, which is harmless.
+  }
 }
 
 function alive(storage: Storage | undefined, branch: string, id: string, at: number): boolean {

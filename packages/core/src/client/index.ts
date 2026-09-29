@@ -71,6 +71,16 @@ export {
   watchTheme,
 } from "./theme.js";
 export type { ThemeSignals, ThemeView, ThemeWatch, ThemeWatchOptions } from "./theme.js";
+export { DRAFT_EXPORT_VERSION, readDraftExport, writeDraftExport } from "./transfer.js";
+export type {
+  DraftExport,
+  DraftExportRead,
+  DraftExportRefusal,
+  DraftImportOutcome,
+  DraftImportPreview,
+  DraftImportResult,
+  ForeignDrafts,
+} from "./transfer.js";
 export { createTransport, DEFAULT_BASE_PATH, MapleRequestError } from "./transport.js";
 export type { Identity, LinkAttempt, LinkStart, Transport, TransportOptions } from "./transport.js";
 export { COMMENT_FILTERS, CORNERS, DETAILS, PICK_ORDER, THEME_PREFERENCES } from "./types.js";

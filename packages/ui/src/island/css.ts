@@ -23,6 +23,7 @@ export function islandCss(): string {
     rowDetail(),
     developer(),
     ledger(),
+    transfer(),
     newComment(),
     keyframes(),
     sheet(),
@@ -976,6 +977,80 @@ function developer(): string {
 }
 
 `.trim();
+}
+
+/** Import, and the row that says drafts are saved under another branch. */
+function transfer(): string {
+  return `
+.mk-transfer,
+.mk-transfer-other {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  padding: 6px 10px;
+  border-top: 1px solid var(--mk-line);
+  background: var(--mk-sunk);
+  color: var(--mk-faint);
+  font-size: 11px;
+}
+
+.mk-transfer-said {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.mk-transfer-said code {
+  color: var(--mk-muted);
+  font-family: inherit;
+  font-weight: 600;
+}
+
+.mk-transfer-panel,
+.mk-transfer-note {
+  flex: 1 1 100%;
+  margin: 0;
+}
+
+.mk-transfer-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mk-transfer-box {
+  box-sizing: border-box;
+  width: 100%;
+  resize: vertical;
+  padding: 6px 8px;
+  border: 1px solid var(--mk-line);
+  border-radius: 6px;
+  background: var(--mk-bg);
+  color: var(--mk-fg);
+  font: inherit;
+  font-size: 11px;
+}
+
+.mk-transfer-row,
+.mk-transfer-ask {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mk-transfer-file {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--mk-muted);
+  font-size: 11px;
+}
+
+.mk-unsent-copy:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+`;
 }
 
 /** The two rows above the picks: what is waiting, and the sign-off. */

@@ -72,3 +72,26 @@ pasted block should not have to learn one.
 The author is the one field a draft cannot have. Nothing has asked the route who
 this is, and putting a name on something nobody signed would be a lie, so it is
 the guest author, which is what the route would have assigned anyway.
+
+## Moving drafts between browsers
+
+Markdown cannot be read back, so **Export** in the unsent list saves a JSON file
+of the store's own shape: `{ version, branch, drafts }`, anchors, regions and page
+context included, attachments by reference only. **Import drafts** takes a paste
+or a dropped file, checks each entry with the same `isDraft` the store uses, and
+saves through the draft keeper so the list updates without a reload. An id that
+is already here, or that this branch sent, is skipped, so importing twice adds
+nothing; a draft older than a week is turned away because the next load would
+drop it; an entry that is not a draft is counted and reported. Each keeps its
+original `updatedAt` and `context`. A file written on another branch asks first
+and never re-keys silently.
+
+## Drafts under another branch
+
+The keeper reads exactly `maple:drafts:<branch>`, which is right, but a label
+that changes under a reviewer looks like lost data. When the island opens it
+scans the origin's other `maple:drafts:*` keys and, if one holds live drafts
+(not expired, not sent), shows a quiet row: "3 drafts saved under `espresso-bar`"
+with **Move here** and **Dismiss**. Move goes through the import path and empties
+the old key. Nothing is merged automatically, and a dismissal holds until a
+newer draft appears under that key.

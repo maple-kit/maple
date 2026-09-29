@@ -23,6 +23,7 @@ import { POLL_MS, startPolling } from "./poll.js";
 import { readMapleConfig, readPreferences, writePreferences } from "./preferences.js";
 import { opensComposer } from "./shortcut.js";
 import { themeFrom, watchTheme } from "./theme.js";
+import { readDraftExport, writeDraftExport } from "./transfer.js";
 import { createTransport } from "./transport.js";
 import { PICK_ORDER } from "./types.js";
 
@@ -45,6 +46,12 @@ import type {
 } from "./navigation.js";
 import type { MapleConfig, MapleProps } from "./preferences.js";
 import type { ThemeView, ThemeWatch } from "./theme.js";
+import type {
+  DraftImportOutcome,
+  DraftImportPreview,
+  DraftImportResult,
+  ForeignDrafts,
+} from "./transfer.js";
 import type { Transport } from "./transport.js";
 import type {
   ApprovalConfig,
@@ -191,6 +198,21 @@ export interface MapleClient {
   publish(ids?: readonly string[]): Promise<readonly Comment[]>;
   /** Every unsent comment as markdown, for a reviewer with nowhere to publish. */
   draftsAsMarkdown(): string;
+  /** Every unsent comment as a file another browser can import. */
+  draftsAsJson(): string;
+  /** What a pasted or dropped file holds, without adding any of it. */
+  previewDraftImport(text: string): DraftImportPreview;
+  /**
+   * Adds a file's drafts through the keeper, so the island updates in place.
+   * Skips ids already here or sent from here; never changes the branch.
+   */
+  importDrafts(text: string): DraftImportOutcome;
+  /** Other branches' keys on this origin with live drafts, to tell the reviewer. */
+  foreignDrafts(): readonly ForeignDrafts[];
+  /** Brings that branch's drafts here and empties its key. Never automatic. */
+  moveDrafts(branch: string): DraftImportResult;
+  /** Stops offering that branch's drafts until a newer one appears. */
+  dismissDrafts(branch: string): void;
   /**
    * Whether a comment is judged as it is typed, remembered per origin. It
    * cannot switch on a deployment that configured no classifier.
@@ -305,6 +327,12 @@ export function createMapleClient(options: MapleClientOptions): MapleClient {
     keepDraft: () => keepDraft(runtime),
     publish: (ids) => publish(runtime, ids),
     draftsAsMarkdown: () => copyable(runtime),
+    draftsAsJson: () => writeDraftExport(options.branch, runtime.drafts.list()),
+    previewDraftImport: (text) => previewImport(runtime, text),
+    importDrafts: (text) => importText(runtime, text),
+    foreignDrafts: () => runtime.drafts.foreign(),
+    moveDrafts: (branch) => moved(runtime, runtime.drafts.adopt(branch)),
+    dismissDrafts: (branch) => runtime.drafts.dismiss(branch),
     setAssist: (on) => setAssist(runtime, on),
     discardDraft: (id) => discardDraft(runtime, id),
 
@@ -974,6 +1002,32 @@ function copyable(runtime: Runtime): string {
     branch: runtime.options.branch,
     ...(runtime.options.label === undefined ? {} : { label: runtime.options.label }),
   }).markdown;
+}
+
+function previewImport(runtime: Runtime, text: string): DraftImportPreview {
+  const read = readDraftExport(text);
+  if (!read.ok) return read;
+  const { branch, drafts, invalid } = read;
+  return {
+    ok: true,
+    branch,
+    sameBranch: branch === runtime.options.branch,
+    count: drafts.length,
+    invalid,
+  };
+}
+
+function importText(runtime: Runtime, text: string): DraftImportOutcome {
+  const read = readDraftExport(text);
+  if (!read.ok) return read;
+  const result = moved(runtime, runtime.drafts.importDrafts(read.drafts));
+  return { ok: true, ...result, invalid: read.invalid };
+}
+
+/** Whatever came in is shown at once, whether or not the client has started. */
+function moved(runtime: Runtime, result: DraftImportResult): DraftImportResult {
+  patch(runtime, { drafts: runtime.drafts.list() });
+  return result;
 }
 
 /** Records the approval and takes the verdict the route publishes with it. */
