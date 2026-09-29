@@ -102,10 +102,59 @@ describe("a store that broke", () => {
   });
 });
 
+/** A route whose comment list answers `respond`, with `/me` answering as usual. */
+function listAnswering(respond: () => Promise<Response>): typeof globalThis.fetch {
+  return (input: RequestInfo | URL) => {
+    const url = String(input instanceof Request ? input.url : input);
+    return url.includes("/me") ? Promise.resolve(Response.json({ user: null })) : respond();
+  };
+}
+
+function treeOver(fetch: typeof globalThis.fetch): ReactElement {
+  return createElement(
+    MapleRoot,
+    { branch: BRANCH, theme: "light", options: { fetch } },
+    createElement(
+      Island,
+      { defaultOpen: true },
+      createElement(IslandContent, null, createElement(MapleNotice), createElement(List)),
+    ),
+  );
+}
+
 describe("the list under a failed load", () => {
   it("does not claim the branch is empty, because it does not know", async () => {
     await render(tree({ status: 500 }));
     await shown("store");
+
+    expect(root().querySelector(".mk-empty")?.textContent).toContain("not the whole story");
+  });
+
+  it("says the same when the sign-in it offers has not been used yet", async () => {
+    await render(tree({ status: 401, github: { linked: false } }));
+    await shown("unauthorized");
+
+    expect(root().querySelector(".mk-empty")?.textContent).toContain("not the whole story");
+  });
+
+  it("shows the ordinary empty state where the notice already says there is no store", async () => {
+    await render(tree({ status: 401 }));
+    const found = await shown("unauthorized");
+
+    expect(found.textContent).toContain("nowhere to put your comments");
+    expect(root().querySelector(".mk-empty")?.textContent).toBe("Nothing here under this filter.");
+  });
+
+  it("still says it could not read after a network error", async () => {
+    await render(treeOver(listAnswering(() => Promise.reject(new TypeError("offline")))));
+    await vi.waitFor(() => expect(notice()).not.toBeNull());
+
+    expect(root().querySelector(".mk-empty")?.textContent).toContain("not the whole story");
+  });
+
+  it("still says it could not read a ledger it cannot parse", async () => {
+    await render(treeOver(listAnswering(() => Promise.resolve(new Response("not json")))));
+    await vi.waitFor(() => expect(notice()).not.toBeNull());
 
     expect(root().querySelector(".mk-empty")?.textContent).toContain("not the whole story");
   });

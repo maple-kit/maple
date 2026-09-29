@@ -10,6 +10,7 @@ import { useComments, useMaple } from "@maple-kit/react";
 import { createElement, forwardRef, Fragment } from "react";
 
 import { cx } from "../cx.js";
+import { isSetupGap } from "../notice/language.js";
 import { renderPart } from "../part.js";
 import { byReason } from "./comments.js";
 import { listId, reasonOf, useIsland } from "./context.js";
@@ -33,9 +34,9 @@ export const List = /** @__PURE__ */ forwardRef<HTMLDivElement, ListProps>(
   function List(props, ref) {
     const { asChild, children, className, ...rest } = props;
     const island = useIsland(PART);
-    const { error, filter, phase } = useMaple();
+    const { error, filter, github, phase } = useMaple();
     const comments = useComments();
-    const failed = error?.during === "load";
+    const failed = error?.during === "load" && !isSetupGap(error.kind, github);
 
     const rows =
       filter === "unpinned"
@@ -63,7 +64,8 @@ export const List = /** @__PURE__ */ forwardRef<HTMLDivElement, ListProps>(
 );
 
 /** An empty list has three reasons and they are not one sentence: a load that
- * failed read as a branch with nothing on it, which stops a reviewer looking. */
+ * failed read as a branch with nothing on it, which stops a reviewer looking.
+ * A deployment with no store failed nothing: the notice explains it. */
 function nothing(phase: ClientState["phase"], failed: boolean): string {
   if (failed) return ISLAND_COPY.unread;
   return phase === "loading" ? ISLAND_COPY.loading : ISLAND_COPY.empty;

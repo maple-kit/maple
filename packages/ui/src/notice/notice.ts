@@ -13,7 +13,7 @@ import { createElement, forwardRef } from "react";
 
 import { cx } from "../cx.js";
 import { renderPart } from "../part.js";
-import { NOTICE_COPY, offersSignIn } from "./language.js";
+import { isSetupGap, NOTICE_COPY, offersSignIn } from "./language.js";
 
 import type { PartProps } from "../part.js";
 import type { FailedCall, GitHubLink, MapleFailure } from "@maple-kit/core/client";
@@ -66,11 +66,9 @@ export const MapleNotice = /** @__PURE__ */ forwardRef<HTMLElement, MapleNoticeP
   },
 );
 
-/** A 401 with no sign-in on offer is a setup gap, not the reviewer's doing:
- * "sign in" would point at a door that is not there. */
+/** The failure's own sentence, or the setup gap's, which names no door. */
 function said(error: MapleFailure, github: GitHubLink): string {
-  const stuck = error.kind === "unauthorized" && github.state === "unsupported";
-  return stuck ? NOTICE_COPY.noSignIn : error.message;
+  return isSetupGap(error.kind, github) ? NOTICE_COPY.noSignIn : error.message;
 }
 
 /** Sign in, or try again. Nothing is offered where neither would help. */

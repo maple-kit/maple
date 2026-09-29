@@ -5,7 +5,7 @@
  * the same words. Only the offer is here, because only a surface has one.
  */
 
-import type { FailureKind } from "@maple-kit/core/client";
+import type { FailureKind, GitHubLink } from "@maple-kit/core/client";
 
 /** The notice's own words. */
 export const NOTICE_COPY = {
@@ -21,4 +21,10 @@ export const NOTICE_COPY = {
 /** Whether the offer is a sign-in or a retry. A 401 is nobody's to retry. */
 export function offersSignIn(kind: FailureKind, linkable: boolean): boolean {
   return kind === "unauthorized" && linkable;
+}
+
+/** A 401 with no sign-in on offer is a setup gap, not the reviewer's doing:
+ * "sign in" would point at a door that is not there. */
+export function isSetupGap(kind: FailureKind, github: GitHubLink): boolean {
+  return kind === "unauthorized" && github.state === "unsupported";
 }
