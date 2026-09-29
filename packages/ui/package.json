@@ -33,7 +33,7 @@
     "./package.json": "./package.json"
   },
   "scripts": {
-    "build": "tsdown && node ./scripts/size.js",
+    "build": "tsdown && tsdown -c tsdown.standalone.config.ts && node ./scripts/size.js",
     "clean": "rm -rf dist *.tsbuildinfo",
     "size": "node ./scripts/size.js"
   },
