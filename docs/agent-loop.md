@@ -67,9 +67,12 @@ The hook reads its own environment, not the MCP server's: an `env` block in
 `.mcp.json` reaches the server and nothing else. `MAPLE_GITHUB_OWNER`,
 `MAPLE_GITHUB_REPO` and `GITHUB_TOKEN` have to be set where the client starts,
 or the hook fails naming the one that is missing. With neither of the first two
-set it lets every stop through: installed with the plugin, it runs in every
-project, and most are not reviewed. `MAPLE_BRANCH` defaults to the branch
-checked out in the session's working directory.
+set it reads the local store, the comments under `.maple/` at the repository's
+main checkout for the branch checked out in the session's working directory,
+and blocks on those exactly as it does for a forge. It lets every stop through
+where there is no `.maple/` folder, no comments for the branch or no git
+repository, and never creates the folder: installed with the plugin, it runs in
+every project, and most are not reviewed. `MAPLE_BRANCH` overrides the branch.
 
 ## Configuration
 

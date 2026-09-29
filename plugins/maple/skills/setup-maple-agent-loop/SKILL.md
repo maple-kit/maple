@@ -131,8 +131,9 @@ inherits only Claude Code's own environment. It needs `GITHUB_TOKEN`,
 `MAPLE_GITHUB_OWNER` and `MAPLE_GITHUB_REPO` there or in the command, as
 above. `GITHUB_TOKEN` comes from the shell the client was started in
 (section 2); never inline it. With neither `MAPLE_GITHUB_OWNER` nor
-`MAPLE_GITHUB_REPO` set, the hook takes the project to be one Maple does not
-review and lets every stop through.
+`MAPLE_GITHUB_REPO` set, the hook reads the local store instead: the comments
+under `.maple/` for the checked-out branch. It lets every stop through where
+there is no `.maple/` folder, none for the branch, or no repository.
 
 The branch is `MAPLE_BRANCH` when it is set, and otherwise the branch checked
 out in the session's working directory.
@@ -176,9 +177,9 @@ branch, because an unknown branch returns an empty list rather than an error.
 the wrong branch, and Claude Code treats a failing Stop hook as a non-blocking
 error. Run step 4 by hand. A `… is not set` error means the hook's environment
 is missing a variable (section 4). `{}` on a branch you know has open comments
-means `MAPLE_GITHUB_OWNER` and `MAPLE_GITHUB_REPO` are both unset in the
-hook's environment, `MAPLE_BRANCH` is not the head branch name, or the hook ran
-from a checkout on another branch.
+with a forge means `MAPLE_GITHUB_OWNER` and `MAPLE_GITHUB_REPO` are both unset
+in the hook's environment (it then reads `.maple/`), `MAPLE_BRANCH` is not the
+head branch name, or the hook ran from a checkout on another branch.
 
 **The agent keeps being sent back and cannot finish.** It gets eight tries in
 a row, then the hook lets it stop. The count lives in a small file per session
