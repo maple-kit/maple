@@ -21,8 +21,6 @@ const FALLBACK_KEY = "default";
 /** Where the folders live, relative to the root. */
 export const LOCAL_FOLDER = ".maple";
 
-const INHERITED = new Set(["GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE"]);
-
 /** What a local connector may be told, all of it for a test or an odd layout. */
 export interface LocalPlaceOptions {
   /** The directory whose git state names the key. Defaults to the process's. */
@@ -77,9 +75,12 @@ export function normalizeUrl(url: string): string {
 /** Git's stdout, or undefined where git fails, is missing or the answer is empty. */
 async function git(cwd: string, args: readonly string[]): Promise<string | undefined> {
   // An enclosing hook exports these, and they would override the directory.
-  const env = Object.fromEntries(
-    Object.entries(process.env).filter(([name]) => !INHERITED.has(name)),
-  );
+  const env = {
+    ...process.env,
+    GIT_DIR: undefined,
+    GIT_WORK_TREE: undefined,
+    GIT_INDEX_FILE: undefined,
+  };
   try {
     const { stdout } = await run("git", [...args], { cwd, env });
     return stdout.trim() === "" ? undefined : stdout.trim();
