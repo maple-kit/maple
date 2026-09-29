@@ -192,7 +192,7 @@ function Box(props: SurfaceProps & { layers: LayerChunk | undefined }): ReactEle
       }),
       createElement("kbd", { className: "mk-mock-key-hint" }, MOCK_COPY.escape),
     ),
-    state.unnamed ? createElement("p", { className: "mk-mock-unnamed" }, MOCK_COPY.unnamed) : null,
+    aside(state) && createElement("p", { className: "mk-mock-unnamed" }, aside(state)),
     createElement(
       "div",
       { className: "mk-mock-body" },
@@ -207,6 +207,12 @@ function Box(props: SurfaceProps & { layers: LayerChunk | undefined }): ReactEle
     ),
     createElement(Foot, { client, state }),
   );
+}
+
+/** The line under the field, when the sentence was not turned into a chip. */
+function aside({ planFailure, unnamed }: MockClientState): string | undefined {
+  if (planFailure !== undefined) return MOCK_COPY[planFailure];
+  return unnamed ? MOCK_COPY.unnamed : undefined;
 }
 
 function calls(state: MockClientState, client: MockClient): ReactNode {

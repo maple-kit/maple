@@ -407,6 +407,24 @@ the identity connector does not resolve. A blank sentence is answered
 `{ plan: null }` without asking anyone. A sentence is at most 500 characters,
 and the calls at most a hundred.
 
+**A request stays small, whatever the page.** The calls are every one the page
+recorded on the route, so the body would grow with the page: about 15 KB on a
+dashboard of thirty calls. `routePlan` gzips it (`Content-Encoding: gzip`, from
+`CompressionStream`, so the summaries' repeated field names cost little) and
+sends the calls in consecutive batches of at most about 6 KB on the wire, one
+request after another. The readings are merged: the calls end to end in
+order, the state from the most confident batch, and each flag's and the role's
+most certain verdict. The route inflates a gzipped body, capped at 512 KB
+inflated, and still reads a plain one; any other `Content-Encoding` is 415.
+Each batch counts against the rate limit below. A firewall that measures body
+size can still block the route: see "A web application firewall" in
+`docs/configuration.md`.
+
+**A plan that fails says so.** A 401 or 403 (a firewall, or a session that
+ended) shows "The server refused that" and does not invite a retry; a network
+failure or a 5xx shows "Try again". Either way the calls stay listed to set by
+hand, and the failure and its status go to the `logger` given to `installMock`.
+
 It shares `/assist`'s budget code, not its budget: a cache of 200 plans keyed
 by the whole request, and 40 plans a minute per reviewer. A classifier failure
 is logged and answered 502 with nothing of the cause, since a provider's error

@@ -48,6 +48,8 @@ const MAX_REQUEST = 500;
 const MAX_KEY = 300;
 const MAX_SUMMARY = 500;
 const KEY = /^[a-z]+:\S/;
+/** What a gzipped body may inflate to: far above a full request, far below a bomb. */
+const MAX_INFLATED = 512 * 1024;
 
 const DEFAULT_CACHE = 200;
 const DEFAULT_RATE: RateLimit = { limit: 40, windowMs: 60_000 };
@@ -78,6 +80,7 @@ export function createMockPlanner(
     async respond(request, session, logger) {
       if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
+      if (unreadable(request)) return json({ error: "Send the body plain or gzipped" }, 415);
       const { asked, error } = read(await readJson(request));
       if (asked === undefined) return json({ error }, 400);
       if (asked.request.trim() === "") return json({ plan: null } satisfies MockPlanAnswer, 200);
@@ -159,11 +162,44 @@ async function described(
   });
 }
 
+/** A plain body is read as it is; a gzipped one is inflated, up to a ceiling. */
 async function readJson(request: Request): Promise<unknown> {
   try {
-    return await request.json();
+    if (!gzipped(request)) return await request.json();
+    if (request.body === null) return undefined;
+    const inflated = request.body.pipeThrough(new DecompressionStream("gzip"));
+    return JSON.parse(await text(inflated, MAX_INFLATED));
   } catch {
     return undefined;
+  }
+}
+
+function gzipped(request: Request): boolean {
+  return request.headers.get("content-encoding")?.trim().toLowerCase() === "gzip";
+}
+
+/** Whether the body names an encoding this endpoint cannot read. */
+function unreadable(request: Request): boolean {
+  const encoding = request.headers.get("content-encoding")?.trim().toLowerCase();
+  return (
+    encoding !== undefined && encoding !== "" && encoding !== "identity" && encoding !== "gzip"
+  );
+}
+
+async function text(stream: ReadableStream<Uint8Array>, limit: number): Promise<string> {
+  const decoder = new TextDecoder("utf-8", { fatal: true });
+  const reader = stream.getReader();
+  let out = "";
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) return out + decoder.decode();
+    size += value.byteLength;
+    if (size > limit) {
+      await reader.cancel();
+      throw new RangeError("The body is too large.");
+    }
+    out += decoder.decode(value, { stream: true });
   }
 }
 
