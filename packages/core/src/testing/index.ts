@@ -6,6 +6,8 @@ export type {
 export { SAMPLE_CONTEXT, sampleComment, storedComment } from "./fixtures.js";
 export { runGateContract } from "./gate-contract.js";
 export type { GateContractOptions, GateContractSubject } from "./gate-contract.js";
+export { runMediaContract } from "./media-contract.js";
+export type { MediaContractOptions, MediaContractSubject } from "./media-contract.js";
 export { memoryClassifier } from "./memory-classifier.js";
 export type { MemoryClassifier, MemoryClassifierOptions } from "./memory-classifier.js";
 export { memoryGate } from "./memory-gate.js";

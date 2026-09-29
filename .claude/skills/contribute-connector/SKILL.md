@@ -74,8 +74,9 @@ before starting.
    shared one leaks state between tests and turns a real failure into a flake.
 
    A gate runs `runGateContract` and a classifier `runClassifierContract`, both
-   from the same directory and wired the same way. Media, observability and
-   identity have no contract suite yet; test those against msw directly.
+   from the same directory and wired the same way. Media runs
+   `runMediaContract`. Observability and identity have no contract suite yet;
+   test those against msw directly.
 
 5. **Mock every network call.** Handlers go in `packages/core/test/msw/`, one
    file per upstream. A connector tested only against a 200 is not tested
