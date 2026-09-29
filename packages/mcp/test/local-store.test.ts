@@ -2,7 +2,7 @@ import { mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { fileStore } from "@maple-kit/core/connectors";
+import { fileStore } from "@maple-kit/core/local";
 import { sampleComment } from "@maple-kit/core/testing";
 import { afterEach, describe, expect, it } from "vitest";
 

@@ -10,6 +10,7 @@ export default defineConfig({
     "src/export/index.ts",
     "src/gate/index.ts",
     "src/loader/index.ts",
+    "src/local/index.ts",
     "src/next/index.ts",
     "src/logger/index.ts",
     "src/mock/index.ts",

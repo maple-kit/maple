@@ -152,7 +152,7 @@ below the table.
 | `memory` (reference) | ✓    | ✓      | ✓         | ✓    | —     | ✓         | ✓       | ✓         | —       | —      | —             | —           | —           | ✓       | ✓    | ✓     | ✓        | ✓    |
 | `keyword` (baseline) | —    | —      | —         | —    | —     | —         | —       | —         | —       | —      | —             | —           | —           | —       | —    | ✓     | ✓        | ✓    |
 
-`file` ships from `@maple-kit/core/connectors` and is the local store: see
+`file` ships from `@maple-kit/core/local` and is the local store: see
 [A local store, for a laptop](#a-local-store-for-a-laptop).
 
 The reference connector lives in `@maple-kit/core/testing` and exists so the
@@ -171,8 +171,9 @@ does with the model tier switched off. See `docs/assist.md`.
 .maple/<branch-slug>/media/<key>.<ext>
 ```
 
-Both are in `@maple-kit/core/connectors`, need Node's `fs` and a `git` binary
-on the path, and add no dependency. Every write goes to a temporary file that is
+Both are in `@maple-kit/core/local`, not `/connectors`: they need Node's `fs` and a
+`git` binary on the path, and `/connectors` is imported by browser code. They add
+no dependency. Every write goes to a temporary file that is
 renamed over the target, so a crash mid-write leaves the old file, never half of
 a new one. A `comments.json` that cannot be parsed is refused rather than
 overwritten.

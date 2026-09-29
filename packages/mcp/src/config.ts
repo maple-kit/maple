@@ -7,7 +7,8 @@
  */
 
 import { createCommentStore } from "@maple-kit/core";
-import { fileStore, githubGate, githubStore } from "@maple-kit/core/connectors";
+import { githubGate, githubStore } from "@maple-kit/core/connectors";
+import { fileStore } from "@maple-kit/core/local";
 
 import { describeVariable } from "./environment.js";
 import { routeRefresh } from "./refresh.js";

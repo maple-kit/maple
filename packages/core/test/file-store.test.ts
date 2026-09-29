@@ -5,8 +5,8 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { capabilitiesOf, missingRequirements } from "../src/connectors/capabilities.js";
-import { fileMedia } from "../src/connectors/file-media.js";
-import { fileStore } from "../src/connectors/file-store.js";
+import { fileMedia } from "../src/local/file-media.js";
+import { fileStore } from "../src/local/file-store.js";
 import { sampleComment } from "../src/testing/fixtures.js";
 import { addWorktree, git, initRepo, scratch } from "./local-repo.js";
 

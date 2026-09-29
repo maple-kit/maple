@@ -14,9 +14,9 @@ import { join, parse } from "node:path";
 import { writeAtomic } from "./local-files.js";
 import { resolveLocalPlace } from "./local-place.js";
 
+import type { MediaConnector } from "../connectors/types.js";
 import type { MediaBlob, MediaRef } from "../types.js";
 import type { LocalPlaceOptions } from "./local-place.js";
-import type { MediaConnector } from "./types.js";
 
 /** Options for {@link fileMedia}. */
 export interface FileMediaOptions extends LocalPlaceOptions {

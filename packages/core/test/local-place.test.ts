@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { normalizeUrl, resolveLocalPlace, slugify } from "../src/connectors/local-place.js";
+import { normalizeUrl, resolveLocalPlace, slugify } from "../src/local/local-place.js";
 import { addWorktree, git, initRepo, scratch } from "./local-repo.js";
 
 const cleanups: (() => void)[] = [];

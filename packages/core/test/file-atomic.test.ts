@@ -3,8 +3,8 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { fileStore } from "../src/connectors/file-store.js";
-import { writeAtomic } from "../src/connectors/local-files.js";
+import { fileStore } from "../src/local/file-store.js";
+import { writeAtomic } from "../src/local/local-files.js";
 import { sampleComment } from "../src/testing/fixtures.js";
 import { scratch } from "./local-repo.js";
 

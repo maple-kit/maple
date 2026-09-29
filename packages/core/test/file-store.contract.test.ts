@@ -1,7 +1,7 @@
 import { rm } from "node:fs/promises";
 
-import { fileMedia } from "../src/connectors/file-media.js";
-import { fileStore } from "../src/connectors/file-store.js";
+import { fileMedia } from "../src/local/file-media.js";
+import { fileStore } from "../src/local/file-store.js";
 import { runMediaContract } from "../src/testing/media-contract.js";
 import { runStoreContract } from "../src/testing/store-contract.js";
 import { scratch } from "./local-repo.js";

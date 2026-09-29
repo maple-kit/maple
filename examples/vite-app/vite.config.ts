@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 
 import { jevClassifier } from "@maple-kit/classifier";
 import { createCommentStore, keywordClassifier } from "@maple-kit/core";
-import { fileMedia, fileStore } from "@maple-kit/core/connectors";
+import { fileMedia, fileStore } from "@maple-kit/core/local";
 import { maple } from "@maple-kit/core/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv } from "vite";

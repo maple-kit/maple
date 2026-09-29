@@ -12,6 +12,7 @@ import { join } from "node:path";
 import { readIfPresent, withLock, writeAtomic } from "./local-files.js";
 import { resolveLocalPlace } from "./local-place.js";
 
+import type { CommentPage, ListQuery, StoreConnector } from "../connectors/types.js";
 import type {
   Approval,
   Comment,
@@ -21,7 +22,6 @@ import type {
   NewComment,
 } from "../types.js";
 import type { LocalPlaceOptions } from "./local-place.js";
-import type { CommentPage, ListQuery, StoreConnector } from "./types.js";
 
 /** Options for {@link fileStore}. */
 export interface FileStoreOptions extends LocalPlaceOptions {
