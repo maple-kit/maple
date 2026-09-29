@@ -18,6 +18,10 @@ export {
   selectPillars,
   UnknownPillarError,
 } from "./classifier.js";
+export { fileMedia } from "./file-media.js";
+export type { FileMediaOptions } from "./file-media.js";
+export { fileStore } from "./file-store.js";
+export type { FileStoreOptions } from "./file-store.js";
 export { CHECK_NAME, githubGate } from "./github-gate.js";
 export type { GitHubGateOptions } from "./github-gate.js";
 export { createPullCache } from "./github-pull.js";
