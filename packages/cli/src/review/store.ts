@@ -15,8 +15,8 @@ import { fileMedia, fileStore, resolveLocalPlace } from "@maple-kit/core/local";
 import type { CommentStore } from "@maple-kit/core";
 import type { MediaConnector } from "@maple-kit/core/connectors";
 
-/** The variables that mean a forge is configured, as in the MCP server. */
-const FORGE_VARIABLES = ["GITHUB_TOKEN", "MAPLE_GITHUB_OWNER", "MAPLE_GITHUB_REPO"] as const;
+/** Maple's own forge variables. GITHUB_TOKEN alone is on most laptops and means nothing here. */
+const FORGE_VARIABLES = ["MAPLE_GITHUB_OWNER", "MAPLE_GITHUB_REPO"] as const;
 
 /** The store a review writes to, and what to call the branch it is about. */
 export interface ReviewStore {

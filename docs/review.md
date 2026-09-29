@@ -51,9 +51,10 @@ relaxed the same way. A policy that needs nothing is passed byte for byte, and
 
 ## Where comments go
 
-Whatever the environment names, read the way the MCP server reads it
-(`MAPLE_STORE`, `GITHUB_TOKEN`, `MAPLE_GITHUB_OWNER`, `MAPLE_GITHUB_REPO`), and
-**the local file store when nothing is set**: comments land in
+Whatever the environment names (`MAPLE_STORE`, or `MAPLE_GITHUB_OWNER` and
+`MAPLE_GITHUB_REPO` with `GITHUB_TOKEN`), read the way the MCP server reads it
+except that `GITHUB_TOKEN` alone counts for nothing, since most laptops have
+one. **The local file store when nothing is named**: comments land in
 `.maple/<branch>/` at the main checkout, so a first run needs no account. The
 SQLite store is for a shared server and is never the default. There is no
 `maple use` command yet; when one exists it replaces the environment here.
