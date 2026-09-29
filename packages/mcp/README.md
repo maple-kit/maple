@@ -45,20 +45,29 @@ file. A missing value fails at startup rather than on the first tool call.
 
 <!-- generated:mcp-environment -->
 
-| Name                     | Secret | What it is                                                                        |
-| ------------------------ | ------ | --------------------------------------------------------------------------------- |
-| `GITHUB_TOKEN`           | Yes    | A token that can read and write pull-request comments. Required.                  |
-| `MAPLE_GITHUB_OWNER`     | No     | The repository's owner. Required.                                                 |
-| `MAPLE_GITHUB_REPO`      | No     | The repository. Required.                                                         |
-| `MAPLE_GITHUB_API`       | No     | The API root, for Enterprise Server.                                              |
-| `MAPLE_STORE`            | No     | `github`, the default and so far the only one.                                    |
-| `MAPLE_BRANCH`           | No     | The branch the Stop hook checks, else the one checked out. The server ignores it. |
-| `MAPLE_URL`              | No     | The deployed route's mount URL. A resolve asks it to republish the gate.          |
-| `MAPLE_GATE_TOKEN`       | Yes    | For CI only: the gate App's installation token. Not with `MAPLE_URL`.             |
-| `MAPLE_GATE_APP_ID`      | No     | The gate App's id, so it updates its own check run rather than another's.         |
-| `MAPLE_REQUIRE_APPROVAL` | No     | `true` to hold the gate until somebody approves, matching the route and CI.       |
+| Name                     | Secret | What it is                                                                                                           |
+| ------------------------ | ------ | -------------------------------------------------------------------------------------------------------------------- |
+| `GITHUB_TOKEN`           | Yes    | A token that can read and write pull-request comments. Required for the `github` store.                              |
+| `MAPLE_GITHUB_OWNER`     | No     | The repository's owner. Required for the `github` store.                                                             |
+| `MAPLE_GITHUB_REPO`      | No     | The repository. Required for the `github` store.                                                                     |
+| `MAPLE_GITHUB_API`       | No     | The API root, for Enterprise Server.                                                                                 |
+| `MAPLE_STORE`            | No     | `github`, the default when a forge is configured, or `file`, the default when none is: the comments under `.maple/`. |
+| `MAPLE_BRANCH`           | No     | The branch the Stop hook checks, else the one checked out. The server ignores it.                                    |
+| `MAPLE_URL`              | No     | The deployed route's mount URL. A resolve asks it to republish the gate.                                             |
+| `MAPLE_GATE_TOKEN`       | Yes    | For CI only: the gate App's installation token. Not with `MAPLE_URL`.                                                |
+| `MAPLE_GATE_APP_ID`      | No     | The gate App's id, so it updates its own check run rather than another's.                                            |
+| `MAPLE_REQUIRE_APPROVAL` | No     | `true` to hold the gate until somebody approves, matching the route and CI.                                          |
 
 <!-- /generated:mcp-environment -->
+
+### With no forge
+
+Set none of `GITHUB_TOKEN`, `MAPLE_GITHUB_OWNER` and `MAPLE_GITHUB_REPO` and the
+server reads and writes the comments `fileStore()` keeps under `.maple/` in its
+working directory's repository, so the loop works on a laptop with no pull
+request. `MAPLE_STORE=file` says so explicitly. It is a laptop's store, not a
+preview pod's: `docs/connectors.md` has the argument. The Stop hook still needs
+a forge configured and stays silent without one.
 
 ## Tools
 

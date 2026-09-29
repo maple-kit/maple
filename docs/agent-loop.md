@@ -78,7 +78,7 @@ tool call, where a client would show it as a tool error and bury it.
 
 | Variable                                  |                                                                    |
 | ----------------------------------------- | ------------------------------------------------------------------ |
-| `MAPLE_STORE`                             | `github`, the default and so far the only one.                     |
+| `MAPLE_STORE`                             | `github` with a forge configured, else `file`: `.maple/`.          |
 | `MAPLE_GITHUB_OWNER`, `MAPLE_GITHUB_REPO` | The repository.                                                    |
 | `GITHUB_TOKEN`                            | Server-side only. Never in a file; use `op run --env-file`.        |
 | `MAPLE_GITHUB_API`                        | For Enterprise Server.                                             |
