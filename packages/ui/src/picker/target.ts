@@ -7,7 +7,13 @@
  * kind is recorded on the anchor and read back by `kindOf`.
  */
 
-import { describeElement, describeRange, labelFor, regionOf } from "@maple-kit/core/anchor";
+import {
+  captureMembers,
+  describeElement,
+  describeRange,
+  labelFor,
+  regionOf,
+} from "@maple-kit/core/anchor";
 import { toCommentContext } from "@maple-kit/core/overlay";
 
 import type { Anchor } from "@maple-kit/core/anchor";
@@ -57,7 +63,7 @@ export function targetFor(pick: Pick, options: TargetOptions = {}): ComposerTarg
 
 /**
  * A passage is described from its range; the other two from their element. A
- * region then records the rectangle over it, which is what makes it a region.
+ * region adds its rectangle and the elements it covers.
  */
 function anchorFor(pick: Pick, element: Element, root: ParentNode | undefined): Anchor {
   const options = root === undefined ? {} : { root };
@@ -65,7 +71,12 @@ function anchorFor(pick: Pick, element: Element, root: ParentNode | undefined): 
 
   const described = describeElement(element, options);
   if (pick.kind !== "region") return described;
-  return { ...described, region: regionOf(pick.rect, element.getBoundingClientRect()) };
+  const members = captureMembers(pick.rect, options);
+  return {
+    ...described,
+    region: regionOf(pick.rect, element.getBoundingClientRect()),
+    ...(members.length === 0 ? {} : { members }),
+  };
 }
 
 /** The element a range sits in, which for a text node is its parent. */

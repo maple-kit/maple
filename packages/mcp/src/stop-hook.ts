@@ -6,6 +6,8 @@
  * looks at the open comments, and either lets it stop or hands the list back.
  */
 
+import { nameMembers } from "@maple-kit/core/anchor";
+
 import type { Comment } from "@maple-kit/core";
 
 /**
@@ -66,7 +68,8 @@ function worklist(open: readonly Comment[]): string {
 }
 
 function describe(comment: Comment): string {
-  const where = comment.anchor.source ?? comment.anchor.component ?? comment.anchor.selector ?? "?";
+  const { anchor } = comment;
+  const where = nameMembers(anchor) ?? anchor.source ?? anchor.component ?? anchor.selector ?? "?";
   const orphaned = comment.status === "orphaned" ? " (orphaned: the location is stale)" : "";
   return `[${comment.id}] ${where}${orphaned} — ${first(comment.body)}`;
 }

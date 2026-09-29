@@ -12,6 +12,8 @@ import type { Comment } from "../src/types.js";
 
 const BRANCH = "feature/x";
 
+const OFFSET = { top: 4, left: 4, right: 4, bottom: 4 };
+
 function exported(comments: readonly Comment[], options = {}): string {
   return exportMarkdown(comments, { branch: BRANCH, ...options }).markdown;
 }
@@ -239,6 +241,41 @@ describe("the byte budget", () => {
     expect(result.bytes).toBeLessThan(8192);
     expect(result.reduced).toEqual([]);
     expect(result.overBudget).toBe(false);
+  });
+
+  it("names a region by what it covers", () => {
+    const markdown = exported([
+      storedComment({
+        anchor: {
+          component: "CoffeeShell",
+          region: { x: 0, y: 0, width: 1, height: 0.1 },
+          members: [
+            { anchor: { component: "BrewGuideCard" }, offset: OFFSET, overlap: 1 },
+            { anchor: { component: "SectionHeading" }, offset: OFFSET, overlap: 1 },
+          ],
+        },
+      }),
+    ]);
+
+    expect(markdown).toContain("`BrewGuideCard +1`");
+    expect(markdown).not.toContain("| `CoffeeShell` |");
+  });
+
+  it("sheds a member's quote context with the anchor's", () => {
+    const member = {
+      anchor: { quote: { exact: "Grind finer", prefix: "x".repeat(400) }, selector: "h2" },
+      offset: OFFSET,
+      overlap: 1,
+    };
+    const comments = Array.from({ length: 14 }, (_, index) =>
+      storedComment({ id: `c_${String(index)}`, anchor: { selector: "main", members: [member] } }),
+    );
+
+    const result = exportMarkdown(comments, { branch: BRANCH });
+    const quote = parseFence(result.markdown)?.comments[0]?.anchor.members?.[0]?.anchor.quote;
+
+    expect(result.reduced[0]).toBe("quote-context");
+    expect(quote).toEqual({ exact: "Grind finer" });
   });
 
   it("sheds quote context first", () => {

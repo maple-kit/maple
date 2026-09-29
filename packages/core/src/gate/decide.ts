@@ -6,6 +6,8 @@
  * one verdict. Keeping them apart is what keeps the check-run API out of core.
  */
 
+import { nameMembers } from "../anchor/label.js";
+
 import type { Approval, Comment, CommentStatus, GateVerdict } from "../types.js";
 
 /** Statuses that hold the gate. Everything but `resolved`, by default. */
@@ -219,7 +221,9 @@ function listing(comments: readonly Comment[], blocking: readonly Comment[]): st
 }
 
 function entry(comment: Comment): string {
-  const anchor = comment.anchor.component ?? comment.anchor.source ?? comment.anchor.selector;
+  const { anchor: recorded } = comment;
+  const anchor =
+    nameMembers(recorded) ?? recorded.component ?? recorded.source ?? recorded.selector;
   const where = anchor === undefined ? "" : `\`${anchor}\` — `;
 
   return `${where}${oneLine(comment.body)}${note(comment.status)}`;

@@ -368,6 +368,22 @@ describe("a region", () => {
     expect(region!.height).toBeCloseTo(60 / 120, 2);
   });
 
+  it("records the elements a rectangle covers, so it can follow them", async () => {
+    await draw([4, 4], [316, 116]);
+    const { members, region } = client.getState().composer.target!.anchor;
+
+    expect(region).toBeDefined();
+    expect(members).toHaveLength(1);
+    expect(members![0]!.anchor.component).toBe("YieldCard");
+    expect(members![0]!.overlap).toBeGreaterThan(0.9);
+  });
+
+  it("records no members for a rectangle that only clips an element", async () => {
+    await draw([20, 20], [200, 90]);
+
+    expect(client.getState().composer.target!.anchor.members).toBeUndefined();
+  });
+
   /**
    * `ComposerTarget.label` is the bare name — "the Yield card". Every surface
    * puts its own words round it, so a phrase stored here came back doubled.

@@ -12,7 +12,7 @@ import { kindOf, resolveAnchor } from "@maple-kit/core/anchor";
 import { isOnPage } from "./route.js";
 
 import type { Comment } from "@maple-kit/core";
-import type { Anchor, AnchorRegion } from "@maple-kit/core/anchor";
+import type { Anchor, AnchorRegion, PlacedMember, Resolved } from "@maple-kit/core/anchor";
 import type { Draft } from "@maple-kit/core/overlay";
 
 /** Where on the page something is, whether it was published or not. */
@@ -22,6 +22,8 @@ export interface Located {
   readonly range?: Range;
   /** The rectangle, when the comment is on a region rather than an element. */
   readonly region?: AnchorRegion;
+  /** The elements a region covers, when they placed it: the rectangle follows them. */
+  readonly members?: readonly PlacedMember[];
   readonly confidence: number;
 }
 
@@ -88,7 +90,13 @@ function locate(anchor: Anchor, root: ParentNode): Located | undefined {
   return {
     element: found.element,
     ...(found.range === undefined ? {} : { range: found.range }),
-    ...(anchor.region === undefined ? {} : { region: anchor.region }),
+    ...rectangleOf(anchor, found),
     confidence: found.confidence,
   };
+}
+
+/** Where the rectangle is measured: against the members that placed it, else the container. */
+export function rectangleOf(anchor: Anchor, found: Resolved): Pick<Located, "members" | "region"> {
+  if (found.members) return { members: found.members };
+  return anchor.region === undefined ? {} : { region: anchor.region };
 }

@@ -7,7 +7,7 @@
  * sentence wrapping over three lines is shown as the three lines it is.
  */
 
-import { regionBox } from "@maple-kit/core/anchor";
+import { membersBox, regionBox } from "@maple-kit/core/anchor";
 import { createElement, forwardRef, useCallback, useRef, useState } from "react";
 
 import { useMapleUi } from "../context.js";
@@ -18,7 +18,7 @@ import { culled, ringBox, runBox } from "./geometry.js";
 import { flag, MOVING_ATTRIBUTE, OFF_ATTRIBUTE, place } from "./paint.js";
 
 import type { Box } from "./geometry.js";
-import type { AnchorRegion } from "@maple-kit/core/anchor";
+import type { AnchorRegion, PlacedMember } from "@maple-kit/core/anchor";
 import type { ReactElement } from "react";
 
 /** Set on the label when it was moved under the anchor to clear page text. */
@@ -44,6 +44,11 @@ export interface TargetRingProps {
    * ring is that rectangle rather than the element it was measured in.
    */
   readonly region?: AnchorRegion;
+  /**
+   * The elements a region covers. When they are known the ring is the
+   * rectangle they grow into, and `region` is not used.
+   */
+  readonly members?: readonly PlacedMember[];
   /** The label's words. `ringLabel` builds them; the ring never invents them. */
   readonly label?: string;
   /** A second line under the label. Developer detail: where this is written. */
@@ -62,10 +67,21 @@ function empty(rect: Box): boolean {
   return rect.width === 0 && rect.height === 0;
 }
 
+/** The rectangle to draw: the members' union, a fraction of the target, or the target. */
+function rectOf(
+  target: Element | Range,
+  region: AnchorRegion | undefined,
+  members: readonly PlacedMember[] | undefined,
+): Box {
+  if (members) return membersBox(members);
+  const box = target.getBoundingClientRect();
+  return region === undefined ? box : regionBox(box, region);
+}
+
 /** The ring around one target, repositioned per scrolled frame. */
 export const MapleTargetRing = /** @__PURE__ */ forwardRef<HTMLDivElement, TargetRingProps>(
   function MapleTargetRing(props, ref) {
-    const { className, label, note, region, state = "composing", target } = props;
+    const { className, label, members, note, region, state = "composing", target } = props;
     const { container } = useMapleUi(PART);
 
     const ring = useRef<HTMLDivElement | null>(null);
@@ -73,13 +89,14 @@ export const MapleTargetRing = /** @__PURE__ */ forwardRef<HTMLDivElement, Targe
     const runs = useRef<(HTMLDivElement | null)[]>([]);
     const [lines, setLines] = useState(0);
 
+    const drawsRegion = region !== undefined || members !== undefined;
+
     const paint = useCallback(
       (moving: boolean) => {
         const node = ring.current;
         if (!node || !target) return;
 
-        const box = target.getBoundingClientRect();
-        const rect = region === undefined ? box : regionBox(box, region);
+        const rect = rectOf(target, region, members);
         const away = empty(rect) || culled(rect, viewportHeight(container));
         flag(node, OFF_ATTRIBUTE, away);
         flag(node, MOVING_ATTRIBUTE, moving);
@@ -91,14 +108,14 @@ export const MapleTargetRing = /** @__PURE__ */ forwardRef<HTMLDivElement, Targe
         // per scrolled frame flickers, and `scrollend` settles it again.
         if (cap.current && !moving) corner(cap.current, drawn, container);
 
-        const boxes = region === undefined ? linesOf(target) : [];
+        const boxes = drawsRegion ? [] : linesOf(target);
         if (boxes.length !== lines) setLines(boxes.length);
         boxes.forEach((box, index) => {
           const run = runs.current[index];
           if (run) place(run, runBox(box, rect));
         });
       },
-      [container, lines, region, target],
+      [container, drawsRegion, lines, members, region, target],
     );
 
     useFrameLoop(PART, paint);
@@ -109,8 +126,8 @@ export const MapleTargetRing = /** @__PURE__ */ forwardRef<HTMLDivElement, Targe
       {
         className: className ? `mk-ring ${className}` : "mk-ring",
         "data-mk-state": state,
-        "data-mk-passage": String(region === undefined && "startContainer" in target),
-        "data-mk-region": String(region !== undefined),
+        "data-mk-passage": String(!drawsRegion && "startContainer" in target),
+        "data-mk-region": String(drawsRegion),
         ref: composeRefs<HTMLDivElement>(ref, (node) => {
           ring.current = node;
         }),
