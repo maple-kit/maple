@@ -25,14 +25,13 @@ const BUDGETS = [
   // this sheet so Maple.Mock needs no second one inside <Maple /> (a page that
   // only mocks adopts MOCK_CSS, weighed below); 16 KB once its menu joined.
   { name: "the adopted stylesheet", entries: ["stylesheet.js"], max: 16 * 1024 },
-  // 22 KB until the wordmark, 1.7 KB of path data the header always reaches;
-  // 24 KB until the sign-off and the unsent list, 0.7 KB between them; 26 KB
-  // until the pixel leaf, whose 263 rectangles are 1.3 KB the header reaches
-  // too, and which docs/branding.md says is a drawing and not a recolour.
+  // 22 KB until the wordmark (1.7 KB of path data); 24 KB until the sign-off
+  // and the unsent list; 26 KB until the pixel leaf (1.3 KB, docs/branding.md);
+  // 28 KB, then 29 KB once a draft knows which page it belongs to.
   {
     name: "root + marks + island + icons",
     entries: ["index.js", "marks/index.js", "island/index.js", "icons/index.js"],
-    max: 28 * 1024,
+    max: 29 * 1024,
   },
   // 9 KB until the score card. The extra 1 KB is the card, the kind control
   // and the context card's disclosure. Every byte of it is inert on a

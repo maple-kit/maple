@@ -6,6 +6,7 @@ import { render } from "vitest-browser-react";
 import { MapleRoot } from "../src/index.js";
 import { Unsent } from "../src/island/index.js";
 
+import type { CommentContext } from "@maple-kit/core";
 import type { MapleClient } from "@maple-kit/core/client";
 import type { ReactElement } from "react";
 
@@ -118,6 +119,16 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+function keepAt(body: string, component: string, path: string): void {
+  client.openComposer({
+    kind: "element",
+    anchor: { component },
+    context: { url: `https://brew-preview.example.test${path}` } as CommentContext,
+  });
+  client.setBody(body);
+  client.keepDraft();
+}
+
 describe("the unsent list", () => {
   it("draws nothing while nothing is waiting", async () => {
     await render(tree());
@@ -183,5 +194,27 @@ describe("the unsent list", () => {
 
     await vi.waitFor(() => expect(client.getState().composer.open).toBe(true));
     expect(client.getState().composer.body).toBe("half a thought");
+  });
+});
+
+describe("drafts written on another page", () => {
+  it("are tagged, with a link to the route they belong to", async () => {
+    await render(tree());
+    keepAt("here", "YieldCard", location.pathname);
+    keepAt("elsewhere", "MrrCard", "/menu?view=seasonal");
+
+    await vi.waitFor(() => expect(root().querySelectorAll(".mk-unsent-row")).toHaveLength(2));
+    const tags = root().querySelectorAll<HTMLAnchorElement>(".mk-unsent-where");
+    expect(tags).toHaveLength(1);
+    expect(tags[0]?.textContent).toBe("On another page · /menu");
+    expect(tags[0]?.getAttribute("href")).toBe("/menu?view=seasonal");
+  });
+
+  it("are not tagged when no page was recorded", async () => {
+    await render(tree());
+    keep("old draft", "YieldCard");
+
+    await vi.waitFor(() => expect(section()).not.toBeNull());
+    expect(root().querySelector(".mk-unsent-where")).toBeNull();
   });
 });

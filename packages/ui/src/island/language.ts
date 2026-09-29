@@ -157,6 +157,7 @@ export const UNSENT_COPY = {
   discard: "Throw this one away",
   discardGlyph: "✕",
   blank: "(nothing written yet)",
+  elsewhere: (path: string) => `On another page · ${path}`,
 } as const;
 
 /** Copy with no better home than a name. */

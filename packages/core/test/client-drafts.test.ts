@@ -175,3 +175,37 @@ describe("throwing a draft away", () => {
     expect(seen).toHaveBeenCalledTimes(2);
   });
 });
+
+describe("whether a reload would lose a draft", () => {
+  it("is at risk only inside the debounce window", () => {
+    vi.useFakeTimers();
+    const kept = keeper({ storage: memoryStorage() });
+    expect(kept.atRisk()).toBe(false);
+
+    kept.save(draft("d_1", "spacing"));
+    expect(kept.atRisk()).toBe(true);
+
+    vi.advanceTimersByTime(DRAFT_DEBOUNCE_MS);
+    expect(kept.atRisk()).toBe(false);
+  });
+
+  it("announces the write that ends the window", () => {
+    vi.useFakeTimers();
+    const kept = keeper({ storage: memoryStorage() });
+    const listener = vi.fn();
+    kept.save(draft("d_1", "spacing"));
+    kept.subscribe(listener);
+
+    vi.advanceTimersByTime(DRAFT_DEBOUNCE_MS);
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it("is at risk for as long as memory is all there is", () => {
+    const kept = keeper();
+    expect(kept.atRisk()).toBe(false);
+
+    kept.save(draft("d_1", "spacing"));
+    kept.flush();
+    expect(kept.atRisk()).toBe(true);
+  });
+});

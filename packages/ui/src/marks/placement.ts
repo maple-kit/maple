@@ -9,6 +9,8 @@
 
 import { kindOf, resolveAnchor } from "@maple-kit/core/anchor";
 
+import { isOnPage } from "./route.js";
+
 import type { Comment } from "@maple-kit/core";
 import type { Anchor, AnchorRegion } from "@maple-kit/core/anchor";
 import type { Draft } from "@maple-kit/core/overlay";
@@ -61,12 +63,17 @@ export function placements(
   return placed;
 }
 
-/** Every unsent comment the page still has, placed by the same rules. */
+/**
+ * Every unsent comment written on this page, placed by the same rules. One
+ * written on another route is not tried: a shared layout would let it land here.
+ */
 export function draftPlacements(
   drafts: readonly Draft[],
   root: ParentNode,
+  pathname: string,
 ): readonly DraftPlacement[] {
   return drafts.flatMap((draft) => {
+    if (!isOnPage(draft, pathname)) return [];
     const found = locate(draft.anchor, root);
     return found ? [{ ...found, draft }] : [];
   });

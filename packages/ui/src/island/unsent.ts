@@ -11,6 +11,7 @@ import { useMaple, useMapleClient } from "@maple-kit/react";
 import { createElement, forwardRef, useState } from "react";
 
 import { cx } from "../cx.js";
+import { draftRoute, isOnPage, pathOf, usePathname } from "../marks/route.js";
 import { renderPart } from "../part.js";
 import { UNSENT_COPY } from "./language.js";
 
@@ -34,6 +35,7 @@ export const Unsent = /** @__PURE__ */ forwardRef<HTMLDivElement, UnsentProps>(
     const { drafts, publishing } = useMaple();
     const client = useMapleClient();
     const [copied, setCopied] = useState(false);
+    const pathname = usePathname(typeof window === "undefined" ? undefined : window);
 
     if (drafts.length === 0) return null;
 
@@ -84,15 +86,16 @@ export const Unsent = /** @__PURE__ */ forwardRef<HTMLDivElement, UnsentProps>(
         createElement(
           "ul",
           { key: "rows", className: "mk-unsent-rows" },
-          ...drafts.map((draft) => row(draft, client)),
+          ...drafts.map((draft) => row(draft, client, pathname)),
         ),
       ],
     );
   },
 );
 
-/** One waiting comment: what it says, and the two things to do with it. */
-function row(draft: Draft, client: MapleClient): ReactNode {
+/** One waiting comment: what it says, where it belongs, and what to do with it. */
+function row(draft: Draft, client: MapleClient, pathname: string): ReactNode {
+  const route = draftRoute(draft);
   return createElement(
     "li",
     { key: draft.id, className: "mk-unsent-row" },
@@ -106,6 +109,16 @@ function row(draft: Draft, client: MapleClient): ReactNode {
       },
       draft.body.trim() === "" ? UNSENT_COPY.blank : draft.body,
     ),
+    route === undefined || isOnPage(draft, pathname)
+      ? null
+      : createElement(
+          "a",
+          {
+            className: "mk-unsent-where",
+            href: route,
+          },
+          UNSENT_COPY.elsewhere(pathOf(route) ?? route),
+        ),
     createElement(
       "button",
       {
