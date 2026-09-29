@@ -27,6 +27,11 @@ export interface SourceLocation {
 export interface SourceLocatorOptions {
   /** The repository's directory on the developer's machine, which paths are made relative to. */
   readonly root?: string;
+  /**
+   * Where the dev server's own root is, relative to `root`. A path taken from a
+   * served URL is relative to that, so in a monorepo it needs this put back.
+   */
+  readonly appDir?: string;
   /** How maps are fetched. Defaults to the page's own `fetch`. */
   readonly fetch?: typeof fetch;
 }
@@ -92,13 +97,20 @@ function bundlerPath(path: string): string {
  * A source as a path relative to `root`. Vite's map names a file beside the
  * module and records the absolute path it came from, so that is the base.
  */
-function repositoryPath(source: string, moduleUrl: string, loaded: Loaded, root?: string): string {
+function repositoryPath(
+  source: string,
+  moduleUrl: string,
+  loaded: Loaded,
+  options: SourceLocatorOptions,
+): string {
+  const { root, appDir } = options;
   const base = loaded.file?.startsWith("/") ? `file://${loaded.file}` : moduleUrl;
   const { protocol, pathname } = new URL(source, base);
   let path = bundlerPath(source);
   if (source.startsWith("/")) path = source;
   else if (protocol === "file:") path = decodeURIComponent(pathname);
-  else if (protocol.startsWith("http")) path = pathname.slice(1);
+  else if (protocol.startsWith("http"))
+    path = [appDir, pathname.slice(1)].filter(Boolean).join("/");
 
   if (root === undefined) return path;
   const prefix = root.endsWith("/") ? root : `${root}/`;
@@ -158,7 +170,7 @@ export function createSourceLocator(options: SourceLocatorOptions = {}): SourceL
     }
     const original = loaded?.reader(frame.line, frame.column - 1);
     if (original === undefined || loaded === null) return undefined;
-    const path = repositoryPath(original.source, frame.url, loaded, options.root);
+    const path = repositoryPath(original.source, frame.url, loaded, options);
     return isApplication(path) ? `${path}:${original.line}:${original.column + 1}` : undefined;
   }
 

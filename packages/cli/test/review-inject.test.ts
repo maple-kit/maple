@@ -7,12 +7,13 @@ const TAG = {
   branch: "feat/x",
   basePath: "/__maple/api",
   root: "/work/app",
+  appDir: "apps/web",
 } as const;
 
 describe("overlayTag", () => {
   it("carries what the script reads, and the nonce when there is one", () => {
     expect(overlayTag({ ...TAG, nonce: "abc" })).toBe(
-      '<script src="/__maple/overlay.js" data-branch="feat/x" data-base-path="/__maple/api" data-root="/work/app" nonce="abc"></script>',
+      '<script src="/__maple/overlay.js" data-branch="feat/x" data-base-path="/__maple/api" data-root="/work/app" data-app-dir="apps/web" nonce="abc"></script>',
     );
   });
 

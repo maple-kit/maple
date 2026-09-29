@@ -113,6 +113,21 @@ describe("createSourceLocator", () => {
     expect(found?.source).toBe(expected);
   });
 
+  it("puts the app's folder back on a path taken from the served URL, in a monorepo", async () => {
+    server.use(
+      http.get(`${ORIGIN}/src/App.tsx`, () =>
+        HttpResponse.text(moduleWith({ version: 3, sources: ["App.tsx"], mappings: MAPPINGS })),
+      ),
+    );
+    const element = elementAt(`${ORIGIN}/src/App.tsx`, 3, 8);
+    const locator = createSourceLocator({ appDir: "apps/web" });
+
+    locator.locate(element);
+    await vi.waitFor(() => {
+      expect(locator.locate(element)?.source).toBe("apps/web/src/App.tsx:3:1");
+    });
+  });
+
   it("follows an external map", async () => {
     server.use(
       http.get(`${ORIGIN}/chunk.js`, () =>

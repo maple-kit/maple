@@ -34,7 +34,11 @@ function mount(): void {
 
   const root = attribute("root");
   const basePath = attribute("base-path");
-  installSourceLocator(root === undefined ? {} : { root });
+  const appDir = attribute("app-dir");
+  installSourceLocator({
+    ...(root === undefined ? {} : { root }),
+    ...(appDir === undefined ? {} : { appDir }),
+  });
 
   createRoot(document.createElement("div")).render(
     createElement(Maple, {

@@ -10,7 +10,7 @@ import { execFile, spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { createRequire } from "node:module";
-import { dirname, join } from "node:path";
+import { dirname, join, relative, sep } from "node:path";
 import { promisify } from "node:util";
 
 import { createMapleHandler, toNodeMiddleware } from "@maple-kit/core/route";
@@ -74,13 +74,14 @@ async function shippedOverlay(): Promise<string> {
   }
 }
 
-/** The top of the checkout `cwd` is in, which source paths are made relative to. */
-async function repositoryRoot(cwd: string): Promise<string> {
+/** The top of the checkout `cwd` is in, which source paths are made relative to, and where `cwd` is in it. */
+async function repositoryPaths(cwd: string): Promise<{ root: string; appDir: string }> {
   try {
     const { stdout } = await exec("git", ["rev-parse", "--show-toplevel"], { cwd });
-    return stdout.trim() || cwd;
+    const root = stdout.trim() || cwd;
+    return { root, appDir: relative(root, cwd).split(sep).join("/") };
   } catch {
-    return cwd;
+    return { root: cwd, appDir: "" };
   }
 }
 
@@ -130,7 +131,7 @@ export async function startReview(options: ReviewOptions): Promise<ReviewSession
       target,
       overlay,
       route: toNodeMiddleware(handler, ROUTE_PATH),
-      tag: { branch: store.branch, basePath: ROUTE_PATH, root: await repositoryRoot(options.cwd) },
+      tag: { branch: store.branch, basePath: ROUTE_PATH, ...(await repositoryPaths(options.cwd)) },
       ...(options.onRelaxed === undefined ? {} : { onRelaxed: options.onRelaxed }),
     };
     const server = createServer(createProxyListener(settings));

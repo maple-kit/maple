@@ -14,6 +14,8 @@ export interface OverlayTag {
   readonly branch: string;
   readonly basePath: string;
   readonly root: string;
+  /** The app's folder relative to the root, empty when they are one. */
+  readonly appDir: string;
   readonly nonce?: string;
 }
 
@@ -42,6 +44,7 @@ export function overlayTag(tag: OverlayTag): string {
     ["data-branch", tag.branch],
     ["data-base-path", tag.basePath],
     ["data-root", tag.root],
+    ["data-app-dir", tag.appDir],
     ...(tag.nonce === undefined ? [] : [["nonce", tag.nonce]]),
   ] as const;
   const written = attributes.map(([name, value]) => `${name}="${escapeAttribute(value)}"`);
