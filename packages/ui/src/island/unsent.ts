@@ -13,6 +13,7 @@ import { createElement, forwardRef, useState } from "react";
 import { cx } from "../cx.js";
 import { draftRoute, isOnPage, pathOf, usePathname } from "../marks/route.js";
 import { renderPart } from "../part.js";
+import { SoloOffer } from "../solo.js";
 import { UNSENT_COPY } from "./language.js";
 
 import type { PartProps } from "../part.js";
@@ -101,6 +102,7 @@ export const Unsent = /** @__PURE__ */ forwardRef<HTMLDivElement, UnsentProps>(
           { key: "rows", className: "mk-unsent-rows" },
           ...drafts.map((draft) => row(draft, client, pathname)),
         ),
+        createElement(SoloOffer, { key: "solo" }),
       ],
     );
   },

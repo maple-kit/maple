@@ -7,6 +7,7 @@
  * dealt with is the question and where it sits is a detail of one of its states.
  */
 
+export { SOLO_COPY, SoloOffer, soloCommand } from "../solo.js";
 export { Account } from "./account.js";
 export type { AccountProps } from "./account.js";
 export { Approve } from "./approve.js";
