@@ -1,9 +1,11 @@
+import { createLogger, memorySink } from "@maple-kit/core/logger";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import {
   createInventory,
   createMockClient,
   planCall,
+  PlanFailedError,
   PlanUnavailableError,
   routePlan,
   seenFlags,
@@ -317,7 +319,7 @@ describe("the box, planning a sentence", () => {
     vi.useRealTimers();
   });
 
-  it("shows nothing when a plan fails, and keeps planning", async () => {
+  it("names the failure and keeps planning, with no chip", async () => {
     vi.useFakeTimers();
     const client = createMockClient({
       view: view(),
@@ -326,7 +328,51 @@ describe("the box, planning a sentence", () => {
     client.setQuery("no roasts");
     await settle();
 
-    expect(client.getState()).toMatchObject({ planning: true, suggestions: [], unnamed: false });
+    expect(client.getState()).toMatchObject({
+      planning: true,
+      suggestions: [],
+      unnamed: false,
+      planFailure: "failed",
+    });
+    expect(client.getState().calls.map((row) => row.key)).toEqual([LIST, USER]);
+    vi.useRealTimers();
+  });
+
+  it.each<[string, () => Promise<never>, "refused" | "failed", number | undefined]>([
+    ["a 403", () => Promise.reject(new PlanFailedError("no", 403)), "refused", 403],
+    ["a 401", () => Promise.reject(new PlanFailedError("no", 401)), "refused", 401],
+    ["a 500", () => Promise.reject(new PlanFailedError("no", 500)), "failed", 500],
+    ["no answer", () => Promise.reject(new PlanFailedError("gone")), "failed", undefined],
+  ])("tells %s apart, and logs it with its status", async (_name, fail, failure, status) => {
+    vi.useFakeTimers();
+    const sink = memorySink();
+    const logger = createLogger({ sinks: [sink] });
+    const client = createMockClient({ view: view(), handle: { ...handle(fail), logger } });
+    client.setQuery("no roasts");
+    await settle();
+
+    expect(client.getState().planFailure).toBe(failure);
+    const [entry] = sink.records;
+    expect(entry).toMatchObject({ level: "warn" });
+    expect(entry?.fields["status"]).toBe(status);
+    vi.useRealTimers();
+  });
+
+  it("forgets the failure when the sentence changes or reads", async () => {
+    vi.useFakeTimers();
+    const plan = vi
+      .fn<PlanLookup>()
+      .mockRejectedValueOnce(new PlanFailedError("no", 500))
+      .mockResolvedValue(planOf({ empty: 0.8 }));
+    const client = createMockClient({ view: view(), handle: handle(plan) });
+    client.setQuery("no roasts");
+    await settle();
+    expect(client.getState().planFailure).toBe("failed");
+
+    client.setQuery("no roasts at all");
+    await settle();
+    expect(client.getState().planFailure).toBeUndefined();
+    expect(client.getState().draft).toEqual([{ key: LIST, state: "empty" }]);
     vi.useRealTimers();
   });
 
@@ -373,6 +419,24 @@ describe("the route's planner, over the network", () => {
     await expect(lookup(asked)).rejects.toBeInstanceOf(PlanUnavailableError);
     fake.refuseNext(500);
     await expect(lookup(asked)).rejects.toThrow(/could not plan: 500/);
+  });
+
+  it("reports a WAF's HTML 403 as a refusal, a 500 as a failure, and a dropped request as no answer", async () => {
+    fake.blockNext(403);
+    const blocked = await lookup(asked).catch((error: unknown) => error);
+    expect(blocked).toBeInstanceOf(PlanFailedError);
+    expect(blocked).toMatchObject({ status: 403, refused: true });
+
+    fake.refuseNext(500);
+    expect(await lookup(asked).catch((error: unknown) => error)).toMatchObject({
+      status: 500,
+      refused: false,
+    });
+
+    fake.dropNext();
+    const dropped = await lookup(asked).catch((error: unknown) => error);
+    expect(dropped).toBeInstanceOf(PlanFailedError);
+    expect(dropped).toMatchObject({ status: undefined, refused: false });
   });
 
   it("is at the address the page names", () => {

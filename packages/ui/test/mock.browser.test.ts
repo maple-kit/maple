@@ -1,5 +1,11 @@
 import { decodeRecipe } from "@maple-kit/core/mock";
-import { createInventory, createMockClient, installMock, seenFlags } from "@maple-kit/mock";
+import {
+  createInventory,
+  createMockClient,
+  installMock,
+  PlanFailedError,
+  seenFlags,
+} from "@maple-kit/mock";
 import { createElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
@@ -514,6 +520,29 @@ describe("the box, reading a sentence", () => {
       ),
     );
     expect(find(`.mk-mock-call[data-mk-mocked="true"]`)).toBeNull();
+  });
+
+  it.each<[string, number | undefined, RegExp]>([
+    ["a 403 does not suggest retrying", 403, /refused that\. Set calls below/],
+    ["a 500 suggests trying again", 500, /Try again, or set calls below/],
+    ["no answer suggests trying again", undefined, /Try again, or set calls below/],
+  ])("says so when a plan fails, and %s", async (_name, status, words) => {
+    const lookup = vi.fn<PlanLookup>(() => Promise.reject(new PlanFailedError("no", status)));
+    const client = track(
+      createMockClient({
+        handle: { ...handle(), plan: lookup },
+        view: fakePage().view,
+        defaultOpen: true,
+        planDebounceMs: 10,
+      }),
+    );
+    await render(createElement(MapleMock, { client }));
+    await vi.waitFor(() => expect(find(".mk-mock-field")).not.toBeNull());
+    await userEvent.type(find<HTMLInputElement>(".mk-mock-field")!, "no reviews yet");
+
+    await vi.waitFor(() => expect(find(".mk-mock-unnamed")?.textContent).toMatch(words));
+    await pickState(find(".mk-mock-call:last-child"), "Empty");
+    expect(client.getState().draft).toHaveLength(1);
   });
 
   it("shows nothing at all for a plan it is unsure of", async () => {

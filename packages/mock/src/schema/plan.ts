@@ -17,6 +17,23 @@ export class PlanUnavailableError extends Error {
   override readonly name = "PlanUnavailableError";
 }
 
+/** Raised when the route answered, or could not be reached, and no plan came. */
+export class PlanFailedError extends Error {
+  override readonly name = "PlanFailedError";
+  /** The HTTP status; absent for a request that never got an answer. */
+  readonly status: number | undefined;
+
+  constructor(message: string, status?: number, options?: ErrorOptions) {
+    super(message, options);
+    this.status = status;
+  }
+
+  /** True for a 401 or 403, which asking again will not change. */
+  get refused(): boolean {
+    return this.status === 401 || this.status === 403;
+  }
+}
+
 /** Where the route is, and how to reach it past the interceptor. */
 export interface RoutePlanOptions {
   /** Where Maple's route is mounted, such as `/api/maple`. */
@@ -31,20 +48,30 @@ export interface RoutePlanOptions {
  * A lookup over the route's planner.
  *
  * @throws {PlanUnavailableError} when the route answers 404.
+ * @throws {PlanFailedError} when the route refuses, fails, or cannot be reached.
  */
 export function routePlan(options: RoutePlanOptions): PlanLookup {
   const url = new URL(`${options.basePath.replace(/\/$/, "")}/mock/plan`, origin(options));
 
   return async ({ request, route, calls, flags }, signal) => {
-    const response = await options.fetch(url, {
-      method: "POST",
-      credentials: "same-origin",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ request, route, calls, ...(flags === undefined ? {} : { flags }) }),
-      ...(signal === undefined ? {} : { signal }),
-    });
+    let response: Response;
+    try {
+      response = await options.fetch(url, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ request, route, calls, ...(flags === undefined ? {} : { flags }) }),
+        ...(signal === undefined ? {} : { signal }),
+      });
+    } catch (error) {
+      if (signal?.aborted) throw error;
+      throw new PlanFailedError("The route could not be reached.", undefined, { cause: error });
+    }
     if (response.status === 404) throw new PlanUnavailableError("This route plans nothing.");
-    if (!response.ok) throw new Error(`The route could not plan: ${String(response.status)}`);
+    if (!response.ok) {
+      const status = response.status;
+      throw new PlanFailedError(`The route could not plan: ${String(status)}`, status);
+    }
     const body = (await response.json()) as { plan?: MockPlan | null };
     return body.plan ?? null;
   };

@@ -47,6 +47,8 @@ export const MOCK_COPY = {
   label: "Mock this page",
   field: "Find a call",
   sentence: "Say a state, like “no items yet”",
+  failed: "Couldn't read that. Try again, or set calls below.",
+  refused: "The server refused that. Set calls below.",
   unnamed: "That doesn't name a state this page's data can be in.",
   real: "Real",
   escape: "Esc",

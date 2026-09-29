@@ -33,15 +33,33 @@ export interface PlanFake {
   readonly handlers: RequestHandler[];
   readonly asked: MockPlanRequest[];
   refuseNext(status: number): void;
+  /** The next request answers as a load balancer would: an HTML body, not JSON. */
+  blockNext(status: number): void;
+  /** The next request never gets an answer. */
+  dropNext(): void;
   reset(): void;
 }
 
 export function createPlanFake(): PlanFake {
   const asked: MockPlanRequest[] = [];
   let refusal: number | undefined;
+  let block: number | undefined;
+  let drop = false;
 
   const handlers = [
     http.post(PLAN_URL, async ({ request }) => {
+      if (drop) {
+        drop = false;
+        return HttpResponse.error();
+      }
+      if (block !== undefined) {
+        const status = block;
+        block = undefined;
+        return new HttpResponse("<html><body>Forbidden</body></html>", {
+          status,
+          headers: { "content-type": "text/html" },
+        });
+      }
       if (refusal !== undefined) {
         const status = refusal;
         refusal = undefined;
@@ -61,9 +79,17 @@ export function createPlanFake(): PlanFake {
     refuseNext(status) {
       refusal = status;
     },
+    blockNext(status) {
+      block = status;
+    },
+    dropNext() {
+      drop = true;
+    },
     reset() {
       asked.length = 0;
       refusal = undefined;
+      block = undefined;
+      drop = false;
     },
   };
 }

@@ -68,6 +68,8 @@ export interface MockHandle {
   readonly shape?: ShapeLookup;
   /** Plans a sentence through Maple's route, when the page names one. */
   readonly plan?: PlanLookup;
+  /** Where the box reports what it cannot do, such as a plan the route refused. */
+  readonly logger?: Logger;
   /** The recipe applying on the page's current route, which a comment records. */
   current?(): Recipe | undefined;
   /** Each call a write sent to the server while the recipe's `as` was on. */
@@ -171,6 +173,7 @@ export function installMock(options: InstallOptions = {}): MockHandle {
     inventory,
     ...(shape === undefined ? {} : { shape }),
     ...(plan === undefined ? {} : { plan }),
+    ...(options.logger === undefined ? {} : { logger: options.logger }),
     current: () => (recipe?.route === undefined || recipe.route === route() ? recipe : undefined),
     writes,
     ...(rules === undefined ? {} : { identity: rules }),

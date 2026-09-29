@@ -20,6 +20,7 @@ export type {
   MockClientOptions,
   MockClientState,
   MockView,
+  PlanFailure,
 } from "./client/index.js";
 export { isData } from "./codec.js";
 export type { Answer, Call, Codec } from "./codec.js";
@@ -54,7 +55,7 @@ export {
   valueBranch,
 } from "./schema/json-schema.js";
 export type { Located } from "./schema/json-schema.js";
-export { PlanUnavailableError, routePlan } from "./schema/plan.js";
+export { PlanFailedError, PlanUnavailableError, routePlan } from "./schema/plan.js";
 export type { PlanLookup, RoutePlanOptions } from "./schema/plan.js";
 export { routeShapes } from "./schema/route.js";
 export type { RouteShapesOptions } from "./schema/route.js";

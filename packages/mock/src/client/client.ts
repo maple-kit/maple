@@ -16,7 +16,7 @@ import { installedMock } from "../handle.js";
 import { realIdentity } from "../identity.js";
 import { forgetRecipe, keepRecipeCookie, saveRecipe } from "../link.js";
 import { pathPattern } from "../rest.js";
-import { PlanUnavailableError } from "../schema/plan.js";
+import { PlanFailedError, PlanUnavailableError } from "../schema/plan.js";
 import { PLAN_DEBOUNCE_MS, PLAN_MIN_LENGTH, planCall } from "./plan.js";
 
 import type { SeenFlag } from "../flags.js";
@@ -94,6 +94,8 @@ export interface MockClientState {
   readonly unnamed: boolean;
   /** True while the route is reading the sentence, and not while it is typed. */
   readonly thinking: boolean;
+  /** Why the last sentence was not read: refused for good, or failed and worth another try. */
+  readonly planFailure: PlanFailure | undefined;
   /** The sentence behind the draft, once a chip put it there. */
   readonly request: string | undefined;
   /** The page's route pattern, which a recipe applied from here is scoped to. */
@@ -121,6 +123,9 @@ export interface MockClientState {
   /** What a surface of its own is drawn in: the opposite of the page. */
   readonly scheme: Scheme;
 }
+
+/** A plan that never came: the route said no, or something between us and it failed. */
+export type PlanFailure = "refused" | "failed";
 
 /** The controller. A binding reads `subscribe` and calls the rest. */
 export interface MockClient {
@@ -251,6 +256,7 @@ function initial(open: boolean): MockClientState {
     suggestions: [],
     unnamed: false,
     thinking: false,
+    planFailure: undefined,
     request: undefined,
     route: "/",
     calls: [],
@@ -356,10 +362,11 @@ function cancelPlan(runtime: Runtime): void {
   patch(runtime, { thinking: false });
 }
 
-const QUIET: PlanReading & { thinking: false } = {
+const QUIET: PlanReading & { thinking: false; planFailure: undefined } = {
   suggestions: [],
   unnamed: false,
   thinking: false,
+  planFailure: undefined,
 };
 
 /** A keystroke: restarts the wait and abandons whatever plan was in flight. */
@@ -373,13 +380,13 @@ function schedulePlan(runtime: Runtime): void {
   runtime.planTimer = setTimeout(() => void runPlan(runtime, sentence), wait);
 }
 
-/** A failure is swallowed: the box keeps working, and no chip arrives. */
+/** A failure is named in the box and logged; the manual controls keep working. */
 async function runPlan(runtime: Runtime, sentence: string): Promise<void> {
   const lookup = runtime.handle?.plan;
   if (lookup === undefined) return;
   const flight = new AbortController();
   runtime.planFlight = flight;
-  patch(runtime, { thinking: true });
+  patch(runtime, { thinking: true, planFailure: undefined });
   const { route } = runtime.state;
   const calls = (runtime.handle?.inventory.calls(route) ?? []).map(planCall);
   const flags = seenFlags()
@@ -396,10 +403,22 @@ async function runPlan(runtime: Runtime, sentence: string): Promise<void> {
     if (!flight.signal.aborted) read(runtime, readPlan(plan));
   } catch (error) {
     if (error instanceof PlanUnavailableError) runtime.planOff = true;
-    if (!flight.signal.aborted) patch(runtime, QUIET);
+    if (!flight.signal.aborted) failed(runtime, error);
   } finally {
     if (runtime.planFlight === flight) delete runtime.planFlight;
   }
+}
+
+/** No chip arrives; a route that answered says so, and the host's logger hears it. */
+function failed(runtime: Runtime, error: unknown): void {
+  if (error instanceof PlanUnavailableError) return patch(runtime, QUIET);
+  const status = error instanceof PlanFailedError ? error.status : undefined;
+  runtime.handle?.logger?.warn("A mock sentence could not be planned.", {
+    ...(status === undefined ? {} : { status }),
+    error: String(error),
+  });
+  const refused = error instanceof PlanFailedError && error.refused;
+  patch(runtime, { ...QUIET, planFailure: refused ? "refused" : "failed" });
 }
 
 type Draft = Pick<MockClientState, "draft" | "draftFlags" | "draftAs">;
