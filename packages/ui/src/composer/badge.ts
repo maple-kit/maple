@@ -37,14 +37,14 @@ export const CONTEXT_LABELS = { closed: "Show what was captured", open: "Hide wh
 /** Labels muted, values aligned, two columns — folded to its first row. */
 export const MapleContextBadge = /** @__PURE__ */ forwardRef<HTMLElement, MapleContextProps>(
   function MapleContextBadge(props, ref) {
-    const { composer, detail } = useMaple();
+    const { composer } = useMaple();
     const client = useMapleClient();
     const context = props.context ?? composer.target?.context;
     const Element = (props.asChild ? Slot : "section") as "section";
 
     if (!context) return null;
 
-    const rows = contextRows(context, detail);
+    const rows = contextRows(context);
     const collapsible = props.collapsible !== false && composer.viewing === undefined;
     const open = !collapsible || composer.contextOpen;
 

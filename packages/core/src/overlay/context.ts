@@ -165,18 +165,12 @@ export interface ContextRow {
  *
  * `formatContext` is the one-line form, which is what a scanned row of
  * comments needs. In the composer there is room for two columns, and the
- * window-versus-content gap is the insight — so the default form says
- * "420px covered" rather than leaving a reader to subtract two numbers.
+ * window-versus-content gap is the insight, so the width row says
+ * "420px covered" rather than leaving a reader to subtract two numbers. Every
+ * row is a fact about the page, so the set does not depend on who is reading.
  */
-export function contextRows(
-  context: PageContext | CommentContext,
-  detail: Detail = "developer",
-): readonly ContextRow[] {
+export function contextRows(context: PageContext | CommentContext): readonly ContextRow[] {
   const fields = badgeFields(context);
-  return detail === "developer" ? developerRows(fields) : defaultRows(fields);
-}
-
-function defaultRows(fields: BadgeFields): readonly ContextRow[] {
   const covered = fields.width - fields.contentWidth;
   return [
     {
@@ -184,18 +178,10 @@ function defaultRows(fields: BadgeFields): readonly ContextRow[] {
       value: `${String(fields.width)}px`,
       ...(covered > 0 ? { note: `${String(covered)}px covered` } : {}),
     },
-    { label: "Theme", value: fields.scheme },
-    ...openRow(fields),
-  ];
-}
-
-function developerRows(fields: BadgeFields): readonly ContextRow[] {
-  return [
-    { label: "Window", value: `${String(fields.width)}px` },
     { label: "Content", value: `${String(fields.contentWidth)}px` },
     ...(fields.breakpoint === undefined ? [] : [{ label: "Breakpoint", value: fields.breakpoint }]),
-    { label: "Scheme", value: fields.scheme },
-    { label: "DPR", value: `${String(fields.dpr)}×` },
+    { label: "Theme", value: fields.scheme },
+    { label: "Pixel ratio", value: `${String(fields.dpr)}×` },
     ...(fields.locale === undefined ? [] : [{ label: "Locale", value: fields.locale, mono: true }]),
     ...openRow(fields),
   ];

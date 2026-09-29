@@ -293,32 +293,24 @@ describe("the context badge", () => {
     expect(rows(".probe-page")).toEqual(rows(".probe-stored"));
   });
 
-  it("states how much of the width was covered rather than two numbers to subtract", async () => {
+  it("shows the same environment rows in both details, and states the covered width", async () => {
     started();
     await open();
-
-    expect(rows(".probe-page")).toEqual({
+    const expected = {
       Width: "1440px · 420px covered",
-      Theme: "dark",
-      Open: "Copilot",
-    });
-  });
-
-  it("names the layout width, the breakpoint, the ratio and the locale in developer detail", async () => {
-    started();
-    await open();
-    client.setDetail("developer");
-
-    await vi.waitFor(() => expect(rows(".probe-page")["Window"]).toBe("1440px"));
-    expect(rows(".probe-page")).toEqual({
-      Window: "1440px",
       Content: "1020px",
       Breakpoint: "lg",
-      Scheme: "dark",
-      DPR: "2×",
+      Theme: "dark",
+      "Pixel ratio": "2×",
       Locale: "en-GB",
       Open: "Copilot",
-    });
+    };
+
+    expect(rows(".probe-page")).toEqual(expected);
+    client.setDetail("developer");
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(rows(".probe-page")).toEqual(expected);
   });
 
   it("is a labelled list inside its card, so its values line up in one column", async () => {
