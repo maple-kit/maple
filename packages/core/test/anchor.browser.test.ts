@@ -183,6 +183,52 @@ describe("choosing between one component rendered twice", () => {
   });
 });
 
+/**
+ * A layout component renders once on every route, so its source location is
+ * unique on all of them. Only its text says which page a comment was left on.
+ */
+describe("a single match with a quote", () => {
+  const SHELL = `data-maple-src="src/layout/coffee-shell.tsx:42:3" data-maple-name="CoffeeShell"`;
+  const yirgacheffe = `<main ${SHELL}><h1>Brew a Yirgacheffe</h1><p>Grind size for this roast.</p></main>`;
+  const sumatra = `<main ${SHELL}><h1>Steam a cortado</h1><p>Milk temperature and texture.</p></main>`;
+
+  it("resolves on the page it was described on", () => {
+    const root = mount(yirgacheffe);
+    const found = resolved(describeElement(root.querySelector("main")!, { root }));
+    expect(found.by).toBe("source");
+    expect(found.confidence).toBeCloseTo(0.9);
+  });
+
+  it("does not resolve on another page that renders the same component", () => {
+    const { quote } = describeElement(mount(yirgacheffe).querySelector("main")!, {
+      root: container,
+    });
+    container.remove();
+    mount(sumatra);
+
+    const anchor = { source: "src/layout/coffee-shell.tsx:42:3", component: "CoffeeShell", quote };
+    expect(resolveAnchor(anchor, { root: container })).toMatchObject({
+      status: "orphaned",
+      reason: "changed",
+      tried: ["source", "component", "quote"],
+    });
+  });
+
+  it("falls through to a rung that can still place it", () => {
+    mount(`<main ${SHELL}><p>Other text</p></main><p>approved the plan</p>`);
+    const found = resolved({
+      source: "src/layout/coffee-shell.tsx:42:3",
+      quote: { exact: "approved the plan" },
+    });
+    expect(found.by).toBe("quote");
+  });
+
+  it("trusts a key without asking the text", () => {
+    mount(`<p data-maple-key="msg:1">Now reads differently</p>`);
+    expect(resolved({ key: "msg:1", quote: { exact: "Before the edit" } }).by).toBe("key");
+  });
+});
+
 describe("orphaning", () => {
   it("says so when nothing was recorded", () => {
     mount(`<p>Text</p>`);
@@ -275,15 +321,14 @@ describe("narrowing to the passage", () => {
     expect(found.status === "resolved" && found.by).toBe("source");
   });
 
-  it("stands on the element when the quote is no longer in it", () => {
+  it("orphans the anchor when the quote is no longer in the element", () => {
     mount(PARAGRAPH);
     const found = resolveAnchor(anchorOn("a sentence nobody wrote here at all"), {
       root: container,
       passage: true,
     });
 
-    expect(found.status).toBe("resolved");
-    expect(found.status === "resolved" && found.range).toBeUndefined();
+    expect(found).toMatchObject({ status: "orphaned", reason: "changed" });
   });
 
   it("changes nothing for an anchor with no quote to narrow to", () => {
