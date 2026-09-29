@@ -130,6 +130,40 @@ describe("POST /mock/plan", () => {
     expect(classifier.asked()).toEqual([]);
   });
 
+  describe("a gzipped body", () => {
+    async function gzip(text: string): Promise<Uint8Array<ArrayBuffer>> {
+      const stream = new Blob([text]).stream().pipeThrough(new CompressionStream("gzip"));
+      return new Uint8Array(await new Response(stream).arrayBuffer());
+    }
+
+    function zipped(body: BodyInit, encoding = "gzip"): Request {
+      return new Request(`${BASE}/mock/plan`, {
+        method: "POST",
+        body,
+        headers: { "content-type": "application/json", "content-encoding": encoding },
+      });
+    }
+
+    it("is read the same as a plain one", async () => {
+      const plain = await handler(keywordClassifier())(post(ASKED));
+      const body = await gzip(JSON.stringify(ASKED));
+      const response = await handler(keywordClassifier())(zipped(body));
+
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual(await plain.json());
+    });
+
+    it("is refused when it is not gzip, or inflates past the ceiling", async () => {
+      const handle = handler(keywordClassifier());
+      const bomb = await gzip(JSON.stringify({ ...ASKED, request: "a".repeat(600_000) }));
+      const garbage = new Uint8Array([1, 2, 3, 4]);
+
+      expect((await handle(zipped(await gzip("{}"), "br"))).status).toBe(415);
+      expect((await handle(zipped(bomb))).status).toBe(400);
+      expect((await handle(zipped(garbage))).status).toBe(400);
+    });
+  });
+
   it("plans a sentence once, however often it is asked", async () => {
     const classifier = memoryClassifier({ state: "empty" });
     const handle = handler(classifier);

@@ -32,6 +32,8 @@ export const SURE: MockPlan = {
 export interface PlanFake {
   readonly handlers: RequestHandler[];
   readonly asked: MockPlanRequest[];
+  /** What each request's body weighed on the wire, and how it was encoded. */
+  readonly sent: { readonly bytes: number; readonly encoding: string | null }[];
   refuseNext(status: number): void;
   /** The next request answers as a load balancer would: an HTML body, not JSON. */
   blockNext(status: number): void;
@@ -42,6 +44,7 @@ export interface PlanFake {
 
 export function createPlanFake(): PlanFake {
   const asked: MockPlanRequest[] = [];
+  const sent: PlanFake["sent"][number][] = [];
   let refusal: number | undefined;
   let block: number | undefined;
   let drop = false;
@@ -65,7 +68,10 @@ export function createPlanFake(): PlanFake {
         refusal = undefined;
         return HttpResponse.json({ error: "refused" }, { status });
       }
-      const body = (await request.json()) as MockPlanRequest;
+      const encoding = request.headers.get("content-encoding");
+      const wire = new Uint8Array(await request.arrayBuffer());
+      sent.push({ bytes: wire.byteLength, encoding });
+      const body = (await inflate(wire, encoding)) as MockPlanRequest;
       asked.push(body);
       if (body.request.trim() === "") return HttpResponse.json({ plan: null });
       const calls = body.calls.map(({ key }) => ({ key, concerned: true, p: 0.9 }));
@@ -76,6 +82,7 @@ export function createPlanFake(): PlanFake {
   return {
     handlers,
     asked,
+    sent,
     refuseNext(status) {
       refusal = status;
     },
@@ -87,9 +94,16 @@ export function createPlanFake(): PlanFake {
     },
     reset() {
       asked.length = 0;
+      sent.length = 0;
       refusal = undefined;
       block = undefined;
       drop = false;
     },
   };
+}
+
+async function inflate(wire: Uint8Array<ArrayBuffer>, encoding: string | null): Promise<unknown> {
+  if (encoding !== "gzip") return JSON.parse(new TextDecoder().decode(wire));
+  const stream = new Blob([wire]).stream().pipeThrough(new DecompressionStream("gzip"));
+  return new Response(stream).json();
 }

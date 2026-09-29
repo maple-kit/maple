@@ -439,6 +439,49 @@ describe("the route's planner, over the network", () => {
     expect(dropped).toMatchObject({ status: undefined, refused: false });
   });
 
+  it("gzips the body, and reads the same when the browser cannot", async () => {
+    const zipped = await lookup(asked);
+    vi.stubGlobal("CompressionStream", undefined);
+    const plain = await lookup(asked);
+    vi.unstubAllGlobals();
+
+    expect(fake.sent.map(({ encoding }) => encoding)).toEqual(["gzip", null]);
+    expect(fake.asked).toEqual([asked, asked]);
+    expect(plain).toEqual(zipped);
+  });
+
+  describe("on a page with a hundred recorded calls", () => {
+    /** Summaries that do not squeeze to nothing: each is its own run of hex. */
+    const many = Array.from({ length: 100 }, (_unused, index) => ({
+      key: `trpc:query dashboard.metric${String(index)}`,
+      summary: Array.from({ length: 30 }, (_field, at) =>
+        ((index + 1) * (at + 7) * 2_654_435_761).toString(16).slice(-9),
+      ).join(", "),
+    }));
+
+    it("sends no request body over 8 KB, and merges the readings in order", async () => {
+      const plan = await lookup({ ...asked, calls: many });
+
+      expect(fake.sent.length).toBeGreaterThan(1);
+      for (const { bytes, encoding } of fake.sent) {
+        expect(encoding).toBe("gzip");
+        expect(bytes).toBeLessThanOrEqual(8 * 1024);
+      }
+      expect(fake.asked.flatMap((part) => part.calls)).toEqual(many);
+      expect(plan?.calls.map(({ key }) => key)).toEqual(many.map(({ key }) => key));
+    });
+
+    it("sends it whole when it fits, and stops at the first refusal", async () => {
+      await lookup({ ...asked, calls: many.slice(0, 3) });
+      expect(fake.sent).toHaveLength(1);
+
+      fake.reset();
+      fake.refuseNext(403);
+      await expect(lookup({ ...asked, calls: many })).rejects.toMatchObject({ status: 403 });
+      expect(fake.sent).toHaveLength(0);
+    });
+  });
+
   it("is at the address the page names", () => {
     expect(PLAN_URL).toBe("https://preview.example.com/api/maple/mock/plan");
   });

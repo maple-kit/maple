@@ -4,6 +4,8 @@
  * preview, or has no planner, answers 404.
  */
 
+import { encodeBody, mergePlans, splitRequest } from "./plan-body.js";
+
 import type { MockPlan, MockPlanRequest } from "@maple-kit/core/connectors";
 
 /** Asks the route for a plan. Null for a sentence with nothing in it yet. */
@@ -45,7 +47,8 @@ export interface RoutePlanOptions {
 }
 
 /**
- * A lookup over the route's planner.
+ * A lookup over the route's planner. Bodies are gzipped, and a page with many
+ * calls is planned in batches, one request after another, with the readings merged.
  *
  * @throws {PlanUnavailableError} when the route answers 404.
  * @throws {PlanFailedError} when the route refuses, fails, or cannot be reached.
@@ -53,28 +56,47 @@ export interface RoutePlanOptions {
 export function routePlan(options: RoutePlanOptions): PlanLookup {
   const url = new URL(`${options.basePath.replace(/\/$/, "")}/mock/plan`, origin(options));
 
-  return async ({ request, route, calls, flags }, signal) => {
-    let response: Response;
-    try {
-      response = await options.fetch(url, {
-        method: "POST",
-        credentials: "same-origin",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ request, route, calls, ...(flags === undefined ? {} : { flags }) }),
-        ...(signal === undefined ? {} : { signal }),
-      });
-    } catch (error) {
-      if (signal?.aborted) throw error;
-      throw new PlanFailedError("The route could not be reached.", undefined, { cause: error });
+  return async (request, signal) => {
+    const plans: MockPlan[] = [];
+    for (const part of await splitRequest(request, encodeBody)) {
+      const plan = await post(options, url, part, signal);
+      if (plan === null) return null;
+      plans.push(plan);
     }
-    if (response.status === 404) throw new PlanUnavailableError("This route plans nothing.");
-    if (!response.ok) {
-      const status = response.status;
-      throw new PlanFailedError(`The route could not plan: ${String(status)}`, status);
-    }
-    const body = (await response.json()) as { plan?: MockPlan | null };
-    return body.plan ?? null;
+    return plans.length === 0 ? null : mergePlans(plans);
   };
+}
+
+async function post(
+  options: RoutePlanOptions,
+  url: URL,
+  request: MockPlanRequest,
+  signal?: AbortSignal,
+): Promise<MockPlan | null> {
+  const { bytes, gzip } = await encodeBody(request);
+  let response: Response;
+  try {
+    response = await options.fetch(url, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "content-type": "application/json",
+        ...(gzip ? { "content-encoding": "gzip" } : {}),
+      },
+      body: bytes,
+      ...(signal === undefined ? {} : { signal }),
+    });
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    throw new PlanFailedError("The route could not be reached.", undefined, { cause: error });
+  }
+  if (response.status === 404) throw new PlanUnavailableError("This route plans nothing.");
+  if (!response.ok) {
+    const status = response.status;
+    throw new PlanFailedError(`The route could not plan: ${String(status)}`, status);
+  }
+  const body = (await response.json()) as { plan?: MockPlan | null };
+  return body.plan ?? null;
 }
 
 function origin(options: RoutePlanOptions): string {
