@@ -25,8 +25,8 @@ export interface IdentityField {
   readonly values?: readonly string[];
 }
 
-/** The host's rules, as it declares them in `RouteOptions.mock.identity`. */
-export interface IdentitySource {
+/** Rules whose identity comes from a client call: the interceptor reads and rewrites its answer. */
+export interface CallIdentity {
   /** The call whose answer says who the reviewer is: `rest:GET /api/session`. */
   readonly call: string;
   readonly role?: IdentityField;
@@ -36,19 +36,61 @@ export interface IdentitySource {
   readonly requires?: Readonly<Record<string, CallNeed>>;
 }
 
+/** Who a server render says the reviewer really is, as the host read it from the request. */
+export interface RealIdentityRead {
+  readonly role?: string;
+  readonly roles?: readonly string[];
+  readonly permissions?: readonly string[];
+}
+
+/**
+ * Rules whose identity is rendered by the server, so no client call carries it.
+ * The route asks `read` who the reviewer really is; the page is shown the
+ * recipe's `as` by `displayedIdentity` in `@maple-kit/mock/server`.
+ */
+export interface ServerIdentity {
+  /** Who the reviewer really is, or null when nobody is signed in. */
+  read(request: Request): Promise<RealIdentityRead | null>;
+  /** The vocabulary, since no call shape lists it. */
+  readonly roles: readonly string[];
+  readonly permissions?: readonly string[];
+  /** Keyed by call. Under `as`, a call whose need the shown identity does not meet answers 403. */
+  readonly requires?: Readonly<Record<string, CallNeed>>;
+}
+
+/** The host's rules, as it declares them in `RouteOptions.mock.identity`. */
+export type IdentitySource = CallIdentity | ServerIdentity;
+
+/** Whether the identity is rendered by the server rather than read from a call. */
+export function isServerIdentity(source: IdentitySource): source is ServerIdentity {
+  return "read" in source && typeof source.read === "function";
+}
+
+/** A field's words, and where the call's answer holds it: no path when the server renders it. */
+export interface IdentityWords {
+  readonly path?: string;
+  readonly values: readonly string[];
+}
+
+/** Who the reviewer really is, as a server render said; null when nobody is signed in. */
+export type CurrentIdentity = RealIdentityRead | null;
+
 /** The rules as the page reads them, every vocabulary filled in. */
 export interface IdentityRules {
-  readonly call: string;
-  readonly role?: Required<IdentityField>;
-  readonly permissions?: Required<IdentityField>;
+  /** The identity call. Absent when the server renders the identity. */
+  readonly call?: string;
+  readonly role?: IdentityWords;
+  readonly permissions?: IdentityWords;
   readonly requires: Readonly<Record<string, CallNeed>>;
+  /** Present when the server renders the identity: who it says the reviewer really is. */
+  readonly server?: { readonly current: CurrentIdentity };
 }
 
 /**
  * The rules with each vocabulary filled in: the host's words, else the shape's,
  * and every role and permission `requires` names.
  */
-export function identityRules(source: IdentitySource, shape?: Shape): IdentityRules {
+export function identityRules(source: CallIdentity, shape?: Shape): IdentityRules {
   const requires = source.requires ?? {};
   const needs = Object.values(requires);
   const role =
@@ -72,6 +114,25 @@ export function identityRules(source: IdentitySource, shape?: Shape): IdentityRu
     ...(role ? { role } : {}),
     ...(permissions ? { permissions } : {}),
     requires,
+  };
+}
+
+/** A server-rendered source's rules: its words plus those `requires` names, and who it read. */
+export function serverIdentityRules(
+  source: ServerIdentity,
+  current: CurrentIdentity,
+): IdentityRules {
+  const requires = source.requires ?? {};
+  const needs = Object.values(requires);
+  const roles = [...source.roles, ...needs.flatMap((need) => need.roles ?? [])];
+  const named = needs.flatMap((need) => (need.permission === undefined ? [] : [need.permission]));
+  return {
+    role: { values: [...new Set(roles)] },
+    ...(source.permissions === undefined
+      ? {}
+      : { permissions: { values: [...new Set([...source.permissions, ...named])] } }),
+    requires,
+    server: { current },
   };
 }
 
@@ -132,13 +193,27 @@ function strings(value: unknown): string[] {
 
 /** Whether `value` is identity rules as the route writes them. */
 export function isIdentityRules(value: unknown): value is IdentityRules {
-  if (!isNode(value) || typeof value["call"] !== "string" || !isNode(value["requires"])) {
-    return false;
-  }
+  if (!isNode(value) || !isNode(value["requires"])) return false;
+  const rendered = isNode(value["server"]) && isCurrent(value["server"]["current"]);
+  const called = typeof value["call"] === "string";
+  if (!called && !rendered) return false;
   return [value["role"], value["permissions"]].every(
     (one) =>
       one === undefined ||
-      (isNode(one) && typeof one["path"] === "string" && isWords(one["values"])),
+      (isNode(one) &&
+        (typeof one["path"] === "string" || (!called && one["path"] === undefined)) &&
+        isWords(one["values"])),
+  );
+}
+
+function isCurrent(value: unknown): boolean {
+  if (value === null) return true;
+  if (!isNode(value)) return false;
+  const { permissions, role, roles } = value;
+  return (
+    (role === undefined || typeof role === "string") &&
+    (roles === undefined || isWords(roles)) &&
+    (permissions === undefined || isWords(permissions))
   );
 }
 

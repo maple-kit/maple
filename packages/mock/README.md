@@ -161,6 +161,12 @@ identity: {
 }
 ```
 
+An app that renders the role on the server has no session call. Give
+`mock.identity` a `read(request)` and the `roles` in place of `call`, and show
+the page `displayedIdentity(request, real, { preview, roles })` from
+`@maple-kit/mock/server` where it seeds the client. That value is for display
+only: never authorise with it, and keep checking the real session.
+
 **On the server**, `requestRecipe(request)` from `@maple-kit/mock/server`
 reads the recipe from a request's `?maple-mock=` link or the page's cookie, for
 flags and roles evaluated in a server render.

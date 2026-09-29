@@ -565,6 +565,62 @@ gated as `/mock/schema` is. A preview that declares none answers
 `200 { "identity": null }`, so a page's console shows no failed request; 404
 means the mock is off (`preview` is false).
 
+**A server render can be the source instead of a call.** Many apps never call
+a session endpoint: the root layout reads the session and seeds the client with
+its roles, so there is no answer for the interceptor to read or rewrite. Give
+`mock.identity` a `read` in place of `call`:
+
+```ts
+identity: {
+  read: async (request) => {
+    const session = await getSession(request);
+    return session ? { role: session.role, permissions: session.grants } : null;
+  },
+  roles: ["owner", "barista", "trainee"],
+  permissions: ["roast:delete"],
+  requires: { "rest:GET /api/audit": { roles: ["owner"] } },
+}
+```
+
+- **`read` says who the reviewer really is**, from the request, as `{ role }`
+  or `{ roles }` and optionally `permissions`; it returns `null` when nobody is
+  signed in. It is asked only of a preview and only after Maple's own identity
+  connector has resolved the reviewer, so it never runs on a production build.
+- **`roles` and `permissions` are the vocabulary**, since no call shape lists
+  it. Every role and permission `requires` names is added.
+- **The route serves `current` beside the rules**: `GET {base}/mock/identity`
+  answers `{ identity: { role, permissions, requires, server: { current } } }`.
+  When `read` returns `null`, the answer is still `200`, with
+  `current: null`: the vocabulary and `requires` stay useful, and a 401 would
+  put a failed request in the console of every signed-out page.
+- **`displayedIdentity` shows the page the recipe's `as`.** The host calls it
+  where it seeds the client, with the identity it already read, and renders
+  with the result:
+
+  ```ts
+  import { displayedIdentity } from "@maple-kit/mock/server";
+
+  const shown = displayedIdentity(request, real, { preview: isPreview, roles });
+  ```
+
+  It returns `real` unchanged with no recipe, no `as`, a build that is not a
+  preview (the same switch as `mock.preview`), or a role `roles` does not
+  list. Otherwise it replaces `role` (and `roles`, when the identity has them)
+  and applies the permission grants and removals.
+
+- **The client judges `requires` without a call.** The role the recipe names,
+  else the one `current` carries, decides which calls answer 403; the box lists
+  `current` as the real role.
+- **Switching `as` reloads the page**, because the server renders it. The box
+  says so on the role and permission controls ("reloads the page") and applies
+  the switch at once, where a call-sourced identity waits for Apply.
+
+**`displayedIdentity` is display only.** Render with what it returns and pass it
+to the client, and never use it to authorise anything. Procedures, queries and
+backend calls keep checking the real session: `as` changes what a reviewer
+sees, never what they may do. The name says so on purpose. A guard written
+against its result would let anyone who can set a cookie act as an owner.
+
 **The page applies them.** `installMock({ route })` reads the rules once, and
 only when the recipe has `as`; `installMock({ identity })` supplies them
 instead.

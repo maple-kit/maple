@@ -7,8 +7,23 @@
  */
 
 export { activeRecipe, MOCK_HANDLE_KEY } from "./active.js";
-export { identityRules, isIdentityRules } from "./identity.js";
-export type { CallNeed, IdentityField, IdentityRules, IdentitySource } from "./identity.js";
+export {
+  identityRules,
+  isIdentityRules,
+  isServerIdentity,
+  serverIdentityRules,
+} from "./identity.js";
+export type {
+  CallIdentity,
+  CallNeed,
+  CurrentIdentity,
+  IdentityField,
+  IdentityRules,
+  IdentitySource,
+  IdentityWords,
+  RealIdentityRead,
+  ServerIdentity,
+} from "./identity.js";
 export {
   decodeRecipe,
   encodeRecipe,
