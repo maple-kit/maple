@@ -21,6 +21,7 @@ import { useNudges } from "./nudge.js";
 import { flag, OFF_ATTRIBUTE, place } from "./paint.js";
 import { addresses, draftPlacements, placements } from "./placement.js";
 import { MapleTargetRing } from "./ring.js";
+import { usePathname } from "./route.js";
 
 import type { Box } from "./geometry.js";
 import type { Nudge, Nudges } from "./nudge.js";
@@ -72,9 +73,10 @@ export const MapleMarkLayer = /** @__PURE__ */ forwardRef<HTMLDivElement, MarkLa
     );
 
     const drafts = useWaiting(state);
+    const pathname = usePathname(container.ownerDocument.defaultView);
     const drafted = useMemo(
-      () => draftPlacements(drafts, container.ownerDocument),
-      [drafts, container],
+      () => draftPlacements(drafts, container.ownerDocument, pathname),
+      [drafts, container, pathname],
     );
 
     const nudges = useNudges();

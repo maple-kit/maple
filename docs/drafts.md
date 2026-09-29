@@ -49,14 +49,19 @@ Batching only works if losing a batch is hard. A draft in `localStorage`
 survives a reload and a crash and does **not** survive somebody closing the tab
 and never coming back, because nobody else can see it.
 
-So `beforeunload` is attached whenever anything is unpublished — a comment
-being typed, or one merely kept — rather than only while the composer is dirty,
-and `confirmOnUnload` now defaults to on. The browser's own dialog is not
-pretty and it is the only thing that fires on a tab close. `confirmOnUnload:
-false` turns it off for a host that would rather risk it.
+So the guard saves before anything that could end the page, and attaches
+`beforeunload` only while something would be lost by a reload: input in the open
+composer, a save still inside its debounce window, or drafts held only in memory
+because the browser blocks site data. A kept draft that has reached
+`localStorage` is not at risk from a reload, so it does not ask, and a page
+with only kept drafts keeps bfcache. `confirmOnUnload: false` turns the dialog
+off for a host that would rather risk the rest.
 
-It costs bfcache on a page with unsent comments and nothing on a page without,
-because the listener is attached and removed as drafts come and go.
+A draft belongs to the route it was written on. Marks are placed only for drafts
+whose recorded path matches the current one, ignoring host and query, because a
+shared layout would otherwise let a draft from `/menu` land on `/roasts/huila`.
+The unsent list tags the others "On another page" and links to their path. Sent
+comments are not filtered by route yet.
 
 ## Copy as markdown
 

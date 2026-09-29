@@ -1060,6 +1060,22 @@ function ledger(): string {
   cursor: pointer;
 }
 
+.mk-unsent-where {
+  flex: none;
+  max-width: 45%;
+  color: var(--mk-faint);
+  font-size: 11px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mk-unsent-where:hover {
+  color: var(--mk-fg);
+}
+
 .mk-unsent-drop {
   flex: none;
   padding: 2px 7px;
