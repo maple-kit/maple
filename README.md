@@ -3,17 +3,12 @@
 <img src="docs/assets/card.svg" alt="Maple: visual review comments on deployed previews, written for people and read by agents. Read the intro post." width="100%">
 </picture></a></p>
 
-<p align="center"><b><a href="https://maple-kit.org">maple-kit.org</a></b> · <a href="https://blog.nitzan.fyi/introducing-maple">Intro post</a> · <a href="#documentation">Docs</a> · <a href="https://www.npmjs.com/org/maple-kit">npm</a></p>
+<p align="center"><b><a href="https://maple-kit.org">maple-kit.org</a></b> · <a href="https://blog.nitzan.fyi/introducing-maple">Intro post</a> · <a href="#pick-a-setup">Pick a setup</a> · <a href="#documentation">Docs</a></p>
 
-<a href="https://maple-kit.org"><img src="https://img.shields.io/badge/site-maple--kit.org-465a2b?style=flat-square&labelColor=1a1d23" alt="maple-kit.org"></a>
+<p align="center">
 <a href="https://github.com/maple-kit/maple/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/maple-kit/maple/ci.yml?branch=main&label=CI&style=flat-square&color=465a2b&labelColor=1a1d23" alt="CI"></a>
 <a href="https://www.npmjs.com/package/@maple-kit/core"><img src="https://img.shields.io/npm/v/@maple-kit/core?style=flat-square&label=%40maple-kit%2Fcore&color=465a2b&labelColor=1a1d23" alt="@maple-kit/core on npm"></a>
 <a href="LICENSE"><img src="https://img.shields.io/github/license/maple-kit/maple?style=flat-square&color=465a2b&labelColor=1a1d23" alt="Apache-2.0"></a>
-
-<p align="center">
-  <img src="docs/assets/demo.gif" alt="A reviewer opens Maple on a dashboard that already carries nine comments, picks the date range in the top bar, and writes that it reads as a label rather than a control. As they type, the assist tier scores the comment against five pillars and calls it a request. They publish it, a new pin lands on the date range, and the count reads ten open." width="100%">
-  <br>
-  <sub><a href="docs/assets/demo.mp4">Watch it as video</a> · recorded from <a href="examples/vite-app">the Vite example</a> by <a href="tools/demo-recorder">tools/demo-recorder</a></sub>
 </p>
 
 A reviewer points at something on a preview deployment and says what is wrong.
@@ -78,20 +73,26 @@ this. None combines all four of:
 
 ## Pick a setup
 
-The SDK route's `store` has no default: without one, the comment endpoints
-answer 404. These are the shapes that work, smallest first.
+The SDK route has no default store: without one, its comment endpoints answer 404. Smallest setup first:
 
-- **Try it locally, with no accounts.** `maple review` proxies your running app and stores comments as files in `.maple/<branch-slug>/comments.json`. Read: [`docs/review.md`](docs/review.md), [`packages/cli`](packages/cli).
-- **Review a deployed preview alone.** `maple solo <preview-url>`, or the agent's `start_solo` tool. Comments go to your machine through a loopback bridge. A guest's comments cannot gate a merge. Read: [`docs/solo.md`](docs/solo.md).
-- **Review a shared preview as a team.** GitHub, one token per reviewer through Device Flow. `npx @maple-kit/cli setup app --owner=acme`, then `maple setup verify --client-id=<Iv…>`. Set `MAPLE_GITHUB_CLIENT_ID`, `MAPLE_COOKIE_KEY` and `MAPLE_PREVIEW=1`. Read: [`docs/github-auth.md`](docs/github-auth.md), [`docs/configuration.md`](docs/configuration.md), [`setup-maple-org`](plugins/maple/skills/setup-maple-org/SKILL.md).
-- **Let an agent act on the comments.** Add the MCP server and the Stop hook, or install the Claude Code plugin. Read: [`docs/agent-loop.md`](docs/agent-loop.md), [`packages/mcp`](packages/mcp), [`setup-maple-agent-loop`](plugins/maple/skills/setup-maple-agent-loop/SKILL.md).
-- **Block the merge until it is reviewed.** `maple setup ci --require-approval --write` adds the workflow; require the `maple/visual-review` check in a ruleset. Read: [`docs/gate.md`](docs/gate.md).
-- **Review empty, failing and huge states.** `@maple-kit/mock` rewrites the page's API responses into the state a reviewer names. Read: [`docs/mock.md`](docs/mock.md), [`packages/mock`](packages/mock).
-- **Use your own backend.** Implement a connector; `maple connectors` prints what each one supports. Read: [`docs/connectors.md`](docs/connectors.md), [`contribute-connector`](.claude/skills/contribute-connector/SKILL.md).
-
-There is no self-hosted shared store yet: a file store in a preview pod loses
-its comments with the pod. Until one lands, a team shares GitHub, or writes a
-[connector](docs/connectors.md).
+<table>
+<tr>
+<td width="50%" valign="top"><b>Try it locally</b><br>No accounts and nothing wired in. Maple proxies your running app and keeps comments as files under <code>.maple/</code>.<br><code>maple review</code><br><sub><a href="docs/review.md">review</a> · <a href="packages/cli">CLI</a></sub></td>
+<td width="50%" valign="top"><b>Review a preview alone</b><br>Comments reach your machine through a loopback bridge. A guest cannot gate a merge.<br><code>maple solo &lt;preview-url&gt;</code><br><sub><a href="docs/solo.md">solo</a></sub></td>
+</tr>
+<tr>
+<td width="50%" valign="top"><b>Review as a team</b><br>Each reviewer signs in to GitHub through Device Flow, so every comment is written as its author. No secret sits in the preview.<br><code>maple setup app --owner=acme</code><br><sub><a href="docs/github-auth.md">GitHub auth</a> · <a href="docs/configuration.md">configuration</a> · <a href="plugins/maple/skills/setup-maple-org/SKILL.md">setup-maple-org</a></sub></td>
+<td width="50%" valign="top"><b>Let an agent fix it</b><br>The MCP server hands the agent each comment and resolves it against the commit. The Stop hook keeps the agent working while any are open.<br><code>/plugin install maple@maple-kit</code><br><sub><a href="docs/agent-loop.md">agent loop</a> · <a href="packages/mcp">MCP</a> · <a href="plugins/maple/skills/setup-maple-agent-loop/SKILL.md">setup-maple-agent-loop</a></sub></td>
+</tr>
+<tr>
+<td width="50%" valign="top"><b>Gate the merge</b><br><code>maple/visual-review</code> fails while a comment is open, and optionally until a reviewer approves.<br><code>maple setup ci --require-approval --write</code><br><sub><a href="docs/gate.md">gate</a></sub></td>
+<td width="50%" valign="top"><b>Review edge-case states</b><br>A reviewer names a state (empty, failing, a thousand rows), and the page's API calls return it.<br><code>import "@maple-kit/mock/install"</code><br><sub><a href="docs/mock.md">mock</a> · <a href="packages/mock">package</a></sub></td>
+</tr>
+<tr>
+<td width="50%" valign="top"><b>Bring your own backend</b><br>A connector is plain Promise methods, and its capabilities are the methods it defines.<br><code>maple connectors</code><br><sub><a href="docs/connectors.md">connectors</a> · <a href=".claude/skills/contribute-connector/SKILL.md">contribute-connector</a></sub></td>
+<td width="50%" valign="top"><b>Host a shared store</b><br>Not built yet. A file store in a preview pod loses its comments when the pod goes, so use GitHub or write a connector for now.<br><sub><a href="docs/connectors.md">connectors</a></sub></td>
+</tr>
+</table>
 
 ## Add it to an app
 

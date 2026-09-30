@@ -132,8 +132,9 @@ through an `<img>` renders in a restricted mode where a link inside it cannot
 be activated, and GitHub strips `style`, so nothing can be positioned over the
 image either. The whole card is wrapped in one `<a>` to the intro post
 instead, the drawn button names where that goes, and the `alt` ends with the
-same words. One card is therefore one destination: everywhere else the README
-needs to point is a badge, which is also why there is no second button.
+same words. One card is therefore one destination, which is why there is no
+second button. The `<a><picture>` sits inside a `<p>`: without a block element
+around it, GitHub moves the `<source>` out and the link wraps an empty picture.
 
 Two more things are not obvious. Every string in both files is live text in a
 system font stack rather than outlines, because outlining a sentence that will
@@ -142,10 +143,13 @@ rather than `opacity` on the group: a group opacity composites the drawing
 through one offscreen buffer and softens every cell, and the cells never
 overlap, so the two are the same picture.
 
-The badges under it are shields.io, in the accent over `--mk-fg`, and they are
-the only images in the README fetched from somewhere else. They say what a
-reader cannot see from the page: where the site is, whether `main` is green,
-what version is on npm, and the licence.
+Under it, one centred line of text links names the site first, then the intro
+post and the two places in the README a reader most often wants. The badges
+below that are shields.io, in the accent over `--mk-fg`, and they are the only
+images in the README fetched from somewhere else. They say what a reader cannot
+see from the page: whether `main` is green, what version is on npm, and the
+licence. The site is a text link rather than a badge, because a badge reads as
+status and the site is a destination.
 
 ### The how-it-works animation
 
