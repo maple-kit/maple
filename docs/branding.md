@@ -132,8 +132,9 @@ through an `<img>` renders in a restricted mode where a link inside it cannot
 be activated, and GitHub strips `style`, so nothing can be positioned over the
 image either. The whole card is wrapped in one `<a>` to the intro post
 instead, the drawn button names where that goes, and the `alt` ends with the
-same words. One card is therefore one destination: everywhere else the README
-needs to point is a badge, which is also why there is no second button.
+same words. One card is therefore one destination, which is why there is no
+second button. The `<a><picture>` sits inside a `<p>`: without a block element
+around it, GitHub moves the `<source>` out and the link wraps an empty picture.
 
 Two more things are not obvious. Every string in both files is live text in a
 system font stack rather than outlines, because outlining a sentence that will
@@ -142,10 +143,38 @@ rather than `opacity` on the group: a group opacity composites the drawing
 through one offscreen buffer and softens every cell, and the cells never
 overlap, so the two are the same picture.
 
-The badges under it are shields.io, in the accent over `--mk-fg`, and they are
-the only images in the README fetched from somewhere else. They say what a
-reader cannot see from the page: where the site is, whether `main` is green,
-what version is on npm, and the licence.
+Under it, one centred line of text links names the site first, then the intro
+post and the two places in the README a reader most often wants. The badges
+below that are shields.io, in the accent over `--mk-fg`, and they are the only
+images in the README fetched from somewhere else. They say what a reader cannot
+see from the page: whether `main` is green, what version is on npm, and the
+licence. The site is a text link rather than a badge, because a badge reads as
+status and the site is a destination.
+
+### The how-it-works animation
+
+`docs/assets/how-it-works.svg` and `how-it-works-dark.svg` are the "How it
+works" strip from [maple-kit.org](https://maple-kit.org), sampled at 30 frames a
+second over its 17 second loop. Each panel's distinct frames are pixel paths,
+shown and hidden by CSS keyframes alone, with no script and no font file, so
+GitHub animates them through an `<img>`. The verbs under the panels take the
+accent while their act plays; under `prefers-reduced-motion` the finished
+picture stands still.
+
+They are generated, not drawn, from the site's own strip code, which lives with
+the site rather than here. Regenerate both when the site's strip changes. The
+dimmed panels are mixed 45% of the way toward the ground, so the dark file is
+computed from the dark palette, not recoloured from the light one.
+
+### The setup icons
+
+`docs/assets/setups/` holds the eight icons in the README's "Pick a setup"
+grid, each as `<slug>.svg` and `<slug>-dark.svg`. They are drawn on the strip's
+grid from its sprites and palette: the crab, the castle, the review leaves and
+the gate, with the store dimmed the way the strip dims a panel that is not
+playing. The canvas is 32 by 24 cells and the README draws it at `height="48"`,
+which is two device pixels a cell. They are decorative, so the `<img>` has an
+empty `alt`, and like the strip they are generated rather than hand-edited.
 
 ## On a pull request
 

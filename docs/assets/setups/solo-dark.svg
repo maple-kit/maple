@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="48" viewBox="0 0 32 24" shape-rendering="crispEdges" role="img" aria-labelledby="t"><title id="t">One review leaf over a page, with one reviewer</title>
+<path fill="#575b64" d="M2 2h28v1h-28zM2 3h1v3h-1zM29 3h1v3h-1zM2 6h28v1h-28zM2 7h1v13h-1zM29 7h1v13h-1zM5 9h10v1h-10zM5 11h7v1h-7zM5 13h9v1h-9zM2 20h28v1h-28z"/>
+<path fill="#90949b" d="M4 4h1v1h-1zM6 4h1v1h-1zM8 4h1v1h-1z"/>
+<path fill="#6e7818" d="M22 7h1v1h-1zM23 8h1v2h-1zM19 9h1v2h-1zM25 9h1v2h-1zM22 11h1v1h-1zM24 11h1v1h-1zM20 12h2v1h-2zM23 12h2v1h-2z"/>
+<path fill="#7d8718" d="M21 8h1v2h-1zM20 10h1v2h-1zM24 10h1v1h-1z"/>
+<path fill="#c9bb37" d="M22 8h1v1h-1zM21 10h1v1h-1z"/>
+<path fill="#92a127" d="M22 9h1v2h-1z"/>
+<path fill="#b1b431" d="M23 10h1v1h-1z"/>
+<path fill="#acb131" d="M21 11h1v1h-1zM23 11h1v1h-1z"/>
+<path fill="#555f02" d="M21 13h1v1h-1z"/>
+<path fill="#f6f7f9" d="M8 14h3v2h-3zM7 17h5v3h-5z"/>
+</svg>
