@@ -166,6 +166,16 @@ the site rather than here. Regenerate both when the site's strip changes. The
 dimmed panels are mixed 45% of the way toward the ground, so the dark file is
 computed from the dark palette, not recoloured from the light one.
 
+### The setup icons
+
+`docs/assets/setups/` holds the eight icons in the README's "Pick a setup"
+grid, each as `<slug>.svg` and `<slug>-dark.svg`. They are drawn on the strip's
+grid from its sprites and palette: the crab, the castle, the review leaves and
+the gate, with the store dimmed the way the strip dims a panel that is not
+playing. The canvas is 32 by 24 cells and the README draws it at `height="48"`,
+which is two device pixels a cell. They are decorative, so the `<img>` has an
+empty `alt`, and like the strip they are generated rather than hand-edited.
+
 ## On a pull request
 
 Every body `exportMarkdown` writes is assembled in the same order: one line
