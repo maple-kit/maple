@@ -32,14 +32,10 @@ broken when breaking it is the right shape, and the changeset says what broke.
 <img src="docs/assets/how-it-works.svg" alt="Four steps in a loop: mount Maple in a preview, a reviewer comments on the page, an agent fixes it over MCP, and a CI check holds the merge until every comment is resolved." width="100%">
 </picture></p>
 
-<table>
-<tr>
-<td width="25%" valign="top"><b><a href="docs/configuration.md">Mount</a></b><br>One route in your application, and one script in the preview build.</td>
-<td width="25%" valign="top"><b><a href="docs/github-auth.md">Comment</a></b><br>A reviewer points to an issue on the app. Maple records all the context needed for the agent to pick it up.</td>
-<td width="25%" valign="top"><b><a href="docs/agent-loop.md">Fix</a></b><br>Your agent monitors new comments via the MCP, implements a fix and marks it as resolved.</td>
-<td width="25%" valign="top"><b><a href="docs/gate.md">Gate</a></b><br>A CI check holds the merge until all comments are resolved, and all visual gates pass.</td>
-</tr>
-</table>
+1. **[Mount](docs/configuration.md)**: One route in your application, and one script in the preview build.
+2. **[Comment](docs/github-auth.md)**: A reviewer points to an issue on the app. Maple records all the context needed for the agent to pick it up.
+3. **[Fix](docs/agent-loop.md)**: Your agent monitors new comments via the MCP, implements a fix and marks it as resolved.
+4. **[Gate](docs/gate.md)**: A CI check holds the merge until all comments are resolved, and all visual gates pass.
 
 Code got fast. Planning, definitions of done and edge cases did not, so they get
 skipped and surface in testing. Maple moves that review to the preview, where
@@ -49,14 +45,16 @@ the comment can still be acted on.
 
 <table>
 <tr>
-<td width="33%" valign="top"><a href="packages/ui"><img src="docs/assets/features/three-types.gif" alt="Three picks in a row: a metric card, a box dragged over part of a chart, and a sentence selected under it." width="100%"></a><br><b>An element, an area, or a passage.</b> Pick a component, drag a box, or select the words that are wrong. The anchor finds it again after a redeploy.</td>
-<td width="33%" valign="top"><a href="packages/mcp"><img src="docs/assets/features/agentic-tooling.gif" alt="A terminal: the agent waits for comments, receives one naming a file and line, edits one line, and resolves the comment in a commit." width="100%"></a><br><b>Your agent picks it up over MCP.</b> It waits for comments, reads each with its context, makes the change, and resolves it against the commit.</td>
-<td width="33%" valign="top"><a href="docs/gate.md"><img src="docs/assets/features/merge-gate.gif" alt="A pull request's checks: maple/visual-review fails with two comments open, they resolve, the check passes and the merge button wakes up." width="100%"></a><br><b>A merge gate.</b> <code>maple/visual-review</code> fails while a comment is open and, if you want, until the reviewer approves.</td>
+<td width="50%" valign="top"><a href="packages/ui"><img src="docs/assets/features/three-types.gif" alt="Three picks in a row: a metric card, a box dragged over part of a chart, and a sentence selected under it." width="100%"></a><br><b>An element, an area, or a passage.</b> Pick a component, drag a box, or select the words that are wrong. The anchor finds it again after a redeploy.</td>
+<td width="50%" valign="top"><a href="packages/mcp"><img src="docs/assets/features/agentic-tooling.gif" alt="A terminal: the agent waits for comments, receives one naming a file and line, edits one line, and resolves the comment in a commit." width="100%"></a><br><b>Your agent picks it up over MCP.</b> It waits for comments, reads each with its context, makes the change, and resolves it against the commit.</td>
 </tr>
 <tr>
-<td valign="top"><a href="packages/core"><img src="docs/assets/features/tagger.gif" alt="In developer mode, hovering the page shows each element's component name and its file, line and column." width="100%"></a><br><b>The file and the line.</b> A build-time tagger marks every JSX element with where it was written, so a comment arrives pointing at source.</td>
-<td valign="top"><a href="packages/mock"><img src="docs/assets/features/edge-case-states.gif" alt="A table of open reviews loads with real data, then empty, then failing, with a banner naming the state each time." width="100%"></a><br><b>Any state, on request.</b> Type empty, failing or a thousand rows, and the page's API calls return it. A model picks the state; code writes every byte.</td>
-<td valign="top"><a href="packages/classifier"><img src="docs/assets/features/assist-scoring.gif" alt="A reviewer types a comment on a chart and it is scored as a request, rated on being specific, actionable, concise, standalone and placed." width="100%"></a><br><b>A score, if you want one.</b> The comment is judged as it is typed, against five pillars, by a classifier you supply.</td>
+<td width="50%" valign="top"><a href="docs/gate.md"><img src="docs/assets/features/merge-gate.gif" alt="A pull request's checks: maple/visual-review fails with two comments open, they resolve, the check passes and the merge button wakes up." width="100%"></a><br><b>A merge gate.</b> <code>maple/visual-review</code> fails while a comment is open and, if you want, until the reviewer approves.</td>
+<td width="50%" valign="top"><a href="packages/core"><img src="docs/assets/features/tagger.gif" alt="In developer mode, hovering the page shows each element's component name and its file, line and column." width="100%"></a><br><b>The file and the line.</b> A build-time tagger marks every JSX element with where it was written, so a comment arrives pointing at source.</td>
+</tr>
+<tr>
+<td width="50%" valign="top"><a href="packages/mock"><img src="docs/assets/features/edge-case-states.gif" alt="A table of open reviews loads with real data, then empty, then failing, with a banner naming the state each time." width="100%"></a><br><b>Any state, on request.</b> Type empty, failing or a thousand rows, and the page's API calls return it. A model picks the state; code writes every byte.</td>
+<td width="50%" valign="top"><a href="packages/classifier"><img src="docs/assets/features/assist-scoring.gif" alt="A reviewer types a comment on a chart and it is scored as a request, rated on being specific, actionable, concise, standalone and placed." width="100%"></a><br><b>A score, if you want one.</b> The comment is judged as it is typed, against five pillars, by a classifier you supply.</td>
 </tr>
 </table>
 
@@ -83,15 +81,13 @@ this. None combines all four of:
 The SDK route's `store` has no default: without one, the comment endpoints
 answer 404. These are the shapes that work, smallest first.
 
-| I want to…                            | Do this                                                                                                                                                                                                               | Read                                                                                                                                                               |
-| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Try it locally, with no accounts      | `maple review` proxies your running app and stores comments as files in `.maple/<branch-slug>/comments.json`.                                                                                                         | [`docs/review.md`](docs/review.md), [`packages/cli`](packages/cli)                                                                                                 |
-| Review a deployed preview alone       | `maple solo <preview-url>`, or the agent's `start_solo` tool. Comments go to your machine through a loopback bridge. A guest's comments cannot gate a merge.                                                          | [`docs/solo.md`](docs/solo.md)                                                                                                                                     |
-| Review a shared preview as a team     | GitHub, one token per reviewer through Device Flow. `npx @maple-kit/cli setup app --owner=acme`, then `maple setup verify --client-id=<Iv…>`. Set `MAPLE_GITHUB_CLIENT_ID`, `MAPLE_COOKIE_KEY` and `MAPLE_PREVIEW=1`. | [`docs/github-auth.md`](docs/github-auth.md), [`docs/configuration.md`](docs/configuration.md), [`setup-maple-org`](plugins/maple/skills/setup-maple-org/SKILL.md) |
-| Let an agent act on the comments      | Add the MCP server and the Stop hook, or install the Claude Code plugin.                                                                                                                                              | [`docs/agent-loop.md`](docs/agent-loop.md), [`packages/mcp`](packages/mcp), [`setup-maple-agent-loop`](plugins/maple/skills/setup-maple-agent-loop/SKILL.md)       |
-| Block the merge until it is reviewed  | `maple setup ci --require-approval --write` adds the workflow; require the `maple/visual-review` check in a ruleset.                                                                                                  | [`docs/gate.md`](docs/gate.md)                                                                                                                                     |
-| Review empty, failing and huge states | `@maple-kit/mock` rewrites the page's API responses into the state a reviewer names.                                                                                                                                  | [`docs/mock.md`](docs/mock.md), [`packages/mock`](packages/mock)                                                                                                   |
-| Use your own backend                  | Implement a connector; `maple connectors` prints what each one supports.                                                                                                                                              | [`docs/connectors.md`](docs/connectors.md), [`contribute-connector`](.claude/skills/contribute-connector/SKILL.md)                                                 |
+- **Try it locally, with no accounts.** `maple review` proxies your running app and stores comments as files in `.maple/<branch-slug>/comments.json`. Read: [`docs/review.md`](docs/review.md), [`packages/cli`](packages/cli).
+- **Review a deployed preview alone.** `maple solo <preview-url>`, or the agent's `start_solo` tool. Comments go to your machine through a loopback bridge. A guest's comments cannot gate a merge. Read: [`docs/solo.md`](docs/solo.md).
+- **Review a shared preview as a team.** GitHub, one token per reviewer through Device Flow. `npx @maple-kit/cli setup app --owner=acme`, then `maple setup verify --client-id=<Iv…>`. Set `MAPLE_GITHUB_CLIENT_ID`, `MAPLE_COOKIE_KEY` and `MAPLE_PREVIEW=1`. Read: [`docs/github-auth.md`](docs/github-auth.md), [`docs/configuration.md`](docs/configuration.md), [`setup-maple-org`](plugins/maple/skills/setup-maple-org/SKILL.md).
+- **Let an agent act on the comments.** Add the MCP server and the Stop hook, or install the Claude Code plugin. Read: [`docs/agent-loop.md`](docs/agent-loop.md), [`packages/mcp`](packages/mcp), [`setup-maple-agent-loop`](plugins/maple/skills/setup-maple-agent-loop/SKILL.md).
+- **Block the merge until it is reviewed.** `maple setup ci --require-approval --write` adds the workflow; require the `maple/visual-review` check in a ruleset. Read: [`docs/gate.md`](docs/gate.md).
+- **Review empty, failing and huge states.** `@maple-kit/mock` rewrites the page's API responses into the state a reviewer names. Read: [`docs/mock.md`](docs/mock.md), [`packages/mock`](packages/mock).
+- **Use your own backend.** Implement a connector; `maple connectors` prints what each one supports. Read: [`docs/connectors.md`](docs/connectors.md), [`contribute-connector`](.claude/skills/contribute-connector/SKILL.md).
 
 There is no self-hosted shared store yet: a file store in a preview pod loses
 its comments with the pod. Until one lands, a team shares GitHub, or writes a
