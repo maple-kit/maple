@@ -147,6 +147,21 @@ the only images in the README fetched from somewhere else. They say what a
 reader cannot see from the page: where the site is, whether `main` is green,
 what version is on npm, and the licence.
 
+### The how-it-works animation
+
+`docs/assets/how-it-works.svg` and `how-it-works-dark.svg` are the "How it
+works" strip from [maple-kit.org](https://maple-kit.org), sampled at 30 frames a
+second over its 17 second loop. Each panel's distinct frames are pixel paths,
+shown and hidden by CSS keyframes alone, with no script and no font file, so
+GitHub animates them through an `<img>`. The verbs under the panels take the
+accent while their act plays; under `prefers-reduced-motion` the finished
+picture stands still.
+
+They are generated, not drawn, from the site's own strip code, which lives with
+the site rather than here. Regenerate both when the site's strip changes. The
+dimmed panels are mixed 45% of the way toward the ground, so the dark file is
+computed from the dark palette, not recoloured from the light one.
+
 ## On a pull request
 
 Every body `exportMarkdown` writes is assembled in the same order: one line
