@@ -123,7 +123,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
       - name: No stale version pin, no paragraph repeated in a file
@@ -137,7 +137,7 @@ jobs:
         with:
           # The check diffs against the merge base, which a shallow clone lacks.
           fetch-depth: 0
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
       - name: No denylisted identifier or home path added
@@ -202,7 +202,7 @@ jobs:
         with:
           # The check diffs against the merge base, which a shallow clone lacks.
           fetch-depth: 0
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
       - name: Docs-only changes ship no changeset
