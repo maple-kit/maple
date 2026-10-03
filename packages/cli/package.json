@@ -9,7 +9,7 @@
     "url": "git+https://github.com/maple-kit/maple.git",
     "directory": "packages/cli"
   },
-  "homepage": "https://github.com/maple-kit/maple/tree/main/packages/cli",
+  "homepage": "https://maple-kit.org",
   "engines": {
     "node": ">=24.0.0"
   },
