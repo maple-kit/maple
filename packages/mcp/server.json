@@ -1,0 +1,40 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.maple-kit/maple",
+  "title": "Maple",
+  "description": "Review comments pinned to a running frontend, read and resolved by your coding agent.",
+  "websiteUrl": "https://maple-kit.org",
+  "repository": {
+    "url": "https://github.com/maple-kit/maple",
+    "source": "github",
+    "subfolder": "packages/mcp"
+  },
+  "version": "0.17.1",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@maple-kit/mcp",
+      "version": "0.17.1",
+      "transport": { "type": "stdio" },
+      "environmentVariables": [
+        {
+          "name": "GITHUB_TOKEN",
+          "description": "A token that can read and write the repository's pull request comments. Required for the github store.",
+          "isSecret": true
+        },
+        {
+          "name": "MAPLE_GITHUB_OWNER",
+          "description": "The repository's owner. Required for the github store."
+        },
+        {
+          "name": "MAPLE_GITHUB_REPO",
+          "description": "The repository. Required for the github store."
+        },
+        {
+          "name": "MAPLE_STORE",
+          "description": "github, the default when a forge is configured, or file, the comments under .maple/ on this machine."
+        }
+      ]
+    }
+  ]
+}
