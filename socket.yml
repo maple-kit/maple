@@ -1,0 +1,10 @@
+# Socket for GitHub. Every key below restates a default, so the configuration
+# is reviewed in a diff rather than living only in the dashboard. Which alerts
+# block a merge is the dashboard's security policy, not this file.
+version: 2
+
+githubApp:
+  enabled: true
+  pullRequestAlertsEnabled: true
+  dependencyOverviewEnabled: true
+  projectReportsEnabled: true

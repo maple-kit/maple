@@ -11,11 +11,17 @@ runs:
         node-version-file: .nvmrc
         cache: pnpm
 
+    # Socket Firewall refuses a package Socket has confirmed as malware, at the
+    # moment it is fetched. It needs no token. Pinned to a SHA: it is a control.
+    - uses: SocketDev/action@ba6de6cc0565af1f42295590380973573297e31f # v1.3.2
+      with:
+        mode: firewall-free
+
     - name: Install
       shell: bash
       # --frozen-lockfile fails rather than resolving: a lockfile that does not
       # match package.json is a review problem, not something CI should fix.
-      run: pnpm install --frozen-lockfile
+      run: sfw pnpm install --frozen-lockfile
 
     - name: Build the allowlisted native dependency
       shell: bash
