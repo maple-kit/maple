@@ -12,7 +12,7 @@
     "url": "git+https://github.com/maple-kit/maple.git",
     "directory": "packages/mock"
   },
-  "homepage": "https://github.com/maple-kit/maple/tree/main/packages/mock",
+  "homepage": "https://maple-kit.org",
   "engines": {
     "node": ">=24.0.0"
   },
