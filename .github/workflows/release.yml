@@ -72,4 +72,39 @@ jobs:
         # `changeset publish` does create the tags locally, in this checkout.
         # Pushing them here is what makes them exist. A run that published
         # nothing has no new tags and this is a no-op.
-        run: git push origin --tags
+        id: tags
+        env:
+          GH_REPO: ${{ github.repository }}
+        run: |
+          version=$(jq -r .version packages/mcp/package.json)
+          tag="@maple-kit/mcp@${version}"
+          # The tag is on origin only once a release has pushed it, so one
+          # missing there that exists locally is a publish from this run.
+          if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null \
+            && ! git ls-remote --exit-code --tags origin "refs/tags/${tag}" >/dev/null; then
+            echo "mcp_published=true" >> "$GITHUB_OUTPUT"
+          fi
+          git push origin --tags
+
+      - name: Install mcp-publisher
+        if: steps.tags.outputs.mcp_published == 'true'
+        env:
+          MCP_PUBLISHER_VERSION: 1.8.1
+          MCP_PUBLISHER_SHA256: a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc
+        run: |
+          curl -sSLf -o mcp-publisher.tar.gz "https://github.com/modelcontextprotocol/registry/releases/download/v${MCP_PUBLISHER_VERSION}/mcp-publisher_linux_amd64.tar.gz"
+          echo "${MCP_PUBLISHER_SHA256}  mcp-publisher.tar.gz" | sha256sum -c -
+          tar -xzf mcp-publisher.tar.gz mcp-publisher
+
+      - name: Publish @maple-kit/mcp to the MCP Registry
+        # After the tag push, so a registry failure fails the run visibly
+        # without costing the tags. server.json takes its versions from
+        # package.json here, so the committed file cannot drift from npm.
+        if: steps.tags.outputs.mcp_published == 'true'
+        working-directory: packages/mcp
+        run: |
+          version=$(jq -r .version package.json)
+          jq --arg v "$version" '.version = $v | .packages[0].version = $v' server.json > server.json.new
+          mv server.json.new server.json
+          ../../mcp-publisher login github-oidc
+          ../../mcp-publisher publish

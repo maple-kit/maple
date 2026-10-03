@@ -170,6 +170,9 @@ The server and the hook read `GITHUB_TOKEN`, `MAPLE_GITHUB_OWNER` and
 `MAPLE_GITHUB_REPO` from the environment Claude Code starts in. In a project
 where the last two are unset, the hook lets every stop through.
 
+To install only the skills, for Claude Code or any other agent the
+[`skills` CLI](https://skills.sh) supports, run `npx skills add maple-kit/maple`.
+
 ## Vendor-agnostic by construction
 
 Maple stores nothing itself. A connector is one file implementing plain

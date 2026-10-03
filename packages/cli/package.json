@@ -1,6 +1,6 @@
 {
   "name": "@maple-kit/cli",
-  "version": "0.17.0",
+  "version": "0.17.1",
   "description": "Command line interface for Maple",
   "license": "Apache-2.0",
   "type": "module",
@@ -9,7 +9,7 @@
     "url": "git+https://github.com/maple-kit/maple.git",
     "directory": "packages/cli"
   },
-  "homepage": "https://github.com/maple-kit/maple/tree/main/packages/cli",
+  "homepage": "https://maple-kit.org",
   "engines": {
     "node": ">=24.0.0"
   },

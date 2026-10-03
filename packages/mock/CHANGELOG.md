@@ -1,5 +1,13 @@
 # @maple-kit/mock
 
+## 0.17.1
+
+### Patch Changes
+
+- d7a18bb: The npm page of every package now links https://maple-kit.org as its homepage. The repository link still opens the package's own folder.
+- Updated dependencies [d7a18bb]
+  - @maple-kit/core@0.17.1
+
 ## 0.17.0
 
 ### Patch Changes
