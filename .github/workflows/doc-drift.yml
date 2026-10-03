@@ -28,7 +28,7 @@ jobs:
           # The head commit itself, so links in the comment outlive the merge ref.
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
       - name: Judge the paragraphs the change reaches
