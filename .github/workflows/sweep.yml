@@ -32,7 +32,7 @@ jobs:
     outputs:
       bump: ${{ steps.sweep.outputs.bump }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # The window's first commit and each changeset's commit are in history.
           fetch-depth: 0
@@ -57,7 +57,7 @@ jobs:
         run: >-
           node tools/sweep/run.ts --since "$SINCE" --out "$SWEEP_DIR/sweep.json"
           --action-manifest "$SWEEP_DIR/maple-action.json" --drift "$SWEEP_DIR/drift.json"
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: sweep
           path: ${{ env.SWEEP_DIR }}/sweep.json
@@ -79,11 +79,11 @@ jobs:
       # contents and pull-requests write) opens it as someone CI answers to.
       GH_TOKEN: ${{ secrets.SWEEP_TOKEN || github.token }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           token: ${{ secrets.SWEEP_TOKEN || github.token }}
       - uses: ./.github/actions/setup
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: sweep
           path: ${{ env.SWEEP_DIR }}
@@ -123,11 +123,11 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       LABEL: sweep
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .nvmrc
-      - uses: actions/download-artifact@v8
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: sweep
           path: ${{ env.SWEEP_DIR }}
