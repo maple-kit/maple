@@ -12,6 +12,18 @@ pin in `plugins/maple/.mcp.json`, and when the plugin changed its
 only when that version does. CI's stale-version guard compares against
 `package.json`, so it passes on that pull request and on every one after.
 
+## GitHub Releases
+
+After the tags are pushed, `release.yml` runs `tools/github-releases/release.ts`,
+which creates a GitHub Release for each `@maple-kit/*` tag at HEAD that lacks
+one. The notes are that version's section of the package's `CHANGELOG.md`, and
+only `@maple-kit/core` is marked latest, so the repository sidebar shows it. A
+tag that already has a release is skipped.
+
+To fill in what a failed run missed, dispatch `github-releases.yml`: with no
+input it releases every package's current version, and with a `tag` it
+releases that one.
+
 ## A new package name
 
 npm registers a trusted publisher only against a package that already exists,

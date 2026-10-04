@@ -1,0 +1,38 @@
+name: GitHub Releases
+
+# Backfills a release for each package's current version, or for one tag.
+# The release job does this itself after a publish; this is for the rest.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "One tag, such as @maple-kit/core@0.17.1. Empty releases every package's current version."
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  releases:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Create the missing releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          if [ -n "$TAG" ]; then
+            node tools/github-releases/release.ts --tag "$TAG"
+          else
+            node tools/github-releases/release.ts --backfill-latest
+          fi
