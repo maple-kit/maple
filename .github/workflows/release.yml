@@ -84,7 +84,21 @@ jobs:
             && ! git ls-remote --exit-code --tags origin "refs/tags/${tag}" >/dev/null; then
             echo "mcp_published=true" >> "$GITHUB_OUTPUT"
           fi
-          git push origin --tags
+          # --porcelain marks each tag it creates on origin "[new tag]".
+          pushed=$(git push --porcelain origin --tags)
+          if grep -q '\[new tag\]' <<<"$pushed"; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create GitHub Releases for the new tags
+        # After the tag push, so a failure here costs neither the publish nor
+        # the tags. Releases are skipped when they already exist, and the
+        # notes are each version's section of its package's CHANGELOG.md.
+        if: steps.tags.outputs.published == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: node tools/github-releases/release.ts
 
       - name: Install mcp-publisher
         if: steps.tags.outputs.mcp_published == 'true'
