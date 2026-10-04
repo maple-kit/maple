@@ -96,6 +96,8 @@ What this repository enforces today:
 - **OpenSSF Scorecard.** `.github/workflows/scorecard.yml` grades these
   practices on every push to `main` and weekly, and publishes the result to
   [scorecard.dev](https://scorecard.dev/viewer/?uri=github.com/maple-kit/maple).
+- **CodeQL.** `.github/workflows/codeql.yml` runs static analysis on every pull
+  request and push to `main`, and weekly, and reports to code scanning.
 
 ## Supported versions
 
