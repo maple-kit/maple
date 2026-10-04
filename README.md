@@ -8,14 +8,13 @@
 <p align="center">
 <a href="https://github.com/maple-kit/maple/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/maple-kit/maple/ci.yml?branch=main&label=CI&style=flat-square&color=465a2b&labelColor=1a1d23" alt="CI"></a>
 <a href="LICENSE"><img src="https://img.shields.io/github/license/maple-kit/maple?style=flat-square&color=465a2b&labelColor=1a1d23" alt="Apache-2.0"></a>
+<a href="https://mcpservers.org/servers/maple-kit/maple"><img src="https://mcpservers.org/badge.svg" alt="Listed on mcpservers.org"></a>
+<a href="https://glama.ai/mcp/servers/maple-kit/maple"><img src="https://glama.ai/mcp/servers/maple-kit/maple/badges/score.svg" alt="Maple MCP server on Glama"></a>
 <br>
 <a href="https://www.npmjs.com/package/@maple-kit/core"><img src="https://img.shields.io/npm/v/@maple-kit/core?label=core&style=flat-square&color=465a2b&labelColor=1a1d23" alt="@maple-kit/core on npm"></a>
 <a href="https://www.npmjs.com/package/@maple-kit/core"><img src="https://img.shields.io/npm/dm/@maple-kit/core?label=downloads&style=flat-square&color=465a2b&labelColor=1a1d23" alt="@maple-kit/core monthly downloads"></a>
 <a href="https://www.npmjs.com/package/@maple-kit/mcp"><img src="https://img.shields.io/npm/v/@maple-kit/mcp?label=mcp&style=flat-square&color=465a2b&labelColor=1a1d23" alt="@maple-kit/mcp on npm"></a>
 <a href="https://www.npmjs.com/package/@maple-kit/mcp"><img src="https://img.shields.io/npm/dm/@maple-kit/mcp?label=downloads&style=flat-square&color=465a2b&labelColor=1a1d23" alt="@maple-kit/mcp monthly downloads"></a>
-<br>
-<a href="https://mcpservers.org/servers/maple-kit/maple"><img src="https://mcpservers.org/badge.svg" alt="Listed on mcpservers.org"></a>
-<a href="https://glama.ai/mcp/servers/maple-kit/maple"><img src="https://glama.ai/mcp/servers/maple-kit/maple/badges/score.svg" alt="Maple MCP server on Glama"></a>
 </p>
 
 A reviewer points at something on a preview deployment and says what is wrong.
