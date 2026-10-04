@@ -93,6 +93,9 @@ What this repository enforces today:
   as a CI job over the full history.
 - **Signed-off commits.** A commit-msg hook and a CI job require a
   [DCO](DCO) sign-off on every commit.
+- **OpenSSF Scorecard.** `.github/workflows/scorecard.yml` grades these
+  practices on every push to `main` and weekly, and publishes the result to
+  [scorecard.dev](https://scorecard.dev/viewer/?uri=github.com/maple-kit/maple).
 
 ## Supported versions
 
