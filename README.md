@@ -9,6 +9,7 @@
 <a href="https://github.com/maple-kit/maple/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/maple-kit/maple/ci.yml?branch=main&label=CI&style=flat-square&color=465a2b&labelColor=1a1d23" alt="CI"></a>
 <a href="LICENSE"><img src="https://img.shields.io/github/license/maple-kit/maple?style=flat-square&color=465a2b&labelColor=1a1d23" alt="Apache-2.0"></a>
 <a href="https://scorecard.dev/viewer/?uri=github.com/maple-kit/maple"><img src="https://img.shields.io/ossf-scorecard/github.com/maple-kit/maple?label=OpenSSF%20Scorecard&style=flat-square&color=465a2b&labelColor=1a1d23" alt="OpenSSF Scorecard"></a>
+<a href="https://www.bestpractices.dev/projects/15205"><img src="https://img.shields.io/cii/level/15205?label=OpenSSF%20Best%20Practices&style=flat-square&color=465a2b&labelColor=1a1d23" alt="OpenSSF Best Practices"></a>
 <a href="https://mcpservers.org/servers/maple-kit/maple"><img src="https://mcpservers.org/badge.svg" alt="Listed on mcpservers.org"></a>
 <a href="https://glama.ai/mcp/servers/maple-kit/maple"><img src="https://glama.ai/mcp/servers/maple-kit/maple/badges/score.svg" alt="Maple MCP server on Glama"></a>
 <br>
