@@ -34,7 +34,7 @@ jobs:
       - name: Skip without the key
         if: env.TYPESAFE_API_KEY == ''
         run: echo "TYPESAFE_API_KEY is not set (a fork's pull request gets no secrets), so jev is not scored."
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: env.TYPESAFE_API_KEY != ''
       - uses: ./.github/actions/setup
         if: env.TYPESAFE_API_KEY != ''

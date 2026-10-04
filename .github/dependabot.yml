@@ -16,6 +16,7 @@ updates:
         patterns: ["tsdown", "typescript", "publint"]
 
   - package-ecosystem: github-actions
-    directory: /
+    # The composite action is not under /.github/workflows, so list it.
+    directories: ["/", "/.github/actions/setup"]
     schedule:
       interval: weekly
