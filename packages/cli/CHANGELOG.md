@@ -1,5 +1,18 @@
 # @maple-kit/cli
 
+## 0.18.0
+
+### Minor Changes
+
+- 5750a12: Add `maple lint` and `maple ci lint`, and export `runCiLint`. `maple lint` runs the rendered design lint against a preview and exits 1 on an error finding. `maple ci lint` also writes SARIF and publishes the `maple/design-lint` check run, reading its inputs from flags or the GitHub Actions environment; a preview that cannot be reached is neutral. Flags may now repeat (`FlagType` gains `"strings"`).
+
+### Patch Changes
+
+- Updated dependencies [5750a12]
+  - @maple-kit/lint@0.2.0
+  - @maple-kit/core@0.18.0
+  - @maple-kit/ui@0.18.0
+
 ## 0.17.1
 
 ### Patch Changes
