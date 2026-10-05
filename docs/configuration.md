@@ -132,6 +132,25 @@ A blocked plan shows in
 the mock box as "The server refused that", and in the host's logger as a
 warning with the status.
 
+## CI: the example preview
+
+Set on this repository, for `.github/workflows/preview.yml`, which deploys
+`examples/vite-app` to a Worker per pull request. `examples/vite-app/README.md`
+is the runbook. Without the first two, every job skips with a notice; a fork's
+pull request never gets them. The comment App is the one above, and its
+Device Flow has to be on.
+
+| Name                     | Kind     | What it is                                                                              |
+| ------------------------ | -------- | --------------------------------------------------------------------------------------- |
+| `CLOUDFLARE_API_TOKEN`   | Secret   | An API token scoped to one account: Workers Scripts edit, Account Settings read.        |
+| `CLOUDFLARE_ACCOUNT_ID`  | Variable | The Cloudflare account id. Not a secret, and an input wrangler needs.                   |
+| `MAPLE_GITHUB_CLIENT_ID` | Variable | The comment App's client id. Missing, the preview deploys and nobody can sign in to it. |
+
+The Worker takes `MAPLE_REPOSITORY`, `MAPLE_COMMIT` and `MAPLE_GITHUB_CLIENT_ID`
+as public `--var`s at deploy, and an optional `MAPLE_COOKIE_KEY` secret that CI
+does not set. The account needs a `workers.dev` subdomain, registered once in
+the dashboard.
+
 ## Where each one goes
 
 A secret goes wherever that deployment keeps secrets, and the rest can sit in

@@ -86,6 +86,54 @@ pnpm --filter @maple-kit/example-vite verify
 The CSP contrast with the Next example: this one is not yet run under the same
 policy, so `docs/overlay-csp.md`'s claim is still described rather than tested.
 
-The route here is `fileStore()` and `fileMedia()`, mounted by the Vite plugin on the dev and
-preview servers only. A statically deployed copy of this example has no server
-and has to host the route elsewhere.
+The route above is `fileStore()` and `fileMedia()`, mounted by the Vite plugin
+on the dev and preview servers only. A static build has no server, so the
+deployed copy below hosts the route in a Worker and keeps comments somewhere
+else.
+
+## The deployed preview
+
+Every pull request that touches `packages/` or `examples/vite-app/` gets a
+public copy of this example on its own Cloudflare Worker, so Maple reviews its
+own pull requests. `.github/workflows/preview.yml` does it:
+
+1. Builds with `MAPLE_PREVIEW=1`, so the tagger is on and every comment carries
+   `file:line`, into `dist-preview/`.
+2. `wrangler deploy --name maple-example-pr-<n>`, using `wrangler.jsonc`.
+3. Puts the URL in a sticky comment on the pull request, runs `maple-action`'s
+   `sync` and `gate`, and lints the preview against `src/app/app.css` as
+   `maple/design-lint` with `upload-sarif`.
+4. Deletes the Worker when the pull request closes.
+
+`worker/index.ts` is the Worker. Static files are served by Workers static
+assets and never reach it; `/api/*` and `/ld/*` do. It answers `/api/maple/*`
+with `createMapleHandler`, and the page's own API from `server/answers.ts`,
+the same table the Vite servers use.
+
+**Comments are written to the pull request that deployed the preview**, through
+`githubStore`, as the reviewer: they press **Link GitHub** in the overlay and
+sign in with Device Flow, and the Worker holds no token of its own. The build
+stamps its branch into the overlay and its head commit into the Worker, which is
+how a branch becomes a pull request. The Worker's only configuration is public:
+`MAPLE_REPOSITORY`, `MAPLE_COMMIT` and the comment App's client id
+`MAPLE_GITHUB_CLIENT_ID`. A screenshot has nowhere to be kept, so the overlay
+says so rather than offering one.
+
+Nothing deploys until the repository has the `CLOUDFLARE_API_TOKEN` secret and
+the `CLOUDFLARE_ACCOUNT_ID` variable, and never for a fork's pull request;
+each job then skips with a notice. `docs/configuration.md` lists what to set and
+what the token needs.
+
+To deploy by hand, from a checkout with the packages built:
+
+```bash
+pnpm --filter @maple-kit/core --filter @maple-kit/classifier build
+MAPLE_PREVIEW=1 pnpm --filter @maple-kit/example-vite build
+cd examples/vite-app
+npx wrangler@4.147.0 deploy --dry-run --name maple-example-local   # bundle only
+npx wrangler@4.147.0 dev                                           # http://localhost:8787
+```
+
+`dev` serves the same Worker locally, including `/api/maple/*`. Drop
+`--dry-run` to deploy, with `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`
+in the environment.

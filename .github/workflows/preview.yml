@@ -1,0 +1,223 @@
+name: Preview
+
+# One Cloudflare Worker per pull request serves examples/vite-app built with
+# MAPLE_PREVIEW=1, so Maple reviews its own pull requests. The URL goes on the
+# pull request, the design lint runs against it, and the Worker is deleted when
+# the pull request closes. examples/vite-app/README.md is the runbook.
+#
+# Nothing here deploys without CLOUDFLARE_API_TOKEN and the CLOUDFLARE_ACCOUNT_ID
+# variable, and never for a fork: a fork's pull request gets no secrets. Each job
+# then skips with a notice rather than failing. docs/configuration.md lists them.
+#
+# The paths filter also applies to `closed`. A pull request that stopped touching
+# these paths after it deployed would leave its Worker behind; delete it by name.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    paths:
+      - "packages/**"
+      - "examples/vite-app/**"
+      - ".github/workflows/preview.yml"
+
+# A push cancels the deploy before it; a close cancels a deploy still running,
+# so the delete is always the last word.
+concurrency:
+  group: preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  WORKER: maple-example-pr-${{ github.event.pull_request.number }}
+  # Pinned exactly, like a dependency. Bump it by hand: npx would otherwise run
+  # whatever was published last.
+  WRANGLER: wrangler@4.147.0
+  WRANGLER_SEND_METRICS: "false"
+
+jobs:
+  deploy:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write # the preview comment, and sync's
+    outputs:
+      preview-url: ${{ steps.deploy.outputs.url }}
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+    steps:
+      - name: Decide whether this run can deploy
+        id: can
+        run: |
+          if [ "$HEAD_REPOSITORY" != "$GITHUB_REPOSITORY" ]; then
+            echo "::notice::No preview: a fork's pull request gets no secrets."
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+          elif [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::notice::No preview: the CLOUDFLARE_API_TOKEN secret or the CLOUDFLARE_ACCOUNT_ID variable is not set."
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          fi
+          if [ -z "$MAPLE_GITHUB_CLIENT_ID" ]; then
+            echo "::warning::MAPLE_GITHUB_CLIENT_ID is not set: the preview deploys, but nobody can sign in to comment."
+          fi
+        env:
+          MAPLE_GITHUB_CLIENT_ID: ${{ vars.MAPLE_GITHUB_CLIENT_ID }}
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.can.outputs.deploy == 'true'
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        if: steps.can.outputs.deploy == 'true'
+
+      - name: Build the preview
+        if: steps.can.outputs.deploy == 'true'
+        # vite.config.ts runs in Node and imports these two from their dist.
+        run: |
+          pnpm --filter @maple-kit/core --filter @maple-kit/classifier build
+          pnpm --filter @maple-kit/example-vite build
+        env:
+          MAPLE_PREVIEW: "1"
+          # How the overlay names the branch, and so which pull request it reads.
+          VITE_MAPLE_BRANCH: ${{ github.event.pull_request.head.ref }}
+
+      - name: Deploy the Worker
+        id: deploy
+        if: steps.can.outputs.deploy == 'true'
+        working-directory: examples/vite-app
+        # Every --var is public: the App's client id has no secret to go with it.
+        run: |
+          out="$RUNNER_TEMP/wrangler-output.ndjson"
+          WRANGLER_OUTPUT_FILE_PATH="$out" npx --yes "$WRANGLER" deploy \
+            --name "$WORKER" \
+            --var "MAPLE_REPOSITORY:$GITHUB_REPOSITORY" \
+            --var "MAPLE_COMMIT:$HEAD_SHA" \
+            --var "MAPLE_GITHUB_CLIENT_ID:$MAPLE_GITHUB_CLIENT_ID"
+          url=$(jq -r 'select(.type == "deploy") | .targets[]?' "$out" | head -n 1)
+          if [ -z "$url" ]; then
+            echo "::error::wrangler deployed, but its output named no URL."
+            exit 1
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          MAPLE_GITHUB_CLIENT_ID: ${{ vars.MAPLE_GITHUB_CLIENT_ID }}
+
+      - name: Wait for the URL to answer
+        if: steps.deploy.outputs.url != ''
+        # A new workers.dev name can take a minute to resolve.
+        run: |
+          for _ in $(seq 1 24); do
+            if curl -fsS -o /dev/null "$URL"; then exit 0; fi
+            sleep 5
+          done
+          echo "::error::$URL did not answer within two minutes."
+          exit 1
+        env:
+          URL: ${{ steps.deploy.outputs.url }}
+
+      - name: Put the URL on the pull request
+        if: steps.deploy.outputs.url != ''
+        # maple-action's sync comment carries the ledger and nothing else, so the
+        # URL has its own sticky comment, found again by a marker. It holds no
+        # maple fence: githubStore would read it back as a review comment.
+        run: |
+          marker='<!-- maple-example-preview -->'
+          body="$marker"$'\n'"**Preview:** $URL"$'\n\n'"Built from \`$HEAD_SHA\`. Sign in with GitHub in the overlay to comment on this pull request."
+          api="repos/$GITHUB_REPOSITORY/issues"
+          id=$(gh api --paginate "$api/$PR/comments" \
+            --jq ".[] | select(.body | startswith(\"$marker\")) | .id" | head -n 1)
+          if [ -n "$id" ]; then
+            gh api --method PATCH "$api/comments/$id" -f body="$body" > /dev/null
+          else
+            gh api --method POST "$api/$PR/comments" -f body="$body" > /dev/null
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+          URL: ${{ steps.deploy.outputs.url }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+
+      - uses: maple-kit/maple-action@305f1b796eeda5629e1cea72c8204f824ad76fa4 # v0.4.0
+        if: steps.deploy.outputs.url != ''
+        with:
+          mode: sync
+
+  # Published, not required, until the gate has proven enforcement (#133). A
+  # separate job from sync, because it needs no write access to the pull request.
+  gate:
+    needs: deploy
+    if: needs.deploy.outputs.preview-url != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      checks: write # maple/visual-review
+      pull-requests: read # the comments the verdict is decided from
+    steps:
+      - uses: maple-kit/maple-action@305f1b796eeda5629e1cea72c8204f824ad76fa4 # v0.4.0
+        with:
+          mode: gate
+
+  design-lint:
+    needs: deploy
+    if: needs.deploy.outputs.preview-url != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      checks: write # maple/design-lint
+      security-events: write # upload-sarif
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The action bundles Playwright 1.63.0; the browser has to match it.
+      - run: npx --yes playwright@1.63.0 install --with-deps chromium
+
+      - id: lint
+        uses: maple-kit/maple-action@305f1b796eeda5629e1cea72c8204f824ad76fa4 # v0.4.0
+        with:
+          mode: lint
+          preview-url: ${{ needs.deploy.outputs.preview-url }}
+          # The example's one stylesheet declares its tokens as custom properties
+          # on :root, which is the format @maple-kit/lint reads.
+          token-files: examples/vite-app/src/app/app.css
+          viewports: 1280x800, 375x667
+
+      - uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        if: always() && steps.lint.outputs.sarif-path != ''
+        with:
+          sarif_file: ${{ steps.lint.outputs.sarif-path }}
+
+  cleanup:
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+    steps:
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+      - name: Delete the Worker
+        run: |
+          if [ "$HEAD_REPOSITORY" != "$GITHUB_REPOSITORY" ] || [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::notice::Nothing to delete: this pull request could not have deployed."
+            exit 0
+          fi
+          if ! npx --yes "$WRANGLER" delete --name "$WORKER" --force 2> "$RUNNER_TEMP/delete.err"; then
+            cat "$RUNNER_TEMP/delete.err"
+            # A pull request that never deployed has no Worker to delete.
+            grep -qiE "not found|does not exist|10007" "$RUNNER_TEMP/delete.err" || exit 1
+            echo "::notice::$WORKER did not exist."
+          fi
