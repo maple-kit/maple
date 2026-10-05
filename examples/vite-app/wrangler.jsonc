@@ -1,0 +1,21 @@
+{
+  // The preview Worker for examples/vite-app. CI deploys one per pull request
+  // with `--name maple-example-pr-<n>`; the name below is for a manual deploy.
+  "name": "maple-example",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-09-01",
+  "workers_dev": true,
+  "preview_urls": false,
+
+  // The MAPLE_PREVIEW=1 build. Only these paths reach the Worker; every other
+  // request is a static file and never invokes it.
+  "assets": {
+    "directory": "./dist-preview",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*", "/ld/*"],
+  },
+
+  // Public values only. CI adds MAPLE_REPOSITORY, MAPLE_COMMIT and
+  // MAPLE_GITHUB_CLIENT_ID with --var; a cookie key would be a secret.
+  "vars": { "MAPLE_PREVIEW": "1" },
+}

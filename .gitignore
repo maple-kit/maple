@@ -52,3 +52,4 @@ evals/.evalite/
 
 # The recorder's raw screencast; the encoded GIF and MP4 are what is kept.
 tools/demo-recorder/.frames/
+.wrangler/

@@ -2,13 +2,14 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { jevClassifier } from "@maple-kit/classifier";
-import { createCommentStore, keywordClassifier } from "@maple-kit/core";
+import { createCommentStore } from "@maple-kit/core";
 import { fileMedia, fileStore } from "@maple-kit/core/local";
 import { maple } from "@maple-kit/core/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv } from "vite";
 
-import { AUDIT, LD_FLAGS, ROWS } from "./src/app/data.js";
+import { answerFor } from "./server/answers.js";
+import { exampleMock } from "./server/mock.js";
 import { SEEDED_FRAMES } from "./src/app/frames.js";
 import { seedComments } from "./src/app/seed.js";
 
@@ -55,30 +56,17 @@ async function seeded(branch: string): Promise<{ store: CommentStore; media: Med
   return { store, media };
 }
 
-/**
- * The page's own API, answered from `data.ts`: what a real app would fetch.
- * `/ld/…` stands in for LaunchDarkly's flag poll, so the example needs no key.
- */
-const API: Readonly<Record<string, unknown>> = {
-  "GET /api/reviews": { items: ROWS, total: ROWS.length, nextCursor: null },
-  "GET /api/session": { name: "Ada", tint: 0, role: "owner", permissions: ["settings.write"] },
-  "GET /api/audit": { items: AUDIT },
-  "POST /api/settings": null,
-};
-
-const LD_POLL = /^\/ld\/sdk\/evalx\/[^/]+\/contexts\/[^/]+$/;
-
+/** The page's own API, from `server/answers.ts`, which the deployed Worker shares. */
 const answerApi: Connect.NextHandleFunction = (request, response, next) => {
   const path = request.url?.split("?")[0] ?? "";
-  const key = `${request.method ?? "GET"} ${path}`;
-  const body = request.method === "GET" && LD_POLL.test(path) ? LD_FLAGS : API[key];
-  if (body === undefined) return next();
-  if (body === null) {
-    response.statusCode = 204;
+  const answer = answerFor(request.method ?? "GET", path);
+  if (answer === undefined) return next();
+  if (answer.body === null) {
+    response.statusCode = answer.status;
     return response.end();
   }
   response.setHeader("content-type", "application/json");
-  response.end(JSON.stringify(body));
+  response.end(JSON.stringify(answer.body));
 };
 
 /** Mounts the page's API on the dev and preview servers. */
@@ -132,21 +120,7 @@ export default defineConfig(async ({ command, isPreview, mode }) => {
           store,
           media,
           ...(classifier ? { assist: { classifier } } : {}),
-          // The page's API, described for Maple Mock; served per call, never
-          // bundled. A sentence is planned by the model when it can plan.
-          mock: {
-            preview,
-            schemas: [{ codec: "rest", document: openapi() }],
-            // Who the page is told the reviewer is, for a recipe's `as`. The
-            // role and permission words come from the session's own schema.
-            identity: {
-              call: "rest:GET /api/session",
-              role: { path: "role" },
-              permissions: { path: "permissions" },
-              requires: { "rest:GET /api/audit": { roles: ["owner"] } },
-            },
-            plan: { classifier: classifier?.plan ? classifier : keywordClassifier() },
-          },
+          mock: exampleMock(openapi(), preview, classifier),
         },
       }),
     ],
