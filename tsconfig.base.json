@@ -36,6 +36,7 @@
       "@maple-kit/core/tagger": ["./packages/core/src/tagger/index.ts"],
       "@maple-kit/core/testing": ["./packages/core/src/testing/index.ts"],
       "@maple-kit/core/vite": ["./packages/core/src/vite/index.ts"],
+      "@maple-kit/lint": ["./packages/lint/src/index.ts"],
       "@maple-kit/mock": ["./packages/mock/src/index.ts"],
       "@maple-kit/mock/client": ["./packages/mock/src/client/index.ts"],
       "@maple-kit/mock/install": ["./packages/mock/src/install.ts"],

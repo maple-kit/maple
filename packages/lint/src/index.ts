@@ -36,6 +36,14 @@ export {
   unreadableColors,
 } from "./rendered/rules.js";
 export type { RuleDefinition } from "./rendered/rules.js";
+export { annotationsFor, DESIGN_LINT_CHECK, publishCheckRun } from "./report/check-run.js";
+export type { Annotation, CheckRunTarget } from "./report/check-run.js";
+export { describePlace, placeOf } from "./report/place.js";
+export type { Place } from "./report/place.js";
+export { toSarif } from "./report/sarif.js";
+export type { SarifLog, SarifOptions } from "./report/sarif.js";
+export { groupByRule, unreachableVerdict, verdictFor } from "./report/verdict.js";
+export type { Conclusion, Verdict } from "./report/verdict.js";
 export { lengthToPx, parseTokens, readTokenFiles, ROOT_FONT_SIZE } from "./tokens.js";
 export type { TokenSet } from "./tokens.js";
 export type { Finding, Severity, Tier } from "./types.js";

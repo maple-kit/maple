@@ -25,6 +25,7 @@ const alias = [
   },
   { find: /^@maple-kit\/core$/, replacement: here("./packages/core/src/index.ts") },
   { find: /^@maple-kit\/core\/(.*)$/, replacement: here("./packages/core/src/$1/index.ts") },
+  { find: /^@maple-kit\/lint$/, replacement: here("./packages/lint/src/index.ts") },
   { find: /^@maple-kit\/mock$/, replacement: here("./packages/mock/src/index.ts") },
   { find: /^@maple-kit\/mock\/install$/, replacement: here("./packages/mock/src/install.ts") },
   { find: /^@maple-kit\/mock\/(.*)$/, replacement: here("./packages/mock/src/$1/index.ts") },
