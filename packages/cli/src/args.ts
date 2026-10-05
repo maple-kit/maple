@@ -8,8 +8,11 @@
 
 import { parseArgs as parseNodeArgs } from "node:util";
 
-/** Whether a flag takes a value (`--owner acme`) or stands alone (`--gate`). */
-export type FlagType = "boolean" | "string";
+/**
+ * Whether a flag takes a value (`--owner acme`), stands alone (`--gate`), or
+ * takes a value it may be given more than once (`--tokens a.css --tokens b.css`).
+ */
+export type FlagType = "boolean" | "string" | "strings";
 
 /** The flags one command accepts, by name without the leading dashes. */
 export type FlagSpec = Readonly<Record<string, FlagType>>;
@@ -27,9 +30,12 @@ export interface ParsedArgs {
   readonly command?: string;
   /** Positional arguments after the subcommand. */
   readonly positionals: readonly string[];
-  /** Flags: `true` for a boolean one that was given, the value for a string one. */
-  readonly flags: Readonly<Record<string, boolean | string>>;
+  /** Flags: `true` for a boolean one that was given, the value for a string one, every value for a repeatable one. */
+  readonly flags: Readonly<Record<string, FlagValue>>;
 }
+
+/** What a flag parses to. */
+export type FlagValue = boolean | string | readonly string[];
 
 /** A command line the flag spec does not allow, such as an unknown flag or a missing value. */
 export class ArgsError extends Error {
@@ -48,7 +54,12 @@ export function parseArgs(
   spec: FlagSpec,
   { strict = true }: { readonly strict?: boolean } = {},
 ): ParsedArgs {
-  const options = Object.fromEntries(Object.entries(spec).map(([name, type]) => [name, { type }]));
+  const options = Object.fromEntries(
+    Object.entries(spec).map(([name, type]) => [
+      name,
+      type === "strings" ? { type: "string" as const, multiple: true } : { type },
+    ]),
+  );
   let parsed: { values: Record<string, unknown>; positionals: string[] };
   try {
     parsed = parseNodeArgs({ args: [...argv], options, strict, allowPositionals: true });
@@ -56,9 +67,11 @@ export function parseArgs(
     throw new ArgsError(firstSentence(error));
   }
 
-  const flags: Record<string, boolean | string> = {};
+  const flags: Record<string, FlagValue> = {};
   for (const [name, value] of Object.entries(parsed.values)) {
-    if (typeof value === "string" || typeof value === "boolean") flags[name] = value;
+    if (typeof value === "string" || typeof value === "boolean" || Array.isArray(value)) {
+      flags[name] = value as FlagValue;
+    }
   }
   const [command, ...rest] = parsed.positionals;
   return { ...(command === undefined ? {} : { command }), positionals: rest, flags };
@@ -74,7 +87,7 @@ function firstSentence(error: unknown): string {
 /** The flags `spec` accepts, as a usage line: `--owner <value>, --gate`. */
 export function describeFlags(spec: FlagSpec): string {
   return Object.entries(spec)
-    .map(([name, type]) => (type === "string" ? `--${name} <value>` : `--${name}`))
+    .map(([name, type]) => (type === "boolean" ? `--${name}` : `--${name} <value>`))
     .join(", ");
 }
 

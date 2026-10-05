@@ -173,3 +173,18 @@ painted colour that could not be read.
 A run sends the preview platform's bypass as request headers and nothing else.
 Reviewer cookies are never used: CI's lint run does not borrow a person's
 session to see a page.
+
+## From the command line
+
+`maple lint --url=<preview> --tokens=<file.css>` runs the rendered tier and
+prints the findings grouped by rule with their `file:line:col`. It exits 1 when
+a finding is an error.
+
+`maple ci lint` is the same run as CI does it: `--sarif <path>` writes SARIF,
+and the `maple/design-lint` check run is published on the head commit with
+annotations. Inputs fall back to `GITHUB_REPOSITORY`, the pull request's head
+commit in `GITHUB_EVENT_PATH` (then `GITHUB_SHA`) and `GITHUB_OUTPUT`; the token
+is `MAPLE_GITHUB_TOKEN`, then `GITHUB_TOKEN`, never an argument. `--dry-run`
+prints the verdict and publishes nothing. A preview that cannot be reached is
+neutral, not a failure. `runCiLint` from `@maple-kit/cli` is the same thing as a
+function.
