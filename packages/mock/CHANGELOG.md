@@ -1,5 +1,11 @@
 # @maple-kit/mock
 
+## 0.18.0
+
+### Patch Changes
+
+- @maple-kit/core@0.18.0
+
 ## 0.17.1
 
 ### Patch Changes

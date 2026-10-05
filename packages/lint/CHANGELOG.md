@@ -1,5 +1,15 @@
 # @maple-kit/lint
 
+## 0.2.0
+
+### Minor Changes
+
+- 5750a12: Add the reporting half of the lint: `toSarif`, `verdictFor`, `unreachableVerdict`, `publishCheckRun` for the `maple/design-lint` check run, and `placeOf` to read a finding's `file:line:col`.
+
+### Patch Changes
+
+- @maple-kit/core@0.18.0
+
 ## 0.1.10
 
 ### Patch Changes
