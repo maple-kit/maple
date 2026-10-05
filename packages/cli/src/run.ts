@@ -1,5 +1,7 @@
 import { ArgsError, describeFlags, GLOBAL_FLAGS, isSet, parseArgs } from "./args.js";
+import { CI_LINT_FLAGS, CI_LINT_USAGE, ciLint } from "./commands/ci-lint.js";
 import { connectorKindRows, renderConnectorKinds } from "./commands/connectors.js";
+import { lint, LINT_FLAGS } from "./commands/lint.js";
 import { MOCK_PLAN_FLAGS, MOCK_PLAN_USAGE, mockPlan } from "./commands/mock-plan.js";
 import { MOCK_SCHEMA_FLAGS, MOCK_SCHEMA_USAGE, mockSchema } from "./commands/mock-schema.js";
 import { review, REVIEW_FLAGS } from "./commands/review.js";
@@ -10,6 +12,7 @@ import { solo, SOLO_FLAGS } from "./commands/solo.js";
 import { HELP } from "./help.js";
 
 import type { FlagSpec, ParsedArgs } from "./args.js";
+import type { RunLint } from "./commands/lint.js";
 import type { Generate } from "./commands/mock-schema.js";
 import type { WorkflowFs } from "./commands/setup-ci.js";
 import type { SoloOptions } from "./commands/solo.js";
@@ -28,6 +31,10 @@ export interface RunOptions {
   readonly fs?: WorkflowFs;
   /** How `maple solo` starts its bridge. Defaults to core's. */
   readonly start?: SoloOptions["start"];
+  /** `maple lint` and `maple ci lint`'s linter, in place of a real browser. */
+  readonly lint?: RunLint;
+  /** What `maple ci lint` reads its GitHub inputs from. Defaults to the process's. */
+  readonly env?: NodeJS.ProcessEnv;
 }
 
 /** What a command produced: text to print and the exit code to use. */
@@ -46,6 +53,16 @@ interface Command {
 
 /** Every command, by the words that name it. */
 export const COMMANDS: Readonly<Record<string, Command>> = {
+  "ci lint": {
+    flags: CI_LINT_FLAGS,
+    run: (args, options) =>
+      ciLint(args, {
+        ...(options.env === undefined ? {} : { env: options.env }),
+        ...(options.lint === undefined ? {} : { lint: options.lint }),
+        ...(options.fetch === undefined ? {} : { fetch: options.fetch }),
+        ...(options.cwd === undefined ? {} : { root: options.cwd }),
+      }),
+  },
   connectors: {
     flags: {},
     run: ({ flags }) => {
@@ -53,6 +70,7 @@ export const COMMANDS: Readonly<Record<string, Command>> = {
       return present(isSet(flags, "json"), rows, renderConnectorKinds(rows));
     },
   },
+  lint: { flags: LINT_FLAGS, run: (args, options) => lint(args, options.lint, options.cwd) },
   "mock schema": {
     flags: MOCK_SCHEMA_FLAGS,
     run: (args, options) => mockSchema(args, options.generate),
@@ -76,6 +94,7 @@ export const COMMANDS: Readonly<Record<string, Command>> = {
 
 /** What a command group prints when its subcommand is missing or unknown. */
 const GROUP_USAGE: Readonly<Record<string, string>> = {
+  ci: CI_LINT_USAGE,
   mock: `${MOCK_SCHEMA_USAGE}\n\n${MOCK_PLAN_USAGE}`,
   setup: `${SETUP_APP_USAGE}\n\n${SETUP_VERIFY_USAGE}\n\n${SETUP_CI_USAGE}`,
 };

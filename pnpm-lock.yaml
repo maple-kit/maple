@@ -203,9 +203,15 @@ importers:
       '@maple-kit/core':
         specifier: workspace:*
         version: link:../core
+      '@maple-kit/lint':
+        specifier: workspace:*
+        version: link:../lint
       '@maple-kit/ui':
         specifier: workspace:*
         version: link:../ui
+      playwright:
+        specifier: ^1.50.0
+        version: 1.63.0
     devDependencies:
       '@trpc/openapi':
         specifier: 11.19.0-alpha

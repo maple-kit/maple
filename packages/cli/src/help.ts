@@ -12,7 +12,9 @@ Commands
   setup app         Print the prefilled GitHub App registration URL and the steps after it
   setup verify      Check that a comment App's Device Flow is on
   setup ci          Print or write the gate workflow, and the ruleset that requires it
-  solo              Keep a preview's comments on this machine: start the bridge, print the link
+  lint              Run the design-system lint against a preview, locally
+  ci lint           Run the design lint as CI does: SARIF and the maple/design-lint check
+  solo             Keep a preview's comments on this machine: start the bridge, print the link
 
 Options
   --json            Print machine-readable output where a command supports it

@@ -33,6 +33,8 @@ npm install -g @maple-kit/cli
 | `maple setup app`    | Print the prefilled GitHub App registration URL and the steps after it      |
 | `maple setup verify` | Check that a comment App's Device Flow is on                                |
 | `maple setup ci`     | Print or write the gate workflow, and the ruleset that requires it          |
+| `maple lint`         | Run the design-system lint against a preview, locally                       |
+| `maple ci lint`      | Run the design lint as CI does: SARIF and the maple/design-lint check       |
 | `maple solo`         | Keep a preview's comments on this machine: start the bridge, print the link |
 
 <!-- /generated:cli-commands -->
