@@ -8,6 +8,8 @@
  * credential for the few minutes it lives.
  */
 
+import { USER_AGENT } from "../internal/user-agent.js";
+
 /** Where the flow runs and as whom. */
 export interface DeviceFlowOptions {
   /** The GitHub App's client id. Public; it is not a secret. */
@@ -109,7 +111,11 @@ export function createDeviceFlow(options: DeviceFlowOptions): DeviceFlow {
   async function post<T>(path: string, body: Record<string, string>): Promise<T> {
     const response = await call(`${base}${path}`, {
       method: "POST",
-      headers: { accept: "application/json", "content-type": "application/json" },
+      headers: {
+        accept: "application/json",
+        "content-type": "application/json",
+        "user-agent": USER_AGENT,
+      },
       body: JSON.stringify(body),
     });
 

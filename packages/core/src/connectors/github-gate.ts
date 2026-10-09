@@ -7,6 +7,8 @@
  * that has to be a second App.
  */
 
+import { USER_AGENT } from "../internal/user-agent.js";
+
 import type { GateConclusion, GateReason, GateVerdict } from "../types.js";
 import type { GateConnector, GateReport, GateTarget } from "./types.js";
 
@@ -83,6 +85,7 @@ function createClient(options: GitHubGateOptions): Client {
           accept: "application/vnd.github+json",
           authorization: `Bearer ${options.token}`,
           "x-github-api-version": "2022-11-28",
+          "user-agent": USER_AGENT,
           ...(init.body === undefined ? {} : { "content-type": "application/json" }),
           ...init.headers,
         },
