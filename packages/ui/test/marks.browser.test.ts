@@ -585,6 +585,71 @@ describe("the layer", () => {
     expect(getComputedStyle(mark!).transitionProperty).not.toContain("translate");
   });
 
+  it("moves a mark exactly as far as its anchor, even as it leaves the top", async () => {
+    fixture("c1", { x: 200, y: 400, w: 200, h: 80 });
+    const comments = [comment("c1")];
+
+    await render(layer({ comments, visible: comments }));
+    const [mark] = await drawn(1);
+    const before = y(mark!);
+
+    window.scrollTo(0, 410);
+    await vi.waitFor(() => expect(y(mark!)).toBe(before - 410));
+    expect(y(mark!)).toBeLessThan(0);
+  });
+
+  it("says nothing while every mark is on the screen", async () => {
+    fixture("c1", { x: 200, y: 300, w: 200, h: 80 });
+    const comments = [comment("c1")];
+
+    await render(layer({ comments, visible: comments }));
+    await drawn(1);
+
+    for (const edge of root().querySelectorAll<HTMLElement>(".mk-edge")) {
+      expect(edge.hasAttribute("data-mk-off")).toBe(true);
+    }
+  });
+
+  it("points at comments scrolled out of sight, with a count, and goes to the nearest", async () => {
+    const far = window.innerHeight * 2;
+    fixture("c1", { x: 200, y: far, w: 200, h: 80 });
+    fixture("c2", { x: 600, y: window.innerHeight + 300, w: 200, h: 80 });
+    const comments = [comment("c1"), comment("c2")];
+
+    await render(layer({ comments, visible: comments }));
+    await drawn(2);
+
+    const down = root().querySelector<HTMLButtonElement>('.mk-edge[data-mk-edge="down"]')!;
+    await vi.waitFor(() => expect(down.hasAttribute("data-mk-off")).toBe(false));
+    expect(down.querySelector(".mk-edge-n")!.textContent).toBe("2");
+    expect(down.getAttribute("aria-label")).toBe("Scroll down to the nearest of 2 comments");
+    expect(root().querySelector('.mk-edge[data-mk-edge="up"]')!.hasAttribute("data-mk-off")).toBe(
+      true,
+    );
+
+    const box = down.getBoundingClientRect();
+    expect(box.bottom).toBeLessThanOrEqual(window.innerHeight);
+    expect(box.bottom).toBeGreaterThan(window.innerHeight - 50);
+
+    down.click();
+    await vi.waitFor(() => expect(window.scrollY).toBeGreaterThan(100));
+    await vi.waitFor(() => expect(window.scrollY).toBeGreaterThan(window.innerHeight - 200));
+  });
+
+  it("points back up once the page has gone past a comment", async () => {
+    fixture("c1", { x: 200, y: 100, w: 200, h: 80 });
+    const comments = [comment("c1")];
+
+    await render(layer({ comments, visible: comments }));
+    await drawn(1);
+    window.scrollTo(0, 900);
+
+    const up = root().querySelector<HTMLButtonElement>('.mk-edge[data-mk-edge="up"]')!;
+    await vi.waitFor(() => expect(up.hasAttribute("data-mk-off")).toBe(false));
+    expect(up.getAttribute("aria-label")).toBe("Scroll up to a comment");
+    expect(up.getBoundingClientRect().top).toBeLessThan(20);
+  });
+
   it("rings the mark a reviewer is pointing at, and stops the moment they leave", async () => {
     const target = fixture("c1", { x: 200, y: 300, w: 200, h: 80 });
     const comments = [comment("c1")];

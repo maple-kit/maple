@@ -9,6 +9,7 @@
  */
 
 import { SHEET_BREAKPOINT_PX } from "../tokens.js";
+import { resizeCss } from "./resize-css.js";
 import { STAGGER_ROWS } from "./stagger.js";
 
 /** Every rule the island needs, and nothing another part owns. */
@@ -16,6 +17,7 @@ export function islandCss(): string {
   return [
     shell(),
     corners(),
+    resizeCss(),
     header(),
     filters(),
     list(),

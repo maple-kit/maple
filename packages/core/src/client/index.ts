@@ -106,6 +106,7 @@ export type {
   ComposerTarget,
   Corner,
   Detail,
+  IslandSize,
   PickKind,
   PickState,
   PostedComment,

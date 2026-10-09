@@ -30,6 +30,12 @@ export const CORNERS = ["bottom-right", "bottom-left", "top-right", "top-left"] 
 /** One of {@link CORNERS}. The island snaps to these and to nothing between. */
 export type Corner = (typeof CORNERS)[number];
 
+/** How big the viewer made the island's card, in CSS pixels. */
+export interface IslandSize {
+  readonly width: number;
+  readonly height: number;
+}
+
 /** The two amounts of detail a surface shows. Neither changes what is recorded. */
 export const DETAILS = ["default", "developer"] as const;
 
@@ -138,6 +144,8 @@ export interface ClientState {
   readonly detail: Detail;
   /** Which corner the island sits in, after a drag or a query string. */
   readonly position: Corner;
+  /** The card's size after the viewer resized it, or null while it is the default. */
+  readonly islandSize: IslandSize | null;
   /** Hidden for this session. Not gone: anything arriving brings it back. */
   readonly hidden: boolean;
   /** The comment a link asked for, or a mark answered to. Null when none. */

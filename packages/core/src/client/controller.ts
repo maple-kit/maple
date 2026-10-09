@@ -65,6 +65,7 @@ import type {
   Corner,
   Detail,
   GitHubLink,
+  IslandSize,
   PickKind,
   PickState,
   PostedComment,
@@ -168,6 +169,8 @@ export interface MapleClient {
   setTheme(preference: ThemePreference): void;
   /** Snapped to a corner by the surface; remembered per origin. */
   setPosition(position: Corner): void;
+  /** The card's size, as the viewer left it; null puts it back. Remembered per origin. */
+  setIslandSize(size: IslandSize | null): void;
   /** Hidden for the session. Anything arriving takes it back off again. */
   setHidden(hidden: boolean): void;
   /** What a link, a mark or a row asked to be looked at. Null clears it. */
@@ -317,6 +320,7 @@ export function createMapleClient(options: MapleClientOptions): MapleClient {
     setDetail: (detail) => remember(runtime, { detail }),
     setTheme: (themePreference) => remember(runtime, { themePreference }),
     setPosition: (position) => remember(runtime, { position }),
+    setIslandSize: (islandSize) => remember(runtime, { islandSize }),
     setHidden: (hidden) => patch(runtime, { hidden }),
     select: (id) => patch(runtime, { selected: id, hidden: id === null && runtime.state.hidden }),
     peek: (id) => patch(runtime, { peeked: id }),
@@ -397,6 +401,7 @@ function runtimeFor(options: MapleClientOptions): Runtime {
       showResolved: !config.hideResolved,
       detail: config.detail,
       position: config.position,
+      islandSize: readPreferences(storageOf(options)).islandSize ?? null,
       hidden: false,
       selected: config.comment ?? null,
       peeked: null,
@@ -443,6 +448,7 @@ function remember(runtime: Runtime, change: Partial<ClientState>): void {
       detail: runtime.state.detail,
       position: runtime.state.position,
       theme: runtime.state.themePreference,
+      islandSize: runtime.state.islandSize,
     },
     storageOf(runtime.options),
   );

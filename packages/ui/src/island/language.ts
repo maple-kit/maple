@@ -220,6 +220,12 @@ export const ISLAND_COPY = {
   attachmentSentence: "A screenshot went with this comment. The panel shows it.",
 } as const;
 
+/** The card's resize handles, for a screen reader and the keyboard. */
+export const RESIZE_COPY = {
+  width: "Resize the width",
+  height: "Resize the height",
+} as const;
+
 /** The pill's own words. One number, and it is the open one. */
 export function openLabel(count: number): string {
   return `${String(count)} open`;
