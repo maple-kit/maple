@@ -107,6 +107,28 @@ describe("streamSink", () => {
     expect(stream.lines[0]).toMatch(/^\S+Z error failed\nError: boom\n/);
   });
 
+  it.each([
+    ["no cause", new Error("boom"), []],
+    [
+      "an Error cause",
+      new Error("boom", { cause: new Error("GitHub 403") }),
+      ["Error: GitHub 403"],
+    ],
+    [
+      "a nested chain",
+      new Error("boom", { cause: new TypeError("mid", { cause: "root" }) }),
+      ["TypeError: mid", '"root"'],
+    ],
+  ])("appends the cause chain with %s", (_, error, causes) => {
+    const stream = captured();
+    createLogger({ sinks: [streamSink(stream)] }).error("failed", error);
+
+    const written = (stream.lines[0] ?? "")
+      .split("\n")
+      .filter((line) => line.startsWith("Caused by: "));
+    expect(written).toEqual(causes.map((cause) => `Caused by: ${cause}`));
+  });
+
   it("still writes the line when the fields cannot be serialised", () => {
     const stream = captured();
     const loop: Record<string, unknown> = {};

@@ -1,3 +1,5 @@
+import { causeChain } from "../causes.js";
+
 import type { LogRecord, LogSink } from "../types.js";
 
 /** Anything with a `write(text)`, such as `process.stderr`. */
@@ -18,7 +20,9 @@ function serialise(fields: LogRecord["fields"]): string {
 function format(record: LogRecord): string {
   const head = `${record.at} ${record.level.padEnd(5)} ${record.message}`;
   const fields = Object.keys(record.fields).length > 0 ? ` ${serialise(record.fields)}` : "";
-  const error = record.error ? `\n${record.error.stack ?? String(record.error)}` : "";
+  const error = record.error
+    ? `\n${record.error.stack ?? String(record.error)}${causeChain(record.error)}`
+    : "";
   return `${head}${fields}${error}\n`;
 }
 
