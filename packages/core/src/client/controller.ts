@@ -450,12 +450,27 @@ function remember(runtime: Runtime, change: Partial<ClientState>): void {
 
 /** Recomputes everything derived, so no caller can forget to. */
 function derive(state: ClientState): ClientState {
+  const visible = visibleComments(state.comments, state.filter, state.showResolved);
   return {
-    ...state,
-    visible: visibleComments(state.comments, state.filter, state.showResolved),
+    ...dropHidden(state, visible),
+    visible,
     openCount: openCount(state.comments),
     myApproval: mine(state),
   };
+}
+
+/**
+ * A comment the list hides cannot be open or selected, or a card would sit
+ * above an empty list. One not loaded yet is kept: a deep link names it first. */
+function dropHidden(state: ClientState, visible: readonly Comment[]): ClientState {
+  const hidden = (id: string | null | undefined) =>
+    id != null &&
+    state.comments.some((one) => one.id === id) &&
+    !visible.some((one) => one.id === id);
+
+  const closing = state.composer.open && hidden(state.composer.viewing);
+  const next = hidden(state.selected) ? { ...state, selected: null } : state;
+  return closing ? { ...next, composer: CLOSED } : next;
 }
 
 /**
