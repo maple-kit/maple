@@ -41,6 +41,35 @@ output, so what this example claims is checked rather than described:
 pnpm --filter @maple-kit/example-vite verify
 ```
 
+## A public preview for every pull request
+
+A pull request that touches `packages/` or this example gets a deployed copy,
+so a reviewer can comment on it without running anything.
+`.github/workflows/vite-app-preview.yml` builds with `MAPLE_PREVIEW=1`, so the
+tagger is on and every comment carries `file:line`, then deploys one
+Cloudflare Worker named `maple-example-pr-<number>` and posts its URL in a
+sticky comment. The Worker is deleted when the pull request closes. A fork's
+pull request is skipped: it gets no secrets to deploy with.
+
+`worker/index.ts` is the whole server. `dist-preview/` is served as Workers
+static assets, `/api/maple/*` goes to `createMapleHandler`, and the page's own
+API comes from `src/app/example-api.ts`, the same table the Vite servers use.
+
+The store is `githubStore` on this repository's own pull request, found by the
+commit the build came from, and written as the reviewer: they sign in with
+Device Flow on the page, and their token lives in an `HttpOnly` cookie. The
+example therefore reviews the change that deployed it. The seeded comments are
+for the local dev server only; a deployed copy starts with the pull request's
+own ledger.
+
+The settings the workflow needs are listed in `docs/configuration.md`. To build
+and inspect the Worker without deploying it:
+
+```bash
+MAPLE_PREVIEW=1 pnpm --filter @maple-kit/example-vite build
+cd examples/vite-app && pnpm dlx wrangler@4.147.0 deploy --dry-run --outdir wout
+```
+
 ## What it proves today
 
 1. **One plugin, no other configuration.** `maple({ tagger })` in
@@ -86,6 +115,8 @@ pnpm --filter @maple-kit/example-vite verify
 The CSP contrast with the Next example: this one is not yet run under the same
 policy, so `docs/overlay-csp.md`'s claim is still described rather than tested.
 
-The route here is `fileStore()` and `fileMedia()`, mounted by the Vite plugin on the dev and
-preview servers only. A statically deployed copy of this example has no server
-and has to host the route elsewhere.
+The route in `vite.config.ts` is `fileStore()` and `fileMedia()`, mounted by the
+Vite plugin on the dev and preview servers only. A statically deployed copy has
+no server, which is why the pull request preview hosts the route in a Worker.
+That Worker has no media connector yet, so a deployed copy cannot keep a
+screenshot, and it sets no rate limit beyond GitHub's own.

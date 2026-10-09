@@ -1,0 +1,96 @@
+name: Vite app preview
+
+# One Cloudflare Worker per pull request serves examples/vite-app with Maple
+# mounted, so a reviewer can comment on a real deployment of the change. The
+# Worker is deleted when the pull request closes. The design is in
+# examples/vite-app/README.md; the secret and variables are in
+# docs/configuration.md.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    paths:
+      - "packages/**"
+      - "examples/vite-app/**"
+      - ".github/workflows/vite-app-preview.yml"
+
+# A newer push replaces the deploy in flight, and a close waits its turn so it
+# always runs last.
+concurrency:
+  group: vite-app-preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  # Pinned exactly, run through Socket Firewall, and installed on demand: the
+  # repository does not depend on it, only this workflow does.
+  WRANGLER: wrangler@4.147.0
+  WORKER: maple-example-pr-${{ github.event.pull_request.number }}
+  MARKER: "<!-- maple-vite-app-preview -->"
+  CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  GH_TOKEN: ${{ github.token }}
+  PR: ${{ github.event.pull_request.number }}
+
+jobs:
+  deploy:
+    # A fork's pull request gets no secrets, so there is nothing to deploy with.
+    if: github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - name: Build the packages the example imports
+        run: pnpm build
+      - name: Build the example as a preview
+        env:
+          MAPLE_PREVIEW: "1"
+          VITE_MAPLE_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: pnpm --filter @maple-kit/example-vite build
+      - name: Deploy the Worker
+        working-directory: examples/vite-app
+        env:
+          WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/wrangler-output.ndjson
+          MAPLE_GITHUB_CLIENT_ID: ${{ vars.MAPLE_GITHUB_CLIENT_ID }}
+          MAPLE_COMMIT: ${{ github.event.pull_request.head.sha }}
+        run: |
+          sfw pnpm dlx "$WRANGLER" deploy --name "$WORKER" \
+            --var "MAPLE_GITHUB_CLIENT_ID:$MAPLE_GITHUB_CLIENT_ID" \
+            --var "MAPLE_REPO:$GITHUB_REPOSITORY" \
+            --var "MAPLE_COMMIT:$MAPLE_COMMIT"
+          target=$(jq -rs 'map(select(.type == "deploy")) | last | .targets[0]' "$WRANGLER_OUTPUT_FILE_PATH")
+          case "$target" in http*) ;; *) target="https://$target" ;; esac
+          echo "URL=$target" >> "$GITHUB_ENV"
+      - name: Say where it is
+        run: |
+          body="$MARKER
+          **Preview:** $URL
+
+          Sign in with GitHub on the page to comment. Comments land on this pull request."
+          ./.github/scripts/sticky-comment.sh "$PR" "$MARKER" "$body"
+
+  cleanup:
+    if: github.event.action == 'closed' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+      - name: Delete the Worker
+        # --force: a pull request that never deployed has nothing to delete.
+        run: pnpm dlx "$WRANGLER" delete --name "$WORKER" --force || echo "No Worker to delete."
+      - name: Say it is gone
+        run: |
+          ./.github/scripts/sticky-comment.sh "$PR" "$MARKER" "$MARKER
+          **Preview:** deleted with the pull request."

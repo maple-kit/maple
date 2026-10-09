@@ -4,7 +4,8 @@
     "types": ["node", "vite/client"],
     "jsx": "react-jsx",
     "module": "preserve",
-    "moduleResolution": "bundler"
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "scripts/**/*.ts", "*.config.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "scripts/**/*.ts", "worker/**/*.ts", "*.config.ts"]
 }

@@ -8,7 +8,7 @@ import { maple } from "@maple-kit/core/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv } from "vite";
 
-import { AUDIT, LD_FLAGS, ROWS } from "./src/app/data.js";
+import { answerExample } from "./src/app/example-api.js";
 import { SEEDED_FRAMES } from "./src/app/frames.js";
 import { seedComments } from "./src/app/seed.js";
 
@@ -55,30 +55,16 @@ async function seeded(branch: string): Promise<{ store: CommentStore; media: Med
   return { store, media };
 }
 
-/**
- * The page's own API, answered from `data.ts`: what a real app would fetch.
- * `/ld/…` stands in for LaunchDarkly's flag poll, so the example needs no key.
- */
-const API: Readonly<Record<string, unknown>> = {
-  "GET /api/reviews": { items: ROWS, total: ROWS.length, nextCursor: null },
-  "GET /api/session": { name: "Ada", tint: 0, role: "owner", permissions: ["settings.write"] },
-  "GET /api/audit": { items: AUDIT },
-  "POST /api/settings": null,
-};
-
-const LD_POLL = /^\/ld\/sdk\/evalx\/[^/]+\/contexts\/[^/]+$/;
-
 const answerApi: Connect.NextHandleFunction = (request, response, next) => {
   const path = request.url?.split("?")[0] ?? "";
-  const key = `${request.method ?? "GET"} ${path}`;
-  const body = request.method === "GET" && LD_POLL.test(path) ? LD_FLAGS : API[key];
-  if (body === undefined) return next();
-  if (body === null) {
+  const answer = answerExample(request.method ?? "GET", path);
+  if (answer === undefined) return next();
+  if ("empty" in answer) {
     response.statusCode = 204;
     return response.end();
   }
   response.setHeader("content-type", "application/json");
-  response.end(JSON.stringify(body));
+  response.end(JSON.stringify(answer.body));
 };
 
 /** Mounts the page's API on the dev and preview servers. */
