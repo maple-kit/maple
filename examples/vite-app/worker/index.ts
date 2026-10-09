@@ -8,7 +8,7 @@
  */
 
 import { createCommentStore } from "@maple-kit/core";
-import { readGitHubSession } from "@maple-kit/core/auth";
+import { githubIdentity, readGitHubSession } from "@maple-kit/core/auth";
 import { createPullCache, githubStore, keywordClassifier } from "@maple-kit/core/connectors";
 import { createLogger } from "@maple-kit/core/logger";
 import { createMapleHandler } from "@maple-kit/core/route";
@@ -57,6 +57,8 @@ function handlerFor(env: Env): Handler {
     // The route keeps a store's error out of the browser; Workers Logs keeps it.
     logger: createLogger(),
     store: storeFor(env),
+    // Names the reviewer by their GitHub login; without it comments say "Guest".
+    identity: githubIdentity(),
     githubAuth: { clientId: env.MAPLE_GITHUB_CLIENT_ID },
     mock: {
       preview: true,
