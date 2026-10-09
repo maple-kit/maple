@@ -34,10 +34,10 @@ function Keep(): null {
   return null;
 }
 
-function tree(): ReactElement {
+function tree(fetch = fixtureFetch()): ReactElement {
   return createElement(
     MapleRoot,
-    { branch: BRANCH, theme: "light", options: { fetch: fixtureFetch() } },
+    { branch: BRANCH, theme: "light", options: { fetch } },
     createElement(Keep),
     createElement(
       Island,
@@ -93,10 +93,14 @@ beforeEach(async () => {
   await vi.waitFor(() => expect(client.getState().comments).toHaveLength(COMMENTS.length));
 });
 
-afterEach(() => {
+function cleanup(): void {
   client.destroy();
-  document.documentElement.removeAttribute("data-theme");
   for (const overlay of document.querySelectorAll("[data-maple-overlay]")) overlay.remove();
+}
+
+afterEach(() => {
+  cleanup();
+  document.documentElement.removeAttribute("data-theme");
 });
 
 /**
@@ -171,6 +175,37 @@ describe("clicking a comment", () => {
     await openFirstRow();
 
     expect(client.getState().selected).toBe(client.getState().composer.viewing);
+  });
+});
+
+/** The card and the list read one rule, so a card never sits over an empty list. */
+describe("a comment the filter stops showing", () => {
+  it("closes its card and shows the empty state once it is resolved", async () => {
+    cleanup();
+    await render(tree(fixtureFetch(COMMENTS.slice(0, 1))));
+    await vi.waitFor(() => expect(root().querySelectorAll(".mk-row")).toHaveLength(1));
+    await openFirstRow();
+    const id = client.getState().composer.viewing!;
+
+    const resolve = [
+      ...root().querySelectorAll<HTMLButtonElement>(".mk-composer-foot button"),
+    ].find((one) => one.textContent === "Resolve");
+    resolve?.click();
+
+    await vi.waitFor(() => expect(root().querySelector(".mk-empty")).not.toBeNull());
+    expect(client.getState().comments.find((one) => one.id === id)?.status).toBe("resolved");
+    expect(client.getState().composer.open).toBe(false);
+    expect(client.getState().selected).toBeNull();
+    expect(root().querySelector(".mk-read")).toBeNull();
+  });
+
+  it("keeps the card when the filter still shows it", async () => {
+    await openFirstRow();
+
+    client.setFilter("open");
+
+    expect(client.getState().composer.open).toBe(true);
+    expect(root().querySelector(".mk-read")).not.toBeNull();
   });
 });
 
