@@ -1,8 +1,9 @@
 name: Vite app preview
 
 # One Cloudflare Worker per pull request serves examples/vite-app with Maple
-# mounted, so a reviewer can comment on a real deployment of the change. The
-# Worker is deleted when the pull request closes. The design is in
+# mounted, at <branch>.preview.maple-kit.org, so a reviewer can comment on a
+# real deployment of the change. The Worker and its domain are deleted when the
+# pull request closes. The design is in
 # examples/vite-app/README.md; the secret and variables are in
 # docs/configuration.md.
 on:
@@ -28,6 +29,8 @@ env:
   WRANGLER: wrangler@4.147.0
   WORKER: maple-example-pr-${{ github.event.pull_request.number }}
   MARKER: "<!-- maple-vite-app-preview -->"
+  PREVIEW_DOMAIN: preview.maple-kit.org
+  BRANCH: ${{ github.event.pull_request.head.ref }}
   CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
   CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
   GH_TOKEN: ${{ github.token }}
@@ -51,21 +54,20 @@ jobs:
         env:
           MAPLE_PREVIEW: "1"
           VITE_MAPLE_BRANCH: ${{ github.event.pull_request.head.ref }}
+          VITE_MAPLE_PULL_REQUEST: ${{ github.event.pull_request.html_url }}
         run: pnpm --filter @maple-kit/example-vite build
       - name: Deploy the Worker
         working-directory: examples/vite-app
         env:
-          WRANGLER_OUTPUT_FILE_PATH: ${{ runner.temp }}/wrangler-output.ndjson
           MAPLE_GITHUB_CLIENT_ID: ${{ vars.MAPLE_GITHUB_CLIENT_ID }}
           MAPLE_COMMIT: ${{ github.event.pull_request.head.sha }}
         run: |
-          sfw pnpm dlx "$WRANGLER" deploy --name "$WORKER" \
+          host=$(../../.github/scripts/preview-host.sh "$BRANCH" "$PREVIEW_DOMAIN")
+          sfw pnpm dlx "$WRANGLER" deploy --name "$WORKER" --domain "$host" \
             --var "MAPLE_GITHUB_CLIENT_ID:$MAPLE_GITHUB_CLIENT_ID" \
             --var "MAPLE_REPO:$GITHUB_REPOSITORY" \
             --var "MAPLE_COMMIT:$MAPLE_COMMIT"
-          target=$(jq -rs 'map(select(.type == "deploy")) | last | .targets[0]' "$WRANGLER_OUTPUT_FILE_PATH")
-          case "$target" in http*) ;; *) target="https://$target" ;; esac
-          echo "URL=$target" >> "$GITHUB_ENV"
+          echo "URL=https://$host" >> "$GITHUB_ENV"
       - name: Say where it is
         run: |
           body="$MARKER
@@ -87,9 +89,15 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .nvmrc
-      - name: Delete the Worker
-        # --force: a pull request that never deployed has nothing to delete.
-        run: pnpm dlx "$WRANGLER" delete --name "$WORKER" --force || echo "No Worker to delete."
+      - name: Delete the Worker and its domain
+        # The domain is detached first: deleting a Worker leaves its custom
+        # domain record behind. Both steps tolerate a PR that never deployed.
+        run: |
+          host=$(./.github/scripts/preview-host.sh "$BRANCH" "$PREVIEW_DOMAIN")
+          api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains"
+          id=$(curl -sf -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api?hostname=$host" | jq -r '.result[0].id // empty') || id=""
+          [ -z "$id" ] || curl -sf -X DELETE -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/$id" > /dev/null
+          pnpm dlx "$WRANGLER" delete --name "$WORKER" --force || echo "No Worker to delete."
       - name: Say it is gone
         run: |
           ./.github/scripts/sticky-comment.sh "$PR" "$MARKER" "$MARKER

@@ -47,8 +47,11 @@ A pull request that touches `packages/` or this example gets a deployed copy,
 so a reviewer can comment on it without running anything.
 `.github/workflows/vite-app-preview.yml` builds with `MAPLE_PREVIEW=1`, so the
 tagger is on and every comment carries `file:line`, then deploys one
-Cloudflare Worker named `maple-example-pr-<number>` and posts its URL in a
-sticky comment. The Worker is deleted when the pull request closes. A fork's
+Cloudflare Worker named `maple-example-pr-<number>` on a custom domain,
+`<branch>.preview.maple-kit.org`, and posts the URL in a sticky comment. The
+branch is lowercased into a DNS label, with a short hash when it has to be
+cut to 63 characters. The Worker and its domain are deleted when the pull
+request closes. A fork's
 pull request is skipped: it gets no secrets to deploy with.
 
 `worker/index.ts` is the whole server. `dist-preview/` is served as Workers

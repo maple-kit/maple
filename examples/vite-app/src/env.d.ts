@@ -8,6 +8,8 @@
 interface ImportMetaEnv {
   /** The branch under review. CI stamps it; absent, the example picks its own. */
   readonly VITE_MAPLE_BRANCH?: string;
+  /** The pull request's URL, which the island's branch chip links to. */
+  readonly VITE_MAPLE_PULL_REQUEST?: string;
 }
 
 /** True on a preview build and in `vite dev`, set by `vite.config.ts`. */
