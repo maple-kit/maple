@@ -11,12 +11,17 @@ import "./app/app.css";
 // The branch under review. A real deployment reads this from whatever its CI
 // stamped into the build; the example takes it from the env or falls back.
 const BRANCH = import.meta.env.VITE_MAPLE_BRANCH ?? "feat/example";
+// The pull request's URL, so the island's branch chip links to it. Absent
+// outside a preview build.
+const PULL_REQUEST = import.meta.env.VITE_MAPLE_PULL_REQUEST;
 
 const root = document.getElementById("root");
 if (root) {
   createRoot(root).render(
     <StrictMode>
-      <App overlay={<Maple branch={BRANCH} />} />
+      <App
+        overlay={<Maple branch={BRANCH} {...(PULL_REQUEST ? { pullRequest: PULL_REQUEST } : {})} />}
+      />
     </StrictMode>,
   );
 }
