@@ -261,6 +261,21 @@ function header(): string {
   flex: 1 1 auto;
 }
 
+a.mk-branch {
+  text-decoration: none;
+  transition:
+    background-color var(--mk-dur-fade) var(--mk-ease-surface),
+    color var(--mk-dur-fade) var(--mk-ease-surface),
+    border-color var(--mk-dur-fade) var(--mk-ease-surface);
+}
+
+a.mk-branch:hover,
+a.mk-branch:focus-visible {
+  border-color: var(--mk-line-firm);
+  background: var(--mk-bg);
+  color: var(--mk-fg);
+}
+
 .mk-branch {
   max-width: 132px;
   padding: 2px 8px;
@@ -735,6 +750,24 @@ ${steps}
 
 .mk-row:nth-child(n + ${String(STAGGER_ROWS + 1)}) {
   animation-delay: var(--mk-stagger-cap);
+}
+
+/* Held in the layout and drawn only on hover or focus, so a row that gains the
+   button does not move. A pointer-less device reaches it by focus alone. */
+.mk-btn.mk-quick {
+  margin-left: auto;
+  padding: 1px 7px;
+  font-size: 11px;
+  opacity: 0;
+  transition:
+    opacity var(--mk-dur-fade) var(--mk-ease-surface),
+    background-color var(--mk-dur-fade) var(--mk-ease-surface),
+    filter var(--mk-dur-fade) var(--mk-ease-surface);
+}
+
+.mk-row:hover .mk-quick,
+.mk-row:focus-within .mk-quick {
+  opacity: 1;
 }
 
 .mk-row-top {

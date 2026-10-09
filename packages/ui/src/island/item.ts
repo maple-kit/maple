@@ -73,7 +73,7 @@ export const Item = /** @__PURE__ */ forwardRef<HTMLElement, ItemProps>(function
       ref: composeRefs<HTMLElement>(ref, useReveal(selected)),
     },
     [
-      top(comment, number),
+      top(comment, number, client),
       renderPart("p", false, { key: "body", className: "mk-text mk-body" }, comment.body),
       long ? more(expanded, () => setExpanded(!expanded)) : null,
       meta(comment),
@@ -114,7 +114,11 @@ function more(expanded: boolean, onClick: () => void): ReactNode {
 }
 
 /** Which comment this is, who wrote it, when, and where it is in its life. */
-function top(comment: Comment, number: number): ReactNode {
+function top(
+  comment: Comment,
+  number: number,
+  client: ReturnType<typeof useMapleClient>,
+): ReactNode {
   const chip =
     comment.status === "open"
       ? null
@@ -132,7 +136,32 @@ function top(comment: Comment, number: number): ReactNode {
     pin(comment, number),
     who(comment),
     chip,
+    quick(comment, client),
   ]);
+}
+
+/**
+ * The one change a reviewer makes most, a hover away. It is the same call the
+ * card's button makes, and it stops the click so the row does not open.
+ */
+function quick(comment: Comment, client: ReturnType<typeof useMapleClient>): ReactNode {
+  if (comment.status === "orphaned") return null;
+  const done = comment.status === "resolved";
+
+  return renderPart(
+    "button",
+    false,
+    {
+      key: "quick",
+      type: "button",
+      className: cx("mk-btn mk-press mk-quick", done ? undefined : "mk-btn-primary"),
+      onClick: (event: { stopPropagation: () => void }) => {
+        event.stopPropagation();
+        void client.setStatus(comment.id, done ? "open" : "resolved");
+      },
+    },
+    done ? ISLAND_COPY.reopen : ISLAND_COPY.resolve,
+  );
 }
 
 function chipTone(comment: Comment): string {

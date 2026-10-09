@@ -35,6 +35,7 @@ function mount(): void {
   const root = attribute("root");
   const basePath = attribute("base-path");
   const appDir = attribute("app-dir");
+  const pullRequest = attribute("pull-request");
   installSourceLocator({
     ...(root === undefined ? {} : { root }),
     ...(appDir === undefined ? {} : { appDir }),
@@ -43,6 +44,7 @@ function mount(): void {
   createRoot(document.createElement("div")).render(
     createElement(Maple, {
       branch: attribute("branch") ?? "local",
+      ...(pullRequest === undefined ? {} : { pullRequest }),
       ...(basePath === undefined ? {} : { options: { basePath } }),
     }),
   );
