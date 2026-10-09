@@ -26,7 +26,7 @@ export function numbersFor(comments: readonly Comment[]): ReadonlyMap<string, nu
 }
 
 /**
- * The live count beside every pill. `All` subtracts the resolved ones while
+ * The live count beside every pill. `Active` subtracts the resolved ones while
  * they are hidden, because the list under it does too.
  */
 export function countsFor(comments: readonly Comment[], showResolved: boolean): FilterCounts {

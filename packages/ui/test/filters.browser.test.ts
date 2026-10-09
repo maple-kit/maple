@@ -103,7 +103,7 @@ describe("the filter row", () => {
 
 /** The dots carry the marks' colours, so the row doubles as the key to them. */
 describe("the tally", () => {
-  it("has one dot per status, and no dot for All", () => {
+  it("has one dot per status, and no dot for Active", () => {
     const names = [...root().querySelectorAll(".mk-tally-one")].map((one) =>
       one.getAttribute("data-tally"),
     );

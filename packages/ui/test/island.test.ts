@@ -39,7 +39,7 @@ describe("the count on the pill", () => {
 });
 
 describe("the filter counts", () => {
-  it("subtracts the resolved ones from All while they are hidden", () => {
+  it("subtracts the resolved ones from Active while they are hidden", () => {
     expect(countsFor(COMMENTS, false)).toEqual({
       all: 8,
       open: 3,
@@ -49,7 +49,7 @@ describe("the filter counts", () => {
     });
   });
 
-  it("counts everything under All once resolved ones are asked for", () => {
+  it("counts everything under Active once resolved ones are asked for", () => {
     expect(countsFor(COMMENTS, true).all).toBe(9);
   });
 });
