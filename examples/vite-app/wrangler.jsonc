@@ -4,8 +4,7 @@
   "name": "maple-example",
   "main": "worker/index.ts",
   "compatibility_date": "2026-10-01",
-  // The preview is served from a custom domain the workflow attaches.
-  "workers_dev": false,
+  "workers_dev": true,
   // Workers Logs, so a failed route call can be read in the dashboard.
   "observability": { "enabled": true },
   "assets": {
