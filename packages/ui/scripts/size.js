@@ -49,7 +49,8 @@ const BUDGETS = [
     entries: ["mock/layers.js"],
     max: 2.5 * 1024,
   },
-  { name: "the default composition, on top", entries: ["maple.js"], max: 1024 },
+  // 1 KB until the sign-in steps and the linked branch chip joined it.
+  { name: "the default composition, on top", entries: ["maple.js"], max: 1.5 * 1024 },
 ];
 
 // Static imports only: a dynamic `import("./x.js")` is a chunk loaded later,
