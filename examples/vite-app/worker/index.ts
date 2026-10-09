@@ -15,15 +15,15 @@ import { createMapleHandler } from "@maple-kit/core/route";
 
 import openapi from "../openapi.json";
 import { answerExample } from "../src/app/example-api.js";
+import { gateFrom } from "./gate.js";
 
-import type { StoreResolver } from "@maple-kit/core/route";
+import type { GateEnv } from "./gate.js";
+import type { GateResolver, StoreResolver } from "@maple-kit/core/route";
 
-/** The variables `wrangler deploy --var` sets, and the assets binding. */
-interface Env {
+/** The variables `wrangler deploy --var` sets, the gate App's secret, and the assets binding. */
+interface Env extends GateEnv {
   readonly ASSETS: { fetch(request: Request): Promise<Response> };
   readonly MAPLE_GITHUB_CLIENT_ID: string;
-  /** `owner/name` of the repository whose pull request holds the comments. */
-  readonly MAPLE_REPO: string;
   /** The commit the preview was built from, which names its pull request. */
   readonly MAPLE_COMMIT: string;
 }
@@ -47,6 +47,14 @@ function storeFor(env: Env): StoreResolver {
   };
 }
 
+/** The route keeps a store's error out of the browser; Workers Logs keeps it. */
+const logger = createLogger();
+
+function gateOption(env: Env): { gate?: GateResolver } {
+  const gate = gateFrom(env, logger);
+  return gate === undefined ? {} : { gate };
+}
+
 type Handler = (request: Request) => Promise<Response>;
 
 /** Built on the first request: the variables arrive with it, not at import. */
@@ -54,12 +62,13 @@ let handler: Handler | undefined;
 
 function handlerFor(env: Env): Handler {
   handler ??= createMapleHandler({
-    // The route keeps a store's error out of the browser; Workers Logs keeps it.
-    logger: createLogger(),
+    logger,
     store: storeFor(env),
     // Names the reviewer by their GitHub login; without it comments say "Guest".
     identity: githubIdentity(),
     githubAuth: { clientId: env.MAPLE_GITHUB_CLIENT_ID },
+    // Only with the gate App's three bindings; without them the action's run stands.
+    ...gateOption(env),
     mock: {
       preview: true,
       schemas: [{ codec: "rest", document: openapi }],

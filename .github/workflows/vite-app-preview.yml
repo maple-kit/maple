@@ -61,13 +61,33 @@ jobs:
         env:
           MAPLE_GITHUB_CLIENT_ID: ${{ vars.MAPLE_GITHUB_CLIENT_ID }}
           MAPLE_COMMIT: ${{ github.event.pull_request.head.sha }}
+          # Ids, not secrets. Empty until the gate App exists, and the Worker
+          # then runs without a gate.
+          MAPLE_GATE_APP_ID: ${{ vars.MAPLE_GATE_APP_ID }}
+          MAPLE_GATE_INSTALLATION_ID: ${{ vars.MAPLE_GATE_INSTALLATION_ID }}
         run: |
           host=$(../../.github/scripts/preview-host.sh "$BRANCH" "$PREVIEW_DOMAIN")
           sfw pnpm dlx "$WRANGLER" deploy --name "$WORKER" --domain "$host" \
             --var "MAPLE_GITHUB_CLIENT_ID:$MAPLE_GITHUB_CLIENT_ID" \
             --var "MAPLE_REPO:$GITHUB_REPOSITORY" \
-            --var "MAPLE_COMMIT:$MAPLE_COMMIT"
+            --var "MAPLE_COMMIT:$MAPLE_COMMIT" \
+            --var "MAPLE_GATE_APP_ID:$MAPLE_GATE_APP_ID" \
+            --var "MAPLE_GATE_INSTALLATION_ID:$MAPLE_GATE_INSTALLATION_ID"
           echo "URL=https://$host" >> "$GITHUB_ENV"
+      - name: Give the Worker the gate App's key
+        # Only this step holds the key, it reaches wrangler on stdin, and a
+        # fork never gets here: the job's condition excludes it, and the
+        # trigger is pull_request, not pull_request_target.
+        working-directory: examples/vite-app
+        env:
+          MAPLE_GATE_PRIVATE_KEY: ${{ secrets.MAPLE_GATE_PRIVATE_KEY }}
+        run: |
+          if [ -z "$MAPLE_GATE_PRIVATE_KEY" ]; then
+            echo "No gate App key; the Worker runs without a gate."
+            exit 0
+          fi
+          printf '%s' "$MAPLE_GATE_PRIVATE_KEY" |
+            sfw pnpm dlx "$WRANGLER" secret put MAPLE_GATE_PRIVATE_KEY --name "$WORKER"
       - name: Say where it is
         run: |
           body="$MARKER

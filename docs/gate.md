@@ -342,6 +342,17 @@ halves publish as the same App. That is worse: it puts a signing key in CI for
 a job whose own `GITHUB_TOKEN` is already sufficient at push time, and the key
 is the one credential `docs/github-auth.md` argues hardest about.
 
+### In this repository
+
+Both publishers run on every pull request. `.github/workflows/maple.yml` runs
+`maple-action` in `sync` and `gate` modes, which publishes as GitHub Actions;
+the Vite example's preview Worker, once it has the gate App's three variables
+(`docs/configuration.md`), publishes as the gate App when a comment is created
+or resolved. A commit can therefore carry two runs named `maple/visual-review`,
+one per App, and the Worker's `githubGate` is given `appId` so it leaves the
+action's run alone and posts its own. Which of them a ruleset counts is the
+table below; the check is advisory here, so nothing is pinned today.
+
 ### Which App to pin
 
 A ruleset's required check can name the App it must come from — the

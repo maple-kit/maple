@@ -130,6 +130,22 @@ Domain, so the zone must be on the same account as `CLOUDFLARE_ACCOUNT_ID`.
 The Worker also receives `MAPLE_REPO` and `MAPLE_COMMIT` from the workflow, so
 its store is the pull request the build came from.
 
+To let a resolve on the preview clear `maple/visual-review` itself, register
+the gate App (the section above) with **Checks: Read and write** and nothing
+else, install it on this repository, and set:
+
+| Name                         | Secret | Kind     | What it is                                                                                    |
+| ---------------------------- | ------ | -------- | --------------------------------------------------------------------------------------------- |
+| `MAPLE_GATE_APP_ID`          | No     | Variable | The gate App's **App ID**, passed to the Worker as the variable of the same name.             |
+| `MAPLE_GATE_INSTALLATION_ID` | No     | Variable | The installation on this repository, passed the same way.                                     |
+| `MAPLE_GATE_PRIVATE_KEY`     | Yes    | Secret   | The App's `.pem` as GitHub gave it (PKCS#1 is fine), put on the Worker as a secret, on stdin. |
+
+Without all three the Worker runs with no gate, exactly as before. The key
+reaches only the deploy step of a same-repository pull request; the trigger is
+`pull_request`, so a fork never has it. The Worker is public, so a key held
+there is a decision: keep the App to `Checks` alone, as `docs/github-auth.md`
+argues, and nothing else is reachable with it.
+
 ## A web application firewall in front of the route
 
 A firewall rule on request body size can reject Maple's requests before they
