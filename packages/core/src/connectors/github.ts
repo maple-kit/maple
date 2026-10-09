@@ -10,6 +10,7 @@
  */
 
 import { exportMarkdown, parseFence } from "../export/markdown.js";
+import { USER_AGENT } from "../internal/user-agent.js";
 import { findPull } from "./github-pull.js";
 
 import type {
@@ -117,6 +118,7 @@ function createClient(options: GitHubStoreOptions): Client {
           accept: "application/vnd.github+json",
           authorization: `Bearer ${options.token}`,
           "x-github-api-version": "2022-11-28",
+          "user-agent": USER_AGENT,
           ...(init.body === undefined ? {} : { "content-type": "application/json" }),
           ...init.headers,
         },

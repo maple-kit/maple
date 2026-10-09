@@ -201,6 +201,19 @@ describe("the session cookie", () => {
     );
   });
 
+  it.each([
+    ["first", (pair: string) => `${pair}, maple_gh_pending=p.abc, theme=dark`],
+    ["in the middle", (pair: string) => `theme=dark, ${pair}; lang=en`],
+    ["last", (pair: string) => `theme=dark, maple_gh_pending=p.abc, ${pair}`],
+  ])("reads back when it comes %s of several joined cookie headers", async (_, join) => {
+    const response = await link();
+    const cookie = join(cookieFrom(response, SESSION_COOKIE)!);
+
+    expect((await readGitHubSession({ headers: { cookie }, url: BASE }))?.token).toBe(
+      "ghu_reviewer",
+    );
+  });
+
   it("reads a tampered value as not linked rather than throwing", async () => {
     const cookie = `${SESSION_COOKIE}=e.aaaa.bbbb`;
     expect(await readGitHubSession({ headers: { cookie }, url: BASE }, { key: KEY })).toBeNull();

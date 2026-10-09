@@ -7,6 +7,7 @@
  * minted here can write checks, and no reviewer's cookie may ever reach it.
  */
 
+import { USER_AGENT } from "../internal/user-agent.js";
 import { toPkcs8 } from "../lib/pkcs8.js";
 
 /** Where the App authenticates and as whom. */
@@ -145,6 +146,7 @@ async function mint(options: InstallationAuthOptions, jwt: string, at: number): 
       accept: "application/vnd.github+json",
       authorization: `Bearer ${jwt}`,
       "x-github-api-version": "2022-11-28",
+      "user-agent": USER_AGENT,
     },
   });
 

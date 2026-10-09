@@ -81,6 +81,7 @@ async function send(
       accept: "application/vnd.github+json",
       authorization: `Bearer ${target.token}`,
       "content-type": "application/json",
+      "user-agent": "maple-kit",
       "x-github-api-version": "2022-11-28",
     },
     body: JSON.stringify(body),
@@ -106,6 +107,7 @@ async function inFlight(target: CheckRunTarget, repo: string): Promise<{ id: num
     headers: {
       accept: "application/vnd.github+json",
       authorization: `Bearer ${target.token}`,
+      "user-agent": "maple-kit",
       "x-github-api-version": "2022-11-28",
     },
   });

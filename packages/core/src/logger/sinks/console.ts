@@ -2,6 +2,8 @@
    Everything else in the repository logs through a Logger; that rule only holds
    if exactly one sink is allowed to call the console itself. */
 
+import { causeChain } from "../causes.js";
+
 import type { LogRecord, LogSink } from "../types.js";
 
 /** Console method to use per level. */
@@ -27,7 +29,13 @@ export function consoleSink(): LogSink {
       const hasFields = Object.keys(record.fields).length > 0;
 
       if (record.error) {
-        write(prefix(record), hasFields ? record.fields : "", record.error);
+        const causes = causeChain(record.error);
+        write(
+          prefix(record),
+          hasFields ? record.fields : "",
+          record.error,
+          ...(causes ? [causes] : []),
+        );
         return;
       }
       if (hasFields) {

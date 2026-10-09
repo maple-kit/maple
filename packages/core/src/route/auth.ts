@@ -19,6 +19,7 @@ import {
   unseal,
 } from "../auth/cookie.js";
 import { createDeviceFlow, DeviceFlowError } from "../auth/device-flow.js";
+import { USER_AGENT } from "../internal/user-agent.js";
 
 import type { GitHubSession, SessionCookieOptions } from "../auth/cookie.js";
 import type { DeviceCode, DeviceFlowFailure } from "../auth/device-flow.js";
@@ -152,7 +153,11 @@ async function sessionFor(options: GitHubAuthOptions, token: string): Promise<Gi
   const call = options.fetch ?? globalThis.fetch;
   try {
     const response = await call(`${options.apiBaseUrl ?? DEFAULT_API}/user`, {
-      headers: { accept: "application/vnd.github+json", authorization: `Bearer ${token}` },
+      headers: {
+        accept: "application/vnd.github+json",
+        authorization: `Bearer ${token}`,
+        "user-agent": USER_AGENT,
+      },
     });
     if (!response.ok) return { token };
 

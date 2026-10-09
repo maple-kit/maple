@@ -24,6 +24,8 @@ export type {
   DeviceToken,
 } from "./device-flow.js";
 
+export { githubIdentity } from "./identity.js";
+
 export { createInstallationAuth, InstallationAuthError } from "./installation.js";
 
 export type { InstallationAuth, InstallationAuthOptions } from "./installation.js";

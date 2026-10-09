@@ -112,6 +112,21 @@ resolve asks the route to republish the gate, and the gate App's credentials
 stay on the route. `MAPLE_GATE_TOKEN` is for CI, where a job lasts less than the
 hour an installation token lives. The server refuses to start with both.
 
+## CI: the Vite example's preview
+
+`.github/workflows/vite-app-preview.yml` deploys `examples/vite-app` as one
+Cloudflare Worker per pull request. These are repository settings, not Worker
+configuration; the Worker's own variables are set by the workflow.
+
+| Name                     | Secret | Kind     | What it is                                                                                    |
+| ------------------------ | ------ | -------- | --------------------------------------------------------------------------------------------- |
+| `CLOUDFLARE_API_TOKEN`   | Yes    | Secret   | An API token with Workers Scripts: Edit on one account. Never runs for a fork's pull request. |
+| `CLOUDFLARE_ACCOUNT_ID`  | No     | Variable | The account the Workers belong to.                                                            |
+| `MAPLE_GITHUB_CLIENT_ID` | No     | Variable | The comment App's client id, passed to the Worker as the variable of the same name.           |
+
+The Worker also receives `MAPLE_REPO` and `MAPLE_COMMIT` from the workflow, so
+its store is the pull request the build came from.
+
 ## A web application firewall in front of the route
 
 A firewall rule on request body size can reject Maple's requests before they

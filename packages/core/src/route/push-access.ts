@@ -6,6 +6,8 @@
  * keyed by a SHA-256 of the token so the token itself is never held.
  */
 
+import { USER_AGENT } from "../internal/user-agent.js";
+
 /** Where the check is made. */
 export interface PushAccessOptions {
   readonly owner: string;
@@ -69,6 +71,7 @@ async function ask(options: PushAccessOptions, token: string): Promise<PushAnswe
       accept: "application/vnd.github+json",
       authorization: `Bearer ${token}`,
       "x-github-api-version": "2022-11-28",
+      "user-agent": USER_AGENT,
     },
   });
 
