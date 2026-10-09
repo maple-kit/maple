@@ -11,6 +11,8 @@ import { useLayoutEffect, useRef } from "react";
 
 import { useMapleUi } from "../context.js";
 
+import type { Scroll, Viewport } from "./geometry.js";
+
 /** What a loop repaints, told whether the page is currently moving under it. */
 export type Paint = (moving: boolean) => void;
 
@@ -73,7 +75,13 @@ export function useFrameLoop(part: string, paint: Paint): void {
   }, [container]);
 }
 
-/** The viewport height a cull is measured against. */
-export function viewportHeight(container: Element): number {
-  return container.ownerDocument.defaultView?.innerHeight ?? 0;
+/** The page's visible area, scrollbars excluded, and how far it is scrolled. */
+export function pageView(container: Element): Viewport & { readonly scroll: Scroll } {
+  const view = container.ownerDocument.defaultView;
+  const root = container.ownerDocument.documentElement;
+  return {
+    width: root.clientWidth || view?.innerWidth || 0,
+    height: root.clientHeight || view?.innerHeight || 0,
+    scroll: { x: view?.scrollX ?? 0, y: view?.scrollY ?? 0 },
+  };
 }

@@ -13,8 +13,8 @@ import { createElement, forwardRef, useCallback, useRef, useState } from "react"
 import { useMapleUi } from "../context.js";
 import { composeRefs } from "../slot.js";
 import { labelSpotFor } from "./clearance.js";
-import { useFrameLoop, viewportHeight } from "./frame.js";
-import { culled, ringBox, runBox } from "./geometry.js";
+import { pageView, useFrameLoop } from "./frame.js";
+import { edgeOf, ringBox, runBox } from "./geometry.js";
 import { flag, MOVING_ATTRIBUTE, OFF_ATTRIBUTE, place } from "./paint.js";
 
 import type { Box } from "./geometry.js";
@@ -97,7 +97,7 @@ export const MapleTargetRing = /** @__PURE__ */ forwardRef<HTMLDivElement, Targe
         if (!node || !target) return;
 
         const rect = rectOf(target, region, members);
-        const away = empty(rect) || culled(rect, viewportHeight(container));
+        const away = empty(rect) || edgeOf(rect, pageView(container)) !== undefined;
         flag(node, OFF_ATTRIBUTE, away);
         flag(node, MOVING_ATTRIBUTE, moving);
         if (away) return;

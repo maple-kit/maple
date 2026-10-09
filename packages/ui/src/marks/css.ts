@@ -393,15 +393,87 @@ function avatarCss(): string {
 function cullCss(): string {
   return `
 .mk-mark[data-mk-off],
+.mk-edge[data-mk-off],
 .mk-ring[data-mk-off] {
   visibility: hidden;
 }
 `;
 }
 
+/** The indicator for comments the page has scrolled out of sight. */
+function edgeCss(): string {
+  return `
+.mk-edge {
+  ${POSITIONED}
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 54px;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--mk-line-firm);
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--mk-bg) 90%, transparent);
+  backdrop-filter: blur(12px) saturate(1.3);
+  box-shadow: var(--mk-sh2);
+  color: var(--mk-accent);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+  pointer-events: auto;
+  transition:
+    transform var(--mk-dur-fade) var(--mk-ease-surface),
+    border-color var(--mk-dur-fade) var(--mk-ease-surface);
+}
+
+.mk-edge:hover,
+.mk-edge:focus-visible {
+  border-color: var(--mk-accent);
+  transform: scale(1.06);
+}
+
+.mk-edge:active {
+  transform: scale(var(--mk-press));
+}
+
+.mk-edge-logo path {
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+
+.mk-edge-arrow {
+  flex: none;
+}
+
+.mk-edge[data-mk-edge="down"] .mk-edge-arrow {
+  rotate: 180deg;
+}
+
+.mk-edge[data-mk-edge="left"] .mk-edge-arrow {
+  rotate: -90deg;
+}
+
+.mk-edge[data-mk-edge="right"] .mk-edge-arrow {
+  rotate: 90deg;
+}
+
+.mk-edge-n {
+  color: var(--mk-fg);
+}
+
+.mk-edge-n:empty {
+  display: none;
+}
+`;
+}
+
 /** Everything the marks add to the overlay's one stylesheet. */
 export function marksCss(): string {
-  return [paintCss(), leafCss(), markCss(), ringCss(), avatarCss(), cullCss()]
+  return [paintCss(), leafCss(), markCss(), ringCss(), avatarCss(), edgeCss(), cullCss()]
     .map((block) => block.trim())
     .join("\n\n");
 }

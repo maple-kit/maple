@@ -59,9 +59,6 @@ export interface Box {
 /** How far outside the ring sits from what it names. */
 const RING_INSET_PX = 3;
 
-/** How far off the top or the bottom a rect is before it stops being drawn. */
-const CULL_PX = 60;
-
 /** The overlay is `position: fixed`, so a client rect is already its geometry. */
 export function ringBox(rect: Box): Box {
   return {
@@ -82,16 +79,47 @@ export function runBox(run: Box, rect: Box): Box {
   };
 }
 
-/** Far enough above or below the viewport that drawing it is wasted work. */
-export function culled(rect: Box, viewportHeight: number): boolean {
-  return rect.y + rect.height < -CULL_PX || rect.y > viewportHeight + CULL_PX;
+/** The viewport a mark is on or off of, scrollbars excluded. */
+export interface Viewport {
+  readonly width: number;
+  readonly height: number;
 }
 
-/** Where a mark wants to be: just outside its anchor's top-left corner. */
-export function markSpot(rect: Box): Box {
+/** Which way the page has to go to bring a hidden mark back. */
+export type Edge = "up" | "down" | "left" | "right";
+
+/** The page's scroll offset, which is how far the document has moved under the overlay. */
+export interface Scroll {
+  readonly x: number;
+  readonly y: number;
+}
+
+/**
+ * Which edge a box has left the viewport by, or nothing while any of it shows.
+ * A box off at a corner is named for the axis it is further out on, so one
+ * hidden mark is counted once.
+ */
+export function edgeOf(box: Box, viewport: Viewport): Edge | undefined {
+  const above = -(box.y + box.height);
+  const below = box.y - viewport.height;
+  const before = -(box.x + box.width);
+  const after = box.x - viewport.width;
+  const far = Math.max(above, below, before, after);
+  if (far < 0) return undefined;
+  if (far === above) return "up";
+  if (far === below) return "down";
+  return far === before ? "left" : "right";
+}
+
+/**
+ * Where a mark wants to be: just outside its anchor's top-left corner. It
+ * keeps off the page's own edge rather than the viewport's, so one scrolled
+ * away moves exactly as far as what it is on.
+ */
+export function markSpot(rect: Box, scroll: Scroll = { x: 0, y: 0 }): Box {
   return {
-    x: Math.max(2, Math.round(rect.x - MARK_OFFSET_PX)),
-    y: Math.max(2, Math.round(rect.y - MARK_OFFSET_PX)),
+    x: Math.max(2 - scroll.x, Math.round(rect.x - MARK_OFFSET_PX)),
+    y: Math.max(2 - scroll.y, Math.round(rect.y - MARK_OFFSET_PX)),
     width: MARK_SIZE_PX,
     height: MARK_SIZE_PX,
   };

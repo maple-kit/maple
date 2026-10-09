@@ -1,3 +1,4 @@
+import { readPreferences } from "@maple-kit/core/client";
 import { createElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
@@ -458,5 +459,62 @@ describe("the branch chip", () => {
     const chip = find(".mk-branch");
     expect(chip.textContent).toBe("web-482");
     expect(chip.getAttribute("title")).toBe(BRANCH);
+  });
+});
+
+/** The card opens at its default size and only ever grows from it. */
+describe("resizing the card", () => {
+  function drag(handle: HTMLElement, from: [number, number], to: [number, number]): void {
+    const fire = (type: string, at: [number, number]) =>
+      handle.dispatchEvent(
+        new PointerEvent(type, { clientX: at[0], clientY: at[1], pointerId: 1, bubbles: true }),
+      );
+    fire("pointerdown", from);
+    fire("pointermove", to);
+    fire("pointerup", to);
+  }
+
+  it("opens at the default size with a handle on each side facing the page", async () => {
+    const card = await open();
+    expect(card.offsetWidth).toBe(320);
+    expect(card.hasAttribute("data-mk-sized")).toBe(false);
+    expect(all(".mk-resize")).toHaveLength(3);
+    expect(getComputedStyle(find(".mk-resize[data-mk-resize='width']")).cursor).toBe("ew-resize");
+    expect(getComputedStyle(find(".mk-resize[data-mk-resize='both']")).cursor).toBe("nwse-resize");
+  });
+
+  it("grows when dragged towards the page and remembers it", async () => {
+    const card = await open();
+    const before = { width: card.offsetWidth, height: card.offsetHeight };
+    drag(find(".mk-resize[data-mk-resize='both']"), [500, 500], [470, 480]);
+
+    const after = { width: card.offsetWidth, height: card.offsetHeight };
+    expect(after.width).toBe(before.width + 30);
+    expect(after.height).toBe(before.height + 20);
+    await vi.waitFor(() => expect(readPreferences().islandSize).toEqual(after));
+  });
+
+  it("will not shrink below the default", async () => {
+    const card = await open();
+    drag(find(".mk-resize[data-mk-resize='width']"), [500, 500], [900, 500]);
+    expect(card.offsetWidth).toBe(320);
+  });
+
+  it("will not outgrow the viewport", async () => {
+    const card = await open();
+    drag(find(".mk-resize[data-mk-resize='width']"), [500, 500], [-9000, 500]);
+    expect(card.offsetWidth).toBe(document.documentElement.clientWidth - 24);
+  });
+
+  it("is resized with the arrow keys, and Home puts it back", async () => {
+    const card = await open();
+    const handle = find<HTMLElement>(".mk-resize[data-mk-resize='width']");
+    expect(handle.getAttribute("role")).toBe("separator");
+    handle.focus();
+    handle.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
+    expect(card.offsetWidth).toBe(336);
+    handle.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true }));
+    await vi.waitFor(() => expect(card.offsetWidth).toBe(320));
+    await vi.waitFor(() => expect(readPreferences().islandSize).toBeUndefined());
   });
 });

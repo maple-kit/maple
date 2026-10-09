@@ -13,7 +13,7 @@ import { COMMENT_SHORTCUT } from "./shortcut.js";
 import { CORNERS, DETAILS, PICK_ORDER, THEME_PREFERENCES } from "./types.js";
 
 import type { Logger } from "../logger/types.js";
-import type { Corner, Detail, PickKind, ThemePreference } from "./types.js";
+import type { Corner, Detail, IslandSize, PickKind, ThemePreference } from "./types.js";
 
 /** The key every stored preference hangs under, per origin. */
 const PREFERENCES_PREFIX = "maple:prefs:";
@@ -73,6 +73,8 @@ export interface StoredPreferences {
   readonly position?: Corner;
   readonly theme?: ThemePreference;
   readonly assist?: boolean;
+  /** The card's size, kept per viewer. Null on a write puts it back to the default. */
+  readonly islandSize?: IslandSize | null;
   /** The pick `c` arms next time, which is the one the viewer armed last. */
   readonly lastPick?: PickKind;
 }
@@ -228,7 +230,19 @@ function sanitised(stored: StoredPreferences): StoredPreferences {
     theme: oneOf(stored.theme ?? null, THEME_PREFERENCES),
     assist: typeof stored.assist === "boolean" ? stored.assist : undefined,
     lastPick: oneOf(stored.lastPick ?? null, PICK_ORDER),
+    islandSize: sizeFrom(stored.islandSize),
   });
+}
+
+/** A size is two positive numbers; anything else was never one of ours. */
+function sizeFrom(value: unknown): IslandSize | undefined {
+  if (typeof value !== "object" || value === null) return undefined;
+  const { width, height } = value as Partial<IslandSize>;
+  const usable = (one: unknown): one is number =>
+    typeof one === "number" && Number.isFinite(one) && one > 0;
+  return usable(width) && usable(height)
+    ? { width: Math.round(width), height: Math.round(height) }
+    : undefined;
 }
 
 /**

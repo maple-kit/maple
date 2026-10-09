@@ -6,7 +6,8 @@ import {
   COLLISION_GAP_PX,
   COLLISION_MAX_TRIES,
   COLLISION_STEP_PX,
-  culled,
+  edgeOf,
+  edgeSpot,
   initialsOf,
   kindPhrase,
   LABEL_SPOTS,
@@ -26,6 +27,7 @@ import {
   ringBox,
   runBox,
   startFrameLoop,
+  summarise,
   waterline,
 } from "../src/marks/index.js";
 import {
@@ -199,13 +201,44 @@ describe("where a mark and a ring go", () => {
     );
   });
 
+  it("keeps a mark off the page's own edge, not the viewport's", () => {
+    const top = { x: 0, y: -300, width: 10, height: 10 };
+    expect(markSpot({ ...top, y: 0 }, { x: 0, y: 0 }).y).toBe(2);
+    expect(markSpot(top, { x: 0, y: 300 }).y).toBe(-298);
+  });
+
+  const VIEW = { width: 1000, height: 800 };
   it.each([
-    ["far above", { x: 0, y: -400, width: 10, height: 10 }, true],
-    ["just above", { x: 0, y: -40, width: 10, height: 10 }, false],
-    ["on screen", { x: 0, y: 300, width: 10, height: 10 }, false],
-    ["far below", { x: 0, y: 900, width: 10, height: 10 }, true],
-  ])("culls what is %s", (_where, rect, expected) => {
-    expect(culled(rect, 800)).toBe(expected);
+    ["above", { x: 100, y: -60, width: 38, height: 38 }, "up"],
+    ["partly above", { x: 100, y: -20, width: 38, height: 38 }, undefined],
+    ["on screen", { x: 100, y: 300, width: 38, height: 38 }, undefined],
+    ["below", { x: 100, y: 900, width: 38, height: 38 }, "down"],
+    ["left", { x: -200, y: 300, width: 38, height: 38 }, "left"],
+    ["right", { x: 1100, y: 300, width: 38, height: 38 }, "right"],
+    ["further out below than right", { x: 1010, y: 1400, width: 38, height: 38 }, "down"],
+  ])("names the edge of what is %s", (_where, box, expected) => {
+    expect(edgeOf(box, VIEW)).toBe(expected);
+  });
+
+  it("counts what is hidden per edge and points at the nearest", () => {
+    const box = (x: number, y: number) => ({ x, y, width: 38, height: 38 });
+    const summary = summarise(
+      [
+        { id: "far", edge: "up", box: box(500, -900) },
+        { id: "near", edge: "up", box: box(200, -100) },
+        { id: "low", edge: "down", box: box(40, 1000) },
+      ],
+      VIEW,
+    );
+    expect(summary.up).toEqual({ count: 2, nearest: "near", along: 219 });
+    expect(summary.down).toMatchObject({ count: 1, nearest: "low" });
+    expect(summary.left).toBeUndefined();
+  });
+
+  it("clamps an indicator to its edge and keeps it off the corners", () => {
+    expect(edgeSpot("up", -50, VIEW)).toMatchObject({ x: 8, y: 8 });
+    expect(edgeSpot("down", 5000, VIEW)).toMatchObject({ x: 1000 - 54 - 8, y: 800 - 30 - 8 });
+    expect(edgeSpot("right", 400, VIEW)).toMatchObject({ x: 1000 - 54 - 8, y: 385 });
   });
 });
 

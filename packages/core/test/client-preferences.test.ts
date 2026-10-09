@@ -194,6 +194,28 @@ describe("what the viewer is remembered for", () => {
     });
   });
 
+  it("remembers the card's size, and a null write puts it back to the default", () => {
+    const storage = memoryStorage();
+    writePreferences({ islandSize: { width: 400.4, height: 520 } }, { storage, origin: ORIGIN });
+    expect(readPreferences({ storage, origin: ORIGIN }).islandSize).toEqual({
+      width: 400,
+      height: 520,
+    });
+
+    writePreferences({ islandSize: null }, { storage, origin: ORIGIN });
+    expect(readPreferences({ storage, origin: ORIGIN })).toEqual({});
+  });
+
+  it.each([[{ width: -1, height: 300 }], [{ width: "wide", height: 300 }], ["big"]])(
+    "drops a stored size that is not two positive numbers: %j",
+    (islandSize) => {
+      const storage = memoryStorage({
+        [`maple:prefs:${ORIGIN}`]: JSON.stringify({ islandSize, detail: "developer" }),
+      });
+      expect(readPreferences({ storage, origin: ORIGIN })).toEqual({ detail: "developer" });
+    },
+  );
+
   it("drops a remembered kind that is not one of the three", () => {
     const storage = memoryStorage({
       [`maple:prefs:${ORIGIN}`]: JSON.stringify({ lastPick: "lasso", detail: "developer" }),

@@ -13,8 +13,9 @@ import { createElement, forwardRef, useCallback, useEffect, useMemo, useRef } fr
 
 import { useMapleUi } from "../context.js";
 import { hoverHandlers } from "../hover.js";
-import { useFrameLoop, viewportHeight } from "./frame.js";
-import { culled, markSpot, placeMark } from "./geometry.js";
+import { EDGES, MapleEdge, paintEdges, summarise } from "./edges.js";
+import { pageView, useFrameLoop } from "./frame.js";
+import { edgeOf, markSpot, placeMark } from "./geometry.js";
 import { ringLabel } from "./label.js";
 import { MapleMark } from "./mark.js";
 import { useNudges } from "./nudge.js";
@@ -23,7 +24,8 @@ import { addresses, draftPlacements, placements, rectangleOf } from "./placement
 import { MapleTargetRing } from "./ring.js";
 import { usePathname } from "./route.js";
 
-import type { Box } from "./geometry.js";
+import type { EdgeNodes, Hidden } from "./edges.js";
+import type { Box, Edge, Scroll, Viewport } from "./geometry.js";
 import type { Nudge, Nudges } from "./nudge.js";
 import type { DraftPlacement, Located, Placement } from "./placement.js";
 import type { RingState, TargetRingProps } from "./ring.js";
@@ -81,15 +83,32 @@ export const MapleMarkLayer = /** @__PURE__ */ forwardRef<HTMLDivElement, MarkLa
 
     const nudges = useNudges();
     const nodes = useRef(new Map<string, HTMLButtonElement>());
+    const edges = useRef<EdgeNodes>({});
+    const near = useRef<Partial<Record<string, string>>>({});
     const paint = useCallback(() => {
-      const height = viewportHeight(container);
+      const view = pageView(container);
       const taken: Box[] = [];
+      const hidden: Hidden[] = [];
       for (const [id, located] of everything(placed, drafted)) {
         const node = nodes.current.get(id);
         const moved = nudges.of(id);
-        if (node) taken.push(step(node, located, { height, taken, ...(moved ? { moved } : {}) }));
+        if (!node) continue;
+        const one = step(node, located, { view, taken, ...(moved ? { moved } : {}) });
+        taken.push(one.spot);
+        if (one.edge) hidden.push({ id, edge: one.edge, box: one.spot });
       }
+      const summary = summarise(hidden, view);
+      paintEdges(edges.current, summary, view);
+      near.current = Object.fromEntries(
+        Object.entries(summary).map(([edge, said]) => [edge, said.nearest]),
+      );
     }, [container, drafted, nudges, placed]);
+
+    const bringBack = (edge: Edge) => {
+      const id = near.current[edge];
+      const found = everything(placed, drafted).find(([one]) => one === id);
+      found?.[1].element.scrollIntoView({ block: "center", inline: "center", behavior: "smooth" });
+    };
 
     useFrameLoop(PART, paint);
     useScrollTo(placed, selectedId);
@@ -130,6 +149,14 @@ export const MapleMarkLayer = /** @__PURE__ */ forwardRef<HTMLDivElement, MarkLa
       { className: className ? `mk-marks ${className}` : "mk-marks", ref },
       ...unsent,
       ...marks,
+      ...EDGES.map((edge) =>
+        createElement(MapleEdge, {
+          key: `edge-${edge}`,
+          edge,
+          onClick: () => bringBack(edge),
+          ref: keepEdge(edges.current, edge),
+        }),
+      ),
       createElement(
         MapleTargetRing,
         ringFor({
@@ -202,26 +229,39 @@ function boxOf(placement: Located): Box {
 
 /** One frame's worth of the page, and where this mark was moved to. */
 interface Frame {
-  readonly height: number;
+  readonly view: Viewport & { readonly scroll: Scroll };
   readonly taken: readonly Box[];
   readonly moved?: Nudge;
 }
 
-/**
- * What one frame does to one mark: cull it, or clear it of its neighbours. One
- * that was dragged holds where it was put; the resolver undoes no decision.
- */
-function step(node: HTMLButtonElement, placement: Located, frame: Frame): Box {
-  const rect = boxOf(placement);
-  const away = culled(rect, frame.height);
-  flag(node, OFF_ATTRIBUTE, away);
+/** Where a mark was put, and which edge of the page it is off, if any. */
+interface Stepped {
+  readonly spot: Box;
+  readonly edge?: Edge;
+}
 
-  const wanted = markSpot(rect);
+/**
+ * One frame, one mark: where its anchor is, as far as the page moved it, and
+ * hidden once none of it shows. A dragged one holds where it was put.
+ */
+function step(node: HTMLButtonElement, placement: Located, frame: Frame): Stepped {
+  const wanted = markSpot(boxOf(placement), frame.view.scroll);
   const spot = frame.moved
     ? { ...wanted, x: wanted.x + frame.moved.dx, y: wanted.y + frame.moved.dy }
     : placeMark(wanted, frame.taken);
-  if (!away) place(node, spot);
-  return spot;
+
+  const edge = edgeOf(spot, frame.view);
+  flag(node, OFF_ATTRIBUTE, edge !== undefined);
+  if (edge === undefined) place(node, spot);
+  return edge === undefined ? { spot } : { spot, edge };
+}
+
+/** One callback per edge, so the layer can move the indicators itself. */
+function keepEdge(nodes: EdgeNodes, edge: Edge) {
+  return (node: HTMLButtonElement | null) => {
+    if (node) nodes[edge] = node;
+    else delete nodes[edge];
+  };
 }
 
 /** Keeps the node a frame will move. One callback per id, so refs stay stable. */

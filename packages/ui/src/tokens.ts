@@ -186,6 +186,9 @@ export const RUNTIME_TOKENS: readonly string[] = [
   "--mk-y",
   "--mk-w",
   "--mk-h",
+  // The card, once the viewer has resized it.
+  "--mk-card-w",
+  "--mk-card-h",
 ];
 
 /**

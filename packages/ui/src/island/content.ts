@@ -7,12 +7,15 @@
  * the exit is a close rather than a disappearance, and it is never delayed.
  */
 
-import { forwardRef } from "react";
+import { useMaple } from "@maple-kit/react";
+import { createElement, forwardRef, Fragment, useRef } from "react";
 
 import { cx } from "../cx.js";
 import { renderPart } from "../part.js";
+import { composeRefs } from "../slot.js";
 import { useIsland } from "./context.js";
 import { ISLAND_COPY } from "./language.js";
+import { resizeHandles, useRestoredSize } from "./resize.js";
 
 import type { PartProps } from "../part.js";
 import type { AnimationEvent, ReactNode } from "react";
@@ -29,6 +32,9 @@ export const IslandContent = /** @__PURE__ */ forwardRef<HTMLDivElement, IslandC
   function IslandContent(props, ref) {
     const { asChild, children, className, ...rest } = props;
     const island = useIsland(PART);
+    const { position } = useMaple();
+    const card = useRef<HTMLDivElement | null>(null);
+    useRestoredSize(card, island.phase === "closed");
 
     if (island.phase === "closed") return null;
 
@@ -47,9 +53,11 @@ export const IslandContent = /** @__PURE__ */ forwardRef<HTMLDivElement, IslandC
         "data-mk-phase": island.phase,
         className: cx("mk-card mk-surface", className),
         onAnimationEnd,
-        ref,
+        ref: composeRefs(ref, card),
       },
-      children,
+      asChild
+        ? children
+        : createElement(Fragment, null, children, ...resizeHandles({ card, corner: position })),
     );
   },
 );

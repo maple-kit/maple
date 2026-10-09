@@ -75,3 +75,9 @@ export function markLabel(
   if (address === undefined) return `${DRAFT_LABEL} comment${who}`;
   return `Comment ${address}${who}, ${STATUS_LABELS[status]}`;
 }
+
+/** What an edge indicator says: which way, and how many are that way. */
+export function edgeLabel(edge: "up" | "down" | "left" | "right", count: number): string {
+  if (count === 1) return `Scroll ${edge} to a comment`;
+  return `Scroll ${edge} to the nearest of ${String(count)} comments`;
+}

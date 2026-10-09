@@ -17,13 +17,15 @@ export type { AvatarProps } from "./avatar.js";
 export { LABEL_SPOTS, labelBox, labelSpotFor, pageTextIn } from "./clearance.js";
 export type { LabelPlacement, LabelSpot } from "./clearance.js";
 export { marksCss } from "./css.js";
-export { startFrameLoop, useFrameLoop, viewportHeight } from "./frame.js";
+export { EDGES, edgeSpot, MapleEdge, paintEdges, summarise } from "./edges.js";
+export type { EdgeNodes, EdgeProps, EdgeSummary, Hidden } from "./edges.js";
+export { startFrameLoop, pageView, useFrameLoop } from "./frame.js";
 export type { Paint } from "./frame.js";
 export {
   COLLISION_GAP_PX,
   COLLISION_MAX_TRIES,
   COLLISION_STEP_PX,
-  culled,
+  edgeOf,
   MARK_HIT_PX,
   MARK_OFFSET_PX,
   MARK_SIZE_PX,
@@ -33,7 +35,7 @@ export {
   runBox,
   waterline,
 } from "./geometry.js";
-export type { Box, Waterline } from "./geometry.js";
+export type { Box, Edge, Scroll, Viewport, Waterline } from "./geometry.js";
 export { kindPhrase, markLabel, markTitle, NOTHING_NAMED, ringLabel } from "./label.js";
 export type { RingLabel } from "./label.js";
 export { MapleMarkLayer, MapleMarkLayer as MarkLayer } from "./layer.js";
