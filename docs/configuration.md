@@ -127,8 +127,32 @@ configuration; the Worker's own variables are set by the workflow.
 The Worker is served at `<branch>.preview.maple-kit.org`, a Workers Custom
 Domain, so the zone must be on the same account as `CLOUDFLARE_ACCOUNT_ID`.
 
-The Worker also receives `MAPLE_REPO` and `MAPLE_COMMIT` from the workflow, so
-its store is the pull request the build came from.
+The Worker also receives `MAPLE_REPO`, `MAPLE_COMMIT` and `MAPLE_PR` from the
+workflow, so its store is the pull request the build came from.
+
+### Screenshots
+
+Every preview Worker binds one R2 bucket, `maple-example-previews`, as
+`SCREENSHOTS` and writes under `pr-<number>/` (`r2Media` in
+`@maple-kit/core/connectors`). Create it once, with an account login that can
+manage R2, and add the lifecycle rule that expires what a closed pull request
+leaves behind:
+
+```bash
+wrangler r2 bucket create maple-example-previews
+wrangler r2 bucket lifecycle add maple-example-previews expire-previews pr- --expire-days 14
+```
+
+The deploy token needs **Workers R2 Storage: Edit** (account permission) to bind
+the bucket. A pull request's screenshots are not deleted when it closes, since
+wrangler cannot delete by prefix; they expire 14 days after upload, within
+about a day of that. Free tier: 10 GB-month of storage, 1 million writes and 10
+million reads a month, and no egress charge
+(<https://developers.cloudflare.com/r2/pricing/>).
+
+A screenshot link is public and unguessable: the key is 128 random bits, and
+GitHub's image proxy has to load it with no cookie. Uploading needs a signed-in
+reviewer.
 
 To let a resolve on the preview clear `maple/visual-review` itself, register
 the gate App (the section above) with **Checks: Read and write** and nothing

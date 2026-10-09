@@ -16,12 +16,14 @@ import { createMapleHandler } from "@maple-kit/core/route";
 import openapi from "../openapi.json";
 import { answerExample } from "../src/app/example-api.js";
 import { gateFrom } from "./gate.js";
+import { refuseAnonymousUpload, routeMedia, tableMedia } from "./media.js";
 
 import type { GateEnv } from "./gate.js";
+import type { MediaEnv } from "./media.js";
 import type { GateResolver, StoreResolver } from "@maple-kit/core/route";
 
-/** The variables `wrangler deploy --var` sets, the gate App's secret, and the assets binding. */
-interface Env extends GateEnv {
+/** The variables `wrangler deploy --var` sets, the gate App's secret, the screenshot bucket, and the assets binding. */
+interface Env extends GateEnv, MediaEnv {
   readonly ASSETS: { fetch(request: Request): Promise<Response> };
   readonly MAPLE_GITHUB_CLIENT_ID: string;
   /** The commit the preview was built from, which names its pull request. */
@@ -42,6 +44,7 @@ function storeFor(env: Env): StoreResolver {
       token: session.token,
       pull: { commit: env.MAPLE_COMMIT },
       cache: pulls,
+      media: tableMedia(env, new URL(request.url).origin),
     });
     return createCommentStore(connector);
   };
@@ -66,6 +69,7 @@ function handlerFor(env: Env): Handler {
     store: storeFor(env),
     // Names the reviewer by their GitHub login; without it comments say "Guest".
     identity: githubIdentity(),
+    media: routeMedia(env),
     githubAuth: { clientId: env.MAPLE_GITHUB_CLIENT_ID },
     // Only with the gate App's three bindings; without them the action's run stands.
     ...gateOption(env),
@@ -81,6 +85,8 @@ function handlerFor(env: Env): Handler {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const { pathname } = new URL(request.url);
+    const refused = await refuseAnonymousUpload(request);
+    if (refused) return refused;
     if (pathname.startsWith("/api/maple/")) return handlerFor(env)(request);
 
     const answer = answerExample(request.method, pathname);

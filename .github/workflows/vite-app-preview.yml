@@ -3,7 +3,8 @@ name: Vite app preview
 # One Cloudflare Worker per pull request serves examples/vite-app with Maple
 # mounted, at <branch>.preview.maple-kit.org, so a reviewer can comment on a
 # real deployment of the change. The Worker and its domain are deleted when the
-# pull request closes. The design is in
+# pull request closes; its screenshots, in the shared R2 bucket, expire by a
+# lifecycle rule. The design is in
 # examples/vite-app/README.md; the secret and variables are in
 # docs/configuration.md.
 on:
@@ -72,7 +73,8 @@ jobs:
             --var "MAPLE_REPO:$GITHUB_REPOSITORY" \
             --var "MAPLE_COMMIT:$MAPLE_COMMIT" \
             --var "MAPLE_GATE_APP_ID:$MAPLE_GATE_APP_ID" \
-            --var "MAPLE_GATE_INSTALLATION_ID:$MAPLE_GATE_INSTALLATION_ID"
+            --var "MAPLE_GATE_INSTALLATION_ID:$MAPLE_GATE_INSTALLATION_ID" \
+            --var "MAPLE_PR:$PR"
           echo "URL=https://$host" >> "$GITHUB_ENV"
       - name: Give the Worker the gate App's key
         # Only this step holds the key, it reaches wrangler on stdin, and a
@@ -112,6 +114,8 @@ jobs:
       - name: Delete the Worker and its domain
         # The domain is detached first: deleting a Worker leaves its custom
         # domain record behind. Both steps tolerate a PR that never deployed.
+        # Screenshots stay: wrangler cannot delete by prefix, so the bucket's
+        # lifecycle rule expires them.
         run: |
           host=$(./.github/scripts/preview-host.sh "$BRANCH" "$PREVIEW_DOMAIN")
           api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/domains"

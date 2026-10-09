@@ -70,7 +70,15 @@ With the gate App's `MAPLE_GATE_APP_ID`, `MAPLE_GATE_INSTALLATION_ID` and
 resolving the last comment on the preview clears `maple/visual-review` with no
 workflow running. Without them the Worker has no gate and nothing else changes.
 
-The settings the workflow needs are listed in `docs/configuration.md`. To build
+Screenshots go to a shared R2 bucket, bound as `SCREENSHOTS`, under a
+`pr-<number>/` prefix (`worker/media.ts`, `r2Media`). The route serves them at
+`/api/maple/media/<key>`, which is the link in the pull request's table, so a
+reviewer clicking it from GitHub needs no sign-in; the key is 128 random bits.
+An upload needs a signed-in reviewer. A lifecycle rule expires the objects
+after 14 days rather than on close, because wrangler cannot delete by prefix.
+
+The settings the workflow needs, the bucket and its lifecycle rule are in
+`docs/configuration.md`. To build
 and inspect the Worker without deploying it:
 
 ```bash

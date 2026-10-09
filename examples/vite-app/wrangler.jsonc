@@ -8,6 +8,10 @@
   "workers_dev": true,
   // Workers Logs, so a failed route call can be read in the dashboard.
   "observability": { "enabled": true },
+  // One bucket for every preview; each Worker writes under `pr-<number>/`. It is
+  // created once by hand, and a lifecycle rule expires the objects: see
+  // docs/configuration.md.
+  "r2_buckets": [{ "binding": "SCREENSHOTS", "bucket_name": "maple-example-previews" }],
   "assets": {
     "directory": "dist-preview",
     "binding": "ASSETS",

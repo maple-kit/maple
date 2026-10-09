@@ -35,6 +35,8 @@ export {
   stateFromWeights,
 } from "./plan.js";
 export type { StateGuess } from "./plan.js";
+export { r2Media } from "./r2-media.js";
+export type { R2BucketLike, R2MediaOptions } from "./r2-media.js";
 export type {
   AnyConnector,
   ClassifierConnector,
