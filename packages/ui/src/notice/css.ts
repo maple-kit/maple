@@ -54,20 +54,10 @@ export function noticeCss(): string {
   cursor: pointer;
 }
 
+/* The island header's own close button, so the two sit on the same inset and
+   share a size; the negative margin keeps the band from growing to hold it. */
 .mk-notice-off {
-  flex: none;
-  padding: 0 2px;
-  border: 0;
-  background: transparent;
-  color: var(--mk-faint);
-  font: inherit;
-  font-size: 11px;
-  line-height: 1.4;
-  cursor: pointer;
-}
-
-.mk-notice-off:hover {
-  color: var(--mk-fg);
+  margin: -5px 0 -5px auto;
 }
 
 /* In the composer it is the last thing above the buttons, so it closes the

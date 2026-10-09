@@ -43,6 +43,7 @@ import { MapleMock } from "./mock/index.js";
 import { MapleNotice } from "./notice/index.js";
 import { MaplePicker } from "./picker/index.js";
 import { MapleRoot } from "./root.js";
+import { SignIn } from "./signin.js";
 
 import type { LeaveAsk, MapleAttachmentsProps } from "./composer/index.js";
 import type { MapleRootProps } from "./root.js";
@@ -86,6 +87,7 @@ export const Maple = /** @__PURE__ */ forwardRef<HTMLDivElement, MapleProps>(
       inventory(root, defaultOpen === true),
       composer(leave, attachments),
       createElement(MapleMock, { key: "mock" }),
+      createElement(SignIn, { key: "signin" }),
       children,
     );
   },

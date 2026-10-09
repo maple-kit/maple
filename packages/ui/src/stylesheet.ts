@@ -14,7 +14,9 @@ import { marksCss } from "./marks/css.js";
 import { mockCss } from "./mock/css.js";
 import { noticeCss } from "./notice/css.js";
 import { pickerCss } from "./picker/css.js";
+import { popupCss } from "./popup-css.js";
 import { baseCss, tokenCss } from "./sheet-base.js";
+import { signInCss } from "./signin-css.js";
 
 export { SCHEME_ATTRIBUTE, tokenCss } from "./sheet-base.js";
 
@@ -29,6 +31,8 @@ ${marksCss()}
 ${noticeCss()}
 ${pickerCss()}
 ${mockCss()}
+${popupCss()}
+${signInCss()}
 `.trim();
 }
 

@@ -78,7 +78,11 @@ function root(): ShadowRoot {
 }
 
 function offer(): HTMLElement | null {
-  return root().querySelector<HTMLElement>(".mk-solo");
+  return root().querySelector<HTMLElement>(".mk-solo-link");
+}
+
+function popup(): HTMLDialogElement | null {
+  return root().querySelector<HTMLDialogElement>(".mk-popup");
 }
 
 function keep(): void {
@@ -110,36 +114,36 @@ afterEach(() => {
 });
 
 describe("the offer to a guest", () => {
-  it("is one line under the unsent list, with the command in it", async () => {
-    await render(tree(guestFetch(false)));
-    await vi.waitFor(() => expect(client.getState().phase).toBe("ready"));
-    keep();
-
+  it("is a link in the sentence, and the command is in the popup it opens", async () => {
+    await render(tree(guestFetch(true)));
     await vi.waitFor(() => expect(offer()).not.toBeNull());
-    expect(offer()?.textContent).toBe(
-      "Can't sign in? Run maple solo to keep comments on your machine",
-    );
-    expect(offer()?.querySelector("button")?.textContent).toBe("maple solo");
+    expect(offer()?.textContent).toBe("Can't sign in?");
+    expect(popup()).toBeNull();
+
+    offer()?.click();
+
+    await vi.waitFor(() => expect(popup()?.open).toBe(true));
+    expect(popup()?.textContent).toContain(`maple solo ${location.origin}`);
   });
 
-  it("copies the command, addressed to this page, when it is pressed", async () => {
-    await render(tree(guestFetch(false)));
-    await vi.waitFor(() => expect(client.getState().phase).toBe("ready"));
-    keep();
+  it("copies the command, addressed to this page, when Copy is pressed", async () => {
+    await render(tree(guestFetch(true)));
     await vi.waitFor(() => expect(offer()).not.toBeNull());
+    offer()?.click();
+    await vi.waitFor(() => expect(popup()).not.toBeNull());
 
-    offer()?.querySelector("button")?.click();
+    popup()?.querySelector<HTMLButtonElement>(".mk-acct-do")?.click();
 
     await vi.waitFor(() => expect(copiedText).toBe(`maple solo ${location.origin}`));
     await vi.waitFor(() =>
-      expect(offer()?.querySelector("[role=status]")?.textContent).toContain(SOLO_COPY.copied),
+      expect(popup()?.querySelector(".mk-acct-do")?.textContent).toBe(SOLO_COPY.copied),
     );
   });
 
   it("is under a refusal too, where the guest learns nothing can be posted", async () => {
     await render(tree(guestFetch(true)));
 
-    await vi.waitFor(() => expect(root().querySelector(".mk-notice .mk-solo")).not.toBeNull());
+    await vi.waitFor(() => expect(root().querySelector(".mk-notice .mk-solo-link")).not.toBeNull());
   });
 
   it("is not drawn for a page that is already paired", async () => {
