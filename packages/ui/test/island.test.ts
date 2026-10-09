@@ -8,7 +8,6 @@ import {
   ISLAND_COPY,
   kindPhrase,
   openLabel,
-  pickTitle,
   triggerLabel,
 } from "../src/island/language.js";
 import { STAGGER_ROWS } from "../src/island/stagger.js";
@@ -46,7 +45,13 @@ describe("the filter counts", () => {
       needs_reverify: 1,
       resolved: 1,
       unpinned: 4,
+      drafts: 0,
     });
+  });
+
+  it("counts the drafts it is given, which are not comments", () => {
+    expect(countsFor(COMMENTS, false, 3).drafts).toBe(3);
+    expect(countsFor(COMMENTS, false, 3).all).toBe(8);
   });
 
   it("counts everything under Active once resolved ones are asked for", () => {
@@ -109,7 +114,7 @@ describe("the unpinned tab", () => {
   });
 
   it("never offers to re-place one by hand, which core cannot do", () => {
-    const copy = Object.values(ISLAND_COPY).join(" ");
+    const copy = JSON.stringify(ISLAND_COPY);
     expect(copy).not.toMatch(/re-?place|by hand/i);
   });
 });
@@ -118,10 +123,6 @@ describe("the words", () => {
   it("says unpinned where the wire says orphaned", () => {
     expect(FILTER_LABELS.unpinned).toBe("Unpinned");
     expect(Object.values(FILTER_LABELS)).not.toContain("Orphaned");
-  });
-
-  it("tells a picker that the comment key, pressed again, cycles the three", () => {
-    expect(pickTitle("text")).toBe("Comment on text — press c again while picking to cycle");
   });
 });
 
@@ -166,16 +167,8 @@ describe("the island's rules", () => {
     expect(css).not.toMatch(/animation-delay:\s*var\(--mk-dur/);
   });
 
-  /**
-   * The one delay on this surface is the tooltip's intent, and it is on the
-   * way in only: a hover-out that waits reads as a surface that missed it.
-   */
-  it("delays nothing but a tooltip appearing", () => {
-    const delayed = css.split("}").filter((rule) => rule.includes("transition-delay"));
-
-    expect(delayed).toHaveLength(1);
-    expect(delayed[0]).toContain("transition-delay: var(--mk-delay-tooltip)");
-    expect(delayed[0]).toContain(":popover-open");
+  it("delays nothing: there is no tooltip left to wait for", () => {
+    expect(css).not.toContain("transition-delay");
   });
 
   it("presses at the one press scale and never below it", () => {

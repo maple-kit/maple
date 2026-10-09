@@ -11,10 +11,12 @@ import { resolveAnchor } from "@maple-kit/core/anchor";
 import { matchesFilter } from "@maple-kit/core/client";
 
 import { ORPHAN_ORDER } from "../language.js";
+import { UNSENT_COPY } from "./language.js";
 
-import type { Comment } from "@maple-kit/core";
+import type { Comment, MapleUser } from "@maple-kit/core";
 import type { Anchor, OrphanReason, Resolution } from "@maple-kit/core/anchor";
 import type { CommentFilter } from "@maple-kit/core/client";
+import type { Draft } from "@maple-kit/core/overlay";
 
 /** The count beside one filter's pill. */
 export type FilterCounts = Readonly<Record<CommentFilter, number>>;
@@ -29,7 +31,11 @@ export function numbersFor(comments: readonly Comment[]): ReadonlyMap<string, nu
  * The live count beside every pill. `Active` subtracts the resolved ones while
  * they are hidden, because the list under it does too.
  */
-export function countsFor(comments: readonly Comment[], showResolved: boolean): FilterCounts {
+export function countsFor(
+  comments: readonly Comment[],
+  showResolved: boolean,
+  drafts = 0,
+): FilterCounts {
   const count = (filter: CommentFilter) =>
     comments.filter((comment) => matchesFilter(comment, filter)).length;
 
@@ -40,6 +46,7 @@ export function countsFor(comments: readonly Comment[], showResolved: boolean): 
     needs_reverify: count("needs_reverify"),
     resolved,
     unpinned: count("unpinned"),
+    drafts,
   };
 }
 
@@ -83,4 +90,36 @@ export function byReason(
     return reason === undefined ? ORPHAN_ORDER.length : ORPHAN_ORDER.indexOf(reason);
   };
   return [...comments].sort((a, b) => rank(a) - rank(b));
+}
+
+/** Where a draft's context falls back to when it never recorded one. */
+const NO_CONTEXT = {
+  url: "",
+  viewportWidth: 0,
+  viewportHeight: 0,
+  contentWidth: 0,
+  devicePixelRatio: 1,
+  colorScheme: "light",
+} as const;
+
+/**
+ * A draft in the shape of a comment, so the row that draws a published one
+ * draws it too. It is the reviewer's own, and nothing has verified it yet.
+ */
+export function draftAsComment(draft: Draft, user: MapleUser | null): Comment {
+  return {
+    id: draft.id,
+    branch: "",
+    body: draft.body.trim() === "" ? UNSENT_COPY.blank : draft.body,
+    status: "open",
+    createdAt: draft.updatedAt,
+    author: {
+      id: user?.id ?? "draft",
+      name: user?.name ?? UNSENT_COPY.you,
+      provenance: user === null ? "guest" : "server",
+    },
+    anchor: draft.anchor,
+    context: draft.context ?? NO_CONTEXT,
+    ...(draft.attachments === undefined ? {} : { attachments: draft.attachments }),
+  };
 }

@@ -6,7 +6,6 @@ import { render } from "vitest-browser-react";
 import { MapleRoot } from "../src/index.js";
 import { Unsent } from "../src/island/index.js";
 
-import type { CommentContext } from "@maple-kit/core";
 import type { MapleClient } from "@maple-kit/core/client";
 import type { ReactElement } from "react";
 
@@ -119,30 +118,21 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function keepAt(body: string, component: string, path: string): void {
-  client.openComposer({
-    kind: "element",
-    anchor: { component },
-    context: { url: `https://brew-preview.example.test${path}` } as CommentContext,
-  });
-  client.setBody(body);
-  client.keepDraft();
-}
-
-describe("the unsent list", () => {
+describe("the unsent line", () => {
   it("draws nothing while nothing is waiting", async () => {
     await render(tree());
     expect(section()).toBeNull();
   });
 
-  it("appears with a row per kept comment", async () => {
+  it("says some comments are unpublished, and nothing more", async () => {
     await render(tree());
     keep("The spacing is off.", "YieldCard");
     keep("This label is wrong.", "MrrCard");
 
     await vi.waitFor(() => expect(section()).not.toBeNull());
-    expect(section()?.textContent).toContain("Unsent · 2");
-    expect(root().querySelectorAll(".mk-unsent-row")).toHaveLength(2);
+    expect(section()?.textContent).toBe("Some comments are unpublishedPublish");
+    expect(root().querySelector(".mk-solo")).toBeNull();
+    expect(root().querySelectorAll(".mk-unsent-row")).toHaveLength(0);
   });
 
   it("publishes every kept comment in one request", async () => {
@@ -151,7 +141,7 @@ describe("the unsent list", () => {
     keep("second", "B");
     await vi.waitFor(() => expect(section()).not.toBeNull());
 
-    root().querySelector<HTMLButtonElement>(".mk-unsent-publish")?.click();
+    root().querySelector<HTMLButtonElement>(".mk-split-main")?.click();
 
     await vi.waitFor(() => expect(client.getState().drafts).toHaveLength(0));
     expect(posted).toHaveLength(1);
@@ -159,62 +149,27 @@ describe("the unsent list", () => {
     expect(section()).toBeNull();
   });
 
-  it("throws one away from its own row, without opening a panel", async () => {
-    await render(tree());
-    keep("first", "A");
-    keep("second", "B");
-    await vi.waitFor(() => expect(root().querySelectorAll(".mk-unsent-row")).toHaveLength(2));
-
-    root().querySelector<HTMLButtonElement>(".mk-unsent-drop")?.click();
-
-    await vi.waitFor(() => expect(root().querySelectorAll(".mk-unsent-row")).toHaveLength(1));
-    expect(client.getState().composer.open).toBe(false);
-  });
-
-  it("copies every unsent comment as markdown, which is the way out with no store", async () => {
+  it("offers Copy as Markdown and Copy as JSON behind the arrow, and downloads nothing", async () => {
+    const link = vi.spyOn(HTMLAnchorElement.prototype, "click");
     await render(tree());
     keep("The spacing is off.", "YieldCard");
     await vi.waitFor(() => expect(section()).not.toBeNull());
+    expect(root().querySelector(".mk-split-menu")).toBeNull();
 
-    root().querySelector<HTMLButtonElement>(".mk-unsent-copy")?.click();
+    root().querySelector<HTMLButtonElement>(".mk-split-more")?.click();
+    await vi.waitFor(() => expect(root().querySelector(".mk-split-menu")).not.toBeNull());
+    const items = [...root().querySelectorAll<HTMLButtonElement>(".mk-split-item")];
+    expect(items.map((one) => one.textContent)).toEqual(["Copy as Markdown", "Copy as JSON"]);
 
+    items[0]?.click();
     await vi.waitFor(() => expect(copiedText).toContain("The spacing is off."));
     expect(copiedText).toContain("```maple");
-    await vi.waitFor(() =>
-      expect(root().querySelector(".mk-unsent-copy")?.textContent).toBe("Copied"),
-    );
-  });
+    expect(root().querySelector(".mk-split-menu")).toBeNull();
 
-  it("reopens a kept comment from its row", async () => {
-    await render(tree());
-    keep("half a thought", "A");
-    await vi.waitFor(() => expect(section()).not.toBeNull());
-
-    root().querySelector<HTMLButtonElement>(".mk-unsent-body")?.click();
-
-    await vi.waitFor(() => expect(client.getState().composer.open).toBe(true));
-    expect(client.getState().composer.body).toBe("half a thought");
-  });
-});
-
-describe("drafts written on another page", () => {
-  it("are tagged, with a link to the route they belong to", async () => {
-    await render(tree());
-    keepAt("here", "YieldCard", location.pathname);
-    keepAt("elsewhere", "MrrCard", "/menu?view=seasonal");
-
-    await vi.waitFor(() => expect(root().querySelectorAll(".mk-unsent-row")).toHaveLength(2));
-    const tags = root().querySelectorAll<HTMLAnchorElement>(".mk-unsent-where");
-    expect(tags).toHaveLength(1);
-    expect(tags[0]?.textContent).toBe("On another page · /menu");
-    expect(tags[0]?.getAttribute("href")).toBe("/menu?view=seasonal");
-  });
-
-  it("are not tagged when no page was recorded", async () => {
-    await render(tree());
-    keep("old draft", "YieldCard");
-
-    await vi.waitFor(() => expect(section()).not.toBeNull());
-    expect(root().querySelector(".mk-unsent-where")).toBeNull();
+    root().querySelector<HTMLButtonElement>(".mk-split-more")?.click();
+    await vi.waitFor(() => expect(root().querySelector(".mk-split-menu")).not.toBeNull());
+    root().querySelectorAll<HTMLButtonElement>(".mk-split-item")[1]?.click();
+    await vi.waitFor(() => expect(copiedText).toBe(client.draftsAsJson()));
+    expect(link).not.toHaveBeenCalled();
   });
 });

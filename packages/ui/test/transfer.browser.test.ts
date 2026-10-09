@@ -75,7 +75,8 @@ function root(): ShadowRoot {
 async function press(label: string): Promise<void> {
   await vi.waitFor(() => {
     const found = [...root().querySelectorAll<HTMLButtonElement>("button")].find(
-      (one) => one.textContent === label && !one.disabled,
+      (one) =>
+        (one.textContent === label || one.getAttribute("aria-label") === label) && !one.disabled,
     );
     if (!found) throw new Error(`no enabled button says ${label}`);
     found.click();
@@ -97,34 +98,13 @@ function note(): string {
 }
 
 function rows(): string[] {
-  return [...root().querySelectorAll(".mk-unsent-body")].map((one) => one.textContent ?? "");
+  return client.getState().drafts.map((one) => one.body);
 }
 
 afterEach(() => {
   client.destroy();
   for (const overlay of document.querySelectorAll("[data-maple-overlay]")) overlay.remove();
   vi.restoreAllMocks();
-});
-
-describe("exporting the unsent list", () => {
-  it("hands the browser a file with the branch and every draft", async () => {
-    const made: Blob[] = [];
-    vi.spyOn(URL, "createObjectURL").mockImplementation((blob) => {
-      made.push(blob as Blob);
-      return "blob:drafts";
-    });
-    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
-    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
-
-    await render(tree());
-    client.importDrafts(exportFile(BRANCH, [draft("d1", "the crema looks thin")]));
-    await vi.waitFor(() => expect(rows()).toHaveLength(1));
-    await press("Export");
-
-    const file = JSON.parse(await made[0]!.text()) as { branch: string; drafts: Draft[] };
-    expect(file.branch).toBe(BRANCH);
-    expect(file.drafts.map((one) => one.id)).toEqual(["d1"]);
-  });
 });
 
 describe("importing drafts", () => {

@@ -114,6 +114,15 @@ afterEach(() => {
 });
 
 describe("the offer to a guest", () => {
+  it("is not on the unsent line, which is only about publishing", async () => {
+    await render(tree(guestFetch(false)));
+    await vi.waitFor(() => expect(client.getState().phase).toBe("ready"));
+    keep();
+
+    await vi.waitFor(() => expect(root().querySelector(".mk-unsent")).not.toBeNull());
+    expect(offer()).toBeNull();
+  });
+
   it("is a link in the sentence, and the command is in the popup it opens", async () => {
     await render(tree(guestFetch(true)));
     await vi.waitFor(() => expect(offer()).not.toBeNull());
@@ -140,7 +149,7 @@ describe("the offer to a guest", () => {
     );
   });
 
-  it("is under a refusal too, where the guest learns nothing can be posted", async () => {
+  it("is under a refusal, where the guest learns nothing can be posted", async () => {
     await render(tree(guestFetch(true)));
 
     await vi.waitFor(() => expect(root().querySelector(".mk-notice .mk-solo-link")).not.toBeNull());
@@ -149,28 +158,9 @@ describe("the offer to a guest", () => {
   it("is not drawn for a page that is already paired", async () => {
     const paired = `maple-solo=${TOKEN}&maple-bridge=${encodeURIComponent(BRIDGE)}`;
     history.replaceState(null, "", `${START}#${paired}`);
-    await render(tree(guestFetch(false)));
-    await vi.waitFor(() => expect(client.getState().phase).toBe("ready"));
+    await render(tree(guestFetch(true)));
+    await vi.waitFor(() => expect(client.getState().phase).toBe("error"));
 
-    keep();
-
-    await vi.waitFor(() => expect(root().querySelector(".mk-unsent")).not.toBeNull());
-    expect(offer()).toBeNull();
-  });
-
-  it("is not drawn for a reviewer who is signed in", async () => {
-    const signedIn: typeof fetch = (input) => {
-      const url = addressOf(input);
-      if (url.includes("/me")) return Promise.resolve(json({ user: { id: "u_7" } }, 200));
-      if (url.includes("/approvals")) return Promise.resolve(json({ error: "none" }, 501));
-      return Promise.resolve(json({ comments: [] }, 200));
-    };
-    await render(tree(signedIn));
-    await vi.waitFor(() => expect(client.getState().user).not.toBeNull());
-
-    keep();
-
-    await vi.waitFor(() => expect(root().querySelector(".mk-unsent")).not.toBeNull());
     expect(offer()).toBeNull();
   });
 });

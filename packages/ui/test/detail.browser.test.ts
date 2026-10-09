@@ -299,12 +299,6 @@ describe("the focus ring", () => {
     expect(getComputedStyle(pill).borderTopLeftRadius).toBe("999px");
     expect(getComputedStyle(pill).outlineWidth).toBe("2px");
   });
-
-  it("gives the two controls with no corners of their own a radius", async () => {
-    await open();
-
-    expect(getComputedStyle(find(".mk-when")).borderTopLeftRadius).not.toBe("0px");
-  });
 });
 
 describe("developer detail", () => {
@@ -375,56 +369,14 @@ describe("developer detail", () => {
   });
 });
 
-/**
- * Who wrote a comment is a name and a dot in its colour; what the name is worth
- * is the dot's fill. Nothing says that in words, so the name carries it.
- */
-describe("the row's tooltips", () => {
-  /** Growing from `bottom left` while sitting below the chip grows backwards. */
-  it("grows the tooltip from the edge it was placed against", async () => {
+/** A row is scanned, so it explains nothing: no legend, no help tooltip. */
+describe("the row's legend", () => {
+  it("draws no tooltip for a name, a leaf or a chip", async () => {
     await open();
-    const chip = find<HTMLElement>(".mk-name");
-    const tip = find<HTMLElement>(".mk-name .mk-tip");
 
-    chip.focus();
-    await vi.waitFor(() => expect(tip.matches(":popover-open")).toBe(true));
-
-    expect(tip.hasAttribute("data-mk-below")).toBe(true);
-    expect(getComputedStyle(tip).transformOrigin.split(" ")[1]).toBe("0px");
-  });
-
-  it("waits 80ms before a tooltip appears, and never before it goes", async () => {
-    await open();
-    const chip = find<HTMLElement>(".mk-name");
-    const tip = find<HTMLElement>(".mk-name .mk-tip");
-
-    expect(getComputedStyle(tip).transitionDelay).toBe("0s, 0s");
-    expect(getComputedStyle(tip).transitionDuration).toBe("0.15s, 0.15s");
-    expect(getComputedStyle(tip).transitionTimingFunction).toBe("ease-out, ease-out");
-    expect(getComputedStyle(tip).opacity).toBe("0");
-
-    chip.focus();
-    await vi.waitFor(() => expect(getComputedStyle(tip).transitionDelay).toBe("0.08s"));
-    chip.blur();
-    await vi.waitFor(() => expect(getComputedStyle(tip).transitionDelay).toBe("0s, 0s"));
-  });
-
-  it("says in words what a name is worth, which nothing else on the row does", async () => {
-    await open();
-    const tips = all(".mk-name .mk-tip").map((one) => one.textContent ?? "");
-
-    expect(tips.length).toBeGreaterThan(0);
-    expect(tips.some((text) => text.includes("verified"))).toBe(true);
-    expect(tips.some((text) => text.includes("typed a name into Maple"))).toBe(true);
-  });
-
-  /** The row's leaf is the mark, so its fill is a status and not a person. */
-  it("says what the row's own leaf means, which is where the comment is at", async () => {
-    await open();
-    const tips = all(".mk-rowleaf .mk-tip").map((one) => one.textContent ?? "");
-
-    expect(tips.length).toBeGreaterThan(0);
-    expect(tips.some((text) => text.startsWith("Open —"))).toBe(true);
+    expect(root().querySelector(".mk-tip")).toBeNull();
+    expect(root().querySelector("[role=tooltip]")).toBeNull();
+    expect(root().querySelector(".mk-name")?.getAttribute("aria-describedby")).toBeNull();
   });
 });
 

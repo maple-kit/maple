@@ -47,8 +47,6 @@ export {
 export { OVERLAY_CSS, SCHEME_ATTRIBUTE } from "./stylesheet.js";
 export { useOverlayScheme } from "./theme.js";
 export type { OverlayTheme } from "./theme.js";
-export { Tip, tipSpot } from "./tip.js";
-export type { TipProps } from "./tip.js";
 export {
   MOTION_TOKENS,
   RADIUS_TOKENS,
