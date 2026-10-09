@@ -1,0 +1,32 @@
+name: Maple
+
+# Dogfoods the merge gate: reports maple/visual-review on every pull request.
+# Advisory: the check is not required by any ruleset. The route on the preview
+# Worker re-publishes the check when a reviewer resolves a comment, so no
+# comment-event trigger is needed here (docs/gate.md, "Publishing from the
+# route"). Runs the published action, the path docs/gate.md documents.
+on:
+  pull_request:
+
+concurrency:
+  group: maple-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+    steps:
+      - uses: maple-kit/maple-action@305f1b796eeda5629e1cea72c8204f824ad76fa4 # v0.4.0
+        with:
+          mode: sync
+      - uses: maple-kit/maple-action@305f1b796eeda5629e1cea72c8204f824ad76fa4 # v0.4.0
+        with:
+          mode: gate
