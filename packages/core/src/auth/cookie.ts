@@ -43,7 +43,11 @@ const WEEK_SECONDS = 604_800;
 const DEFAULT_PATH = "/api/maple";
 const IV_BYTES = 12;
 
-/** Reads one cookie out of a request's `cookie` header. */
+/**
+ * Reads one cookie out of a request's `cookie` header. HTTP/2 and HTTP/3 may
+ * send cookies as several headers, which `Headers` joins with ", ", so a comma
+ * separates pairs too; RFC 6265 keeps commas out of cookie values.
+ */
 export function readCookie(
   headers: Readonly<Record<string, string>>,
   name: string,
@@ -51,7 +55,7 @@ export function readCookie(
   const header = headers["cookie"];
   if (!header) return undefined;
 
-  for (const pair of header.split(";")) {
+  for (const pair of header.split(/[;,]/)) {
     const at = pair.indexOf("=");
     if (at === -1) continue;
     if (pair.slice(0, at).trim() === name) return decodeURIComponent(pair.slice(at + 1).trim());
