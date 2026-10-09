@@ -7,8 +7,6 @@
  * tooltip, because a list of comments is scanned rather than read.
  */
 
-import { COMMENT_SHORTCUT } from "@maple-kit/core/client";
-
 import type { CommentFilter, Corner, PickKind, ThemePreference } from "@maple-kit/core/client";
 
 /** The five filters, in the words the pills show. `unpinned` is `orphaned`. */
@@ -18,6 +16,7 @@ export const FILTER_LABELS: Readonly<Record<CommentFilter, string>> = {
   needs_reverify: "Re-verify",
   resolved: "Resolved",
   unpinned: "Unpinned",
+  drafts: "Drafts",
 };
 
 /** The order the filters are shown in. Unpinned is last: it is the odd one. */
@@ -37,10 +36,10 @@ export const TALLY_ORDER: readonly CommentFilter[] = [
 /** What a screen reader calls the select, which shows a filter name not a noun. */
 export const FILTERS_LABEL = "Show";
 
-/** A dot's tooltip: what it counts, and the fact that clicking narrows to it. */
-export function tallyTitle(filter: CommentFilter, count: number): string {
+/** What a screen reader hears on a tally dot: the count and what it counts. */
+export function tallyLabel(filter: CommentFilter, count: number): string {
   const many = count === 1 ? "comment" : "comments";
-  return `${String(count)} ${FILTER_LABELS[filter].toLowerCase()} ${many} — click to show only these`;
+  return `${String(count)} ${FILTER_LABELS[filter].toLowerCase()} ${many}`;
 }
 
 /** The word on each pick button. */
@@ -55,13 +54,6 @@ export const THEME_LABELS: Readonly<Record<ThemePreference, string>> = {
   auto: "Auto",
   light: "Light",
   dark: "Dark",
-};
-
-/** What each theme does, for the tooltip. `auto` is the one worth explaining. */
-export const THEME_TITLES: Readonly<Record<ThemePreference, string>> = {
-  auto: "The opposite of this page, so the overlay reads as a guest on it.",
-  light: "Always light, whatever this page is in.",
-  dark: "Always dark, whatever this page is in.",
 };
 
 /** The four corners, in the words the picker shows under the switch. */
@@ -135,20 +127,9 @@ export const SIGNIN_COPY = {
   waiting: "Waiting for you to finish on GitHub. This closes by itself.",
 } as const;
 
-/**
- * The sign-off row. It says why before it says what: "Approve" alone reads as
- * a button with no stakes, and the stakes are the whole point of the row.
- */
+/** The sign-off: one icon button, so the words are its label and nothing more. */
 export const APPROVE_COPY = {
-  offered: "Looked and found nothing wrong? Say so here.",
-  wanted: "This pull request is held until somebody approves the preview.",
-  yours: "You approved this preview.",
-  others: (name: string | undefined, count: number) =>
-    count > 1
-      ? `Approved by ${name ?? "somebody"} and ${String(count - 1)} more.`
-      : `Approved by ${name ?? "somebody"}.`,
-  approve: "Approve",
-  withdraw: "Withdraw",
+  label: "Looked, found nothing wrong",
   signIn: "Sign in first: an approval nobody can be named for is not one.",
 } as const;
 
@@ -157,19 +138,17 @@ export const APPROVE_COPY = {
  * here has to carry that without ever calling it a failure.
  */
 export const UNSENT_COPY = {
-  heading: (count: number) => `Unsent · ${String(count)}`,
-  publish: (count: number) => (count === 1 ? "Publish" : `Publish all ${String(count)}`),
+  line: "Some comments are unpublished",
+  publish: "Publish",
   publishing: "Publishing…",
-  copy: "Copy",
+  more: "More ways to take them with you",
+  markdown: "Copy as Markdown",
+  json: "Copy as JSON",
   copied: "Copied",
-  copyHint: "Every unsent comment as markdown, to paste into an agent or a ticket.",
-  export: "Export",
-  exportHint: "Every unsent comment as a file another browser can import.",
-  resumeHint: "Open it again",
   discard: "Throw this one away",
   discardGlyph: "✕",
   blank: "(nothing written yet)",
-  elsewhere: (path: string) => `On another page · ${path}`,
+  you: "You",
 } as const;
 
 /** Drafts arriving: from a file, or from another branch's key on this origin. */
@@ -210,14 +189,18 @@ export const ISLAND_COPY = {
   newComment: "New:",
   empty: "Nothing here under this filter.",
   loading: "Reading the comments on this branch…",
-  unread: "The comments could not be read, so this list is not the whole story.",
   resolve: "Resolve",
   reopen: "Reopen",
+  unread: {
+    title: "Couldn't load the comments",
+    line: "This list is not the whole story until they load.",
+    retry: "Try again",
+  },
+  noDrafts: "No unpublished comments.",
   showAll: "Show all",
   showLess: "Show less",
   hide: "Hide",
   attachment: "shot",
-  attachmentSentence: "A screenshot went with this comment. The panel shows it.",
 } as const;
 
 /** The card's resize handles, for a screen reader and the keyboard. */
@@ -234,11 +217,6 @@ export function openLabel(count: number): string {
 /** What a screen reader hears on the collapsed pill. */
 export function triggerLabel(count: number): string {
   return `Open Maple: ${openLabel(count)}`;
-}
-
-/** A pick button's tooltip. The comment key, pressed again, cycles the three. */
-export function pickTitle(kind: PickKind, key: string = COMMENT_SHORTCUT): string {
-  return `Comment on ${kind} — press ${key} again while picking to cycle`;
 }
 
 /**

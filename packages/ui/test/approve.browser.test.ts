@@ -90,76 +90,69 @@ function root(): ShadowRoot {
   return host.shadowRoot;
 }
 
-function row(): HTMLElement | null {
-  return root().querySelector<HTMLElement>(".mk-approve");
+function button(): HTMLButtonElement | null {
+  return root().querySelector<HTMLButtonElement>(".mk-approve");
 }
 
-/** Waits for the row to settle, so a race is not a finding. */
+/** Waits for the button to settle, so a race is not a finding. */
 async function settled(
-  accept: (found: HTMLElement | null) => boolean,
-): Promise<HTMLElement | null> {
-  await expect.poll(() => accept(row())).toBe(true);
-  return row();
+  accept: (found: HTMLButtonElement | null) => boolean,
+): Promise<HTMLButtonElement | null> {
+  await expect.poll(() => accept(button())).toBe(true);
+  return button();
 }
 
-describe("the sign-off row", () => {
+const pressed = (one: HTMLButtonElement | null) => one?.getAttribute("aria-pressed") === "true";
+
+describe("the sign-off button", () => {
   it("draws nothing where the store keeps no approvals", async () => {
     await render(tree({ keepsApprovals: false }));
     await expect.poll(() => root().querySelector(".mk-approve")).toBeNull();
   });
 
-  it("offers a sign-off where the store keeps them", async () => {
+  it("is one icon with its words as the label, and no sentence beside it", async () => {
     await render(tree({}));
     const found = await settled((one) => one !== null);
 
-    expect(found?.textContent).toContain("Approve");
-    expect(found?.dataset["mkApproved"]).toBe("no");
+    expect(found?.getAttribute("aria-label")).toBe("Looked, found nothing wrong");
+    expect(found?.textContent).toBe("");
+    expect(found?.querySelector("svg")).not.toBeNull();
+    expect(pressed(found)).toBe(false);
   });
 
-  it("says the merge is held when the gate is waiting for one", async () => {
-    await render(tree({ required: true }));
-    const found = await settled((one) => one?.textContent?.includes("held") === true);
-
-    expect(found?.textContent).toContain("held until somebody approves");
-  });
-
-  it("records an approval and turns into the way to take it back", async () => {
+  it("records an approval and shows it as pressed", async () => {
     await render(tree({}));
     await settled((one) => one !== null);
 
-    root().querySelector<HTMLButtonElement>(".mk-approve-do")?.click();
-    const found = await settled((one) => one?.dataset["mkApproved"] === "yes");
+    button()?.click();
+    const found = await settled(pressed);
 
-    expect(found?.textContent).toContain("You approved this preview.");
-    expect(found?.textContent).toContain("Withdraw");
+    expect(found?.getAttribute("aria-label")).toBe("Looked, found nothing wrong");
   });
 
   it("takes it back again", async () => {
     await render(tree({}));
     await settled((one) => one !== null);
 
-    root().querySelector<HTMLButtonElement>(".mk-approve-do")?.click();
-    await settled((one) => one?.dataset["mkApproved"] === "yes");
+    button()?.click();
+    await settled(pressed);
 
-    root().querySelector<HTMLButtonElement>(".mk-approve-do")?.click();
-    const found = await settled((one) => one?.dataset["mkApproved"] === "no");
-    expect(found?.textContent).toContain("Approve");
+    button()?.click();
+    await settled((one) => one !== null && !pressed(one));
   });
 
-  it("names somebody else's sign-off without claiming it", async () => {
+  it("is not pressed by somebody else's sign-off", async () => {
     await render(tree({ approvals: [approval({ id: "u_9", name: "Sam" })] }));
-    const found = await settled((one) => one?.textContent?.includes("Sam") === true);
+    const found = await settled((one) => one !== null);
 
-    expect(found?.textContent).toContain("Approved by Sam.");
-    expect(found?.dataset["mkApproved"]).toBe("no");
+    expect(pressed(found)).toBe(false);
   });
 
   it("will not let a guest sign, and says why", async () => {
     await render(tree({ user: null }));
     await settled((one) => one !== null);
 
-    const button = root().querySelector<HTMLButtonElement>(".mk-approve-do");
-    expect(button?.disabled).toBe(true);
-    expect(button?.title).toContain("Sign in first");
+    expect(button()?.disabled).toBe(true);
+    expect(button()?.title).toContain("Sign in first");
   });
 });

@@ -24,7 +24,6 @@ import {
   ISLAND_COPY,
   SETTINGS_COPY,
   THEME_LABELS,
-  THEME_TITLES,
 } from "./language.js";
 
 import type { PartProps } from "../part.js";
@@ -172,7 +171,6 @@ function Theme(props: ThemeProps): ReactNode {
             role: "radio",
             "aria-checked": theme === props.value,
             className: "mk-seg-one",
-            title: THEME_TITLES[theme],
             onClick: () => props.onPick(theme),
           },
           THEME_LABELS[theme],

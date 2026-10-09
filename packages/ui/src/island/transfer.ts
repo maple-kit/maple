@@ -1,7 +1,7 @@
 /**
  * `Maple.ImportDrafts` and `Maple.OtherDrafts`: unsent comments arriving.
  *
- * Both are quiet on purpose. Import is one text button until it is wanted, and
+ * Both are quiet on purpose. Import is one icon button until it is wanted, and
  * the other-branch row says what was found and does nothing until asked, since
  * a label that differs can be legitimate. Nothing here re-keys a draft on its
  * own; it only calls the client, which saves through the draft keeper.
@@ -105,22 +105,52 @@ export const ImportDrafts = /** @__PURE__ */ forwardRef<HTMLDivElement, ImportDr
       asChild,
       { ...rest, className: cx("mk-transfer", className), ref },
       children ?? [
-        button(open ? TRANSFER_COPY.close : TRANSFER_COPY.open, () => setOpen(!open), false, {
-          key: "toggle",
-          "aria-expanded": open,
-        }),
-        open ? createElement("div", { key: "panel", className: "mk-transfer-panel" }, body) : null,
-        note === undefined
-          ? null
-          : createElement(
-              "p",
-              { key: "note", className: "mk-transfer-note", role: "status" },
-              note,
-            ),
+        createElement(
+          "button",
+          {
+            key: "toggle",
+            type: "button",
+            className: "mk-icon-btn mk-press",
+            "aria-label": open ? TRANSFER_COPY.close : TRANSFER_COPY.open,
+            title: open ? TRANSFER_COPY.close : TRANSFER_COPY.open,
+            "aria-expanded": open,
+            onClick: () => setOpen(!open),
+          },
+          uploadIcon(),
+        ),
+        open
+          ? createElement(
+              "div",
+              { key: "panel", className: "mk-transfer-panel" },
+              body,
+              noteLine(note),
+            )
+          : null,
       ],
     );
   },
 );
+
+/** An arrow rising out of a tray: the file goes up into the island. */
+function uploadIcon(): ReactNode {
+  return createElement(
+    "svg",
+    {
+      viewBox: "0 0 24 24",
+      width: 15,
+      height: 15,
+      "aria-hidden": true,
+      fill: "none",
+      stroke: "currentColor",
+      strokeWidth: 2,
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+    },
+    createElement("path", { d: "M12 15V4" }),
+    createElement("path", { d: "M7.5 8.5L12 4l4.5 4.5" }),
+    createElement("path", { d: "M4.5 14.5v3.5a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-3.5" }),
+  );
+}
 
 /** A row that says drafts exist under another branch here, and offers to bring them. */
 export const OtherDrafts = /** @__PURE__ */ forwardRef<HTMLDivElement, OtherDraftsProps>(
@@ -169,4 +199,10 @@ function button(
     { type: "button", className: "mk-unsent-copy", key: label, onClick, disabled, ...more },
     label,
   );
+}
+
+/** What the last import said, once it has said anything. */
+function noteLine(note: string | undefined): ReactNode {
+  if (note === undefined) return null;
+  return createElement("p", { key: "note", className: "mk-transfer-note", role: "status" }, note);
 }

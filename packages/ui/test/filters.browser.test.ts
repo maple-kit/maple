@@ -138,64 +138,10 @@ describe("the tally", () => {
   });
 });
 
-/**
- * The card hides its overflow, so a tooltip drawn as a child of the row was
- * clipped — and the clipping took the hover off again, which read as a flicker.
- */
-describe("a tally's tooltip", () => {
-  async function hover(name: string): Promise<HTMLElement> {
-    // React synthesises onPointerEnter from pointerover: pointerenter does not
-    // bubble, so a delegated listener never sees one.
-    tally(name).dispatchEvent(new PointerEvent("pointerover", { bubbles: true }));
-    await vi.waitFor(() => expect(root().querySelector(".mk-tip:popover-open")).not.toBeNull());
-    return find<HTMLElement>(".mk-tip");
-  }
-
-  it("says what the dot counts and what clicking it does", async () => {
-    const tip = await hover("open");
-
-    expect(tip.textContent).toContain("open comments");
-    expect(tip.textContent).toContain("click to show only these");
-  });
-
-  it("is in the top layer, which is the only way out of the card's overflow", async () => {
-    const tip = await hover("open");
-
-    expect(tip.matches(":popover-open")).toBe(true);
-    expect(tip.closest(".mk-card")).not.toBeNull();
-  });
-
-  it("is drawn whole, with none of its sentence cut off", async () => {
-    const tip = await hover("open");
-    const box = tip.getBoundingClientRect();
-
-    expect(box.width).toBeGreaterThan(0);
-    expect(tip.scrollHeight).toBeLessThanOrEqual(Math.ceil(box.height) + 1);
-    expect(tip.scrollWidth).toBeLessThanOrEqual(Math.ceil(box.width) + 1);
-  });
-
-  it("stays inside the viewport wherever the chip is", async () => {
-    const tip = await hover("unpinned");
-    const box = tip.getBoundingClientRect();
-
-    expect(box.left).toBeGreaterThanOrEqual(0);
-    expect(box.right).toBeLessThanOrEqual(window.innerWidth);
-    expect(box.top).toBeGreaterThanOrEqual(0);
-    expect(box.bottom).toBeLessThanOrEqual(window.innerHeight);
-  });
-
-  it("goes when the pointer leaves, with no second hover needed", async () => {
-    await hover("open");
-    tally("open").dispatchEvent(
-      new PointerEvent("pointerout", { bubbles: true, relatedTarget: document.body }),
-    );
-
-    await vi.waitFor(() => expect(root().querySelector(".mk-tip:popover-open")).toBeNull());
-  });
-
-  it("opens on focus, so it is not a fact only a mouse can read", async () => {
-    tally("resolved").focus();
-
-    await vi.waitFor(() => expect(root().querySelector(".mk-tip:popover-open")).not.toBeNull());
+describe("the tally's dots", () => {
+  it("name their count for a screen reader and draw no tooltip", () => {
+    expect(tally("open").getAttribute("aria-label")).toMatch(/open comments?$/);
+    expect(root().querySelector(".mk-tip")).toBeNull();
+    expect(root().querySelector("[role=tooltip]")).toBeNull();
   });
 });

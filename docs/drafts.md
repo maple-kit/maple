@@ -20,15 +20,19 @@ send failed, and the comments were unreachable.
 
 ## The shape now
 
-| Control             | Where           | What it does                                        |
-| ------------------- | --------------- | --------------------------------------------------- |
-| **Keep**            | the composer    | Closes it. The comment waits, unsent.               |
-| **Publish**         | the composer    | Sends every kept comment, this one included.        |
-| **Publish all _n_** | the unsent list | The same, from the island.                          |
-| **Copy**            | the unsent list | Every unsent comment as markdown, to the clipboard. |
-| **✕**               | an unsent row   | Throws that one away, without opening a panel.      |
+| Control                   | Where             | What it does                                         |
+| ------------------------- | ----------------- | ---------------------------------------------------- |
+| **Keep**                  | the composer      | Closes it. The comment waits, unsent.                |
+| **Publish**               | the composer      | Sends every kept comment, this one included.         |
+| **Drafts** filter         | the status select | Lists the unsent comments, drawn as any comment is.  |
+| **Publish**               | the unsent line   | The same, from the island.                           |
+| **Copy as Markdown/JSON** | the unsent line   | Every unsent comment to the clipboard, never a file. |
+| **✕**                     | a draft's row     | Throws that one away, without opening a panel.       |
 
-`Maple.Unsent` draws nothing while nothing is waiting, so a reviewer who
+Drafts are a status like the others: `drafts` is a value of the island's filter,
+offered while there are any, and its rows are the same row a published comment
+gets. `Maple.Unsent` is only the one line, "Some comments are unpublished", with
+the split button; it draws nothing while nothing is waiting, so a reviewer who
 publishes as they go never sees it.
 
 ## One publish is one write
@@ -75,9 +79,9 @@ the guest author, which is what the route would have assigned anyway.
 
 ## Moving drafts between browsers
 
-Markdown cannot be read back, so **Export** in the unsent list saves a JSON file
+Markdown cannot be read back, so **Copy as JSON** in the unsent line copies a document
 of the store's own shape: `{ version, branch, drafts }`, anchors, regions and page
-context included, attachments by reference only. **Import drafts** takes a paste
+context included, attachments by reference only. **Import drafts**, the upload icon beside the status select, takes a paste
 or a dropped file, checks each entry with the same `isDraft` the store uses, and
 saves through the draft keeper so the list updates without a reload. An id that
 is already here, or that this branch sent, is skipped, so importing twice adds

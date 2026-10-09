@@ -21,13 +21,13 @@ export { IslandContextError, reasonOf, useIsland } from "./context.js";
 export type { DragHandlers, IslandContextValue, IslandPhase, PointerEventLike } from "./context.js";
 export { islandCss } from "./css.js";
 export { DRAG_THRESHOLD_PX, DRAGGING_ATTRIBUTE, useDrag } from "./drag.js";
-export { Filters } from "./filters.js";
+export { Filters, FilterPick, FilterTally } from "./filters.js";
 export type { FiltersProps } from "./filters.js";
 export { Branch, Header, Logo } from "./header.js";
 export type { BranchProps, HeaderProps, LogoProps } from "./header.js";
 export { Island } from "./island.js";
 export type { IslandProps } from "./island.js";
-export { Item, TIME_DELAY_MS } from "./item.js";
+export { Item } from "./item.js";
 export type { ItemProps } from "./item.js";
 export {
   APPROVE_COPY,

@@ -23,8 +23,8 @@ export function islandCss(): string {
     list(),
     row(),
     rowDetail(),
-    developer(),
     ledger(),
+    approve(),
     solo(),
     transfer(),
     newComment(),
@@ -581,11 +581,11 @@ function preferenceControls(): string {
 function filters(): string {
   return `
 .mk-filters {
+  position: relative;
   flex: none;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  gap: 6px;
   padding: 7px 9px;
   border-bottom: 1px solid var(--mk-line);
 }
@@ -647,7 +647,9 @@ function filters(): string {
 
 .mk-tally {
   display: flex;
+  flex: 1 1 auto;
   align-items: center;
+  justify-content: flex-end;
   gap: 2px;
   min-width: 0;
 }
@@ -720,6 +722,40 @@ function list(): string {
   flex: 1 1 auto;
   overflow-y: auto;
   overscroll-behavior: contain;
+}
+
+.mk-empty-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 22px 16px 24px;
+}
+
+.mk-empty-art {
+  margin-bottom: 6px;
+}
+
+.mk-empty-title {
+  margin: 0;
+  color: var(--mk-fg);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.mk-empty-line {
+  margin: 0;
+  max-width: 24ch;
+  color: var(--mk-faint);
+  font-size: 12px;
+  line-height: 1.4;
+  text-wrap: balance;
+}
+
+.mk-empty-retry {
+  margin-top: 8px;
+  padding: 4px 12px;
+  font-size: 11.5px;
 }
 
 .mk-empty {
@@ -965,76 +1001,39 @@ function rowDelay(position: number): string {
 }`;
 }
 
-/**
- * Developer detail: the chip carries the number and the tooltip carries the
- * sentence, because a sentence in a scanned row is skipped along with its row.
- */
-function developer(): string {
-  return `
-.mk-tipped {
-  position: relative;
-  border-radius: var(--mk-r-xs);
-  cursor: help;
-}
-
-/* The top layer, because the card hides its overflow and nothing else gets out
-   of an ancestor's. Placed by tipSpot, in viewport coordinates, which is what
-   the top layer is positioned against. */
-.mk-tip {
-  position: fixed;
-  top: 0;
-  left: 0;
-  margin: 0;
-  translate: var(--mk-x) var(--mk-y);
-  width: max-content;
-  max-width: 228px;
-  padding: 6px 8px;
-  border: 1px solid var(--mk-line-firm);
-  border-radius: var(--mk-r-sm);
-  background: var(--mk-bg);
-  box-shadow: var(--mk-sh2);
-  color: var(--mk-muted);
-  font-size: 11px;
-  font-weight: 450;
-  line-height: 1.4;
-  letter-spacing: normal;
-  white-space: normal;
-  text-wrap: pretty;
-  opacity: 0;
-  transform: scale(var(--mk-scale-tooltip));
-  transform-origin: bottom left;
-  pointer-events: none;
-  transition:
-    opacity var(--mk-dur-tooltip) var(--mk-ease-tooltip),
-    transform var(--mk-dur-tooltip) var(--mk-ease-tooltip);
-}
-
-/* A surface grows from the edge it was placed against. The tooltip sits under
-   its chip unless there is no room, and the placement says which it did. */
-.mk-tip[data-mk-below] {
-  transform-origin: top left;
-}
-
-/* The delay is on the way in only. A hover-out is a dismissal, and a
-   dismissal that waits reads as a surface that did not hear the pointer. */
-.mk-tip:popover-open {
-  opacity: 1;
-  transform: scale(1);
-  transition-delay: var(--mk-delay-tooltip);
-}
-
-/* A popover keeps its own inset and border, and both fight the placement. */
-.mk-tip:not(:popover-open) {
-  display: none;
-}
-
-`.trim();
-}
-
 /** Import, and the row that says drafts are saved under another branch. */
 function transfer(): string {
   return `
-.mk-transfer,
+.mk-transfer {
+  flex: none;
+  display: flex;
+}
+
+.mk-icon-btn {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid var(--mk-line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--mk-muted);
+  cursor: pointer;
+  transition:
+    border-color var(--mk-dur-swap) var(--mk-ease-swap),
+    background-color var(--mk-dur-swap) var(--mk-ease-swap),
+    color var(--mk-dur-swap) var(--mk-ease-swap);
+}
+
+.mk-icon-btn:hover,
+.mk-icon-btn[aria-expanded="true"] {
+  border-color: var(--mk-line-firm);
+  background: var(--mk-sunk);
+  color: var(--mk-fg);
+}
+
 .mk-transfer-other {
   flex: none;
   display: flex;
@@ -1059,16 +1058,29 @@ function transfer(): string {
   font-weight: 600;
 }
 
-.mk-transfer-panel,
 .mk-transfer-note {
-  flex: 1 1 100%;
   margin: 0;
+  color: var(--mk-muted);
+  font-size: 11px;
 }
 
+/* Under the status line, over the list: the card hides its overflow, so it
+   stays inside the card. */
 .mk-transfer-panel {
+  position: absolute;
+  z-index: 2;
+  top: 100%;
+  left: 0;
+  right: 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
+  padding: 8px 9px 9px;
+  border-bottom: 1px solid var(--mk-line);
+  background: var(--mk-sunk);
+  box-shadow: var(--mk-sh2);
+  color: var(--mk-faint);
+  font-size: 11px;
 }
 
 .mk-transfer-box {
@@ -1139,24 +1151,20 @@ function ledger(): string {
   return `
 .mk-unsent {
   flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 9px;
   border-top: 1px solid var(--mk-line);
   background: var(--mk-sunk);
 }
 
-.mk-unsent-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 10px 5px;
-}
-
 .mk-unsent-label {
-  flex: 1 1 auto;
-  color: var(--mk-faint);
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
+  min-width: 0;
+  color: var(--mk-muted);
+  font-size: 11.5px;
+  font-weight: 550;
 }
 
 .mk-unsent-copy {
@@ -1172,121 +1180,153 @@ function ledger(): string {
   cursor: pointer;
 }
 
-.mk-unsent-publish {
+.mk-split {
+  position: relative;
   flex: none;
-  font-size: 11px;
-  padding: 3px 11px;
+  display: flex;
 }
 
-.mk-unsent-rows {
+.mk-split-main,
+.mk-split-more {
+  font-size: 11px;
+  padding-block: 3px;
+}
+
+.mk-split-main {
+  padding-inline: 11px 9px;
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+}
+
+.mk-split-more {
+  display: grid;
+  place-items: center;
+  padding-inline: 7px;
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+  border-inline-start: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+}
+
+.mk-split-chevron {
+  width: 5px;
+  height: 5px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  rotate: 45deg;
+  translate: 0 -1.5px;
+}
+
+.mk-split-menu {
+  position: absolute;
+  z-index: 3;
+  right: 0;
+  bottom: calc(100% + 6px);
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  margin: 0;
-  padding: 0 6px 7px;
-  list-style: none;
-  max-height: 132px;
-  overflow-y: auto;
-}
-
-.mk-unsent-row {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  border-radius: 6px;
-}
-
-.mk-unsent-row:hover {
+  min-width: 100%;
+  padding: 3px;
+  border: 1px solid var(--mk-line-firm);
+  border-radius: var(--mk-r-sm);
   background: var(--mk-bg);
+  box-shadow: var(--mk-sh2);
 }
 
-.mk-unsent-body {
-  flex: 1 1 auto;
-  min-width: 0;
-  padding: 4px 6px;
+.mk-split-item {
+  padding: 5px 9px;
   border: 0;
+  border-radius: 5px;
   background: transparent;
   color: var(--mk-fg);
   font: inherit;
-  font-size: 12px;
+  font-size: 11.5px;
   text-align: start;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   cursor: pointer;
 }
 
-.mk-unsent-where {
-  flex: none;
-  max-width: 45%;
-  color: var(--mk-faint);
-  font-size: 11px;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.mk-unsent-where:hover {
-  color: var(--mk-fg);
-}
-
-.mk-unsent-drop {
-  flex: none;
-  padding: 2px 7px;
-  border: 0;
-  background: transparent;
-  color: var(--mk-faint);
-  font: inherit;
-  font-size: 11px;
-  cursor: pointer;
-}
-
-.mk-unsent-drop:hover {
-  color: var(--mk-fg);
-}
-
-.mk-approve {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 10px;
-  border-top: 1px solid var(--mk-line);
+.mk-split-item:hover,
+.mk-split-item:focus-visible {
   background: var(--mk-sunk);
 }
 
-.mk-approve-said {
-  flex: 1 1 auto;
-  min-width: 0;
-  color: var(--mk-muted);
-  font-size: 11.5px;
-  line-height: 1.35;
-}
-
-.mk-approve[data-mk-approved="yes"] .mk-approve-said {
-  color: var(--mk-fg);
-}
-
-.mk-approve-do {
-  flex: none;
-  padding: 3px 11px;
-  border: 1px solid var(--mk-line);
-  border-radius: 999px;
-  background: var(--mk-bg);
-  color: var(--mk-fg);
-  font: inherit;
-  font-size: 11px;
-  font-weight: 600;
+.mk-draft-row {
+  position: relative;
   cursor: pointer;
 }
 
-.mk-approve-do:disabled {
+.mk-draft-row .mk-rowleaf .mk-mark-n {
+  display: none;
+}
+
+/* A draft is not a stored comment: there is nothing yet to resolve. */
+.mk-draft-row .mk-quick {
+  display: none;
+}
+
+.mk-draft-drop {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 2px 6px;
+  border: 0;
+  background: transparent;
   color: var(--mk-faint);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.mk-draft-drop:hover {
+  color: var(--mk-fg);
+}
+`.trim();
+}
+
+/** The sign-off, a green check at the end of the status line. */
+function approve(): string {
+  return `
+/* The sign-off is a green check at the end of the status line. At rest it is
+   a quiet fill; once given it is full colour with a ring, so "done" reads at
+   a glance and without a word. */
+.mk-approve {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--mk-ok);
+  cursor: pointer;
+}
+
+.mk-approve-icon {
+  opacity: 0.65;
+  transition: opacity var(--mk-dur-swap) var(--mk-ease-swap);
+}
+
+.mk-approve:hover .mk-approve-icon,
+.mk-approve:focus-visible .mk-approve-icon {
+  opacity: 0.85;
+}
+
+.mk-approve[aria-pressed="true"] {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--mk-ok) 35%, transparent);
+}
+
+.mk-approve[aria-pressed="true"] .mk-approve-icon {
+  opacity: 1;
+}
+
+.mk-approve:disabled {
   cursor: not-allowed;
 }
 
+.mk-approve:disabled .mk-approve-icon {
+  opacity: 0.3;
+}
 `.trim();
 }
 

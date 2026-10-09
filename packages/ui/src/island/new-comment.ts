@@ -17,7 +17,7 @@ import { RegionIcon } from "../icons/region.js";
 import { TextIcon } from "../icons/text.js";
 import { renderPart } from "../part.js";
 import { useIsland } from "./context.js";
-import { ISLAND_COPY, PICK_LABELS, pickTitle } from "./language.js";
+import { ISLAND_COPY, PICK_LABELS } from "./language.js";
 
 import type { PartProps } from "../part.js";
 import type { PickKind } from "@maple-kit/core/client";
@@ -80,7 +80,6 @@ export const PickButton = /** @__PURE__ */ forwardRef<HTMLButtonElement, PickBut
         ...rest,
         "aria-pressed": armed,
         className: cx("mk-pick mk-hit", className),
-        title: pickTitle(kind),
         onClick,
         ref,
       },

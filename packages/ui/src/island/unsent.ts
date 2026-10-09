@@ -1,47 +1,44 @@
 /**
- * `Maple.Unsent`: the comments written here that nobody else can see yet.
+ * `Maple.Unsent`: the one line that says some comments are not published.
  *
- * A comment is a draft until it is published, and the copy in the composer
- * said so — "it is kept here" — while nothing on the island showed a "here".
- * This is that place: what is waiting, the one control that sends it, and the
- * way out for a reviewer with no store to send it to.
+ * The comments themselves are rows under the Drafts filter, drawn as every
+ * other comment is. This is only the way to send them, with the two ways out
+ * for a reviewer with no store to send them to behind the arrow.
  */
 
 import { useMaple, useMapleClient } from "@maple-kit/react";
 import { createElement, forwardRef, useState } from "react";
 
 import { cx } from "../cx.js";
-import { draftRoute, isOnPage, pathOf, usePathname } from "../marks/route.js";
 import { renderPart } from "../part.js";
-import { SoloOffer } from "../solo.js";
 import { UNSENT_COPY } from "./language.js";
 
 import type { PartProps } from "../part.js";
 import type { MapleClient } from "@maple-kit/core/client";
-import type { Draft } from "@maple-kit/core/overlay";
-import type { MouseEvent, ReactNode } from "react";
+import type { FocusEvent, ReactNode } from "react";
 
-/** The section. Its children replace everything inside it. */
+/** The line. Its children replace everything inside it. */
 export interface UnsentProps extends PartProps {
   readonly children?: ReactNode;
 }
 
-/** How long the copy control says it copied before going back to the offer. */
+/** How long the button says it copied before going back to Publish. */
 const COPIED_MS = 1600;
 
-/** The unsent list, drawn only while something is waiting in it. */
+/** The unsent line, drawn only while something is waiting. */
 export const Unsent = /** @__PURE__ */ forwardRef<HTMLDivElement, UnsentProps>(
   function Unsent(props, ref) {
     const { asChild, children, className, ...rest } = props;
     const { drafts, publishing } = useMaple();
     const client = useMapleClient();
     const [copied, setCopied] = useState(false);
-    const pathname = usePathname(typeof window === "undefined" ? undefined : window);
+    const [open, setOpen] = useState(false);
 
     if (drafts.length === 0) return null;
 
-    const copy = (): void => {
-      void navigator.clipboard.writeText(client.draftsAsMarkdown()).then(
+    const copy = (text: string): void => {
+      setOpen(false);
+      void navigator.clipboard.writeText(text).then(
         () => {
           setCopied(true);
           setTimeout(() => setCopied(false), COPIED_MS);
@@ -50,110 +47,75 @@ export const Unsent = /** @__PURE__ */ forwardRef<HTMLDivElement, UnsentProps>(
       );
     };
 
-    const save = (event: MouseEvent<HTMLButtonElement>): void =>
-      download(event.currentTarget.ownerDocument, "maple-drafts.json", client.draftsAsJson());
-
     return renderPart(
       "div",
       asChild,
       { ...rest, className: cx("mk-unsent", className), ref },
       children ?? [
+        createElement("span", { key: "line", className: "mk-unsent-label" }, UNSENT_COPY.line),
         createElement(
-          "div",
-          { key: "head", className: "mk-unsent-head" },
-          createElement(
-            "span",
-            { className: "mk-unsent-label" },
-            UNSENT_COPY.heading(drafts.length),
-          ),
-          createElement(
-            "button",
-            {
-              type: "button",
-              className: "mk-unsent-copy",
-              title: UNSENT_COPY.copyHint,
-              onClick: copy,
+          "span",
+          {
+            key: "split",
+            className: "mk-split",
+            onBlur: (event: FocusEvent<HTMLElement>) => {
+              if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
             },
-            copied ? UNSENT_COPY.copied : UNSENT_COPY.copy,
-          ),
+          },
           createElement(
             "button",
             {
               type: "button",
-              className: "mk-unsent-copy",
-              title: UNSENT_COPY.exportHint,
-              onClick: save,
-            },
-            UNSENT_COPY.export,
-          ),
-          createElement(
-            "button",
-            {
-              type: "button",
-              className: "mk-btn mk-btn-primary mk-press mk-unsent-publish",
+              className: "mk-btn mk-btn-primary mk-press mk-split-main",
               disabled: publishing,
               onClick: () => void client.publish().catch(() => undefined),
             },
-            publishing ? UNSENT_COPY.publishing : UNSENT_COPY.publish(drafts.length),
+            label(publishing, copied),
           ),
+          createElement(
+            "button",
+            {
+              type: "button",
+              className: "mk-btn mk-btn-primary mk-press mk-split-more",
+              "aria-label": UNSENT_COPY.more,
+              "aria-haspopup": "menu",
+              "aria-expanded": open,
+              onClick: () => setOpen(!open),
+            },
+            createElement("span", { className: "mk-split-chevron", "aria-hidden": true }),
+          ),
+          open ? menu(client, copy) : null,
         ),
-        createElement(
-          "ul",
-          { key: "rows", className: "mk-unsent-rows" },
-          ...drafts.map((draft) => row(draft, client, pathname)),
-        ),
-        createElement(SoloOffer, { key: "solo" }),
       ],
     );
   },
 );
 
-/** Hands the browser a file to save. */
-function download(page: Document, name: string, text: string): void {
-  const url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
-  const link = page.createElement("a");
-  link.href = url;
-  link.download = name;
-  link.click();
-  URL.revokeObjectURL(url);
+/** The two exports, both to the clipboard: nothing here downloads a file. */
+function menu(client: MapleClient, copy: (text: string) => void): ReactNode {
+  const item = (label: string, text: () => string) =>
+    createElement(
+      "button",
+      {
+        key: label,
+        type: "button",
+        role: "menuitem",
+        className: "mk-split-item",
+        onClick: () => copy(text()),
+      },
+      label,
+    );
+
+  return createElement(
+    "div",
+    { key: "menu", role: "menu", className: "mk-split-menu" },
+    item(UNSENT_COPY.markdown, () => client.draftsAsMarkdown()),
+    item(UNSENT_COPY.json, () => client.draftsAsJson()),
+  );
 }
 
-/** One waiting comment: what it says, where it belongs, and what to do with it. */
-function row(draft: Draft, client: MapleClient, pathname: string): ReactNode {
-  const route = draftRoute(draft);
-  return createElement(
-    "li",
-    { key: draft.id, className: "mk-unsent-row" },
-    createElement(
-      "button",
-      {
-        type: "button",
-        className: "mk-unsent-body",
-        title: UNSENT_COPY.resumeHint,
-        onClick: () => client.resumeDraft(draft.id),
-      },
-      draft.body.trim() === "" ? UNSENT_COPY.blank : draft.body,
-    ),
-    route === undefined || isOnPage(draft, pathname)
-      ? null
-      : createElement(
-          "a",
-          {
-            className: "mk-unsent-where",
-            href: route,
-          },
-          UNSENT_COPY.elsewhere(pathOf(route) ?? route),
-        ),
-    createElement(
-      "button",
-      {
-        type: "button",
-        className: "mk-unsent-drop",
-        "aria-label": UNSENT_COPY.discard,
-        title: UNSENT_COPY.discard,
-        onClick: () => client.discardDraft(draft.id),
-      },
-      UNSENT_COPY.discardGlyph,
-    ),
-  );
+/** Publish, with the moment it is busy or has just copied told in its place. */
+function label(publishing: boolean, copied: boolean): string {
+  if (publishing) return UNSENT_COPY.publishing;
+  return copied ? UNSENT_COPY.copied : UNSENT_COPY.publish;
 }

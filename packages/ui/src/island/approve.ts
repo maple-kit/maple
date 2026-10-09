@@ -1,12 +1,9 @@
 /**
- * `Maple.Approve`: the row a reviewer signs off from.
+ * `Maple.Approve`: the button a reviewer signs off with.
  *
- * It answers the case the rest of the island cannot — a reviewer who looked
- * and had nothing to say. Without it the gate reads the same green for that
- * review as for one that never happened; `docs/gate.md` argues the point.
- *
- * It draws nothing where the store keeps no approvals, as `Account` draws
- * nothing where the route serves no sign-in.
+ * It answers the case the rest of the island cannot: a reviewer who looked
+ * and had nothing to say. `docs/gate.md` argues the point. It is an icon with
+ * its words as the label, drawn nothing where the store keeps no approvals.
  */
 
 import { useMaple, useMapleClient } from "@maple-kit/react";
@@ -17,17 +14,15 @@ import { renderPart } from "../part.js";
 import { APPROVE_COPY } from "./language.js";
 
 import type { PartProps } from "../part.js";
-import type { Approval } from "@maple-kit/core";
-import type { ClientState, MapleClient } from "@maple-kit/core/client";
 import type { ReactNode } from "react";
 
-/** The row. Its children replace everything inside it. */
+/** The button. Its children replace the icon. */
 export interface ApproveProps extends PartProps {
   readonly children?: ReactNode;
 }
 
-/** The sign-off, as one row above the picks. */
-export const Approve = /** @__PURE__ */ forwardRef<HTMLDivElement, ApproveProps>(
+/** The sign-off, as one green check at the end of the status line. */
+export const Approve = /** @__PURE__ */ forwardRef<HTMLButtonElement, ApproveProps>(
   function Approve(props, ref) {
     const { asChild, children, className, ...rest } = props;
     const state = useMaple();
@@ -35,53 +30,46 @@ export const Approve = /** @__PURE__ */ forwardRef<HTMLDivElement, ApproveProps>
 
     if (state.approval?.supported !== true) return null;
 
-    const mine = state.myApproval;
+    const mine = state.myApproval !== null;
+    const signedIn = state.user !== null;
     return renderPart(
-      "div",
+      "button",
       asChild,
       {
+        type: "button",
+        title: signedIn ? APPROVE_COPY.label : APPROVE_COPY.signIn,
         ...rest,
-        className: cx("mk-approve", className),
-        "data-mk-approved": mine === null ? "no" : "yes",
+        "aria-label": APPROVE_COPY.label,
+        "aria-pressed": mine,
+        disabled: !signedIn,
+        className: cx("mk-approve mk-press", className),
+        onClick: () => void (mine ? client.unapprove() : client.approve()),
         ref,
       },
-      children ?? [
-        createElement("span", { key: "said", className: "mk-approve-said" }, said(state, mine)),
-        control(state, mine, client),
-      ],
+      children ?? checkCircle(),
     );
   },
 );
 
-/**
- * One sentence, from whether this reviewer signed, whether anybody else did,
- * and whether the gate waits. "Approve" alone is a button nobody presses.
- */
-function said(state: ClientState, mine: Approval | null): string {
-  if (mine) return APPROVE_COPY.yours;
-
-  const others = state.approvals.length;
-  if (others > 0) return APPROVE_COPY.others(state.approvals[0]?.author.name, others);
-  return state.approval?.required === true ? APPROVE_COPY.wanted : APPROVE_COPY.offered;
-}
-
-/**
- * A guest sees the offer and cannot take it: the route refuses an approval
- * nobody can be named for. Saying so beats answering a click with a red line.
- */
-function control(state: ClientState, mine: Approval | null, client: MapleClient): ReactNode {
-  const signedIn = state.user !== null;
-
+/** A filled circle with the check cut out of it, so it takes the button's colour. */
+function checkCircle(): ReactNode {
   return createElement(
-    "button",
+    "svg",
     {
-      key: "act",
-      type: "button",
-      className: "mk-approve-do mk-press",
-      disabled: !signedIn,
-      ...(signedIn ? {} : { title: APPROVE_COPY.signIn }),
-      onClick: () => void (mine ? client.unapprove() : client.approve()),
+      viewBox: "0 0 24 24",
+      width: 18,
+      height: 18,
+      "aria-hidden": true,
+      className: "mk-approve-icon",
     },
-    mine ? APPROVE_COPY.withdraw : APPROVE_COPY.approve,
+    createElement("circle", { cx: 12, cy: 12, r: 11, fill: "currentColor" }),
+    createElement("path", {
+      d: "M7.2 12.4l3.2 3.2 6.4-6.6",
+      fill: "none",
+      stroke: "var(--mk-on-ok, #fff)",
+      strokeWidth: 2.2,
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+    }),
   );
 }

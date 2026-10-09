@@ -19,6 +19,7 @@ const STATUS_FOR: Partial<Record<CommentFilter, Comment["status"]>> = {
 
 /** True when `filter` would show `comment`, ignoring the resolved setting. */
 export function matchesFilter(comment: Comment, filter: CommentFilter): boolean {
+  if (filter === "drafts") return false;
   const status = STATUS_FOR[filter];
   return status === undefined || comment.status === status;
 }

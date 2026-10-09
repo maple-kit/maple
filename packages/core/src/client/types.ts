@@ -18,10 +18,20 @@ import type { MapleFailure } from "./failure.js";
  * reads it back off a stored comment and the two cannot both own it. */
 export type { PickKind } from "../types.js";
 
-/** The five filters the inventory offers, in the order it shows them. */
-export const COMMENT_FILTERS = ["all", "open", "needs_reverify", "unpinned", "resolved"] as const;
+/** The filters the inventory offers, in the order it shows them. */
+export const COMMENT_FILTERS = [
+  "all",
+  "open",
+  "needs_reverify",
+  "unpinned",
+  "resolved",
+  "drafts",
+] as const;
 
-/** One of {@link COMMENT_FILTERS}. `unpinned` is the word for `orphaned`. */
+/**
+ * One of {@link COMMENT_FILTERS}. `unpinned` is the word for `orphaned`, and
+ * `drafts` narrows to comments not yet published, which no stored comment is.
+ */
 export type CommentFilter = (typeof COMMENT_FILTERS)[number];
 
 /** The four corners the island may sit in, nearest-first is not a thing here. */

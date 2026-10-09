@@ -287,22 +287,10 @@ describe("Escape", () => {
 
 /** "3h ago" is what a row is scanned for; which afternoon is asked a minute later. */
 describe("a timestamp", () => {
-  it("keeps the exact time in a tooltip rather than in the row", () => {
+  it("keeps the exact time in its title rather than in the row", () => {
     const when = find<HTMLElement>(".mk-when");
 
     expect(when.textContent).toMatch(/ago|now/);
-    expect(when.querySelector(".mk-tip")?.textContent).toMatch(/\d/);
-  });
-
-  it("waits a second before showing it, because nobody hovered on purpose", async () => {
-    const when = find<HTMLElement>(".mk-when");
-    when.dispatchEvent(new PointerEvent("pointerover", { bubbles: true }));
-
-    await new Promise((done) => setTimeout(done, 200));
-    expect(root().querySelector(".mk-tip:popover-open")).toBeNull();
-
-    await vi.waitFor(() => expect(root().querySelector(".mk-tip:popover-open")).not.toBeNull(), {
-      timeout: 2500,
-    });
+    expect(when.title).toMatch(/\d/);
   });
 });

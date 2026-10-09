@@ -16,12 +16,11 @@ import { createElement, forwardRef, useCallback, useRef, useState } from "react"
 import { cx } from "../cx.js";
 import { dataAttributes, formFor } from "../data.js";
 import { hoverHandlers } from "../hover.js";
-import { PROVENANCE_SENTENCES, STATUS_LABELS, STATUS_SENTENCES } from "../language.js";
+import { STATUS_LABELS } from "../language.js";
 import { MapleLeaf } from "../marks/shape.js";
 import { renderPart } from "../part.js";
 import { composeRefs } from "../slot.js";
 import { applyReviewerSlot } from "../slots.js";
-import { Tip } from "../tip.js";
 import { useIsland } from "./context.js";
 import { ISLAND_COPY, kindPhrase } from "./language.js";
 import { absoluteTime, relativeTime } from "./time.js";
@@ -39,9 +38,6 @@ export interface ItemProps extends PartProps {
 const LONG_BODY = 150;
 
 const PART = "<Maple.Item>";
-
-/** A second of rest: nobody hovers a timestamp meaning to ask what it was. */
-export const TIME_DELAY_MS = 1000;
 
 /** A row: which comment, who and when, what they said, and what it is on. */
 export const Item = /** @__PURE__ */ forwardRef<HTMLElement, ItemProps>(function Item(props, ref) {
@@ -123,12 +119,8 @@ function top(
     comment.status === "open"
       ? null
       : createElement(
-          Tip,
-          {
-            key: "status",
-            className: cx("mk-chip", chipTone(comment)),
-            sentence: STATUS_SENTENCES[comment.status],
-          },
+          "span",
+          { key: "status", className: cx("mk-chip", chipTone(comment)) },
           STATUS_LABELS[comment.status],
         );
 
@@ -175,16 +167,10 @@ function chipTone(comment: Comment): string {
  */
 function pin(comment: Comment, number: number): ReactNode {
   const form = formFor(comment.status);
-  const sentence = `${STATUS_LABELS[comment.status]} — ${STATUS_SENTENCES[comment.status]}`;
 
   return createElement(
-    Tip,
-    {
-      key: "pin",
-      className: "mk-rowleaf",
-      sentence,
-      triggerProps: { ...dataAttributes({ status: comment.status, form }) },
-    },
+    "span",
+    { key: "pin", className: "mk-rowleaf", ...dataAttributes({ status: comment.status, form }) },
     createElement(MapleLeaf, { key: "leaf", form, halo: false }),
     createElement(
       "span",
@@ -209,13 +195,8 @@ function who(comment: Comment): ReactNode {
     [
       name(author),
       createElement(
-        Tip,
-        {
-          key: "when",
-          className: "mk-when",
-          delayMs: TIME_DELAY_MS,
-          sentence: absoluteTime(comment.createdAt),
-        },
+        "span",
+        { key: "when", className: "mk-when", title: absoluteTime(comment.createdAt) },
         relativeTime(comment.createdAt, Date.now()),
       ),
     ],
@@ -230,16 +211,13 @@ function name(author: CommentAuthor): ReactNode {
   const slot = author.colorSlot ?? 0;
 
   return createElement(
-    Tip,
+    "span",
     {
       key: "name",
       className: "mk-name",
-      sentence: `${author.name} — ${PROVENANCE_SENTENCES[author.provenance]}`,
-      triggerProps: {
-        ...dataAttributes({ provenance: author.provenance }),
-        ref: (node: HTMLElement | null) => {
-          if (node) applyReviewerSlot(node, slot);
-        },
+      ...dataAttributes({ provenance: author.provenance }),
+      ref: (node: HTMLElement | null) => {
+        if (node) applyReviewerSlot(node, slot);
       },
     },
     author.name,
@@ -253,11 +231,7 @@ function meta(comment: Comment): ReactNode {
   return renderPart("div", false, { key: "meta", className: "mk-meta" }, [
     comment.status === "orphaned" ? null : place(comment),
     attachments > 0
-      ? createElement(
-          Tip,
-          { key: "shot", className: "mk-chip", sentence: ISLAND_COPY.attachmentSentence },
-          ISLAND_COPY.attachment,
-        )
+      ? createElement("span", { key: "shot", className: "mk-chip" }, ISLAND_COPY.attachment)
       : null,
   ]);
 }
