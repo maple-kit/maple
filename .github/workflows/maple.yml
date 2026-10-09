@@ -1,10 +1,11 @@
 name: Maple
 
 # Dogfoods the merge gate: reports maple/visual-review on every pull request.
-# Advisory: the check is not required by any ruleset. The route on the preview
-# Worker re-publishes the check when a reviewer resolves a comment, so no
-# comment-event trigger is needed here (docs/gate.md, "Publishing from the
-# route"). Runs the published action, the path docs/gate.md documents.
+# Advisory: the check is not required by any ruleset. maple-action v0.4.0 reads
+# the pull request and head SHA only from a pull_request payload, so it cannot
+# re-run on issue_comment (the ledger comment edited on a resolve). Until it can,
+# the preview route's publish (docs/gate.md, "Publishing from the route") is the
+# only way the check clears without a push. Runs the published action.
 on:
   pull_request:
 
