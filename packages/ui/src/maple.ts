@@ -83,7 +83,7 @@ export const Maple = /** @__PURE__ */ forwardRef<HTMLDivElement, MapleProps>(
       { ...root, ref },
       createElement(MapleMarkLayer, { key: "marks" }),
       createElement(MaplePicker, { key: "picker", ...(hint === undefined ? {} : { hint }) }),
-      inventory(root.branch, root.label, defaultOpen === true),
+      inventory(root, defaultOpen === true),
       composer(leave, attachments),
       createElement(MapleMock, { key: "mock" }),
       children,
@@ -92,7 +92,11 @@ export const Maple = /** @__PURE__ */ forwardRef<HTMLDivElement, MapleProps>(
 );
 
 /** The island, with every row the default composition shows. */
-function inventory(branch: string, label: string | undefined, defaultOpen: boolean): ReactElement {
+function inventory(
+  root: Pick<MapleRootProps, "branch" | "label" | "pullRequest">,
+  defaultOpen: boolean,
+): ReactElement {
+  const { branch, label, pullRequest } = root;
   return createElement(
     Island,
     { defaultOpen, key: "island" },
@@ -104,7 +108,11 @@ function inventory(branch: string, label: string | undefined, defaultOpen: boole
         Header,
         null,
         createElement(Logo),
-        createElement(Branch, { branch, ...(label === undefined ? {} : { label }) }),
+        createElement(Branch, {
+          branch,
+          ...(label === undefined ? {} : { label }),
+          ...(pullRequest === undefined ? {} : { pullRequest }),
+        }),
         createElement(Settings),
       ),
       createElement(MapleNotice, { during: LOAD_CALLS }),

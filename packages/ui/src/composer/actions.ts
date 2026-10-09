@@ -12,6 +12,7 @@
 import { useMaple, useMapleClient } from "@maple-kit/react";
 import { createElement, forwardRef } from "react";
 
+import { cx } from "../cx.js";
 import { Slot } from "../slot.js";
 import { useComposerScope } from "./scope.js";
 
@@ -129,14 +130,14 @@ function reading(id: string, client: ReturnType<typeof useMapleClient>): readonl
   ];
 }
 
-/** The one status change a reviewer makes by hand, in either direction. */
+/** The one status change a reviewer makes by hand. Resolving is the primary one. */
 function moveOn(id: string, done: boolean, client: ReturnType<typeof useMapleClient>): ReactNode {
   return createElement(
     "button",
     {
       key: "status",
       type: "button",
-      className: "mk-btn mk-btn-primary mk-press",
+      className: cx("mk-btn mk-press", done ? undefined : "mk-btn-primary"),
       onClick: () => void client.setStatus(id, done ? "open" : "resolved"),
     },
     done ? VIEW_LABELS.reopen : VIEW_LABELS.resolve,

@@ -23,7 +23,7 @@ import type { Comment } from "@maple-kit/core";
 import type { ReactElement } from "react";
 
 /** The island's own tree, exactly as the composition documents it. */
-function mount(label?: string): ReactElement {
+function mount(label?: string, pullRequest?: string): ReactElement {
   return createElement(
     MapleRoot,
     { branch: BRANCH, theme: "light", options: { fetch: fixtureFetch() } },
@@ -38,7 +38,11 @@ function mount(label?: string): ReactElement {
           Header,
           null,
           createElement(Logo),
-          createElement(Branch, { branch: BRANCH, ...(label === undefined ? {} : { label }) }),
+          createElement(Branch, {
+            branch: BRANCH,
+            ...(label === undefined ? {} : { label }),
+            ...(pullRequest === undefined ? {} : { pullRequest }),
+          }),
           createElement(Settings),
         ),
         createElement(Filters),
@@ -354,6 +358,41 @@ describe("a row", () => {
     expect(row.querySelector(".mk-more")?.textContent).toBe("Show less");
   });
 
+  it("resolves from a hover action without opening the row", async () => {
+    await open();
+    const before = all(".mk-row").length;
+    const quick = all(".mk-row .mk-quick")[0] as HTMLButtonElement;
+
+    expect(quick.textContent).toBe("Resolve");
+    expect(quick.classList.contains("mk-btn-primary")).toBe(true);
+    quick.click();
+
+    await vi.waitFor(() => expect(all(".mk-row")).toHaveLength(before - 1));
+    expect(all('.mk-row[data-mk-selected="true"]')).toHaveLength(0);
+  });
+
+  it("offers Reopen, in the neutral style, on a resolved row", async () => {
+    await open();
+    filterNamed("resolved").click();
+    await vi.waitFor(() => expect(all(".mk-row")).toHaveLength(1));
+    const quick = find<HTMLButtonElement>(".mk-row .mk-quick");
+
+    expect(quick.textContent).toBe("Reopen");
+    expect(quick.classList.contains("mk-btn-primary")).toBe(false);
+    quick.click();
+    await vi.waitFor(() => expect(all(".mk-row")).toHaveLength(0));
+  });
+
+  it("shows the action only on hover or focus, and keeps it reachable by keyboard", async () => {
+    await open();
+    const row = find(".mk-row");
+    const quick = row.querySelector<HTMLButtonElement>(".mk-quick")!;
+
+    expect(getComputedStyle(quick).opacity).toBe("0");
+    quick.focus();
+    await vi.waitFor(() => expect(getComputedStyle(quick).opacity).toBe("1"));
+  });
+
   it("draws an unverified author more quietly than a verified one", async () => {
     await open();
     const guest = find('.mk-who[data-provenance="guest"]');
@@ -384,6 +423,31 @@ describe("the branch chip", () => {
   it("reads the branch when the application named no label", async () => {
     await open();
     expect(find(".mk-branch").textContent).toBe(BRANCH);
+  });
+
+  it("is plain text when no pull request is known", async () => {
+    await open();
+    expect(find(".mk-branch").tagName).toBe("SPAN");
+  });
+
+  it("links to the pull request in a new tab when one is known", async () => {
+    document.querySelector("[data-maple-overlay]")?.remove();
+    await render(mount(undefined, "https://github.com/acme/app/pull/12"));
+    await open();
+
+    const chip = find(".mk-branch");
+    expect(chip.tagName).toBe("A");
+    expect(chip.getAttribute("href")).toBe("https://github.com/acme/app/pull/12");
+    expect(chip.getAttribute("target")).toBe("_blank");
+    expect(chip.getAttribute("rel")).toContain("noopener");
+  });
+
+  it("does not link anything but a web address", async () => {
+    document.querySelector("[data-maple-overlay]")?.remove();
+    await render(mount(undefined, "javascript:alert(1)"));
+    await open();
+
+    expect(find(".mk-branch").tagName).toBe("SPAN");
   });
 
   it("reads the label instead, and keeps the branch as its title", async () => {

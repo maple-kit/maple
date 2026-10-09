@@ -46,6 +46,8 @@ export interface MapleRootProps extends MapleProps {
    * a hostname label. Read wherever the branch would be; the branch stays.
    */
   readonly label?: string;
+  /** The pull request for the branch, where the build knows it: the chip links to it. */
+  readonly pullRequest?: string;
   /** The commit the preview is serving, where the build stamps one. */
   readonly commit?: string;
   readonly children?: ReactNode;

@@ -303,6 +303,25 @@ function shotBodyCss(): string {
 .mk-shots > .mk-btn {
   flex: none;
 }
+
+/* A note, not a control: a deployment with nowhere to keep a shot has nothing
+   to attach, so this says why in one line and offers nothing to press. */
+.mk-note {
+  padding: 8px 10px;
+  border: 1px solid var(--mk-line);
+  border-radius: var(--mk-r-sm);
+  background: var(--mk-sunk);
+  color: var(--mk-muted);
+  font-size: 11px;
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+
+.mk-note a {
+  color: var(--mk-fg);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
 `.trim();
 }
 

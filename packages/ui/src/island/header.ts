@@ -34,6 +34,8 @@ export interface BranchProps extends PartProps {
   readonly branch?: string;
   /** Shown instead of the branch, which stays on the chip as its title. */
   readonly label?: string;
+  /** The pull request for the branch. The chip links to it when it is a web URL. */
+  readonly pullRequest?: string;
   readonly children?: ReactNode;
 }
 
@@ -89,15 +91,29 @@ export const Logo = /** @__PURE__ */ forwardRef<HTMLHeadingElement, LogoProps>(
  */
 export const Branch = /** @__PURE__ */ forwardRef<HTMLSpanElement, BranchProps>(
   function Branch(props, ref) {
-    const { asChild, branch, children, className, label, ...rest } = props;
+    const { asChild, branch, children, className, label, pullRequest, ...rest } = props;
     const shown = children ?? label ?? branch;
     if (shown === undefined) return null;
 
+    const linked = webUrl(pullRequest);
+    const link = linked === undefined ? {} : { href: linked, target: "_blank", rel: "noopener" };
+
     return renderPart(
-      "span",
+      linked === undefined ? "span" : "a",
       asChild,
-      { ...rest, className: cx("mk-branch", className), title: branch, ref },
+      { ...rest, ...link, className: cx("mk-branch", className), title: branch, ref },
       shown,
     );
   },
 );
+
+/** Only a web address is linked: a `javascript:` URL is not a pull request. */
+function webUrl(value: string | undefined): string | undefined {
+  if (value === undefined) return undefined;
+  try {
+    const { protocol } = new URL(value);
+    return protocol === "https:" || protocol === "http:" ? value : undefined;
+  } catch {
+    return undefined;
+  }
+}

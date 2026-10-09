@@ -201,6 +201,8 @@ export const ISLAND_COPY = {
   empty: "Nothing here under this filter.",
   loading: "Reading the comments on this branch…",
   unread: "The comments could not be read, so this list is not the whole story.",
+  resolve: "Resolve",
+  reopen: "Reopen",
   showAll: "Show all",
   showLess: "Show less",
   hide: "Hide",

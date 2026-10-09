@@ -50,7 +50,7 @@ function tree(media = true, refuse?: number): ReactElement {
 }
 
 function strip(): HTMLElement | null {
-  return root().querySelector<HTMLElement>(".mk-shots");
+  return root().querySelector<HTMLElement>(".mk-shots, .mk-note");
 }
 
 /** Mounts and waits for `/me` to have answered, which is what `media` needs. */
@@ -200,17 +200,20 @@ describe("the default upload", () => {
     await writing(false);
     shotsOf().put(taken());
 
-    await vi.waitFor(() => expect(strip()?.querySelector("img")).not.toBeNull());
+    await vi.waitFor(() => expect(strip()?.textContent).toContain("keeps no screenshots"));
     expect(client?.getState().composer.attachments).toHaveLength(0);
   });
 
-  it("says the one it is showing will not be sent, rather than claiming it was taken", async () => {
+  it("shows a note with a docs link, and no thumbnail or remove button", async () => {
     await writing(false);
     shotsOf().put(taken());
 
-    await vi.waitFor(() => expect(strip()?.querySelector("img")).not.toBeNull());
-    expect(strip()?.textContent).toContain("will not be sent");
-    expect(strip()?.textContent).not.toContain("Taken of the page");
+    await vi.waitFor(() => expect(strip()?.textContent).toContain("turn on screenshot storage"));
+    expect(strip()?.querySelector("img")).toBeNull();
+    expect(strip()?.querySelector("button")).toBeNull();
+    const link = strip()?.querySelector("a");
+    expect(link?.getAttribute("href")).toContain("docs/screenshots.md");
+    expect(link?.getAttribute("rel")).toContain("noopener");
   });
 
   /** `/me` is asked alongside the list, so a 401 on the comments answered it. */
@@ -221,7 +224,7 @@ describe("the default upload", () => {
     await vi.waitFor(() => expect(strip()).not.toBeNull());
     shotsOf().put(taken());
 
-    await vi.waitFor(() => expect(strip()?.textContent).toContain("will not be sent"));
+    await vi.waitFor(() => expect(strip()?.textContent).toContain("turn on screenshot storage"));
   });
 });
 

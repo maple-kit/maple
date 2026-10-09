@@ -37,6 +37,9 @@ export interface MapleAttachmentsProps extends AsChildProps {
   readonly resolve?: (ref: MediaRef) => string | undefined;
 }
 
+/** Where `media` on the route is explained. */
+export const SCREENSHOT_DOCS = "https://github.com/maple-kit/maple/blob/main/docs/screenshots.md";
+
 /** Every word this part shows, spelled once. */
 export const ATTACH_WORDS = {
   hint: "Paste or drop an image to attach one",
@@ -45,8 +48,9 @@ export const ATTACH_WORDS = {
   alt: "Screenshot attached to this comment",
   kept: "A screenshot was attached when this was sent",
   failed: "That image could not be attached.",
-  nowhere: "This deployment keeps no screenshots, so one cannot be attached.",
-  notKept: "This deployment keeps no screenshots, so this one will not be sent.",
+  nowhere: "This deployment keeps no screenshots \u2014 turn on ",
+  nowhereLink: "screenshot storage",
+  nowhereEnd: " to attach them.",
   uncaptured: "Maple could not take a screenshot. Paste or drop one instead.",
 } as const;
 
@@ -72,9 +76,13 @@ export const MapleAttachments = /** @__PURE__ */ forwardRef<HTMLElement, MapleAt
     // this. Only an unasked route is unknown, and that is the one grey case.
     const asked = phase === "error" || phase === "ready";
     const keeps = media || !asked;
+    if (!keeps) {
+      const note = ["mk-composer-row", "mk-note", props.className].filter(Boolean).join(" ");
+      return createElement(Element, { ref, className: note }, ...nowhere());
+    }
     const children = scope.pending
-      ? filled(scope, { failed, captured, keeps })
-      : [said(resting(keeps, claimed), false, "said")];
+      ? filled(scope, { failed, captured })
+      : [said(resting(claimed), false, "said")];
 
     return createElement(
       Element,
@@ -84,10 +92,22 @@ export const MapleAttachments = /** @__PURE__ */ forwardRef<HTMLElement, MapleAt
   },
 );
 
-/** "Paste or drop one" is a lie where there is nowhere to put it, and silence
- * is a lie where a capture was attempted and failed. */
-function resting(keeps: boolean, claimed: Claimed): string {
-  if (!keeps) return ATTACH_WORDS.nowhere;
+/** A deployment with nowhere to put one gets a note, never a thumbnail: a
+ * picture of something about to be dropped, with a control to drop it. */
+function nowhere(): ReactNode[] {
+  return [
+    ATTACH_WORDS.nowhere,
+    createElement(
+      "a",
+      { key: "docs", href: SCREENSHOT_DOCS, target: "_blank", rel: "noopener noreferrer" },
+      ATTACH_WORDS.nowhereLink,
+    ),
+    ATTACH_WORDS.nowhereEnd,
+  ];
+}
+
+/** Silence is a lie where a capture was attempted and failed. */
+function resting(claimed: Claimed): string {
   return claimed === "failed" ? ATTACH_WORDS.uncaptured : ATTACH_WORDS.hint;
 }
 
@@ -138,13 +158,11 @@ function kept(props: KeptProps, ref: React.ForwardedRef<HTMLElement>): ReactElem
 interface Held {
   readonly failed: boolean;
   readonly captured: boolean;
-  /** False and the thumbnail is a picture of something about to be dropped. */
-  readonly keeps: boolean;
 }
 
 /** The thumbnail, where it came from, and the control that takes it off. */
 function filled(scope: ComposerScopeValue, held: Held): ReactNode[] {
-  const { captured, failed, keeps } = held;
+  const { captured, failed } = held;
   return [
     createElement("img", {
       key: "shot",
@@ -155,7 +173,7 @@ function filled(scope: ComposerScopeValue, held: Held): ReactNode[] {
     createElement(
       "span",
       { key: "body", className: "mk-shot-body" },
-      said(taking(held), captured && keeps, "said", "mk-shot-said mk-shot-line"),
+      said(taking(held), captured, "said", "mk-shot-said mk-shot-line"),
       failed
         ? createElement("span", { key: "bad", className: "mk-chip" }, ATTACH_WORDS.failed)
         : null,
@@ -191,10 +209,7 @@ function said(
   );
 }
 
-/** A thumbnail over a deployment that keeps none is a picture of something
- * about to be dropped, and used to say "taken of the page when you picked". */
 function taking(held: Held): string {
-  if (!held.keeps) return ATTACH_WORDS.notKept;
   return held.captured ? ATTACH_WORDS.taken : ATTACH_WORDS.hint;
 }
 
