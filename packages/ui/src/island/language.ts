@@ -13,7 +13,7 @@ import type { CommentFilter, Corner, PickKind, ThemePreference } from "@maple-ki
 
 /** The five filters, in the words the pills show. `unpinned` is `orphaned`. */
 export const FILTER_LABELS: Readonly<Record<CommentFilter, string>> = {
-  all: "All",
+  all: "Active",
   open: "Open",
   needs_reverify: "Re-verify",
   resolved: "Resolved",
