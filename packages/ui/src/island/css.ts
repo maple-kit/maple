@@ -1258,6 +1258,11 @@ function ledger(): string {
   display: none;
 }
 
+/* A draft is not a stored comment: there is nothing yet to resolve. */
+.mk-draft-row .mk-quick {
+  display: none;
+}
+
 .mk-draft-drop {
   position: absolute;
   top: 8px;
