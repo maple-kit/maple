@@ -466,6 +466,22 @@ function settingsPanel(): string {
 .mk-acct-do:active {
   transform: scale(var(--mk-press));
 }
+
+/* Unlinking forgets the token here: it reads as the destructive thing it is. */
+.mk-acct-danger {
+  border-color: var(--mk-danger);
+  background: transparent;
+  color: var(--mk-danger);
+}
+
+.mk-acct-danger:hover {
+  background: var(--mk-danger-sub);
+}
+
+.mk-setting-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
 `.trim();
 }
 
@@ -1054,32 +1070,31 @@ function transfer(): string {
 `;
 }
 
-/** The guest's one line about `maple solo`, under the unsent list and in the notice. */
+/** The link that opens the solo popup, set in the sentence it follows. */
 function solo(): string {
   return `
-.mk-solo {
-  display: block;
-  margin: 0;
-  padding: 0 10px 7px;
-  color: var(--mk-muted);
-  font-size: 11px;
-  line-height: 1.4;
-}
-
-.mk-notice .mk-solo {
-  padding: 4px 0 0;
+.mk-solo-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--mk-accent);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
 }
 
 .mk-solo-command {
-  padding: 0 4px;
-  border: 1px solid var(--mk-line);
-  border-radius: 4px;
-  background: var(--mk-bg);
+  min-width: 0;
+  padding: 4px 8px;
+  border-radius: var(--mk-r-xs);
+  background: var(--mk-sunk);
   color: var(--mk-fg);
-  font: inherit;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 10.5px;
-  cursor: pointer;
+  font-family: var(--mk-mono);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+  user-select: all;
 }
 `;
 }

@@ -38,6 +38,8 @@ export const COLOR_TOKENS: Readonly<Record<string, ThemedToken>> = {
   "--mk-ok-sub": { light: "oklch(0.955 0.03 155)", dark: "oklch(0.29 0.05 155)" },
   "--mk-warn": { light: "oklch(0.60 0.13 82)", dark: "oklch(0.82 0.13 82)" },
   "--mk-warn-sub": { light: "oklch(0.962 0.05 82)", dark: "oklch(0.31 0.06 82)" },
+  "--mk-danger": { light: "oklch(0.52 0.17 27)", dark: "oklch(0.75 0.14 25)" },
+  "--mk-danger-sub": { light: "oklch(0.96 0.025 25)", dark: "oklch(0.30 0.06 25)" },
   "--mk-lost": { light: "oklch(0.52 0.11 305)", dark: "oklch(0.76 0.11 305)" },
   "--mk-lost-sub": { light: "oklch(0.958 0.028 305)", dark: "oklch(0.29 0.05 305)" },
   "--mk-info": { light: "oklch(0.53 0.12 248)", dark: "oklch(0.74 0.12 248)" },

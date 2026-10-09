@@ -23,16 +23,17 @@ const MOCK_MAX = 4 * 1024;
 const BUDGETS = [
   // 13 KB until the score card; 14 KB until the mock box, whose rules ride in
   // this sheet so Maple.Mock needs no second one inside <Maple /> (a page that
-  // only mocks adopts MOCK_CSS, weighed below); 16 KB once its menu joined.
-  { name: "the adopted stylesheet", entries: ["stylesheet.js"], max: 16 * 1024 },
-  // 22 KB until the wordmark (1.7 KB of path data); 24 KB until the sign-off
-  // and the unsent list; 26 KB until the pixel leaf (1.3 KB, docs/branding.md);
-  // 28 KB, then 29 KB once a draft knows its page; 30 KB for import and export;
-  // 31 KB for the solo offer, which the unsent list and the notice both draw.
+  // only mocks adopts MOCK_CSS, weighed below); 16 KB once its menu joined;
+  // 17 KB for the popup and the sign-in steps.
+  { name: "the adopted stylesheet", entries: ["stylesheet.js"], max: 17 * 1024 },
+  // 22 KB until the wordmark; 24 KB for the sign-off and unsent list; 26 KB
+  // for the pixel leaf (docs/branding.md); 28 KB, then 29 KB once a draft knows
+  // its page; 30 KB for import and export; 31 KB for the solo offer; 32 KB for
+  // the popup that offer and the sign-in steps share.
   {
     name: "root + marks + island + icons",
     entries: ["index.js", "marks/index.js", "island/index.js", "icons/index.js"],
-    max: 31 * 1024,
+    max: 32 * 1024,
   },
   // 9 KB until the score card. The extra 1 KB is the card, the kind control
   // and the context card's disclosure. Every byte of it is inert on a

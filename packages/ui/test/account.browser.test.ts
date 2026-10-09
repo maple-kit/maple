@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 
 import { MapleRoot } from "../src/index.js";
-import { Account } from "../src/island/index.js";
+import { Account, SignIn } from "../src/island/index.js";
 
 import type { ReactElement } from "react";
 
@@ -64,6 +64,7 @@ function tree(route: Route): ReactElement {
     MapleRoot,
     { branch: BRANCH, theme: "light", options: { fetch: routeFetch(route), origin: ORIGIN } },
     createElement(Account),
+    createElement(SignIn),
   );
 }
 
@@ -123,6 +124,38 @@ describe("a reviewer who has not linked", () => {
     expect(found.querySelector("a")?.getAttribute("href")).toBe("https://github.com/login/device");
   });
 
+  it("walks them through it in a popup: the code, GitHub, then the wait", async () => {
+    await render(tree({ github: { linked: false } }));
+    await settled("unlinked");
+
+    root().querySelector<HTMLButtonElement>(".mk-acct-do")!.click();
+    await settled("linking");
+
+    const popup = root().querySelector<HTMLDialogElement>(".mk-popup")!;
+    expect(popup.open).toBe(true);
+    expect(popup.querySelector(".mk-step-code")?.textContent).toBe("WDJB-MJHT");
+    expect(popup.querySelector(".mk-step-open")?.getAttribute("href")).toBe(
+      "https://github.com/login/device",
+    );
+    expect(popup.querySelector("[role=status]")?.textContent).toContain("Waiting");
+
+    popup.querySelector<HTMLButtonElement>(".mk-iconbtn")!.click();
+    await vi.waitFor(() => expect(root().querySelector(".mk-popup")).toBeNull());
+    expect((await settled("linking")).querySelector("code")?.textContent).toBe("WDJB-MJHT");
+  });
+
+  it("closes the popup by itself once GitHub has the code", async () => {
+    await render(
+      tree({ github: { linked: false }, startInterval: 0, attempts: [{ status: "linked" }] }),
+    );
+    await settled("unlinked");
+
+    root().querySelector<HTMLButtonElement>(".mk-acct-do")!.click();
+
+    await settled("linked");
+    expect(root().querySelector(".mk-popup")).toBeNull();
+  });
+
   it("offers nothing to press while the reviewer is away on github.com", async () => {
     await render(tree({ github: { linked: false } }));
     await settled("unlinked");
@@ -146,7 +179,7 @@ describe("a reviewer who has not linked", () => {
     root().querySelector<HTMLButtonElement>(".mk-acct-do")!.click();
     const found = await settled("linked");
 
-    expect(found.textContent).toContain("@octocat");
+    expect(found.textContent).toContain("octocat");
   });
 });
 
@@ -155,7 +188,7 @@ describe("a reviewer who has", () => {
     await render(tree({ github: { linked: true, login: "octocat" } }));
     const found = await settled("linked");
 
-    expect(found.textContent).toContain("Linked as @octocat.");
+    expect(found.textContent).toContain("Linked • octocat");
     expect(found.querySelector(".mk-acct-do")?.textContent).toBe("Unlink");
   });
 
@@ -164,6 +197,13 @@ describe("a reviewer who has", () => {
     const found = await settled("linked");
 
     expect(found.querySelector(".mk-acct-do")?.getAttribute("title")).toContain("revoke");
+  });
+
+  it("draws Unlink as the destructive control it is", async () => {
+    await render(tree({ github: { linked: true, login: "octocat" } }));
+    const found = await settled("linked");
+
+    expect(found.querySelector(".mk-acct-do")?.classList.contains("mk-acct-danger")).toBe(true);
   });
 
   it("goes back to an offer when they unlink", async () => {
@@ -178,7 +218,7 @@ describe("a reviewer who has", () => {
     await render(tree({ github: { linked: true } }));
     const found = await settled("linked");
 
-    expect(found.textContent).toContain("Linked.");
-    expect(found.textContent).not.toContain("@");
+    expect(found.textContent).toContain("Linked");
+    expect(found.textContent).not.toContain("•");
   });
 });

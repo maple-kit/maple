@@ -61,7 +61,7 @@ export const MapleNotice = /** @__PURE__ */ forwardRef<HTMLElement, MapleNoticeP
           {
             key: "off",
             type: "button",
-            className: "mk-notice-off mk-hit",
+            className: "mk-iconbtn mk-notice-off mk-hit",
             "aria-label": NOTICE_COPY.dismiss,
             onClick: () => client.clearError(),
           },

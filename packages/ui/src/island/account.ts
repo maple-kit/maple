@@ -40,7 +40,7 @@ export const Account = /** @__PURE__ */ forwardRef<HTMLDivElement, AccountProps>
       children ?? [
         createElement(
           "span",
-          { key: "said" },
+          { key: "said", className: "mk-setting-main" },
           createElement("span", { className: "mk-setting-name" }, ACCOUNT_COPY.name),
           createElement("span", { className: "mk-setting-hint" }, said(link)),
           code(link),
@@ -53,14 +53,10 @@ export const Account = /** @__PURE__ */ forwardRef<HTMLDivElement, AccountProps>
 
 /** One sentence per state, and the failure carries the route's own words. */
 function said(link: GitHubLink): string {
-  if (link.state === "linked") return ACCOUNT_COPY.linkedAs(login(link.login));
+  if (link.state === "linked") return ACCOUNT_COPY.linkedAs(link.login);
   if (link.state === "linking") return ACCOUNT_COPY.linking;
   if (link.state === "failed") return link.reason;
   return ACCOUNT_COPY.unlinked;
-}
-
-function login(name: string | undefined): string | undefined {
-  return name === undefined ? undefined : `@${name}`;
 }
 
 /** The code and where to type it, shown only while a link is waiting. */
@@ -92,7 +88,7 @@ function action(link: GitHubLink, client: MapleClient): ReactNode {
     {
       key: "act",
       type: "button",
-      className: "mk-acct-do",
+      className: linked ? "mk-acct-do mk-acct-danger" : "mk-acct-do",
       ...(linked ? { title: ACCOUNT_COPY.unlinkHint } : {}),
       onClick: () => void (linked ? client.unlinkGitHub() : client.linkGitHub()),
     },

@@ -120,9 +120,19 @@ export const ACCOUNT_COPY = {
   link: "Link",
   retry: "Try again",
   unlink: "Unlink",
-  linkedAs: (login: string | undefined) =>
-    login === undefined ? "Linked." : `Linked as ${login}.`,
+  linkedAs: (login: string | undefined) => (login === undefined ? "Linked" : `Linked • ${login}`),
   unlinkHint: "Forgets the token here. GitHub keeps the authorisation until you revoke it.",
+} as const;
+
+/** The popup Sign in opens: three beats, in the order the reviewer does them. */
+export const SIGNIN_COPY = {
+  title: "Sign in with GitHub",
+  copyStep: "Copy this code",
+  copy: "Copy",
+  copied: "Copied",
+  openStep: "Open GitHub and paste it",
+  open: "Open github.com",
+  waiting: "Waiting for you to finish on GitHub. This closes by itself.",
 } as const;
 
 /**
