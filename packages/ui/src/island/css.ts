@@ -586,7 +586,7 @@ function filters(): string {
   flex: none;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   padding: 7px 9px;
   border-bottom: 1px solid var(--mk-line);
 }
@@ -659,8 +659,8 @@ function filters(): string {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 6px;
+  gap: 2px;
+  padding: 3px 3px;
   border: 1px solid transparent;
   border-radius: 999px;
   background: transparent;
@@ -1023,8 +1023,9 @@ function transfer(): string {
 }
 
 .mk-publish-all {
-  padding-block: 3px;
-  font-size: 11px;
+  padding: 2px 7px;
+  font-size: 10.5px;
+  white-space: nowrap;
 }
 
 .mk-icon-btn:disabled {
