@@ -20,20 +20,22 @@ send failed, and the comments were unreachable.
 
 ## The shape now
 
-| Control                   | Where             | What it does                                         |
-| ------------------------- | ----------------- | ---------------------------------------------------- |
-| **Keep**                  | the composer      | Closes it. The comment waits, unsent.                |
-| **Publish**               | the composer      | Sends every kept comment, this one included.         |
-| **Drafts** filter         | the status select | Lists the unsent comments, drawn as any comment is.  |
-| **Publish**               | the unsent line   | The same, from the island.                           |
-| **Copy as Markdown/JSON** | the unsent line   | Every unsent comment to the clipboard, never a file. |
-| **✕**                     | a draft's row     | Throws that one away, without opening a panel.       |
+| Control           | Where             | What it does                                         |
+| ----------------- | ----------------- | ---------------------------------------------------- |
+| **Save as draft** | the composer      | Closes it. The comment waits, unsent.                |
+| **Publish**       | the composer      | Sends every kept comment, this one included.         |
+| **Sign in**       | the composer      | Replaces Publish until the reviewer has signed in.   |
+| **Drafts** filter | the status select | Lists the unsent comments, drawn as any comment is.  |
+| **Download**      | beside Import     | Every unsent comment as a file, never the clipboard. |
+| **✕**             | a draft's row     | Throws that one away, without opening a panel.       |
 
 Drafts are a status like the others: `drafts` is a value of the island's filter,
 offered while there are any, and its rows are the same row a published comment
-gets. `Maple.Unsent` is only the one line, "Some comments are unpublished", with
-the split button; it draws nothing while nothing is waiting, so a reviewer who
-publishes as they go never sees it.
+gets. Only a draft the reviewer kept counts: the comment being typed is stored
+on every keystroke, but it is not in the filter, the count or the Download dot
+until it is saved. A reviewer who has not signed in sees no Publish: Save as
+draft is the primary button, "Sign in to publish directly" sits beside it, and
+Download carries a green dot while a saved draft cannot be published.
 
 ## One publish is one write
 
@@ -64,7 +66,7 @@ off for a host that would rather risk the rest.
 A draft belongs to the route it was written on. Marks are placed only for drafts
 whose recorded path matches the current one, ignoring host and query, because a
 shared layout would otherwise let a draft from `/menu` land on `/roasts/huila`.
-The unsent list tags the others "On another page" and links to their path. Sent
+The Drafts list tags the others "On another page" and links to their path. Sent
 comments are not filtered by route yet.
 
 ## Copy as markdown
@@ -79,7 +81,7 @@ the guest author, which is what the route would have assigned anyway.
 
 ## Moving drafts between browsers
 
-Markdown cannot be read back, so **Copy as JSON** in the unsent line copies a document
+Markdown cannot be read back, so **Download** saves a file
 of the store's own shape: `{ version, branch, drafts }`, anchors, regions and page
 context included, attachments by reference only. **Import drafts**, the upload icon beside the status select, takes a paste
 or a dropped file, checks each entry with the same `isDraft` the store uses, and

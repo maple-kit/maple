@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 
 import { MapleRoot } from "../src/index.js";
-import { ImportDrafts, OtherDrafts, Unsent } from "../src/island/index.js";
+import { ImportDrafts, OtherDrafts } from "../src/island/index.js";
 
 import type { MapleClient } from "@maple-kit/core/client";
 import type { Draft } from "@maple-kit/core/overlay";
@@ -60,7 +60,6 @@ function tree(storage: Storage = memoryStorage()) {
     MapleRoot,
     { branch: BRANCH, theme: "light", client },
     createElement(OtherDrafts),
-    createElement(Unsent),
     createElement(ImportDrafts),
   );
 }

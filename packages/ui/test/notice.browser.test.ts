@@ -61,18 +61,22 @@ describe("a store that refuses this reviewer", () => {
     expect(found.getAttribute("role")).toBe("alert");
   });
 
-  it("offers the sign-in on the card, not three clicks into settings", async () => {
+  it("offers the sign-in as a link in the sentence, not three clicks into settings", async () => {
     await render(tree({ status: 401, github: { linked: false } }));
     const found = await shown("unauthorized");
 
-    expect(found.querySelector(".mk-notice-do")?.textContent).toBe("Sign in");
+    expect(found.querySelector(".mk-notice-said .mk-link")?.textContent).toBe("Sign in");
+    expect(found.querySelector(".mk-notice-said")?.textContent).toBe(
+      "Sign in before this deployment can show you its comments.",
+    );
+    expect(found.querySelector("button.mk-btn")).toBeNull();
   });
 
   it("offers no door where the deployment has none to offer", async () => {
     await render(tree({ status: 401 }));
     const found = await shown("unauthorized");
 
-    expect(found.querySelector(".mk-notice-do")).toBeNull();
+    expect(found.querySelector(".mk-link")).toBeNull();
     expect(found.textContent).toContain("nowhere to put your comments");
   });
 });
@@ -82,7 +86,7 @@ describe("a store that broke", () => {
     await render(tree({ status: 500 }));
     const found = await shown("store");
 
-    expect(found.querySelector(".mk-notice-do")?.textContent).toBe("Try again");
+    expect(found.querySelector(".mk-link")?.textContent).toBe("Try again");
   });
 
   it("keeps the route's own words off the page and out of the overlay", async () => {
@@ -127,14 +131,15 @@ describe("the list under a failed load", () => {
     await render(tree({ status: 500 }));
     await shown("store");
 
-    expect(root().querySelector(".mk-empty")?.textContent).toContain("not the whole story");
+    expect(root().querySelector(".mk-empty")?.textContent).not.toContain("whole story");
+    expect(root().querySelector(".mk-empty")?.textContent).toContain("Couldn't load the comments");
   });
 
   it("says the same when the sign-in it offers has not been used yet", async () => {
     await render(tree({ status: 401, github: { linked: false } }));
     await shown("unauthorized");
 
-    expect(root().querySelector(".mk-empty")?.textContent).toContain("not the whole story");
+    expect(root().querySelector(".mk-empty")?.textContent).toContain("Couldn't load the comments");
   });
 
   it("shows the ordinary empty state where the notice already says there is no store", async () => {
@@ -149,14 +154,14 @@ describe("the list under a failed load", () => {
     await render(treeOver(listAnswering(() => Promise.reject(new TypeError("offline")))));
     await vi.waitFor(() => expect(notice()).not.toBeNull());
 
-    expect(root().querySelector(".mk-empty")?.textContent).toContain("not the whole story");
+    expect(root().querySelector(".mk-empty")?.textContent).toContain("Couldn't load the comments");
   });
 
   it("still says it could not read a ledger it cannot parse", async () => {
     await render(treeOver(listAnswering(() => Promise.resolve(new Response("not json")))));
     await vi.waitFor(() => expect(notice()).not.toBeNull());
 
-    expect(root().querySelector(".mk-empty")?.textContent).toContain("not the whole story");
+    expect(root().querySelector(".mk-empty")?.textContent).toContain("Couldn't load the comments");
   });
 });
 

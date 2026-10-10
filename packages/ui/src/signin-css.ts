@@ -87,6 +87,15 @@ export function signInCss(): string {
   font-size: 11px;
 }
 
+.mk-popup-body .mk-step-help {
+  margin-top: 8px;
+  font-size: 11px;
+}
+
+.mk-step-help:empty {
+  display: none;
+}
+
 .mk-step-dot {
   flex: none;
   width: 7px;

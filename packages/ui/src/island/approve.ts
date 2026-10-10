@@ -10,6 +10,7 @@ import { useMaple, useMapleClient } from "@maple-kit/react";
 import { createElement, forwardRef } from "react";
 
 import { cx } from "../cx.js";
+import { CheckIcon } from "../icons/check.js";
 import { renderPart } from "../part.js";
 import { APPROVE_COPY } from "./language.js";
 
@@ -21,7 +22,7 @@ export interface ApproveProps extends PartProps {
   readonly children?: ReactNode;
 }
 
-/** The sign-off, as one green check at the end of the status line. */
+/** The sign-off: a green check until given, then a neutral pressed one. */
 export const Approve = /** @__PURE__ */ forwardRef<HTMLButtonElement, ApproveProps>(
   function Approve(props, ref) {
     const { asChild, children, className, ...rest } = props;
@@ -42,34 +43,15 @@ export const Approve = /** @__PURE__ */ forwardRef<HTMLButtonElement, ApprovePro
         "aria-label": APPROVE_COPY.label,
         "aria-pressed": mine,
         disabled: !signedIn,
-        className: cx("mk-approve mk-press", className),
+        className: cx(
+          "mk-icon-btn mk-approve mk-press",
+          mine ? undefined : "mk-icon-btn-ok",
+          className,
+        ),
         onClick: () => void (mine ? client.unapprove() : client.approve()),
         ref,
       },
-      children ?? checkCircle(),
+      children ?? createElement(CheckIcon, { size: 15 }),
     );
   },
 );
-
-/** A filled circle with the check cut out of it, so it takes the button's colour. */
-function checkCircle(): ReactNode {
-  return createElement(
-    "svg",
-    {
-      viewBox: "0 0 24 24",
-      width: 18,
-      height: 18,
-      "aria-hidden": true,
-      className: "mk-approve-icon",
-    },
-    createElement("circle", { cx: 12, cy: 12, r: 11, fill: "currentColor" }),
-    createElement("path", {
-      d: "M7.2 12.4l3.2 3.2 6.4-6.6",
-      fill: "none",
-      stroke: "var(--mk-on-ok, #fff)",
-      strokeWidth: 2.2,
-      strokeLinecap: "round",
-      strokeLinejoin: "round",
-    }),
-  );
-}

@@ -1,26 +1,31 @@
 /**
  * `Maple.ImportDrafts` and `Maple.OtherDrafts`: unsent comments arriving.
  *
- * Both are quiet on purpose. Import is one icon button until it is wanted, and
- * the other-branch row says what was found and does nothing until asked, since
+ * Both are quiet on purpose. Import is one icon button until it is wanted, with
+ * Download beside it, and the other-branch row says what was found and does nothing until asked, since
  * a label that differs can be legitimate. Nothing here re-keys a draft on its
  * own; it only calls the client, which saves through the draft keeper.
  */
 
-import { useMapleClient } from "@maple-kit/react";
+import { useMaple, useMapleClient } from "@maple-kit/react";
 import { createElement, forwardRef, useState } from "react";
 
 import { cx } from "../cx.js";
+import { DownloadIcon } from "../icons/download.js";
+import { SendIcon } from "../icons/send.js";
+import { UploadIcon } from "../icons/upload.js";
 import { renderPart } from "../part.js";
 import { TRANSFER_COPY } from "./language.js";
+import { useSavedDrafts, useSignedOut } from "./saved.js";
 
 import type { PartProps } from "../part.js";
 import type {
   DraftImportOutcome,
   DraftImportPreview,
   DraftImportResult,
+  MapleClient,
 } from "@maple-kit/core/client";
-import type { ChangeEvent, DragEvent, ReactNode } from "react";
+import type { ChangeEvent, DragEvent, MouseEvent, ReactNode } from "react";
 
 /** The section. Its children replace everything inside it. */
 export interface ImportDraftsProps extends PartProps {
@@ -116,8 +121,10 @@ export const ImportDrafts = /** @__PURE__ */ forwardRef<HTMLDivElement, ImportDr
             "aria-expanded": open,
             onClick: () => setOpen(!open),
           },
-          uploadIcon(),
+          createElement(UploadIcon, { size: 15 }),
         ),
+        createElement(DownloadDrafts, { key: "download" }),
+        createElement(PublishAll, { key: "publish" }),
         open
           ? createElement(
               "div",
@@ -131,25 +138,63 @@ export const ImportDrafts = /** @__PURE__ */ forwardRef<HTMLDivElement, ImportDr
   },
 );
 
-/** An arrow rising out of a tray: the file goes up into the island. */
-function uploadIcon(): ReactNode {
+/**
+ * Saves the drafts as a file another browser can import. A green dot says
+ * there is something to carry out while publishing is not possible.
+ */
+function DownloadDrafts(): ReactNode {
+  const client = useMapleClient();
+  const saved = useSavedDrafts();
+  const signedOut = useSignedOut();
+  const waiting = signedOut && saved.length > 0;
+
   return createElement(
-    "svg",
+    "button",
     {
-      viewBox: "0 0 24 24",
-      width: 15,
-      height: 15,
-      "aria-hidden": true,
-      fill: "none",
-      stroke: "currentColor",
-      strokeWidth: 2,
-      strokeLinecap: "round",
-      strokeLinejoin: "round",
+      type: "button",
+      className: "mk-icon-btn mk-press",
+      "aria-label": TRANSFER_COPY.download,
+      title: TRANSFER_COPY.download,
+      disabled: saved.length === 0,
+      "data-mk-dot": waiting,
+      onClick: (event: MouseEvent<HTMLButtonElement>) => save(event.currentTarget, client),
     },
-    createElement("path", { d: "M12 15V4" }),
-    createElement("path", { d: "M7.5 8.5L12 4l4.5 4.5" }),
-    createElement("path", { d: "M4.5 14.5v3.5a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-3.5" }),
+    createElement(DownloadIcon, { size: 15 }),
+    waiting ? createElement("span", { className: "mk-icon-dot", "aria-hidden": true }) : null,
   );
+}
+
+/** Sends every saved draft, for a reviewer who is able to. */
+function PublishAll(): ReactNode {
+  const client = useMapleClient();
+  const { publishing } = useMaple();
+  const saved = useSavedDrafts();
+  const signedOut = useSignedOut();
+  if (saved.length === 0 || signedOut) return null;
+
+  return createElement(
+    "button",
+    {
+      type: "button",
+      className: "mk-icon-btn mk-icon-btn-ok mk-press",
+      "aria-label": TRANSFER_COPY.publishAll,
+      title: TRANSFER_COPY.publishAll,
+      "aria-busy": publishing,
+      disabled: publishing,
+      onClick: () => void client.publish().catch(() => undefined),
+    },
+    createElement(SendIcon, { size: 15 }),
+  );
+}
+
+/** Hands the browser the drafts as a file. */
+function save(from: HTMLElement, client: MapleClient): void {
+  const url = URL.createObjectURL(new Blob([client.draftsAsJson()], { type: "application/json" }));
+  const link = from.ownerDocument.createElement("a");
+  link.href = url;
+  link.download = TRANSFER_COPY.downloadFile;
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 /** A row that says drafts exist under another branch here, and offers to bring them. */

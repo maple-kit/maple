@@ -578,6 +578,20 @@ describe("reading a comment already written", () => {
     expect(maple.getState().selected).toBe("c_7");
   });
 
+  it("marks a draft resumed only when it was kept before the panel opened on it", async () => {
+    const maple = client();
+    await maple.load();
+
+    maple.openComposer(TARGET);
+    maple.setBody("Typing, not yet kept.");
+    expect(maple.getState().composer.resumed).toBe(false);
+    expect(maple.getState().drafts).toHaveLength(1);
+
+    maple.keepDraft();
+    maple.openComposer(TARGET);
+    expect(maple.getState().composer.resumed).toBe(true);
+  });
+
   it("opens no draft and makes nothing dirty: reading is not writing", async () => {
     fake.seed(storedComment({ id: "c_7" }));
     const maple = client();

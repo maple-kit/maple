@@ -2,10 +2,9 @@
  * `Maple.Context`: what the page looked like, at the moment of writing.
  *
  * Half of what Maple has and a comment box does not, which is why it is on
- * screen while the comment is written. It collapses rather than hides: the one
- * fact a reviewer reads off it is how wide the layout was, and the summary
- * keeps that line whatever else is folded away. `contextRows` builds both from
- * a captured page or a stored comment, so the two cannot drift.
+ * screen while the comment is written. It collapses rather than hides, to a
+ * title in the labels' own type. `contextRows` builds the rows from a captured
+ * page or a stored comment, so the two cannot drift.
  */
 
 import { contextRows } from "@maple-kit/core/overlay";
@@ -31,10 +30,14 @@ export interface MapleContextProps extends AsChildProps {
   readonly collapsible?: boolean;
 }
 
-/** What the disclosure is called, in both states. */
-export const CONTEXT_LABELS = { closed: "Show what was captured", open: "Hide what was captured" };
+/** The card's title, and what the disclosure is called in both states. */
+export const CONTEXT_LABELS = {
+  title: "Page context",
+  closed: "Show what was captured",
+  open: "Hide what was captured",
+};
 
-/** Labels muted, values aligned, two columns — folded to its first row. */
+/** Labels muted, values aligned, two columns — folded to its title. */
 export const MapleContextBadge = /** @__PURE__ */ forwardRef<HTMLElement, MapleContextProps>(
   function MapleContextBadge(props, ref) {
     const { composer } = useMaple();
@@ -55,18 +58,14 @@ export const MapleContextBadge = /** @__PURE__ */ forwardRef<HTMLElement, MapleC
         className: ["mk-composer-row", "mk-ctx-card", props.className].filter(Boolean).join(" "),
         "data-mk-open": String(open),
       },
-      collapsible ? head(rows, open, () => client.setContextOpen(!open)) : null,
+      collapsible ? head(open, () => client.setContextOpen(!open)) : null,
       createElement("dl", { className: "mk-ctx" }, ...rows.map(row)),
     );
   },
 );
 
-/**
- * The summary, and the control that unfolds it. It carries the first row's
- * value rather than a word like "Context", because that row is the fact.
- */
-function head(rows: readonly ContextRow[], open: boolean, toggle: () => void): ReactElement {
-  const first = rows[0];
+/** The title, and the control that unfolds the rows under it. */
+function head(open: boolean, toggle: () => void): ReactElement {
   return createElement(
     "button",
     {
@@ -76,7 +75,7 @@ function head(rows: readonly ContextRow[], open: boolean, toggle: () => void): R
       "aria-label": open ? CONTEXT_LABELS.open : CONTEXT_LABELS.closed,
       onClick: toggle,
     },
-    createElement("span", { className: "mk-ctx-sum" }, first === undefined ? "Page" : first.value),
+    createElement("span", { className: "mk-ctx-sum" }, CONTEXT_LABELS.title),
     createElement("span", { className: "mk-ctx-caret", "aria-hidden": "true" }),
   );
 }

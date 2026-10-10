@@ -13,6 +13,7 @@ import { createElement, useState } from "react";
 
 import { SIGNIN_COPY } from "./island/language.js";
 import { Popup } from "./popup.js";
+import { SoloOffer } from "./solo.js";
 
 import type { ReactElement } from "react";
 
@@ -95,5 +96,6 @@ function Steps(props: StepsProps): ReactElement {
       createElement("span", { className: "mk-step-dot", "aria-hidden": "true" }),
       SIGNIN_COPY.waiting,
     ),
+    createElement("div", { className: "mk-step-help" }, createElement(SoloOffer)),
   );
 }

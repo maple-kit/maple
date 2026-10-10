@@ -122,6 +122,11 @@ export interface ComposerState {
   readonly target?: ComposerTarget;
   /** The draft being written into. Survives a close; cleared by a send. */
   readonly draftId?: string;
+  /**
+   * The draft was already saved when the panel opened on it. A new one is
+   * stored on every keystroke too, but is only a draft once it is kept.
+   */
+  readonly resumed?: boolean;
   readonly body: string;
   readonly attachments: readonly MediaRef[];
   /** There is something unsent. The only thing `beforeunload` is keyed off. */

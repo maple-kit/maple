@@ -18,7 +18,7 @@ import type { Corner } from "@maple-kit/core/client";
 import type { KeyboardEvent, PointerEvent, ReactElement, RefObject } from "react";
 
 /** The card's default width, which is its least. */
-export const CARD_WIDTH_PX = 320;
+export const CARD_WIDTH_PX = 400;
 
 /** The card's default height is whatever its rows need; this is the least of it. */
 export const CARD_MIN_HEIGHT_PX = 330;

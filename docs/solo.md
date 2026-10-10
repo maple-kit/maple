@@ -86,9 +86,9 @@ The token is 32 random bytes, in the link only, and dies with the bridge.
 
 It never probes localhost. In Chrome, every request from a public page to
 `127.0.0.1` raises the local-network permission prompt, and a prompt on a page
-that never asked for solo mode is a bug. An unpaired guest sees one line, under
-the unsent list and under a refusal to post: "Can't sign in? Run `maple solo`
-to keep comments on your machine", where the command copies as
+that never asked for solo mode is a bug. An unpaired guest sees one link, inside
+the sign-in popup: "Can't sign in?" opens a second popup that says to run
+`maple solo` to keep comments on your machine, where the command copies as
 `maple solo <this page's origin>`.
 
 A paired page whose bridge has gone says so, and offers **Leave solo**, which

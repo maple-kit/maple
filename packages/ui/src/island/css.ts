@@ -25,7 +25,7 @@ export function islandCss(): string {
     rowDetail(),
     ledger(),
     approve(),
-    solo(),
+    link(),
     transfer(),
     newComment(),
     keyframes(),
@@ -145,7 +145,7 @@ function shell(): string {
   position: absolute;
   right: 0;
   bottom: 0;
-  width: 320px;
+  width: 400px;
   max-width: calc(100vw - 24px);
   max-height: min(78vh, 460px);
   min-height: min(330px, 62vh);
@@ -264,6 +264,7 @@ function header(): string {
 }
 
 a.mk-branch {
+  color: var(--mk-ok);
   text-decoration: none;
   transition:
     background-color var(--mk-dur-fade) var(--mk-ease-surface),
@@ -585,7 +586,7 @@ function filters(): string {
   flex: none;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   padding: 7px 9px;
   border-bottom: 1px solid var(--mk-line);
 }
@@ -658,8 +659,8 @@ function filters(): string {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 6px;
+  gap: 2px;
+  padding: 3px 3px;
   border: 1px solid transparent;
   border-radius: 999px;
   background: transparent;
@@ -741,21 +742,6 @@ function list(): string {
   color: var(--mk-fg);
   font-size: 13px;
   font-weight: 650;
-}
-
-.mk-empty-line {
-  margin: 0;
-  max-width: 24ch;
-  color: var(--mk-faint);
-  font-size: 12px;
-  line-height: 1.4;
-  text-wrap: balance;
-}
-
-.mk-empty-retry {
-  margin-top: 8px;
-  padding: 4px 12px;
-  font-size: 11.5px;
 }
 
 .mk-empty {
@@ -1007,9 +993,11 @@ function transfer(): string {
 .mk-transfer {
   flex: none;
   display: flex;
+  gap: 6px;
 }
 
 .mk-icon-btn {
+  position: relative;
   flex: none;
   display: grid;
   place-items: center;
@@ -1028,10 +1016,41 @@ function transfer(): string {
 }
 
 .mk-icon-btn:hover,
+.mk-icon-btn[aria-pressed="true"],
 .mk-icon-btn[aria-expanded="true"] {
   border-color: var(--mk-line-firm);
   background: var(--mk-sunk);
   color: var(--mk-fg);
+}
+
+/* The primary action of the group: the same box, in the green token. */
+.mk-icon-btn-ok {
+  border-color: color-mix(in srgb, var(--mk-ok) 45%, transparent);
+  background: var(--mk-ok-sub);
+  color: var(--mk-ok);
+}
+
+.mk-icon-btn-ok:hover {
+  border-color: var(--mk-ok);
+  background: var(--mk-ok-sub);
+  color: var(--mk-ok);
+}
+
+.mk-icon-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Something is saved here that cannot be published yet: carry it out. */
+.mk-icon-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid var(--mk-bg);
+  border-radius: 999px;
+  background: var(--mk-ok);
 }
 
 .mk-transfer-other {
@@ -1117,10 +1136,10 @@ function transfer(): string {
 `;
 }
 
-/** The link that opens the solo popup, set in the sentence it follows. */
-function solo(): string {
+/** An action set in the sentence it follows, so it costs a word and not a button. */
+function link(): string {
   return `
-.mk-solo-link {
+.mk-link {
   padding: 0;
   border: 0;
   background: transparent;
@@ -1146,27 +1165,9 @@ function solo(): string {
 `;
 }
 
-/** The two rows above the picks: what is waiting, and the sign-off. */
+/** The small pill button import shares, and a draft's row in the list. */
 function ledger(): string {
   return `
-.mk-unsent {
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 6px 9px;
-  border-top: 1px solid var(--mk-line);
-  background: var(--mk-sunk);
-}
-
-.mk-unsent-label {
-  min-width: 0;
-  color: var(--mk-muted);
-  font-size: 11.5px;
-  font-weight: 550;
-}
-
 .mk-unsent-copy {
   flex: none;
   padding: 2px 8px;
@@ -1178,75 +1179,6 @@ function ledger(): string {
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
-}
-
-.mk-split {
-  position: relative;
-  flex: none;
-  display: flex;
-}
-
-.mk-split-main,
-.mk-split-more {
-  font-size: 11px;
-  padding-block: 3px;
-}
-
-.mk-split-main {
-  padding-inline: 11px 9px;
-  border-start-end-radius: 0;
-  border-end-end-radius: 0;
-}
-
-.mk-split-more {
-  display: grid;
-  place-items: center;
-  padding-inline: 7px;
-  border-start-start-radius: 0;
-  border-end-start-radius: 0;
-  border-inline-start: 1px solid color-mix(in srgb, currentColor 30%, transparent);
-}
-
-.mk-split-chevron {
-  width: 5px;
-  height: 5px;
-  border-right: 1.5px solid currentColor;
-  border-bottom: 1.5px solid currentColor;
-  rotate: 45deg;
-  translate: 0 -1.5px;
-}
-
-.mk-split-menu {
-  position: absolute;
-  z-index: 3;
-  right: 0;
-  bottom: calc(100% + 6px);
-  display: flex;
-  flex-direction: column;
-  min-width: 100%;
-  padding: 3px;
-  border: 1px solid var(--mk-line-firm);
-  border-radius: var(--mk-r-sm);
-  background: var(--mk-bg);
-  box-shadow: var(--mk-sh2);
-}
-
-.mk-split-item {
-  padding: 5px 9px;
-  border: 0;
-  border-radius: 5px;
-  background: transparent;
-  color: var(--mk-fg);
-  font: inherit;
-  font-size: 11.5px;
-  text-align: start;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.mk-split-item:hover,
-.mk-split-item:focus-visible {
-  background: var(--mk-sunk);
 }
 
 .mk-draft-row {
@@ -1282,50 +1214,13 @@ function ledger(): string {
 `.trim();
 }
 
-/** The sign-off, a green check at the end of the status line. */
+/** The sign-off, a green check in the toolbar group. */
 function approve(): string {
   return `
-/* The sign-off is a green check at the end of the status line. At rest it is
-   a quiet fill; once given it is full colour with a ring, so "done" reads at
-   a glance and without a word. */
-.mk-approve {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--mk-ok);
-  cursor: pointer;
-}
-
-.mk-approve-icon {
-  opacity: 0.65;
-  transition: opacity var(--mk-dur-swap) var(--mk-ease-swap);
-}
-
-.mk-approve:hover .mk-approve-icon,
-.mk-approve:focus-visible .mk-approve-icon {
-  opacity: 0.85;
-}
-
-.mk-approve[aria-pressed="true"] {
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--mk-ok) 35%, transparent);
-}
-
-.mk-approve[aria-pressed="true"] .mk-approve-icon {
-  opacity: 1;
-}
-
+/* Until it is given the check wears the group's green; once given it is a
+   neutral pressed button. Signed out it is disabled. */
 .mk-approve:disabled {
   cursor: not-allowed;
-}
-
-.mk-approve:disabled .mk-approve-icon {
-  opacity: 0.3;
 }
 `.trim();
 }

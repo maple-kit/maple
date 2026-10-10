@@ -117,6 +117,11 @@ function shellCss(): string {
   background: var(--mk-sunk);
 }
 
+.mk-composer-hint {
+  color: var(--mk-muted);
+  font-size: 11px;
+}
+
 .mk-grab {
   display: none;
 }
@@ -369,6 +374,7 @@ function kindChip(): string {
 }
 
 .mk-ctx dt,
+.mk-ctx-sum,
 .mk-score-name {
   align-self: baseline;
   color: var(--mk-faint);
@@ -469,8 +475,7 @@ function kindChip(): string {
 /** What the page looked like, and the screenshot taken of it. */
 function contextAndShots(): string {
   return `
-/* It folds rather than vanishes: the width is the one fact read off it, so
-   the summary keeps that line in both states. */
+/* It folds rather than vanishes: its title stays in both states. */
 .mk-ctx-card {
   margin: 2px 16px 4px;
   border: 1px solid var(--mk-line);
@@ -496,7 +501,8 @@ function contextAndShots(): string {
   cursor: pointer;
 }
 
-.mk-ctx-head:hover {
+.mk-ctx-head:hover,
+.mk-ctx-head:hover .mk-ctx-sum {
   color: var(--mk-fg);
 }
 
@@ -523,6 +529,7 @@ function contextAndShots(): string {
 .mk-ctx {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: baseline;
   gap: 7px 10px;
   padding: 11px;
 }

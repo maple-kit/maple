@@ -19,7 +19,7 @@ import type { ReactElement } from "react";
 export const SOLO_COPY = {
   trigger: "Can't sign in?",
   title: "Keep comments on your machine",
-  body: "Run this in your project. It prints a link that pairs this page with your machine, and comments stay there instead of on this deployment.",
+  body: "Run this in your project to keep comments on your machine.",
   command: "maple solo",
   copy: "Copy",
   copied: "Copied",
@@ -37,8 +37,8 @@ export function soloCommand(origin: string): string {
 
 /**
  * Drawn for a guest who is not paired, once the page has heard from the route,
- * as a link that reads as part of the sentence before it. A reviewer who is
- * signed in, or already paired, is shown nothing.
+ * as a link inside the sign-in popup. A reviewer who is signed in, or already
+ * paired, is shown nothing.
  */
 export function SoloOffer(): ReactElement | null {
   const { user, solo, phase } = useMaple();
@@ -48,10 +48,9 @@ export function SoloOffer(): ReactElement | null {
   return createElement(
     Fragment,
     null,
-    " ",
     createElement(
       "button",
-      { type: "button", className: "mk-solo-link", onClick: () => setOpen(true) },
+      { type: "button", className: "mk-link", onClick: () => setOpen(true) },
       SOLO_COPY.trigger,
     ),
     open ? createElement(SoloPopup, { onClose: () => setOpen(false) }) : null,

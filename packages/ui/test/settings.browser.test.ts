@@ -101,6 +101,15 @@ afterEach(() => {
  * A guest matching the wallpaper cannot be seen, so the default is the host's
  * opposite — but which one it is stays the reviewer's call.
  */
+describe("the settings control", () => {
+  it("is a cog: one closed outline of teeth round a hub, not two sliders", () => {
+    const path = find<HTMLButtonElement>(".mk-iconbtn").querySelector("svg path");
+
+    expect(path?.getAttribute("d")).toMatch(/Z/);
+    expect(path?.getAttribute("d")?.match(/L/g)?.length).toBeGreaterThanOrEqual(18);
+  });
+});
+
 describe("the theme switch", () => {
   it("starts on auto, which is the opposite of the host page", async () => {
     await panel();

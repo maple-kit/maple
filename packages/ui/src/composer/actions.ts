@@ -1,18 +1,19 @@
 /**
- * `Maple.Actions`: save it as a draft, or publish it. Nothing here throws a
- * draft away.
+ * `Maple.Actions`: save it as a draft, or publish it. Nothing here throws a draft away.
  *
  * A comment is a draft until it is published, so the quiet control is the
  * usual one: **Save as draft** closes the composer and leaves the comment
  * unsent, on the list and on the page with everything else waiting.
  * **Publish** (or ⌘/Ctrl+Enter in the field) is the deliberate act that puts
- * it in the store. Both are disabled on a blank body.
+ * it in the store. Both are disabled on a blank body. Signed out, there is no
+ * Publish: saving is primary and a link says why.
  */
 
 import { useMaple, useMapleClient } from "@maple-kit/react";
 import { createElement, forwardRef } from "react";
 
 import { cx } from "../cx.js";
+import { useSignedOut } from "../island/saved.js";
 import { Slot } from "../slot.js";
 import { useComposerScope } from "./scope.js";
 
@@ -31,6 +32,9 @@ export const SAVE_DRAFT_LABEL = "Save as draft";
 /** The verb, because publishing is the act and the comment already exists. */
 export const PUBLISH_LABEL = "Publish";
 
+/** Said beside Save as draft while publishing needs a sign-in. */
+export const SIGN_IN_HINT = { link: "Sign in", rest: " to publish directly" } as const;
+
 /** What a comment already written offers instead: done with it, or not yet. */
 export const VIEW_LABELS = {
   close: "Close",
@@ -46,6 +50,7 @@ export const MapleActions = /** @__PURE__ */ forwardRef<HTMLElement, MapleAction
     const Element = (props.asChild ? Slot : "footer") as "footer";
 
     const publish = usePublish();
+    const signedOut = useSignedOut();
 
     const className = props.className ? `mk-composer-foot ${props.className}` : "mk-composer-foot";
 
@@ -67,29 +72,46 @@ export const MapleActions = /** @__PURE__ */ forwardRef<HTMLElement, MapleAction
       },
       props.children,
       createElement("span", { className: "mk-composer-fill" }),
+      signedOut ? signInHint(client) : null,
       createElement(
         "button",
         {
           type: "button",
-          className: "mk-btn mk-btn-quiet mk-press",
+          className: cx("mk-btn mk-press", signedOut ? "mk-btn-primary" : "mk-btn-quiet"),
           disabled: composer.body.trim() === "",
           onClick: () => client.keepDraft(),
         },
         SAVE_DRAFT_LABEL,
       ),
-      createElement(
-        "button",
-        {
-          type: "button",
-          className: "mk-btn mk-btn-primary mk-press",
-          disabled: composer.body.trim() === "" || publishing,
-          onClick: publish,
-        },
-        PUBLISH_LABEL,
-      ),
+      signedOut
+        ? null
+        : createElement(
+            "button",
+            {
+              type: "button",
+              className: "mk-btn mk-btn-primary mk-press",
+              disabled: composer.body.trim() === "" || publishing,
+              onClick: publish,
+            },
+            PUBLISH_LABEL,
+          ),
     );
   },
 );
+
+/** Muted text with Sign in set in it as a link, in place of the Publish it replaces. */
+function signInHint(client: ReturnType<typeof useMapleClient>): ReactNode {
+  return createElement(
+    "span",
+    { key: "hint", className: "mk-composer-hint" },
+    createElement(
+      "button",
+      { type: "button", className: "mk-link", onClick: () => void client.linkGitHub() },
+      SIGN_IN_HINT.link,
+    ),
+    SIGN_IN_HINT.rest,
+  );
+}
 
 /**
  * Publishes what the composer holds and drops the pasted image with it. The

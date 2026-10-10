@@ -41,19 +41,6 @@ export function noticeCss(): string {
   text-wrap: pretty;
 }
 
-.mk-notice-do {
-  flex: none;
-  padding: 3px 9px;
-  border: 1px solid var(--mk-line-firm);
-  border-radius: 999px;
-  background: var(--mk-bg);
-  color: var(--mk-fg);
-  font: inherit;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
 /* The island header's own close button, so the two sit on the same inset and
    share a size; the negative margin keeps the band from growing to hold it. */
 .mk-notice-off {

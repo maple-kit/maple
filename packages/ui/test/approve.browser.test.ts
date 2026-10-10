@@ -118,6 +118,7 @@ describe("the sign-off button", () => {
     expect(found?.textContent).toBe("");
     expect(found?.querySelector("svg")).not.toBeNull();
     expect(pressed(found)).toBe(false);
+    expect(found?.classList.contains("mk-icon-btn-ok")).toBe(true);
   });
 
   it("records an approval and shows it as pressed", async () => {
@@ -128,6 +129,7 @@ describe("the sign-off button", () => {
     const found = await settled(pressed);
 
     expect(found?.getAttribute("aria-label")).toBe("Looked, found nothing wrong");
+    expect(found?.classList.contains("mk-icon-btn-ok")).toBe(false);
   });
 
   it("takes it back again", async () => {

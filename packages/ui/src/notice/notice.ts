@@ -13,7 +13,7 @@ import { createElement, forwardRef } from "react";
 
 import { cx } from "../cx.js";
 import { renderPart } from "../part.js";
-import { SOLO_COPY, SoloOffer } from "../solo.js";
+import { SOLO_COPY } from "../solo.js";
 import { isSetupGap, NOTICE_COPY, offersSignIn } from "./language.js";
 
 import type { PartProps } from "../part.js";
@@ -52,10 +52,8 @@ export const MapleNotice = /** @__PURE__ */ forwardRef<HTMLElement, MapleNoticeP
         createElement(
           "span",
           { key: "said", className: "mk-notice-said" },
-          said(error, github, solo),
-          error.kind === "unauthorized" ? createElement(SoloOffer) : null,
+          ...said(error, github, solo, client),
         ),
-        offer(error, github, solo, client),
         createElement(
           "button",
           {
@@ -72,25 +70,29 @@ export const MapleNotice = /** @__PURE__ */ forwardRef<HTMLElement, MapleNoticeP
   },
 );
 
-/** The failure's own sentence, or the setup gap's, which names no door. */
-function said(error: MapleFailure, github: GitHubLink, solo: boolean): string {
-  if (solo && soloBroke(error)) return SOLO_COPY.gone;
-  return isSetupGap(error.kind, github) ? NOTICE_COPY.noSignIn : error.message;
-}
-
-/** Sign in, or try again. Nothing is offered where neither would help. */
-function offer(
+/** The failure's sentence with its one fix set in it as a link, or none where none helps. */
+function said(
   error: MapleFailure,
   github: GitHubLink,
   solo: boolean,
   client: ReturnType<typeof useMapleClient>,
-): ReactNode {
-  if (solo && soloBroke(error)) return button(SOLO_COPY.leave, () => void client.endSolo());
-  if (offersSignIn(error.kind, github.state === "failed" || github.state === "unlinked")) {
-    return button(NOTICE_COPY.signIn, () => void client.linkGitHub());
+): readonly ReactNode[] {
+  if (solo && soloBroke(error)) {
+    return [SOLO_COPY.gone, " ", link(SOLO_COPY.leave, () => void client.endSolo())];
   }
-  if (error.kind === "unauthorized") return null;
-  return error.during === "load" ? button(NOTICE_COPY.retry, () => void client.load()) : null;
+  if (isSetupGap(error.kind, github)) return [NOTICE_COPY.noSignIn];
+
+  const lead = NOTICE_COPY.signIn;
+  if (offersSignIn(error.kind, github.state === "failed" || github.state === "unlinked")) {
+    const signIn = link(lead, () => void client.linkGitHub());
+    return error.message.startsWith(lead)
+      ? [signIn, error.message.slice(lead.length)]
+      : [error.message, " ", signIn];
+  }
+  if (error.kind !== "unauthorized" && error.during === "load") {
+    return [error.message, " ", link(NOTICE_COPY.retry, () => void client.load())];
+  }
+  return [error.message];
 }
 
 /** A paired bridge that did not answer, or turned the page away: nobody signs in to it. */
@@ -98,10 +100,10 @@ function soloBroke(error: MapleFailure): boolean {
   return error.kind === "offline" || error.kind === "unauthorized";
 }
 
-function button(label: string, onClick: () => void): ReactNode {
+function link(label: string, onClick: () => void): ReactNode {
   return createElement(
     "button",
-    { key: "do", type: "button", className: "mk-notice-do mk-press", onClick },
+    { key: label, type: "button", className: "mk-link", onClick },
     label,
   );
 }

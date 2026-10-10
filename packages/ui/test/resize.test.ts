@@ -6,7 +6,7 @@ const VIEW = { width: 1280, height: 800 };
 
 describe("the card's size", () => {
   it("never goes below the default, which is its least", () => {
-    expect(clampSize({ width: 100, height: 100 }, VIEW)).toEqual({ width: 320, height: 330 });
+    expect(clampSize({ width: 100, height: 100 }, VIEW)).toEqual({ width: 400, height: 330 });
   });
 
   it("never goes past the viewport less the island's margin", () => {

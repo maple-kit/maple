@@ -18,6 +18,10 @@ export function popupCss(): string {
   font-size: 12px;
   line-height: 1.45;
   overflow: hidden;
+  /* The overlay's layer is pointer-events: none and a dialog inherits it from
+     the tree, not from the top layer it is drawn in: without this nothing in
+     the card, nor its backdrop, can be clicked. */
+  pointer-events: auto;
   animation: mk-pop-in var(--mk-dur-tooltip) var(--mk-ease-surface);
 }
 

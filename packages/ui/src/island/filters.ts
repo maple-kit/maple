@@ -17,6 +17,7 @@ import { renderPart } from "../part.js";
 import { countsFor } from "./comments.js";
 import { listId, useIsland } from "./context.js";
 import { FILTER_LABELS, FILTER_ORDER, FILTERS_LABEL, TALLY_ORDER, tallyLabel } from "./language.js";
+import { useSavedDrafts } from "./saved.js";
 
 import type { PartProps } from "../part.js";
 import type { CommentFilter } from "@maple-kit/core/client";
@@ -49,7 +50,8 @@ export const Filters = /** @__PURE__ */ forwardRef<HTMLDivElement, FiltersProps>
 /** Every filter in one select. Drafts are offered only while there are some. */
 export function FilterPick(): ReactNode {
   const island = useIsland(PART);
-  const { comments, drafts, filter, showResolved } = useMaple();
+  const { comments, filter, showResolved } = useMaple();
+  const drafts = useSavedDrafts();
   const client = useMapleClient();
 
   const counts = countsFor(comments, showResolved, drafts.length);
@@ -88,7 +90,8 @@ export function FilterPick(): ReactNode {
 
 /** The count per status, as dots in the marks' own colours. Click one to narrow to it. */
 export function FilterTally(): ReactNode {
-  const { comments, drafts, filter, showResolved } = useMaple();
+  const { comments, filter, showResolved } = useMaple();
+  const drafts = useSavedDrafts();
   const client = useMapleClient();
   const counts = countsFor(comments, showResolved, drafts.length);
 
