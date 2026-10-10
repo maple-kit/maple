@@ -2,6 +2,7 @@ import { readPreferences } from "@maple-kit/core/client";
 import { createElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
+import { page } from "vitest/browser";
 
 import { MapleRoot } from "../src/index.js";
 import {
@@ -478,6 +479,11 @@ describe("the branch chip", () => {
 
 /** The card opens at its default size and only ever grows from it. */
 describe("resizing the card", () => {
+  // The default is 400px wide, which a phone-sized frame would cap.
+  beforeEach(async () => {
+    await page.viewport(1100, 760);
+  });
+
   function drag(handle: HTMLElement, from: [number, number], to: [number, number]): void {
     const fire = (type: string, at: [number, number]) =>
       handle.dispatchEvent(
@@ -490,7 +496,7 @@ describe("resizing the card", () => {
 
   it("opens at the default size with a handle on each side facing the page", async () => {
     const card = await open();
-    expect(card.offsetWidth).toBe(320);
+    expect(card.offsetWidth).toBe(400);
     expect(card.hasAttribute("data-mk-sized")).toBe(false);
     expect(all(".mk-resize")).toHaveLength(3);
     expect(getComputedStyle(find(".mk-resize[data-mk-resize='width']")).cursor).toBe("ew-resize");
@@ -511,7 +517,7 @@ describe("resizing the card", () => {
   it("will not shrink below the default", async () => {
     const card = await open();
     drag(find(".mk-resize[data-mk-resize='width']"), [500, 500], [900, 500]);
-    expect(card.offsetWidth).toBe(320);
+    expect(card.offsetWidth).toBe(400);
   });
 
   it("will not outgrow the viewport", async () => {
@@ -526,9 +532,9 @@ describe("resizing the card", () => {
     expect(handle.getAttribute("role")).toBe("separator");
     handle.focus();
     handle.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }));
-    expect(card.offsetWidth).toBe(336);
+    expect(card.offsetWidth).toBe(416);
     handle.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true }));
-    await vi.waitFor(() => expect(card.offsetWidth).toBe(320));
+    await vi.waitFor(() => expect(card.offsetWidth).toBe(400));
     await vi.waitFor(() => expect(readPreferences().islandSize).toBeUndefined());
   });
 });

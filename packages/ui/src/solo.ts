@@ -19,7 +19,7 @@ import type { ReactElement } from "react";
 export const SOLO_COPY = {
   trigger: "Can't sign in?",
   title: "Keep comments on your machine",
-  body: "Run this in your project. It prints a link that pairs this page with your machine, and comments stay there instead of on this deployment.",
+  body: "Run this in your project to keep comments on your machine.",
   command: "maple solo",
   copy: "Copy",
   copied: "Copied",

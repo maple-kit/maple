@@ -72,23 +72,19 @@ export const CORNER_ORDER: readonly Corner[] = [
   "bottom-right",
 ];
 
-/** One sentence per setting: what it does, not what it is called again. */
+/** A name per setting; only a build that is not tagged says more. */
 export const SETTINGS_COPY = {
   theme: {
     name: "Theme",
-    hint: "What the overlay itself is drawn in. A comment always records the page's own.",
   },
   position: {
     name: "Corner",
-    hint: "Where the island sits. Dragging it by its pill does the same thing.",
   },
   hideResolved: {
     name: "Hide resolved",
-    hint: "Done comments stay off the page and out of the list until you pick the Resolved filter.",
   },
   developer: {
     name: "Developer mode",
-    hint: "Shows how each comment is re-found after a deploy, its source line and its CSS path.",
   },
   untagged: {
     name: "This build is not tagged",
@@ -99,15 +95,14 @@ export const SETTINGS_COPY = {
   },
   hidden: {
     name: "Hide the island",
-    hint: "It goes until you reload. A comment arriving, or a link to one, brings it straight back.",
   },
 } as const;
 
 /** The GitHub link row. Short sentences: this is the one a reviewer acts on. */
 export const ACCOUNT_COPY = {
   name: "GitHub",
-  unlinked: "Link your account and comments are posted on the pull request as you.",
-  linking: "Enter this code on GitHub. This stays open while you do.",
+  unlinked: "Not linked",
+  linking: "Enter this code on GitHub.",
   open: "Open github.com",
   link: "Link",
   retry: "Try again",
@@ -124,13 +119,13 @@ export const SIGNIN_COPY = {
   copied: "Copied",
   openStep: "Open GitHub and paste it",
   open: "Open github.com",
-  waiting: "Waiting for you to finish on GitHub. This closes by itself.",
+  waiting: "Waiting for you to finish on GitHub.",
 } as const;
 
 /** The sign-off: one icon button, so the words are its label and nothing more. */
 export const APPROVE_COPY = {
   label: "Looked, found nothing wrong",
-  signIn: "Sign in first: an approval nobody can be named for is not one.",
+  signIn: "Sign in first.",
 } as const;
 
 /** What a draft row says: a comment is a draft until it is published. */
@@ -147,6 +142,8 @@ export const TRANSFER_COPY = {
   close: "Close import",
   download: "Download drafts",
   downloadFile: "maple-drafts.json",
+  publishAll: "Publish all",
+  publishing: "Publishing…",
   boxLabel: "An exported drafts file",
   boxHint: "Paste an export here, or drop its file",
   fileLabel: "Choose an exported drafts file",
@@ -180,7 +177,7 @@ export const ISLAND_COPY = {
   closeGlyph: "✕",
   newComment: "New:",
   empty: "Nothing here under this filter.",
-  loading: "Reading the comments on this branch…",
+  loading: "Loading…",
   resolve: "Resolve",
   reopen: "Reopen",
   unread: {

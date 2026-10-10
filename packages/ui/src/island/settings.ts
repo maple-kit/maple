@@ -156,7 +156,6 @@ function Theme(props: ThemeProps): ReactNode {
       "span",
       null,
       createElement("span", { className: "mk-setting-name", id: labelId }, copy.name),
-      createElement("span", { className: "mk-setting-hint" }, copy.hint),
     ),
     createElement(
       "span",
@@ -199,7 +198,6 @@ function Corners(props: CornersProps): ReactNode {
       "span",
       null,
       createElement("span", { className: "mk-setting-name", id: labelId }, copy.name),
-      createElement("span", { className: "mk-setting-hint" }, copy.hint),
     ),
     createElement(
       "span",
@@ -235,12 +233,7 @@ function Dismiss(props: DismissProps): ReactNode {
   return createElement(
     "div",
     { className: "mk-setting" },
-    createElement(
-      "span",
-      null,
-      createElement("span", { className: "mk-setting-name" }, copy.name),
-      createElement("span", { className: "mk-setting-hint" }, copy.hint),
-    ),
+    createElement("span", null, createElement("span", { className: "mk-setting-name" }, copy.name)),
     createElement(
       "button",
       { type: "button", className: "mk-more", onClick: props.onHide },
@@ -251,11 +244,11 @@ function Dismiss(props: DismissProps): ReactNode {
 
 interface SettingProps {
   readonly checked: boolean;
-  readonly copy: { readonly name: string; readonly hint: string };
+  readonly copy: { readonly name: string };
   readonly onChange: (on: boolean) => void;
 }
 
-/** A name, the sentence under it, and a real switch on the right. */
+/** A name and a real switch on the right. */
 function Setting(props: SettingProps): ReactNode {
   const labelId = useId();
 
@@ -266,7 +259,6 @@ function Setting(props: SettingProps): ReactNode {
       "span",
       null,
       createElement("span", { className: "mk-setting-name", id: labelId }, props.copy.name),
-      createElement("span", { className: "mk-setting-hint" }, props.copy.hint),
     ),
     createElement("button", {
       type: "button",

@@ -111,7 +111,7 @@ describe("a reviewer who has not linked", () => {
     const found = await settled("unlinked");
 
     expect(found.querySelector(".mk-acct-do")?.textContent).toBe("Link");
-    expect(found.textContent).toContain("as you");
+    expect(found.textContent).toContain("Not linked");
   });
 
   it("shows a code to type and where to type it, once they ask", async () => {

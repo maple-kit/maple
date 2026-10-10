@@ -53,8 +53,22 @@ function json(body: unknown): Response {
 function tree(signedIn: boolean) {
   client = createMapleClient({
     branch: BRANCH,
-    fetch: (input) => {
+    fetch: (input, init) => {
       const url = String(input instanceof Request ? input.url : input);
+      if (init?.method === "POST" && url.endsWith("/comments")) {
+        const sent = JSON.parse(init.body as string) as Record<string, unknown>[];
+        return Promise.resolve(
+          json({
+            comments: sent.map((one, index) => ({
+              ...one,
+              id: `c${String(index)}`,
+              status: "open",
+              createdAt: "2026-09-18T10:00:00.000Z",
+              author: { id: "u", name: "Dana", provenance: "server", colorSlot: 1 },
+            })),
+          }),
+        );
+      }
       if (url.includes("/me")) {
         return Promise.resolve(
           json(
@@ -232,6 +246,50 @@ describe("Download", () => {
     await vi.waitFor(() => expect(download().disabled).toBe(false));
     expect(root().textContent).not.toContain("unpublished");
     expect(root().querySelector(".mk-split")).toBeNull();
+  });
+});
+
+describe("Publish all", () => {
+  const publishAll = () =>
+    [...root().querySelectorAll<HTMLButtonElement>(".mk-transfer button")].find(
+      (one) => one.textContent === "Publish all",
+    );
+
+  it("is beside Download for a signed-in reviewer with saved drafts, and publishes them", async () => {
+    await render(tree(true));
+    await ready();
+    type("MrrCard", "First");
+    client.keepDraft();
+    type("YieldCard", "Second");
+    client.keepDraft();
+
+    await vi.waitFor(() => expect(publishAll()).toBeDefined());
+    const buttons = [...root().querySelectorAll(".mk-transfer button")];
+    expect(buttons.indexOf(publishAll()!)).toBe(buttons.indexOf(download()) + 1);
+
+    publishAll()!.click();
+    await vi.waitFor(() => expect(client.getState().drafts).toHaveLength(0));
+    expect(publishAll()).toBeUndefined();
+  });
+
+  it("is not there while the reviewer is signed out", async () => {
+    await render(tree(false));
+    await ready();
+    type("MrrCard", "First");
+    client.keepDraft();
+
+    await vi.waitFor(() => expect(download().disabled).toBe(false));
+    expect(publishAll()).toBeUndefined();
+  });
+
+  it("is not there with nothing saved, nor for a comment still being typed", async () => {
+    await render(tree(true));
+    await ready();
+    expect(publishAll()).toBeUndefined();
+
+    type("MrrCard", "Typing");
+    await vi.waitFor(() => expect(client.getState().drafts).toHaveLength(1));
+    expect(publishAll()).toBeUndefined();
   });
 });
 

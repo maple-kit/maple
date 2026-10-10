@@ -145,7 +145,7 @@ function shell(): string {
   position: absolute;
   right: 0;
   bottom: 0;
-  width: 320px;
+  width: 400px;
   max-width: calc(100vw - 24px);
   max-height: min(78vh, 460px);
   min-height: min(330px, 62vh);
@@ -1020,6 +1020,11 @@ function transfer(): string {
   border-color: var(--mk-line-firm);
   background: var(--mk-sunk);
   color: var(--mk-fg);
+}
+
+.mk-publish-all {
+  padding-block: 3px;
+  font-size: 11px;
 }
 
 .mk-icon-btn:disabled {

@@ -7,7 +7,7 @@
  * own; it only calls the client, which saves through the draft keeper.
  */
 
-import { useMapleClient } from "@maple-kit/react";
+import { useMaple, useMapleClient } from "@maple-kit/react";
 import { createElement, forwardRef, useState } from "react";
 
 import { cx } from "../cx.js";
@@ -121,6 +121,7 @@ export const ImportDrafts = /** @__PURE__ */ forwardRef<HTMLDivElement, ImportDr
           uploadIcon(),
         ),
         createElement(DownloadDrafts, { key: "download" }),
+        createElement(PublishAll, { key: "publish" }),
         open
           ? createElement(
               "div",
@@ -157,6 +158,26 @@ function DownloadDrafts(): ReactNode {
     },
     downloadIcon(),
     waiting ? createElement("span", { className: "mk-icon-dot", "aria-hidden": true }) : null,
+  );
+}
+
+/** Sends every saved draft, for a reviewer who is able to. */
+function PublishAll(): ReactNode {
+  const client = useMapleClient();
+  const { publishing } = useMaple();
+  const saved = useSavedDrafts();
+  const signedOut = useSignedOut();
+  if (saved.length === 0 || signedOut) return null;
+
+  return createElement(
+    "button",
+    {
+      type: "button",
+      className: "mk-btn mk-btn-primary mk-press mk-publish-all",
+      disabled: publishing,
+      onClick: () => void client.publish().catch(() => undefined),
+    },
+    publishing ? TRANSFER_COPY.publishing : TRANSFER_COPY.publishAll,
   );
 }
 
