@@ -1,5 +1,31 @@
 # @maple-kit/core
 
+## 0.19.0
+
+### Minor Changes
+
+- c689f72: Rework the island's status line and drafts.
+
+  - Drafts are a status: `drafts` joins `COMMENT_FILTERS` in `@maple-kit/core/client` (`matchesFilter` is false for it, since no stored comment is a draft), and the island lists unsent comments under it with the same row as every comment. `Maple.Unsent` is now one line, "Some comments are unpublished", with a Publish split button whose menu copies Markdown or JSON to the clipboard; the file download, the per-draft "On another page" link and the solo offer on that surface are gone. `countsFor` takes the draft count as a third argument.
+  - Import drafts is an icon-only button beside the status select, and the sign-off is a green check-circle at the end of the same line. `Maple.Filters` now holds the new `FilterPick`, `ImportDrafts`, `FilterTally` and `Approve` as children, and `Approve` renders a button, not a row.
+  - A load that failed shows an illustrated state with a retry instead of one sentence.
+  - The explanatory tooltips are removed (status, name, leaf, tally, attachment, picks, themes) along with their copy, the `Tip` component and `tipSpot`; a timestamp keeps its exact time as a native title.
+
+- 817ab18: The island's card can be resized in width and height (corner and side handles, pointer and arrow keys, Home to reset), from its default size, which is also its least, up to the viewport. The size is remembered per origin: `ClientState.islandSize`, `client.setIslandSize()` and a stored `islandSize` preference are new in `@maple-kit/core/client`, and `ClientState` gains a required field.
+
+  Marks are pinned to what they are on: they follow the anchor exactly as the page scrolls, with no clamp to the viewport edge. A mark whose anchor has left the viewport is hidden and an edge indicator (the logo, an arrow and a count) points the way; clicking it scrolls the nearest hidden comment into view. Breaking: `culled` and `viewportHeight` are replaced by `edgeOf` and `pageView` in the marks entrypoint, and `markSpot` takes the page's scroll offset.
+
+### Patch Changes
+
+- 0a71dab: `readCookie` treats a comma as a pair separator. Over HTTP/2 and HTTP/3 a browser may send cookies as several headers, which `Headers` joins with ", ", so the GitHub sign-in's pending and session cookies were read with the next cookie attached, or not at all: sign-in had to be retried, and a signed-in reviewer's store calls failed.
+- b62f2a0: Only a kept draft is a draft, and a reviewer who has not signed in cannot publish. `Maple.Unsent`, the "Some comments are unpublished" line with its split Publish button, is removed with its `UnsentProps` and most of `UNSENT_COPY`; Publish all is the composer's Publish, and Download (a file, beside Import) replaces Copy as Markdown and Copy as JSON. The composer without a sign-in shows Save as draft as the primary button and "Sign in to publish directly" in place of Publish; Download carries a green dot while signed out with saved drafts. The comment being typed was stored on every keystroke and so counted as a draft in the filter and the unpublished line; `ComposerState` gains `resumed`, and `useSavedDrafts` and `useSignedOut` are exported from `@maple-kit/ui/island`. The settings control is a cog, the context card is titled "Page context", and the branch chip is green when it links.
+- 0a71dab: Adds `githubIdentity()` to `@maple-kit/core/auth`, an identity connector that names a reviewer by the login their GitHub session carries. A route with `githubAuth` and no `identity` wrote every comment, and showed the reviewer in the overlay, as "Guest" even though the token was theirs. Pass it as `identity` beside `githubAuth`.
+- 0a71dab: Every request to GitHub carries a `User-Agent` header. Node's `fetch` adds one and Cloudflare Workers' does not, so on a Worker GitHub answered each store call with a 403 ("Request forbidden by administrative rules"), which the route reported as a 400.
+- 6a49a8c: Close the open comment card, and drop its selection, when the active filter stops showing that comment. Resolving the last visible comment from its card used to leave the card expanded above "Nothing here under this filter."; the open and selected comment are now derived against the visible list, so they cannot outlive it.
+- b3a3f19: The island now reads the comments again the moment a GitHub sign-in completes, instead of keeping the "Sign in before this deployment can show you its comments" banner until a reload. The client state gains `pending`, a count of store calls in flight; the island shows a small ring beside the wordmark while it is above zero, and Publish, Approve, Resolve, Reopen and the account button spin and disable themselves while their own call is out (the ring holds still under reduced motion). The check button is now labelled "Approve" and also resolves the comments you left that are still open. The "Page context" header is padded and its label is centred on the chevron.
+- 0a71dab: `consoleSink` and `streamSink` now print a logged error's `cause` chain, one "Caused by:" line per link. A `MapleStoreError`'s own message is generic, so the store's real failure (a GitHub 403, a missing pull request) was never in the log.
+- b3a3f19: Reshape the pull-request comment table to `Status | Comment | Where`. Status is always shown, as a shields.io badge in the island's label and colour; the `#` and Viewport columns are gone (the viewport stays in the fence), and a mocked comment's note moves into Where. The footer's preview host is now a link to the preview rather than inline code.
+
 ## 0.18.0
 
 No changes in this release.
