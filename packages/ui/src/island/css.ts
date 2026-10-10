@@ -1016,6 +1016,7 @@ function transfer(): string {
 }
 
 .mk-icon-btn:hover,
+.mk-icon-btn[aria-pressed="true"],
 .mk-icon-btn[aria-expanded="true"] {
   border-color: var(--mk-line-firm);
   background: var(--mk-sunk);
@@ -1216,38 +1217,10 @@ function ledger(): string {
 /** The sign-off, a green check in the toolbar group. */
 function approve(): string {
   return `
-/* The sign-off is a green check beside Import. At rest it is
-   a quiet fill; once given it is full colour with a ring, so "done" reads at
-   a glance and without a word. */
-.mk-approve,
-.mk-approve:hover {
-  color: var(--mk-ok);
-}
-
-.mk-approve-icon {
-  opacity: 0.65;
-  transition: opacity var(--mk-dur-swap) var(--mk-ease-swap);
-}
-
-.mk-approve:hover .mk-approve-icon,
-.mk-approve:focus-visible .mk-approve-icon {
-  opacity: 0.85;
-}
-
-.mk-approve[aria-pressed="true"] {
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--mk-ok) 35%, transparent);
-}
-
-.mk-approve[aria-pressed="true"] .mk-approve-icon {
-  opacity: 1;
-}
-
+/* Until it is given the check wears the group's green; once given it is a
+   neutral pressed button. Signed out it is disabled. */
 .mk-approve:disabled {
   cursor: not-allowed;
-}
-
-.mk-approve:disabled .mk-approve-icon {
-  opacity: 0.3;
 }
 `.trim();
 }

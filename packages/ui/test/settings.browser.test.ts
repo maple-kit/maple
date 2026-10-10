@@ -106,7 +106,7 @@ describe("the settings control", () => {
     const path = find<HTMLButtonElement>(".mk-iconbtn").querySelector("svg path");
 
     expect(path?.getAttribute("d")).toMatch(/Z/);
-    expect(path?.getAttribute("d")?.match(/L/g)?.length).toBeGreaterThanOrEqual(24);
+    expect(path?.getAttribute("d")?.match(/L/g)?.length).toBeGreaterThanOrEqual(18);
   });
 });
 

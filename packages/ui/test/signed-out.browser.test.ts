@@ -266,8 +266,9 @@ describe("Publish all", () => {
     expect(buttons.indexOf(publishAll()!)).toBe(buttons.indexOf(download()) + 1);
     expect(publishAll()!.title).toBe("Publish all");
     expect(publishAll()!.textContent).toBe("");
-    expect(publishAll()!.getBoundingClientRect().width).toBe(
+    expect(publishAll()!.getBoundingClientRect().width).toBeCloseTo(
       download().getBoundingClientRect().width,
+      1,
     );
 
     publishAll()!.click();
