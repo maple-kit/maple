@@ -443,6 +443,20 @@ describe("the branch chip", () => {
     expect(chip.getAttribute("rel")).toContain("noopener");
   });
 
+  it("reads green when it links, so it looks clickable before hover", async () => {
+    document.querySelector("[data-maple-overlay]")?.remove();
+    await render(mount(undefined, "https://github.com/acme/app/pull/12"));
+    await open();
+
+    const probe = document.createElement("span");
+    probe.style.color = "var(--mk-ok)";
+    find(".mk-head").append(probe);
+    const green = getComputedStyle(probe).color;
+    probe.remove();
+
+    expect(getComputedStyle(find(".mk-branch")).color).toBe(green);
+  });
+
   it("does not link anything but a web address", async () => {
     document.querySelector("[data-maple-overlay]")?.remove();
     await render(mount(undefined, "javascript:alert(1)"));

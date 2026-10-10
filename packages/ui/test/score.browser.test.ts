@@ -254,7 +254,7 @@ describe("the context card beside it", () => {
     await expect.poll(() => badge()?.getAttribute("data-mk-open")).toBe("false");
   });
 
-  it("keeps the one fact read off it while it is folded", async () => {
+  it("keeps its title, in the labels' own muted uppercase, while it is folded", async () => {
     started();
     await client.load();
     client.openComposer(TARGET);
@@ -262,8 +262,38 @@ describe("the context card beside it", () => {
     client.setBody("T");
 
     const summary = () => shadow().querySelector(".mk-ctx-sum");
-    await expect.poll(() => summary()?.textContent).toContain("1440");
+    await expect.poll(() => summary()?.textContent).toBe("Page context");
     expect(shadow().querySelector(".mk-ctx")?.checkVisibility()).toBe(false);
+
+    const title = getComputedStyle(summary()!);
+    shadow().querySelector(".mk-ctx-card")?.setAttribute("data-mk-open", "true");
+    const label = getComputedStyle(shadow().querySelector(".mk-ctx dt")!);
+    for (const property of ["color", "fontSize", "fontWeight", "textTransform", "letterSpacing"]) {
+      expect(title.getPropertyValue(property.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`))).toBe(
+        label.getPropertyValue(property.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)),
+      );
+    }
+  });
+
+  it("lines each label up with its value on one baseline", async () => {
+    started();
+    await client.load();
+    client.openComposer(TARGET);
+    mount();
+
+    await expect.poll(() => shadow().querySelector(".mk-ctx dt")).not.toBeNull();
+    expect(getComputedStyle(shadow().querySelector(".mk-ctx")!).alignItems).toBe("baseline");
+    const label = shadow().querySelector(".mk-ctx dt")!;
+    const value = shadow().querySelector(".mk-ctx dd")!;
+    const baseline = (node: Element): number => {
+      const probe = document.createElement("span");
+      probe.style.cssText = "display:inline-block;width:0;height:0;vertical-align:baseline";
+      node.prepend(probe);
+      const bottom = probe.getBoundingClientRect().bottom;
+      probe.remove();
+      return bottom;
+    };
+    expect(Math.abs(baseline(label) - baseline(value))).toBeLessThan(0.5);
   });
 
   it("reopens only when the reviewer asks, and stays open while they type", async () => {

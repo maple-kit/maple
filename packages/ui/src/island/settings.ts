@@ -2,9 +2,8 @@
  * `Maple.Settings`: the panel behind one control in the header.
  *
  * A visible row of settings is a row every reviewer reads once and then reads
- * past forever. The icon is sliders rather than a gear: a gear at 13px with a
- * hover rotation reads as a sun. Hiding resolved is the controller's setting,
- * because it changes the list every other surface reads as well.
+ * past forever. Hiding resolved is the controller's setting, because it
+ * changes the list every other surface reads as well.
  *
  * The GitHub link is first: the one row that changes what a comment is.
  */
@@ -37,7 +36,7 @@ export interface SettingsProps extends PartProps {
 
 const PART = "<Maple.Settings>";
 
-/** The sliders control, and the panel it opens under the header. */
+/** The cog control, and the panel it opens under the header. */
 export const Settings = /** @__PURE__ */ forwardRef<HTMLButtonElement, SettingsProps>(
   function Settings(props, ref) {
     const { asChild, children, className, ...rest } = props;

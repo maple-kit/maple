@@ -264,6 +264,7 @@ function header(): string {
 }
 
 a.mk-branch {
+  color: var(--mk-ok);
   text-decoration: none;
   transition:
     background-color var(--mk-dur-fade) var(--mk-ease-surface),
