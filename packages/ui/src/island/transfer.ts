@@ -11,6 +11,9 @@ import { useMaple, useMapleClient } from "@maple-kit/react";
 import { createElement, forwardRef, useState } from "react";
 
 import { cx } from "../cx.js";
+import { DownloadIcon } from "../icons/download.js";
+import { SendIcon } from "../icons/send.js";
+import { UploadIcon } from "../icons/upload.js";
 import { renderPart } from "../part.js";
 import { TRANSFER_COPY } from "./language.js";
 import { useSavedDrafts, useSignedOut } from "./saved.js";
@@ -118,7 +121,7 @@ export const ImportDrafts = /** @__PURE__ */ forwardRef<HTMLDivElement, ImportDr
             "aria-expanded": open,
             onClick: () => setOpen(!open),
           },
-          uploadIcon(),
+          createElement(UploadIcon, { size: 15 }),
         ),
         createElement(DownloadDrafts, { key: "download" }),
         createElement(PublishAll, { key: "publish" }),
@@ -156,7 +159,7 @@ function DownloadDrafts(): ReactNode {
       "data-mk-dot": waiting,
       onClick: (event: MouseEvent<HTMLButtonElement>) => save(event.currentTarget, client),
     },
-    downloadIcon(),
+    createElement(DownloadIcon, { size: 15 }),
     waiting ? createElement("span", { className: "mk-icon-dot", "aria-hidden": true }) : null,
   );
 }
@@ -173,11 +176,14 @@ function PublishAll(): ReactNode {
     "button",
     {
       type: "button",
-      className: "mk-btn mk-btn-primary mk-press mk-publish-all",
+      className: "mk-icon-btn mk-icon-btn-ok mk-press",
+      "aria-label": TRANSFER_COPY.publishAll,
+      title: TRANSFER_COPY.publishAll,
+      "aria-busy": publishing,
       disabled: publishing,
       onClick: () => void client.publish().catch(() => undefined),
     },
-    publishing ? TRANSFER_COPY.publishing : TRANSFER_COPY.publishAll,
+    createElement(SendIcon, { size: 15 }),
   );
 }
 
@@ -189,48 +195,6 @@ function save(from: HTMLElement, client: MapleClient): void {
   link.download = TRANSFER_COPY.downloadFile;
   link.click();
   URL.revokeObjectURL(url);
-}
-
-/** An arrow falling into a tray: the file comes out of the island. */
-function downloadIcon(): ReactNode {
-  return createElement(
-    "svg",
-    {
-      viewBox: "0 0 24 24",
-      width: 15,
-      height: 15,
-      "aria-hidden": true,
-      fill: "none",
-      stroke: "currentColor",
-      strokeWidth: 2,
-      strokeLinecap: "round",
-      strokeLinejoin: "round",
-    },
-    createElement("path", { d: "M12 4v11" }),
-    createElement("path", { d: "M7.5 10.5L12 15l4.5-4.5" }),
-    createElement("path", { d: "M4.5 14.5v3.5a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-3.5" }),
-  );
-}
-
-/** An arrow rising out of a tray: the file goes up into the island. */
-function uploadIcon(): ReactNode {
-  return createElement(
-    "svg",
-    {
-      viewBox: "0 0 24 24",
-      width: 15,
-      height: 15,
-      "aria-hidden": true,
-      fill: "none",
-      stroke: "currentColor",
-      strokeWidth: 2,
-      strokeLinecap: "round",
-      strokeLinejoin: "round",
-    },
-    createElement("path", { d: "M12 15V4" }),
-    createElement("path", { d: "M7.5 8.5L12 4l4.5 4.5" }),
-    createElement("path", { d: "M4.5 14.5v3.5a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-3.5" }),
-  );
 }
 
 /** A row that says drafts exist under another branch here, and offers to bring them. */

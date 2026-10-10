@@ -80,8 +80,8 @@ function tree() {
           null,
           createElement(FilterPick),
           createElement(ImportDrafts),
-          createElement(FilterTally),
           createElement(Approve),
+          createElement(FilterTally),
         ),
         createElement(List, {
           children: (comment: Comment) => createElement(Item, { comment }),

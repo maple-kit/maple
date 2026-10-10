@@ -1022,10 +1022,17 @@ function transfer(): string {
   color: var(--mk-fg);
 }
 
-.mk-publish-all {
-  padding: 2px 7px;
-  font-size: 10.5px;
-  white-space: nowrap;
+/* The primary action of the group: the same box, in the green token. */
+.mk-icon-btn-ok {
+  border-color: color-mix(in srgb, var(--mk-ok) 45%, transparent);
+  background: var(--mk-ok-sub);
+  color: var(--mk-ok);
+}
+
+.mk-icon-btn-ok:hover {
+  border-color: var(--mk-ok);
+  background: var(--mk-ok-sub);
+  color: var(--mk-ok);
 }
 
 .mk-icon-btn:disabled {
@@ -1206,24 +1213,15 @@ function ledger(): string {
 `.trim();
 }
 
-/** The sign-off, a green check at the end of the status line. */
+/** The sign-off, a green check in the toolbar group. */
 function approve(): string {
   return `
-/* The sign-off is a green check at the end of the status line. At rest it is
+/* The sign-off is a green check beside Import. At rest it is
    a quiet fill; once given it is full colour with a ring, so "done" reads at
    a glance and without a word. */
-.mk-approve {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  padding: 0;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
+.mk-approve,
+.mk-approve:hover {
   color: var(--mk-ok);
-  cursor: pointer;
 }
 
 .mk-approve-icon {

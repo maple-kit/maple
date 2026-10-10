@@ -143,7 +143,6 @@ export const TRANSFER_COPY = {
   download: "Download drafts",
   downloadFile: "maple-drafts.json",
   publishAll: "Publish all",
-  publishing: "Publishing…",
   boxLabel: "An exported drafts file",
   boxHint: "Paste an export here, or drop its file",
   fileLabel: "Choose an exported drafts file",

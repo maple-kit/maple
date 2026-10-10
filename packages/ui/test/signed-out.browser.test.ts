@@ -251,9 +251,7 @@ describe("Download", () => {
 
 describe("Publish all", () => {
   const publishAll = () =>
-    [...root().querySelectorAll<HTMLButtonElement>(".mk-transfer button")].find(
-      (one) => one.textContent === "Publish all",
-    );
+    root().querySelector<HTMLButtonElement>('.mk-transfer [aria-label="Publish all"]') ?? undefined;
 
   it("is beside Download for a signed-in reviewer with saved drafts, and publishes them", async () => {
     await render(tree(true));
@@ -266,6 +264,11 @@ describe("Publish all", () => {
     await vi.waitFor(() => expect(publishAll()).toBeDefined());
     const buttons = [...root().querySelectorAll(".mk-transfer button")];
     expect(buttons.indexOf(publishAll()!)).toBe(buttons.indexOf(download()) + 1);
+    expect(publishAll()!.title).toBe("Publish all");
+    expect(publishAll()!.textContent).toBe("");
+    expect(publishAll()!.getBoundingClientRect().width).toBe(
+      download().getBoundingClientRect().width,
+    );
 
     publishAll()!.click();
     await vi.waitFor(() => expect(client.getState().drafts).toHaveLength(0));

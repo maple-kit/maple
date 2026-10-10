@@ -21,7 +21,7 @@ export interface ApproveProps extends PartProps {
   readonly children?: ReactNode;
 }
 
-/** The sign-off, as one green check at the end of the status line. */
+/** The sign-off, as one green check in the toolbar group. */
 export const Approve = /** @__PURE__ */ forwardRef<HTMLButtonElement, ApproveProps>(
   function Approve(props, ref) {
     const { asChild, children, className, ...rest } = props;
@@ -42,7 +42,7 @@ export const Approve = /** @__PURE__ */ forwardRef<HTMLButtonElement, ApprovePro
         "aria-label": APPROVE_COPY.label,
         "aria-pressed": mine,
         disabled: !signedIn,
-        className: cx("mk-approve mk-press", className),
+        className: cx("mk-icon-btn mk-approve mk-press", className),
         onClick: () => void (mine ? client.unapprove() : client.approve()),
         ref,
       },
@@ -57,8 +57,8 @@ function checkCircle(): ReactNode {
     "svg",
     {
       viewBox: "0 0 24 24",
-      width: 18,
-      height: 18,
+      width: 15,
+      height: 15,
       "aria-hidden": true,
       className: "mk-approve-icon",
     },
