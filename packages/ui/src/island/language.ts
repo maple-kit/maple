@@ -193,7 +193,6 @@ export const ISLAND_COPY = {
   reopen: "Reopen",
   unread: {
     title: "Couldn't load the comments",
-    line: "This list is not the whole story until they load.",
     retry: "Try again",
   },
   noDrafts: "No unpublished comments.",

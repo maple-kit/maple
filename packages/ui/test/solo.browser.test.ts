@@ -2,9 +2,10 @@ import { createMapleClient } from "@maple-kit/core/client";
 import { createElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
+import { userEvent } from "vitest/browser";
 
 import { MapleRoot } from "../src/index.js";
-import { Island, IslandContent, List, Unsent } from "../src/island/index.js";
+import { Island, IslandContent, List, SignIn } from "../src/island/index.js";
 import { MapleNotice } from "../src/notice/index.js";
 import { SOLO_COPY } from "../src/solo.js";
 
@@ -37,7 +38,23 @@ function json(body: unknown, status: number): Response {
 function guestFetch(refuse: boolean): typeof fetch {
   return (input) => {
     const url = addressOf(input);
-    if (url.includes("/me")) return Promise.resolve(json({ user: null }, 200));
+    if (url.includes("/me")) {
+      return Promise.resolve(json({ user: null, github: { linked: false } }, 200));
+    }
+    if (url.includes("/auth/github")) {
+      return Promise.resolve(
+        json(
+          {
+            userCode: "WDJB-MJHT",
+            verificationUri: "https://github.com/login/device",
+            expiresAt: Date.now() + 900_000,
+            interval: 5,
+            status: "pending",
+          },
+          200,
+        ),
+      );
+    }
     if (url.includes("/approvals")) return Promise.resolve(json({ error: "none" }, 501));
     return Promise.resolve(refuse ? json({ error: "sign in" }, 401) : json({ comments: [] }, 200));
   };
@@ -60,14 +77,9 @@ function tree(fetcher: typeof fetch): ReactElement {
     createElement(
       Island,
       { defaultOpen: true },
-      createElement(
-        IslandContent,
-        null,
-        createElement(MapleNotice),
-        createElement(List),
-        createElement(Unsent),
-      ),
+      createElement(IslandContent, null, createElement(MapleNotice), createElement(List)),
     ),
+    createElement(SignIn),
   );
 }
 
@@ -78,17 +90,20 @@ function root(): ShadowRoot {
 }
 
 function offer(): HTMLElement | null {
-  return root().querySelector<HTMLElement>(".mk-solo-link");
+  return root().querySelector<HTMLElement>(".mk-step-help .mk-link");
 }
 
-function popup(): HTMLDialogElement | null {
-  return root().querySelector<HTMLDialogElement>(".mk-popup");
+function popups(): HTMLDialogElement[] {
+  return [...root().querySelectorAll<HTMLDialogElement>(".mk-popup")];
 }
 
-function keep(): void {
-  client.openComposer({ kind: "element", anchor: { component: "YieldCard" } });
-  client.setBody("The spacing is off.");
-  client.keepDraft();
+/** Presses the notice's Sign in, and waits for the popup it opens. */
+async function signInPopup(): Promise<void> {
+  await vi.waitFor(() => expect(root().querySelector(".mk-notice .mk-link")).not.toBeNull());
+  await userEvent.click(root().querySelector<HTMLElement>(".mk-notice .mk-link")!, {
+    timeout: 2000,
+  });
+  await vi.waitFor(() => expect(offer()).not.toBeNull());
 }
 
 beforeEach(() => {
@@ -114,54 +129,41 @@ afterEach(() => {
 });
 
 describe("the offer to a guest", () => {
-  it("is not on the unsent line, which is only about publishing", async () => {
-    await render(tree(guestFetch(false)));
-    await vi.waitFor(() => expect(client.getState().phase).toBe("ready"));
-    keep();
+  it("is not in the notice, which only has the sign-in to offer", async () => {
+    await render(tree(guestFetch(true)));
+    await vi.waitFor(() => expect(root().querySelector(".mk-notice")).not.toBeNull());
 
-    await vi.waitFor(() => expect(root().querySelector(".mk-unsent")).not.toBeNull());
+    expect(root().querySelectorAll(".mk-notice .mk-link")).toHaveLength(1);
+    expect(root().querySelector(".mk-notice .mk-link")?.textContent).toBe("Sign in");
     expect(offer()).toBeNull();
   });
 
-  it("is a link in the sentence, and the command is in the popup it opens", async () => {
+  it("is a link in the sign-in popup, and the command is in the popup it opens", async () => {
     await render(tree(guestFetch(true)));
-    await vi.waitFor(() => expect(offer()).not.toBeNull());
+    await signInPopup();
     expect(offer()?.textContent).toBe("Can't sign in?");
-    expect(popup()).toBeNull();
+    expect(popups()).toHaveLength(1);
 
-    offer()?.click();
+    await userEvent.click(offer()!, { timeout: 2000 });
 
-    await vi.waitFor(() => expect(popup()?.open).toBe(true));
-    expect(popup()?.textContent).toContain(`maple solo ${location.origin}`);
+    await vi.waitFor(() => expect(popups()).toHaveLength(2));
+    expect(popups()[1]?.open).toBe(true);
+    expect(popups()[1]?.textContent).toContain(`maple solo ${location.origin}`);
   });
 
   it("copies the command, addressed to this page, when Copy is pressed", async () => {
     await render(tree(guestFetch(true)));
-    await vi.waitFor(() => expect(offer()).not.toBeNull());
-    offer()?.click();
-    await vi.waitFor(() => expect(popup()).not.toBeNull());
+    await signInPopup();
+    await userEvent.click(offer()!, { timeout: 2000 });
+    await vi.waitFor(() => expect(popups()).toHaveLength(2));
 
-    popup()?.querySelector<HTMLButtonElement>(".mk-acct-do")?.click();
+    const copy = popups()[1]!.querySelector<HTMLButtonElement>(".mk-acct-do")!;
+    await userEvent.click(copy, { timeout: 2000 });
 
     await vi.waitFor(() => expect(copiedText).toBe(`maple solo ${location.origin}`));
     await vi.waitFor(() =>
-      expect(popup()?.querySelector(".mk-acct-do")?.textContent).toBe(SOLO_COPY.copied),
+      expect(popups()[1]?.querySelector(".mk-acct-do")?.textContent).toBe(SOLO_COPY.copied),
     );
-  });
-
-  it("is under a refusal, where the guest learns nothing can be posted", async () => {
-    await render(tree(guestFetch(true)));
-
-    await vi.waitFor(() => expect(root().querySelector(".mk-notice .mk-solo-link")).not.toBeNull());
-  });
-
-  it("is not drawn for a page that is already paired", async () => {
-    const paired = `maple-solo=${TOKEN}&maple-bridge=${encodeURIComponent(BRIDGE)}`;
-    history.replaceState(null, "", `${START}#${paired}`);
-    await render(tree(guestFetch(true)));
-    await vi.waitFor(() => expect(client.getState().phase).toBe("error"));
-
-    expect(offer()).toBeNull();
   });
 });
 
@@ -177,7 +179,7 @@ describe("a paired page whose bridge has gone", () => {
     expect(notice.textContent).toContain(SOLO_COPY.gone);
     expect(notice.textContent).not.toContain("Sign in");
 
-    notice.querySelector<HTMLButtonElement>(".mk-notice-do")?.click();
+    notice.querySelector<HTMLButtonElement>(".mk-link")?.click();
 
     await vi.waitFor(() => expect(client.getState().solo).toBe(false));
   });

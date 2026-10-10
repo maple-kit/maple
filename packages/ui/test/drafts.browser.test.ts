@@ -180,7 +180,7 @@ describe("the status line", () => {
 });
 
 describe("a list that could not be read", () => {
-  it("draws a titled state with a way to retry, not the old sentence", async () => {
+  it("draws a titled state with an inline way to retry, and no second line", async () => {
     failLoad = true;
     await render(tree());
 
@@ -188,10 +188,12 @@ describe("a list that could not be read", () => {
     const state = root().querySelector(".mk-empty-error");
     expect(state?.querySelector("svg")).not.toBeNull();
     expect(state?.textContent).toContain("Couldn't load the comments");
-    expect(state?.textContent).not.toContain("not the whole story.");
+    expect(state?.textContent).not.toContain("not the whole story");
+    expect(state?.querySelector("button.mk-btn")).toBeNull();
+    expect(state?.querySelector(".mk-empty-title .mk-link")?.textContent).toBe("Try again");
 
     failLoad = false;
-    state?.querySelector<HTMLButtonElement>(".mk-empty-retry")?.click();
+    state?.querySelector<HTMLButtonElement>(".mk-link")?.click();
     await vi.waitFor(() => expect(root().querySelector(".mk-empty-error")).toBeNull());
   });
 });

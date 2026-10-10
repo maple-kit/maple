@@ -25,7 +25,7 @@ export function islandCss(): string {
     rowDetail(),
     ledger(),
     approve(),
-    solo(),
+    link(),
     transfer(),
     newComment(),
     keyframes(),
@@ -743,21 +743,6 @@ function list(): string {
   font-weight: 650;
 }
 
-.mk-empty-line {
-  margin: 0;
-  max-width: 24ch;
-  color: var(--mk-faint);
-  font-size: 12px;
-  line-height: 1.4;
-  text-wrap: balance;
-}
-
-.mk-empty-retry {
-  margin-top: 8px;
-  padding: 4px 12px;
-  font-size: 11.5px;
-}
-
 .mk-empty {
   padding: 26px 16px;
   text-align: center;
@@ -1117,10 +1102,10 @@ function transfer(): string {
 `;
 }
 
-/** The link that opens the solo popup, set in the sentence it follows. */
-function solo(): string {
+/** An action set in the sentence it follows, so it costs a word and not a button. */
+function link(): string {
   return `
-.mk-solo-link {
+.mk-link {
   padding: 0;
   border: 0;
   background: transparent;
