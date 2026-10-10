@@ -19,6 +19,7 @@ export function islandCss(): string {
     corners(),
     resizeCss(),
     header(),
+    spinner(),
     filters(),
     list(),
     row(),
@@ -224,6 +225,51 @@ function corners(): string {
   transform: none;
   cursor: grabbing;
   box-shadow: var(--mk-sh3);
+}
+`.trim();
+}
+
+/** The loader beside the wordmark, and in a button that is working. */
+function spinner(): string {
+  return `
+/* Beside the wordmark while a call is out. Under reduced motion the ring holds
+   still: a quarter arc says "working" without moving. */
+.mk-working {
+  display: inline-flex;
+  color: var(--mk-muted);
+  font-size: 12.5px;
+}
+
+.mk-spin {
+  flex: none;
+  box-sizing: border-box;
+  width: 11px;
+  height: 11px;
+  border: 1.5px solid color-mix(in srgb, currentColor 25%, transparent);
+  border-top-color: currentColor;
+  border-radius: 999px;
+  animation: mk-spin var(--mk-dur-shimmer) var(--mk-ease-spin) infinite;
+}
+
+.mk-icon-btn .mk-spin {
+  width: 14px;
+  height: 14px;
+}
+
+.mk-icon-btn[aria-busy="true"]:disabled {
+  opacity: 1;
+}
+
+@keyframes mk-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mk-spin {
+    animation: none;
+  }
 }
 `.trim();
 }

@@ -109,6 +109,12 @@ describe("motion lives only in tokens", () => {
 });
 
 describe("reduced motion", () => {
+  it("holds the loader still rather than spinning it", () => {
+    expect(RULES).toMatch(
+      /@media \(prefers-reduced-motion: reduce\) \{\s*\.mk-spin \{\s*animation: none;/,
+    );
+  });
+
   it("reduces every duration to 100ms or less", () => {
     const durations = Object.entries(REDUCED_MOTION_TOKENS).filter(([name]) =>
       name.startsWith("--mk-dur"),

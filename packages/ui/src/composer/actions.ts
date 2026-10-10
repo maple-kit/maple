@@ -14,7 +14,9 @@ import { createElement, forwardRef } from "react";
 
 import { cx } from "../cx.js";
 import { useSignedOut } from "../island/saved.js";
+import { StatusButton } from "../island/status-button.js";
 import { Slot } from "../slot.js";
+import { spun } from "../spinner.js";
 import { useComposerScope } from "./scope.js";
 
 import type { AsChildProps } from "../slot.js";
@@ -51,6 +53,7 @@ export const MapleActions = /** @__PURE__ */ forwardRef<HTMLElement, MapleAction
 
     const publish = usePublish();
     const signedOut = useSignedOut();
+    const publishLabel = publishing ? spun(PUBLISH_LABEL) : PUBLISH_LABEL;
 
     const className = props.className ? `mk-composer-foot ${props.className}` : "mk-composer-foot";
 
@@ -91,9 +94,10 @@ export const MapleActions = /** @__PURE__ */ forwardRef<HTMLElement, MapleAction
               type: "button",
               className: "mk-btn mk-btn-primary mk-press",
               disabled: composer.body.trim() === "" || publishing,
+              "aria-busy": publishing,
               onClick: publish,
             },
-            PUBLISH_LABEL,
+            publishLabel,
           ),
     );
   },
@@ -148,20 +152,16 @@ function reading(id: string, client: ReturnType<typeof useMapleClient>): readonl
       },
       VIEW_LABELS.close,
     ),
-    status === "orphaned" ? null : moveOn(id, done, client),
+    status === "orphaned" ? null : moveOn(id, done),
   ];
 }
 
 /** The one status change a reviewer makes by hand. Resolving is the primary one. */
-function moveOn(id: string, done: boolean, client: ReturnType<typeof useMapleClient>): ReactNode {
-  return createElement(
-    "button",
-    {
-      key: "status",
-      type: "button",
-      className: cx("mk-btn mk-press", done ? undefined : "mk-btn-primary"),
-      onClick: () => void client.setStatus(id, done ? "open" : "resolved"),
-    },
-    done ? VIEW_LABELS.reopen : VIEW_LABELS.resolve,
-  );
+function moveOn(id: string, done: boolean): ReactNode {
+  return createElement(StatusButton, {
+    key: "status",
+    id,
+    done,
+    className: done ? undefined : "mk-btn-primary",
+  });
 }

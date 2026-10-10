@@ -312,7 +312,8 @@ export function createMapleClient(options: MapleClientOptions): MapleClient {
 
     load: () => load(runtime),
     refresh: () => refresh(runtime),
-    uploadMedia: (blob, contentType) => runtime.transport.putMedia(blob, contentType),
+    uploadMedia: (blob, contentType) =>
+      tracked(runtime, () => runtime.transport.putMedia(blob, contentType)),
     mediaUrl: (ref) => runtime.transport.mediaUrl(ref),
     clearError: () => patch(runtime, { error: null }),
     setFilter: (filter) => patch(runtime, { filter }),
@@ -408,6 +409,7 @@ function runtimeFor(options: MapleClientOptions): Runtime {
       openCount: 0,
       drafts: drafts.list(),
       publishing: false,
+      pending: 0,
       composer: CLOSED,
       pick: config.pick === undefined ? UNARMED : { armed: true, kind: config.pick },
       theme: themeFrom({}),
@@ -492,6 +494,16 @@ function mine(state: ClientState): Approval | null {
 function patch(runtime: Runtime, change: Partial<ClientState>): void {
   runtime.state = derive({ ...runtime.state, ...change });
   for (const listener of runtime.listeners) listener(runtime.state);
+}
+
+/** Counts a store call while it is out, so a surface can say something is happening. */
+async function tracked<T>(runtime: Runtime, work: () => Promise<T>): Promise<T> {
+  patch(runtime, { pending: runtime.state.pending + 1 });
+  try {
+    return await work();
+  } finally {
+    patch(runtime, { pending: runtime.state.pending - 1 });
+  }
 }
 
 function composer(runtime: Runtime, change: Partial<ComposerState>): void {
@@ -644,7 +656,7 @@ async function load(runtime: Runtime): Promise<void> {
   const identity = whoAmI(runtime);
 
   try {
-    const comments = await runtime.transport.list();
+    const comments = await tracked(runtime, () => runtime.transport.list());
     const who = await identity;
     patch(runtime, {
       phase: "ready",
@@ -752,11 +764,13 @@ function linkOf(github: { linked: boolean; login?: string } | undefined): GitHub
 async function linkGitHub(runtime: Runtime): Promise<void> {
   runtime.link?.cancel();
   try {
-    runtime.link = await startLink({
-      transport: runtime.transport,
-      onChange: (github) => patch(runtime, { github }),
-      ...(runtime.options.now === undefined ? {} : { now: runtime.options.now }),
-    });
+    runtime.link = await tracked(runtime, () =>
+      startLink({
+        transport: runtime.transport,
+        onChange: (github) => linked(runtime, github),
+        ...(runtime.options.now === undefined ? {} : { now: runtime.options.now }),
+      }),
+    );
   } catch (error) {
     patch(runtime, { github: { state: "failed", reason: failureFrom(error, "link").message } });
     runtime.options.logger?.error(
@@ -764,6 +778,17 @@ async function linkGitHub(runtime: Runtime): Promise<void> {
       error instanceof Error ? error : new Error(detailOf(error)),
     );
   }
+}
+
+/**
+ * The code was accepted. What failed to load for want of a sign-in is read
+ * again at once, rather than waiting for a reload.
+ */
+function linked(runtime: Runtime, github: GitHubLink): void {
+  const was = runtime.state.github.state;
+  const arrived = was === "linking" && github.state === "linked";
+  patch(runtime, { github, ...(arrived ? { error: null } : {}) });
+  if (arrived) void load(runtime);
 }
 
 async function endSolo(runtime: Runtime): Promise<void> {
@@ -776,7 +801,7 @@ async function endSolo(runtime: Runtime): Promise<void> {
 async function unlinkGitHub(runtime: Runtime): Promise<void> {
   runtime.link?.cancel();
   runtime.link = undefined;
-  await runtime.transport.linkEnd();
+  await tracked(runtime, () => runtime.transport.linkEnd());
   patch(runtime, { github: { state: "unlinked" } });
 }
 
@@ -979,8 +1004,8 @@ async function publish(runtime: Runtime, ids?: readonly string[]): Promise<reado
 
   patch(runtime, { publishing: true });
   try {
-    const comments = await runtime.transport.appendMany(
-      chosen.map((draft) => postedFromDraft(runtime, draft)),
+    const comments = await tracked(runtime, () =>
+      runtime.transport.appendMany(chosen.map((draft) => postedFromDraft(runtime, draft))),
     );
     for (const draft of chosen) runtime.drafts.markSent(draft.id);
 
@@ -1077,7 +1102,7 @@ function moved(runtime: Runtime, result: DraftImportResult): DraftImportResult {
 /** Records the approval and takes the verdict the route publishes with it. */
 async function approve(runtime: Runtime, note?: string): Promise<Approval> {
   try {
-    const approval = await runtime.transport.approve(note);
+    const approval = await tracked(runtime, () => runtime.transport.approve(note));
     patch(runtime, {
       approvals: [approval, ...runtime.state.approvals.filter((one) => one.id !== approval.id)],
       hidden: false,
@@ -1096,7 +1121,7 @@ async function unapprove(runtime: Runtime): Promise<void> {
   if (!held) return;
 
   try {
-    await runtime.transport.unapprove(held.id);
+    await tracked(runtime, () => runtime.transport.unapprove(held.id));
     patch(runtime, {
       approvals: runtime.state.approvals.filter((one) => one.id !== held.id),
       error: null,
@@ -1114,7 +1139,9 @@ async function setStatus(
   resolution?: ResolutionClaim,
 ): Promise<Comment> {
   try {
-    const updated = await runtime.transport.setStatus(id, status, resolution);
+    const updated = await tracked(runtime, () =>
+      runtime.transport.setStatus(id, status, resolution),
+    );
     patch(runtime, {
       comments: runtime.state.comments.map((comment) => (comment.id === id ? updated : comment)),
       hidden: false,

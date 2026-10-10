@@ -124,7 +124,7 @@ export const SIGNIN_COPY = {
 
 /** The sign-off: one icon button, so the words are its label and nothing more. */
 export const APPROVE_COPY = {
-  label: "Looked, found nothing wrong",
+  label: "Approve",
   signIn: "Sign in first.",
 } as const;
 
@@ -172,6 +172,7 @@ export const ISLAND_COPY = {
   title: "Comments",
   wordmark: "Maple",
   settings: "Settings",
+  working: "Working",
   close: "Close the inventory",
   closeGlyph: "✕",
   newComment: "New:",

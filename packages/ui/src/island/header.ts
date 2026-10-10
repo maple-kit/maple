@@ -6,10 +6,12 @@
  * cannot shut. Settings sit behind the control beside it, not in a visible row.
  */
 
-import { forwardRef } from "react";
+import { useMaple } from "@maple-kit/react";
+import { createElement, forwardRef } from "react";
 
 import { cx } from "../cx.js";
 import { renderPart } from "../part.js";
+import { Spinner } from "../spinner.js";
 import { useIsland } from "./context.js";
 import { ISLAND_COPY } from "./language.js";
 import { Wordmark } from "./wordmark.js";
@@ -74,14 +76,24 @@ export const Logo = /** @__PURE__ */ forwardRef<HTMLHeadingElement, LogoProps>(
   function Logo(props, ref) {
     const { asChild, children, className, ...rest } = props;
 
-    return renderPart(
-      "h2",
-      asChild,
-      { ...rest, className: cx("mk-head-title", className), ref },
+    return renderPart("h2", asChild, { ...rest, className: cx("mk-head-title", className), ref }, [
       children ?? renderPart(Wordmark, false, { key: "wordmark" }),
-    );
+      createElement(Working, { key: "work" }),
+    ]);
   },
 );
+
+/** Beside the wordmark while any call to the store is out. */
+function Working(): ReactNode {
+  const { pending } = useMaple();
+  if (pending === 0) return null;
+
+  return createElement(
+    "span",
+    { className: "mk-working", role: "status", "aria-label": ISLAND_COPY.working },
+    createElement(Spinner),
+  );
+}
 
 /**
  * The branch chip. It takes the branch rather than reading it, because the

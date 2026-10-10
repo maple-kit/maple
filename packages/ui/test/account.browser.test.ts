@@ -26,11 +26,17 @@ interface Route {
 
 function routeFetch(route: Route): typeof globalThis.fetch {
   const attempts = [...(route.attempts ?? [])];
+  /** Once an exchange comes back linked, `/me` says so, as a real route does. */
+  const github = route.github === undefined ? undefined : { ...route.github };
 
   return (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input instanceof Request ? input.url : input);
     const method = init?.method ?? "GET";
-    return Promise.resolve(json(answer(url, method, route, attempts)));
+    const said = answer(url, method, { ...route, ...(github ? { github } : {}) }, attempts);
+    if (github && (said as { status?: string }).status === "linked" && method === "PATCH") {
+      Object.assign(github, { linked: true, login: (said as { login?: string }).login });
+    }
+    return Promise.resolve(json(said));
   };
 }
 

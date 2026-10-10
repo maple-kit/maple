@@ -13,10 +13,11 @@ import { createElement, forwardRef } from "react";
 
 import { cx } from "../cx.js";
 import { renderPart } from "../part.js";
+import { spun, useBusy } from "../spinner.js";
 import { ACCOUNT_COPY } from "./language.js";
 
 import type { PartProps } from "../part.js";
-import type { GitHubLink, MapleClient } from "@maple-kit/core/client";
+import type { GitHubLink } from "@maple-kit/core/client";
 import type { ReactNode } from "react";
 
 /** The row. Its children replace everything inside it. */
@@ -29,7 +30,6 @@ export const Account = /** @__PURE__ */ forwardRef<HTMLDivElement, AccountProps>
   function Account(props, ref) {
     const { asChild, children, className, ...rest } = props;
     const link = useGitHubLink();
-    const client = useMapleClient();
 
     if (link.state === "unsupported") return null;
 
@@ -45,7 +45,7 @@ export const Account = /** @__PURE__ */ forwardRef<HTMLDivElement, AccountProps>
           createElement("span", { className: "mk-setting-hint" }, said(link)),
           code(link),
         ),
-        action(link, client),
+        createElement(Action, { key: "act", link }),
       ],
     );
   },
@@ -76,7 +76,10 @@ function code(link: GitHubLink): ReactNode {
 }
 
 /** Nothing to press while a link is in flight: the reviewer is on github.com. */
-function action(link: GitHubLink, client: MapleClient): ReactNode {
+function Action(props: { readonly link: GitHubLink }): ReactNode {
+  const client = useMapleClient();
+  const [busy, run] = useBusy();
+  const { link } = props;
   if (link.state === "linking") return null;
 
   const linked = link.state === "linked";
@@ -86,12 +89,13 @@ function action(link: GitHubLink, client: MapleClient): ReactNode {
   return createElement(
     "button",
     {
-      key: "act",
       type: "button",
       className: linked ? "mk-acct-do mk-acct-danger" : "mk-acct-do",
       ...(linked ? { title: ACCOUNT_COPY.unlinkHint } : {}),
-      onClick: () => void (linked ? client.unlinkGitHub() : client.linkGitHub()),
+      disabled: busy,
+      "aria-busy": busy,
+      onClick: () => run(() => (linked ? client.unlinkGitHub() : client.linkGitHub())),
     },
-    label,
+    busy ? spun(label) : label,
   );
 }
