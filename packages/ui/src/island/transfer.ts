@@ -15,6 +15,7 @@ import { DownloadIcon } from "../icons/download.js";
 import { SendIcon } from "../icons/send.js";
 import { UploadIcon } from "../icons/upload.js";
 import { renderPart } from "../part.js";
+import { Spinner } from "../spinner.js";
 import { TRANSFER_COPY } from "./language.js";
 import { useSavedDrafts, useSignedOut } from "./saved.js";
 
@@ -183,7 +184,7 @@ function PublishAll(): ReactNode {
       disabled: publishing,
       onClick: () => void client.publish().catch(() => undefined),
     },
-    createElement(SendIcon, { size: 15 }),
+    publishing ? createElement(Spinner) : createElement(SendIcon, { size: 15 }),
   );
 }
 

@@ -185,7 +185,7 @@ saying what the fence is, the fence, then a rule above the footer.
 ````
 Comment written by Ada Lovelace via ⟨wordmark⟩:
 
-| # | Where | Comment | Viewport |
+| Status | Comment | Where |
 …
 
 The full comment details in markdown, to copy into an agent:
@@ -196,7 +196,7 @@ The full comment details in markdown, to copy into an agent:
 
 ---
 
-⟨preview.example.com @ a1b2c3d⟩ · powered by Maple
+[preview.example.com](link) @ a1b2c3d · powered by Maple
 ````
 
 The chrome is not optional and takes no argument. A comment Maple posts is the

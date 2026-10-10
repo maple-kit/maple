@@ -27,8 +27,8 @@ describe("a comment written under a mock", () => {
 
   it("is marked as mocked in the ledger row, and an unmocked one is not", () => {
     const { markdown } = exportMarkdown([mocked, storedComment({ id: "c_2" })], { branch: BRANCH });
-    const rows = markdown.split("\n").filter((line) => /^\| [12] \|/.test(line));
-    expect(rows[0]).toContain("1440×900 · mocked");
+    const rows = markdown.split("\n").filter((line) => /^\| !\[/.test(line));
+    expect(rows[0]).toContain(" · mocked");
     expect(rows[1]).not.toContain("mocked");
   });
 
@@ -40,7 +40,7 @@ describe("a comment written under a mock", () => {
       },
     });
     const { markdown } = exportMarkdown([as], { branch: BRANCH });
-    expect(markdown).toContain("1440×900 · mocked as owner, without billing:write");
+    expect(markdown).toContain(" · mocked as owner, without billing:write");
     expect(parseFence(markdown)?.comments[0]?.context.mock?.as).toEqual({
       role: "owner",
       permissions: { "billing:write": false },

@@ -275,6 +275,26 @@ describe("the context card beside it", () => {
     }
   });
 
+  it("pads its header and centres the label on the caret's line", async () => {
+    started();
+    await client.load();
+    client.openComposer(TARGET);
+    mount();
+    client.setBody("T");
+
+    await expect.poll(() => shadow().querySelector(".mk-ctx-sum")).not.toBeNull();
+    const head = shadow().querySelector(".mk-ctx-head")!;
+    const middle = (node: Element): number => {
+      const box = node.getBoundingClientRect();
+      return box.top + box.height / 2;
+    };
+
+    expect(Number.parseFloat(getComputedStyle(head).paddingTop)).toBeGreaterThan(0);
+    const sum = shadow().querySelector(".mk-ctx-sum")!;
+    const caret = shadow().querySelector(".mk-ctx-caret")!;
+    expect(Math.abs(middle(sum) - middle(caret))).toBeLessThan(2);
+  });
+
   it("lines each label up with its value on one baseline", async () => {
     started();
     await client.load();

@@ -324,9 +324,12 @@ function footer(comments: readonly Comment[]): string {
 
 function stamp(comment: Comment | undefined): string {
   if (comment === undefined) return "";
-  const parts = [hostOf(comment.context.url), comment.commit?.slice(0, 7) ?? ""].filter(Boolean);
+  const host = hostOf(comment.context.url);
+  const commit = comment.commit?.slice(0, 7) ?? "";
+  const link = host === "" ? "" : `[${host}](<${comment.context.url}>)`;
+  const parts = [link, commit && `<code>${commit}</code>`].filter(Boolean);
 
-  return parts.length === 0 ? "" : `<code>${parts.join(" @ ")}</code> · `;
+  return parts.length === 0 ? "" : `${parts.join(" @ ")} · `;
 }
 
 /** A URL a store handed back may be anything; an unparsable one costs the host. */
@@ -343,26 +346,12 @@ function conjoin(names: readonly string[]): string {
   return new Intl.ListFormat("en", { style: "long", type: "conjunction" }).format(names);
 }
 
-/**
- * One table for the whole surface. The status column appears only once
- * something is not open: a column that never varies is a column nobody reads.
- */
+/** One table for the whole surface, status first, the way the island lists it. */
 function table(comments: readonly Comment[], screenshots: ReadonlyMap<string, string>): string {
   const withShots = comments.some((comment) => screenshots.has(comment.id));
-  const withStatus = comments.some((comment) => comment.status !== "open");
-  const head = [
-    "#",
-    "Where",
-    "Comment",
-    ...(withStatus ? ["Status"] : []),
-    "Viewport",
-    ...(withShots ? ["Shot"] : []),
-  ];
-  const rows = comments.map((comment, index) =>
-    row(comment, index + 1, {
-      withStatus,
-      ...(withShots ? { shot: screenshots.get(comment.id) ?? "" } : {}),
-    }),
+  const head = ["Status", "Comment", "Where", ...(withShots ? ["Shot"] : [])];
+  const rows = comments.map((comment) =>
+    row(comment, withShots ? (screenshots.get(comment.id) ?? "") : undefined),
   );
 
   return [`| ${head.join(" | ")} |`, `| ${head.map(() => "---").join(" | ")} |`, ...rows].join(
@@ -370,20 +359,12 @@ function table(comments: readonly Comment[], screenshots: ReadonlyMap<string, st
   );
 }
 
-/** What a row shows beyond the comment itself, decided once for the table. */
-interface RowShape {
-  readonly withStatus: boolean;
-  readonly shot?: string;
-}
-
-function row(comment: Comment, number: number, shape: RowShape): string {
+function row(comment: Comment, shot: string | undefined): string {
   const cells = [
-    String(number),
-    where(comment.anchor),
+    badge(comment.status),
     cell(comment.body),
-    ...(shape.withStatus ? [STATUS_WORDS[comment.status]] : []),
-    `${comment.context.viewportWidth}×${comment.context.viewportHeight}${mockedWords(comment.context.mock)}`,
-    ...(shape.shot === undefined ? [] : [shape.shot ? `[view](${shape.shot})` : ""]),
+    `${where(comment.anchor)}${mockedWords(comment.context.mock)}`,
+    ...(shot === undefined ? [] : [shot ? `[view](${shot})` : ""]),
   ];
   return `| ${cells.join(" | ")} |`;
 }
@@ -402,6 +383,21 @@ const STATUS_WORDS: Readonly<Record<CommentStatus, string>> = {
   needs_reverify: "Re-verify",
   orphaned: "Unpinned",
 };
+
+/** The island's light-scheme status colours (`--mk-accent`, `-ok`, `-warn`, `-muted`) as hex. */
+const STATUS_HEX: Readonly<Record<CommentStatus, string>> = {
+  open: "465a2b",
+  resolved: "267b4c",
+  needs_reverify: "a67700",
+  orphaned: "686c74",
+};
+
+/** GitHub strips inline style, so the badge is an image; shields escapes `-` and `_`. */
+function badge(status: CommentStatus): string {
+  const word = STATUS_WORDS[status];
+  const label = encodeURIComponent(word).replaceAll("-", "--").replaceAll("_", "__");
+  return `![${word}](https://img.shields.io/badge/${label}-${STATUS_HEX[status]}?style=flat-square)`;
+}
 
 function where(anchor: CommentAnchor): string {
   const name = nameMembers(anchor) ?? anchor.component ?? anchor.source ?? anchor.selector;

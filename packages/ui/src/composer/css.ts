@@ -490,8 +490,8 @@ function contextAndShots(): string {
   justify-content: space-between;
   gap: 8px;
   width: 100%;
-  min-height: 28px;
-  padding: 0 11px;
+  min-height: 32px;
+  padding: 6px 11px;
   border: 0;
   background: none;
   color: var(--mk-muted);
@@ -504,6 +504,13 @@ function contextAndShots(): string {
 .mk-ctx-head:hover,
 .mk-ctx-head:hover .mk-ctx-sum {
   color: var(--mk-fg);
+}
+
+/* The shared label rule baseline-aligns; here the label and the caret share a
+   centre line. */
+.mk-ctx-head .mk-ctx-sum {
+  align-self: center;
+  line-height: 1;
 }
 
 /* Two borders rather than an icon: one control does not earn a second svg. */

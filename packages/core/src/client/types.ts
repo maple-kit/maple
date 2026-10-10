@@ -178,6 +178,8 @@ export interface ClientState {
   readonly drafts: readonly Draft[];
   /** A publish is in flight, so the control says so rather than repeating it. */
   readonly publishing: boolean;
+  /** Store calls in flight: a surface shows a loader while this is above zero. */
+  readonly pending: number;
   readonly composer: ComposerState;
   readonly pick: PickState;
   readonly theme: ThemeState;

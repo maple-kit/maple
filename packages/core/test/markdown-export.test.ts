@@ -23,11 +23,10 @@ function fenceOf(markdown: string): ReturnType<typeof parseFence> {
 }
 
 describe("the human table", () => {
-  it("names the component, the body and the viewport", () => {
+  it("names the component and the body", () => {
     const markdown = exported([storedComment()]);
     expect(markdown).toContain("`DashboardHeader`");
     expect(markdown).toContain("spacing under the heading");
-    expect(markdown).toContain("1440×900");
   });
 
   it("falls back down the anchor for the Where column", () => {
@@ -45,7 +44,7 @@ describe("the human table", () => {
     const row = markdown.split("\n").find((line) => line.includes("divider"))!;
 
     expect(row).toContain("a \\| b");
-    expect(row.split(/(?<!\\)\|/)).toHaveLength(6);
+    expect(row.split(/(?<!\\)\|/)).toHaveLength(5);
   });
 
   it("keeps a multi-line comment on one row", () => {
@@ -53,10 +52,26 @@ describe("the human table", () => {
     expect(markdown).toContain("first line<br>second line");
   });
 
-  it("numbers the rows from one", () => {
-    const markdown = exported([storedComment({ id: "a" }), storedComment({ id: "b" })]);
-    expect(markdown).toContain("| 1 |");
-    expect(markdown).toContain("| 2 |");
+  it("leads with a status badge in the island's colour and label", () => {
+    const rows = [
+      ["open", "Open", "465a2b"],
+      ["resolved", "Resolved", "267b4c"],
+      ["needs_reverify", "Re--verify", "a67700"],
+      ["orphaned", "Unpinned", "686c74"],
+    ] as const;
+    for (const [status, label, hex] of rows) {
+      const markdown = exported([storedComment({ status })]);
+      expect(markdown).toContain(
+        `| ![${label.replace("--", "-")}](https://img.shields.io/badge/${label}-${hex}?style=flat-square) |`,
+      );
+    }
+  });
+
+  it("orders the columns Status, Comment, Where and leaves out the viewport", () => {
+    const markdown = exported([storedComment()]);
+    expect(markdown).toContain("| Status | Comment | Where |");
+    expect(markdown).not.toContain("Viewport");
+    expect(markdown).not.toContain("1440×900 |");
   });
 });
 
@@ -96,7 +111,7 @@ describe("the chrome around it", () => {
     const markdown = exported([storedComment()]);
     const lead = markdown.indexOf("The full comment details in markdown, to copy into an agent:");
 
-    expect(lead).toBeGreaterThan(markdown.indexOf("| # |"));
+    expect(lead).toBeGreaterThan(markdown.indexOf("| Status |"));
     expect(lead).toBeLessThan(markdown.indexOf("```maple"));
   });
 
@@ -104,7 +119,7 @@ describe("the chrome around it", () => {
     const markdown = exported([storedComment({ commit: "a1b2c3d4e5f6a7b8" })]);
     expect(
       markdown.endsWith(
-        "<sub><code>preview.example.com @ a1b2c3d</code> · " +
+        "<sub>[preview.example.com](<https://preview.example.com/dashboard>) @ <code>a1b2c3d</code> · " +
           'powered by <a href="https://github.com/maple-kit/maple">Maple</a></sub>',
       ),
     ).toBe(true);
@@ -112,7 +127,9 @@ describe("the chrome around it", () => {
 
   it("stamps the preview alone when the comment carries no commit", () => {
     const markdown = exported([storedComment()]);
-    expect(markdown).toContain("<code>preview.example.com</code> · powered by");
+    expect(markdown).toContain(
+      "[preview.example.com](<https://preview.example.com/dashboard>) · powered by",
+    );
   });
 
   it("drops a stamp it cannot read rather than printing a broken one", () => {
@@ -213,7 +230,7 @@ describe("replies, which are reserved rather than built", () => {
 
   it("writes exactly one row per comment", () => {
     const markdown = exported([storedComment({ id: "a" }), storedComment({ id: "b" })]);
-    const rows = markdown.split("\n").filter((line) => /^\| \d+ \|/.test(line));
+    const rows = markdown.split("\n").filter((line) => line.startsWith("| !["));
 
     expect(rows).toHaveLength(2);
   });
@@ -368,7 +385,7 @@ describe("a summary, with no fence", () => {
       fence: false,
     });
 
-    expect(result.markdown).toContain("| # | Where | Comment | Viewport |");
+    expect(result.markdown).toContain("| Status | Comment | Where |");
     expect(result.markdown).toContain("via <sub><picture>");
     expect(result.markdown).toContain("powered by");
     expect(result.markdown).not.toContain("```maple");

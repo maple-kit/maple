@@ -108,6 +108,7 @@ export const MOTION_TOKENS: Readonly<Record<string, string>> = {
   "--mk-ease-entrance": "cubic-bezier(0.34, 1.36, 0.64, 1)",
   "--mk-ease-swap": "ease-in-out",
   "--mk-ease-tooltip": "ease-out",
+  "--mk-ease-spin": "linear",
 
   "--mk-dur-island-open": "250ms",
   "--mk-dur-island-close": "150ms",
@@ -145,6 +146,7 @@ export const REDUCED_MOTION_TOKENS: Readonly<Record<string, string>> = {
   "--mk-ease-entrance": "ease-out",
   "--mk-ease-swap": "ease-out",
   "--mk-ease-tooltip": "ease-out",
+  "--mk-ease-spin": "ease-out",
 
   "--mk-dur-island-open": "100ms",
   "--mk-dur-island-close": "100ms",

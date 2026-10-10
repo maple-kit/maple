@@ -12,9 +12,12 @@ import { createElement, forwardRef } from "react";
 import { cx } from "../cx.js";
 import { CheckIcon } from "../icons/check.js";
 import { renderPart } from "../part.js";
+import { Spinner, useBusy } from "../spinner.js";
 import { APPROVE_COPY } from "./language.js";
 
 import type { PartProps } from "../part.js";
+import type { Comment } from "@maple-kit/core";
+import type { MapleClient } from "@maple-kit/core/client";
 import type { ReactNode } from "react";
 
 /** The button. Its children replace the icon. */
@@ -28,6 +31,7 @@ export const Approve = /** @__PURE__ */ forwardRef<HTMLButtonElement, ApprovePro
     const { asChild, children, className, ...rest } = props;
     const state = useMaple();
     const client = useMapleClient();
+    const [busy, run] = useBusy();
 
     if (state.approval?.supported !== true) return null;
 
@@ -42,16 +46,33 @@ export const Approve = /** @__PURE__ */ forwardRef<HTMLButtonElement, ApprovePro
         ...rest,
         "aria-label": APPROVE_COPY.label,
         "aria-pressed": mine,
-        disabled: !signedIn,
+        "aria-busy": busy,
+        disabled: !signedIn || busy,
         className: cx(
           "mk-icon-btn mk-approve mk-press",
           mine ? undefined : "mk-icon-btn-ok",
           className,
         ),
-        onClick: () => void (mine ? client.unapprove() : client.approve()),
+        onClick: () => run(() => (mine ? client.unapprove() : approveAndResolve(client))),
         ref,
       },
-      children ?? createElement(CheckIcon, { size: 15 }),
+      children ?? (busy ? createElement(Spinner) : createElement(CheckIcon, { size: 15 })),
     );
   },
 );
+
+const UNRESOLVED: ReadonlySet<Comment["status"]> = new Set(["open", "needs_reverify"]);
+
+/** Approving says the reviewer is done, so what they raised themselves is too. */
+async function approveAndResolve(client: MapleClient): Promise<void> {
+  await client.approve();
+  const me = client.getState().user?.id;
+  if (me === undefined) return;
+
+  const unresolved = client
+    .getState()
+    .comments.filter(
+      (comment: Comment) => UNRESOLVED.has(comment.status) && comment.author.id === me,
+    );
+  await Promise.allSettled(unresolved.map((comment) => client.setStatus(comment.id, "resolved")));
+}
