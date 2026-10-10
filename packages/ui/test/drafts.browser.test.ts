@@ -130,7 +130,6 @@ describe("drafts as a status", () => {
 
     await vi.waitFor(() => expect(root().querySelectorAll(".mk-row")).toHaveLength(2));
     expect(root().querySelectorAll(".mk-draft-row .mk-row")).toHaveLength(2);
-    expect(root().querySelector(".mk-unsent")).toBeNull();
   });
 
   it("opens a draft from its row, and throws it away from the row's own x", async () => {

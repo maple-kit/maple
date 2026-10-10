@@ -37,8 +37,9 @@ const BUDGETS = [
   },
   // 9 KB until the score card. The extra 1 KB is the card, the kind control
   // and the context card's disclosure. Every byte of it is inert on a
-  // deployment with no classifier configured, which is the default.
-  { name: "composer, on top", entries: ["composer/index.js"], max: 10 * 1024 },
+  // deployment with no classifier configured, which is the default. 10.5 KB
+  // for the signed-out buttons: Sign in in place of Publish.
+  { name: "composer, on top", entries: ["composer/index.js"], max: 10.5 * 1024 },
   { name: "picker, on top", entries: ["picker/index.js"], max: 3 * 1024 },
   { name: "notice, on top", entries: ["notice/index.js"], max: 1024 },
   { name: "the mock box, on top", entries: ["mock/index.js"], max: MOCK_MAX },

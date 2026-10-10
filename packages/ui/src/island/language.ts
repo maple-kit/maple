@@ -133,18 +133,8 @@ export const APPROVE_COPY = {
   signIn: "Sign in first: an approval nobody can be named for is not one.",
 } as const;
 
-/**
- * The unsent list. A comment is a draft until it is published, and every word
- * here has to carry that without ever calling it a failure.
- */
+/** What a draft row says: a comment is a draft until it is published. */
 export const UNSENT_COPY = {
-  line: "Some comments are unpublished",
-  publish: "Publish",
-  publishing: "Publishing…",
-  more: "More ways to take them with you",
-  markdown: "Copy as Markdown",
-  json: "Copy as JSON",
-  copied: "Copied",
   discard: "Throw this one away",
   discardGlyph: "✕",
   blank: "(nothing written yet)",
@@ -155,6 +145,8 @@ export const UNSENT_COPY = {
 export const TRANSFER_COPY = {
   open: "Import drafts",
   close: "Close import",
+  download: "Download drafts",
+  downloadFile: "maple-drafts.json",
   boxLabel: "An exported drafts file",
   boxHint: "Paste an export here, or drop its file",
   fileLabel: "Choose an exported drafts file",
@@ -195,7 +187,6 @@ export const ISLAND_COPY = {
     title: "Couldn't load the comments",
     retry: "Try again",
   },
-  noDrafts: "No unpublished comments.",
   showAll: "Show all",
   showLess: "Show less",
   hide: "Hide",

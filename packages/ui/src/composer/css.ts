@@ -117,6 +117,11 @@ function shellCss(): string {
   background: var(--mk-sunk);
 }
 
+.mk-composer-hint {
+  color: var(--mk-muted);
+  font-size: 11px;
+}
+
 .mk-grab {
   display: none;
 }

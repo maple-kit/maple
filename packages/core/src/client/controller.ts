@@ -791,6 +791,7 @@ function openComposer(runtime: Runtime, target: ComposerTarget): void {
       open: true,
       target: named(target),
       draftId,
+      resumed: existing !== undefined,
       body: existing?.body ?? "",
       attachments: existing?.attachments ?? [],
       dirty: existing !== undefined,

@@ -1,8 +1,8 @@
 /**
  * `Maple.ImportDrafts` and `Maple.OtherDrafts`: unsent comments arriving.
  *
- * Both are quiet on purpose. Import is one icon button until it is wanted, and
- * the other-branch row says what was found and does nothing until asked, since
+ * Both are quiet on purpose. Import is one icon button until it is wanted, with
+ * Download beside it, and the other-branch row says what was found and does nothing until asked, since
  * a label that differs can be legitimate. Nothing here re-keys a draft on its
  * own; it only calls the client, which saves through the draft keeper.
  */
@@ -13,14 +13,16 @@ import { createElement, forwardRef, useState } from "react";
 import { cx } from "../cx.js";
 import { renderPart } from "../part.js";
 import { TRANSFER_COPY } from "./language.js";
+import { useSavedDrafts, useSignedOut } from "./saved.js";
 
 import type { PartProps } from "../part.js";
 import type {
   DraftImportOutcome,
   DraftImportPreview,
   DraftImportResult,
+  MapleClient,
 } from "@maple-kit/core/client";
-import type { ChangeEvent, DragEvent, ReactNode } from "react";
+import type { ChangeEvent, DragEvent, MouseEvent, ReactNode } from "react";
 
 /** The section. Its children replace everything inside it. */
 export interface ImportDraftsProps extends PartProps {
@@ -118,6 +120,7 @@ export const ImportDrafts = /** @__PURE__ */ forwardRef<HTMLDivElement, ImportDr
           },
           uploadIcon(),
         ),
+        createElement(DownloadDrafts, { key: "download" }),
         open
           ? createElement(
               "div",
@@ -130,6 +133,63 @@ export const ImportDrafts = /** @__PURE__ */ forwardRef<HTMLDivElement, ImportDr
     );
   },
 );
+
+/**
+ * Saves the drafts as a file another browser can import. A green dot says
+ * there is something to carry out while publishing is not possible.
+ */
+function DownloadDrafts(): ReactNode {
+  const client = useMapleClient();
+  const saved = useSavedDrafts();
+  const signedOut = useSignedOut();
+  const waiting = signedOut && saved.length > 0;
+
+  return createElement(
+    "button",
+    {
+      type: "button",
+      className: "mk-icon-btn mk-press",
+      "aria-label": TRANSFER_COPY.download,
+      title: TRANSFER_COPY.download,
+      disabled: saved.length === 0,
+      "data-mk-dot": waiting,
+      onClick: (event: MouseEvent<HTMLButtonElement>) => save(event.currentTarget, client),
+    },
+    downloadIcon(),
+    waiting ? createElement("span", { className: "mk-icon-dot", "aria-hidden": true }) : null,
+  );
+}
+
+/** Hands the browser the drafts as a file. */
+function save(from: HTMLElement, client: MapleClient): void {
+  const url = URL.createObjectURL(new Blob([client.draftsAsJson()], { type: "application/json" }));
+  const link = from.ownerDocument.createElement("a");
+  link.href = url;
+  link.download = TRANSFER_COPY.downloadFile;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+/** An arrow falling into a tray: the file comes out of the island. */
+function downloadIcon(): ReactNode {
+  return createElement(
+    "svg",
+    {
+      viewBox: "0 0 24 24",
+      width: 15,
+      height: 15,
+      "aria-hidden": true,
+      fill: "none",
+      stroke: "currentColor",
+      strokeWidth: 2,
+      strokeLinecap: "round",
+      strokeLinejoin: "round",
+    },
+    createElement("path", { d: "M12 4v11" }),
+    createElement("path", { d: "M7.5 10.5L12 15l4.5-4.5" }),
+    createElement("path", { d: "M4.5 14.5v3.5a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-3.5" }),
+  );
+}
 
 /** An arrow rising out of a tray: the file goes up into the island. */
 function uploadIcon(): ReactNode {

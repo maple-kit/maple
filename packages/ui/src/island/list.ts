@@ -16,6 +16,7 @@ import { byReason, draftAsComment } from "./comments.js";
 import { listId, reasonOf, useIsland } from "./context.js";
 import { LoadFailed } from "./empty.js";
 import { FILTER_LABELS, ISLAND_COPY, UNSENT_COPY } from "./language.js";
+import { useSavedDrafts } from "./saved.js";
 
 import type { PartProps } from "../part.js";
 import type { Comment } from "@maple-kit/core";
@@ -35,7 +36,8 @@ export const List = /** @__PURE__ */ forwardRef<HTMLDivElement, ListProps>(
   function List(props, ref) {
     const { asChild, children, className, ...rest } = props;
     const island = useIsland(PART);
-    const { drafts, error, filter, github, phase, user } = useMaple();
+    const { error, filter, github, phase, user } = useMaple();
+    const drafts = useSavedDrafts();
     const client = useMapleClient();
     const comments = useComments();
     const inDrafts = filter === "drafts";

@@ -38,7 +38,6 @@ import {
   OtherDrafts,
   PickButton,
   Settings,
-  Unsent,
 } from "./island/index.js";
 import { MapleMarkLayer } from "./marks/index.js";
 import { MapleMock } from "./mock/index.js";
@@ -130,7 +129,6 @@ function inventory(
       ),
       createElement(List, { children: (comment: Comment) => createElement(Item, { comment }) }),
       createElement(OtherDrafts),
-      createElement(Unsent),
       createElement(
         NewComment,
         null,

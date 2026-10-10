@@ -993,9 +993,11 @@ function transfer(): string {
 .mk-transfer {
   flex: none;
   display: flex;
+  gap: 6px;
 }
 
 .mk-icon-btn {
+  position: relative;
   flex: none;
   display: grid;
   place-items: center;
@@ -1018,6 +1020,23 @@ function transfer(): string {
   border-color: var(--mk-line-firm);
   background: var(--mk-sunk);
   color: var(--mk-fg);
+}
+
+.mk-icon-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Something is saved here that cannot be published yet: carry it out. */
+.mk-icon-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid var(--mk-bg);
+  border-radius: 999px;
+  background: var(--mk-ok);
 }
 
 .mk-transfer-other {
@@ -1132,27 +1151,9 @@ function link(): string {
 `;
 }
 
-/** The two rows above the picks: what is waiting, and the sign-off. */
+/** The small pill button import shares, and a draft's row in the list. */
 function ledger(): string {
   return `
-.mk-unsent {
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 6px 9px;
-  border-top: 1px solid var(--mk-line);
-  background: var(--mk-sunk);
-}
-
-.mk-unsent-label {
-  min-width: 0;
-  color: var(--mk-muted);
-  font-size: 11.5px;
-  font-weight: 550;
-}
-
 .mk-unsent-copy {
   flex: none;
   padding: 2px 8px;
@@ -1164,75 +1165,6 @@ function ledger(): string {
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
-}
-
-.mk-split {
-  position: relative;
-  flex: none;
-  display: flex;
-}
-
-.mk-split-main,
-.mk-split-more {
-  font-size: 11px;
-  padding-block: 3px;
-}
-
-.mk-split-main {
-  padding-inline: 11px 9px;
-  border-start-end-radius: 0;
-  border-end-end-radius: 0;
-}
-
-.mk-split-more {
-  display: grid;
-  place-items: center;
-  padding-inline: 7px;
-  border-start-start-radius: 0;
-  border-end-start-radius: 0;
-  border-inline-start: 1px solid color-mix(in srgb, currentColor 30%, transparent);
-}
-
-.mk-split-chevron {
-  width: 5px;
-  height: 5px;
-  border-right: 1.5px solid currentColor;
-  border-bottom: 1.5px solid currentColor;
-  rotate: 45deg;
-  translate: 0 -1.5px;
-}
-
-.mk-split-menu {
-  position: absolute;
-  z-index: 3;
-  right: 0;
-  bottom: calc(100% + 6px);
-  display: flex;
-  flex-direction: column;
-  min-width: 100%;
-  padding: 3px;
-  border: 1px solid var(--mk-line-firm);
-  border-radius: var(--mk-r-sm);
-  background: var(--mk-bg);
-  box-shadow: var(--mk-sh2);
-}
-
-.mk-split-item {
-  padding: 5px 9px;
-  border: 0;
-  border-radius: 5px;
-  background: transparent;
-  color: var(--mk-fg);
-  font: inherit;
-  font-size: 11.5px;
-  text-align: start;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.mk-split-item:hover,
-.mk-split-item:focus-visible {
-  background: var(--mk-sunk);
 }
 
 .mk-draft-row {
