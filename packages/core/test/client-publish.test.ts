@@ -169,7 +169,7 @@ describe("the way out with nowhere to publish", () => {
     kept(maple, "first", "second");
 
     const markdown = maple.draftsAsMarkdown();
-    expect(markdown).toContain("| # | Where | Comment |");
+    expect(markdown).toContain("| Status | Comment | Where |");
     expect(markdown).toContain("first");
     expect(parseFence(markdown)?.comments.map((one) => one.body)).toEqual(["first", "second"]);
   });

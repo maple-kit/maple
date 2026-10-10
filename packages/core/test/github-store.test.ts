@@ -50,7 +50,7 @@ describe("what gets written to the pull request", () => {
     await store().append(sampleComment({ branch }));
 
     const [posted] = github.commentsOn(pullFor(branch));
-    expect(posted?.body).toContain("| # | Where | Comment | Viewport |");
+    expect(posted?.body).toContain("| Status | Comment | Where |");
     expect(posted?.body).toContain("```maple");
     expect(posted?.body).not.toContain("<!--");
   });
@@ -372,7 +372,7 @@ describe("the screenshot the table links to", () => {
     await connector.append(sampleComment({ branch, attachments: [shot] }));
 
     const [posted] = github.commentsOn(pullFor(branch));
-    expect(posted?.body).toContain("| # | Where | Comment | Viewport | Shot |");
+    expect(posted?.body).toContain("| Status | Comment | Where | Shot |");
     expect(posted?.body).toContain("[view](https://cdn.example.com/k1.png)");
   });
 
