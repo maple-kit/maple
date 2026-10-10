@@ -1,6 +1,7 @@
 {
   // The name is set per pull request by `wrangler deploy --name`, and the
-  // variables by `--var`: see .github/workflows/vite-app-preview.yml.
+  // variables by `--var`: see .github/workflows/vite-app-preview.yml. The gate
+  // App's private key is a secret, set with `wrangler secret put`, never here.
   "name": "maple-example",
   "main": "worker/index.ts",
   "compatibility_date": "2026-10-01",

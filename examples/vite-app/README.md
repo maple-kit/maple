@@ -65,6 +65,11 @@ example therefore reviews the change that deployed it. The seeded comments are
 for the local dev server only; a deployed copy starts with the pull request's
 own ledger.
 
+With the gate App's `MAPLE_GATE_APP_ID`, `MAPLE_GATE_INSTALLATION_ID` and
+`MAPLE_GATE_PRIVATE_KEY` set, `worker/gate.ts` passes the route a `gate`, so
+resolving the last comment on the preview clears `maple/visual-review` with no
+workflow running. Without them the Worker has no gate and nothing else changes.
+
 The settings the workflow needs are listed in `docs/configuration.md`. To build
 and inspect the Worker without deploying it:
 
