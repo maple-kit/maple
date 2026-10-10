@@ -1,6 +1,7 @@
 import { createElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
+import { userEvent } from "vitest/browser";
 
 import { MapleRoot } from "../src/index.js";
 import { Account, SignIn } from "../src/island/index.js";
@@ -142,6 +143,29 @@ describe("a reviewer who has not linked", () => {
     popup.querySelector<HTMLButtonElement>(".mk-iconbtn")!.click();
     await vi.waitFor(() => expect(root().querySelector(".mk-popup")).toBeNull());
     expect((await settled("linking")).querySelector("code")?.textContent).toBe("WDJB-MJHT");
+  });
+
+  it("answers a real click inside the popup, not only its close button", async () => {
+    let copied = "";
+    vi.stubGlobal("navigator", {
+      ...navigator,
+      clipboard: {
+        writeText: (text: string) => {
+          copied = text;
+          return Promise.resolve();
+        },
+      },
+    });
+    await render(tree({ github: { linked: false } }));
+    await settled("unlinked");
+    root().querySelector<HTMLButtonElement>(".mk-acct-do")!.click();
+    await settled("linking");
+
+    const copy = root().querySelector<HTMLButtonElement>(".mk-popup .mk-acct-do")!;
+    await userEvent.click(copy, { timeout: 2000 });
+
+    await vi.waitFor(() => expect(copied).toBe("WDJB-MJHT"));
+    vi.unstubAllGlobals();
   });
 
   it("closes the popup by itself once GitHub has the code", async () => {
