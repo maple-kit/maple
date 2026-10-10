@@ -1,14 +1,14 @@
 name: Maple
 
 # Dogfoods the merge gate: reports maple/visual-review on every pull request.
-# Advisory: the check is not required by any ruleset. A resolve in the overlay
-# edits the ledger comment in place, so `edited` re-runs sync and gate then.
-# issue_comment runs this file from the default branch, never the PR's copy,
-# and the action checks nothing out, so a comment cannot run PR code.
+# Advisory: the check is not required by any ruleset. The overlay posts, edits
+# and deletes ```maple comments as the reviewer, so those events re-run sync
+# and gate; the action's own GITHUB_TOKEN edits trigger nothing. issue_comment
+# runs the default branch's copy and checks nothing out, so no PR code runs.
 on:
   pull_request:
   issue_comment:
-    types: [edited]
+    types: [created, edited, deleted]
 
 permissions:
   contents: read
@@ -18,7 +18,7 @@ jobs:
     if: >-
       github.event_name == 'pull_request' ||
       (github.event.issue.pull_request &&
-      contains(github.event.comment.body, '<!-- maple:visual-review -->'))
+      contains(github.event.comment.body, '```maple'))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     concurrency:
