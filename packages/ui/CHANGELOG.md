@@ -1,5 +1,47 @@
 # @maple-kit/ui
 
+## 0.19.0
+
+### Minor Changes
+
+- b62f2a0: Say less, and put the action in the sentence. Sign in and Try again in the notice, Try again in the failed-load state and Leave solo are inline links (`.mk-link`) rather than buttons, and "Sign in" is the first words of "Sign in before this deployment can show you its comments." The failed-load state loses its second line, and `ISLAND_COPY.unread` loses `line`. "Can't sign in?" moves out of the notice into the sign-in popup, where it opens the `maple solo` popup. The popup is now clickable: the overlay layer's `pointer-events: none` reached the dialog through the tree, so nothing inside it took a click.
+- b62f2a0: Only a kept draft is a draft, and a reviewer who has not signed in cannot publish. `Maple.Unsent`, the "Some comments are unpublished" line with its split Publish button, is removed with its `UnsentProps` and most of `UNSENT_COPY`; Publish all is the composer's Publish, and Download (a file, beside Import) replaces Copy as Markdown and Copy as JSON. The composer without a sign-in shows Save as draft as the primary button and "Sign in to publish directly" in place of Publish; Download carries a green dot while signed out with saved drafts. The comment being typed was stored on every keystroke and so counted as a draft in the filter and the unpublished line; `ComposerState` gains `resumed`, and `useSavedDrafts` and `useSignedOut` are exported from `@maple-kit/ui/island`. The settings control is a cog, the context card is titled "Page context", and the branch chip is green when it links.
+- c689f72: Rework the island's status line and drafts.
+
+  - Drafts are a status: `drafts` joins `COMMENT_FILTERS` in `@maple-kit/core/client` (`matchesFilter` is false for it, since no stored comment is a draft), and the island lists unsent comments under it with the same row as every comment. `Maple.Unsent` is now one line, "Some comments are unpublished", with a Publish split button whose menu copies Markdown or JSON to the clipboard; the file download, the per-draft "On another page" link and the solo offer on that surface are gone. `countsFor` takes the draft count as a third argument.
+  - Import drafts is an icon-only button beside the status select, and the sign-off is a green check-circle at the end of the same line. `Maple.Filters` now holds the new `FilterPick`, `ImportDrafts`, `FilterTally` and `Approve` as children, and `Approve` renders a button, not a row.
+  - A load that failed shows an illustrated state with a retry instead of one sentence.
+  - The explanatory tooltips are removed (status, name, leaf, tally, attachment, picks, themes) along with their copy, the `Tip` component and `tipSpot`; a timestamp keeps its exact time as a native title.
+
+- b62f2a0: Publish all sits beside Download in the island, for a signed-in reviewer with kept drafts. The card's default and least width is 400px, up from 320px (`CARD_WIDTH_PX`), so Import, Download and Publish all fit beside the tally. Setting hints, the unlinked-account sentence and the second sentences of the sign-in, approval and solo copy are cut: `SETTINGS_COPY` entries other than `untagged` lose `hint`, and `ISLAND_COPY.loading` reads "Loading…".
+- 817ab18: The island's card can be resized in width and height (corner and side handles, pointer and arrow keys, Home to reset), from its default size, which is also its least, up to the viewport. The size is remembered per origin: `ClientState.islandSize`, `client.setIslandSize()` and a stored `islandSize` preference are new in `@maple-kit/core/client`, and `ClientState` gains a required field.
+
+  Marks are pinned to what they are on: they follow the anchor exactly as the page scrolls, with no clamp to the viewport edge. A mark whose anchor has left the viewport is hidden and an edge indicator (the logo, an arrow and a count) points the way; clicking it scrolls the nearest hidden comment into view. Breaking: `culled` and `viewportHeight` are replaced by `edgeOf` and `pageView` in the marks entrypoint, and `markSpot` takes the page's scroll offset.
+
+- 0e75c79: Rework the sign-in surfaces. Pressing Sign in now opens a popup with numbered steps: copy the code, open GitHub, and a waiting line that closes itself when GitHub confirms; `SignIn` is exported from `@maple-kit/ui/island` and mounted by `<Maple>`. "Can't sign in?" is now a link inside the notice sentence that opens a popup with the `maple solo` command; `SOLO_COPY` loses `before`, `after` and `hint` and gains `trigger`, `title`, `body` and `copy`, and `SoloOffer` is inline text rather than a paragraph. The notice's dismiss button is the island header's close button, so both sit at the same offset and size. A linked account reads "Linked • username", and Unlink is drawn in the new `--mk-danger` colour and aligned right.
+- b62f2a0: Publish all is an icon-only paper-plane button in the toolbar's icon group, and the approve check moves into that group, left of the tally; `Maple.Approve` now renders as an `mk-icon-btn`. Import and Download draw from new `UploadIcon` and `DownloadIcon` on the 16-unit grid, and `SendIcon` is new, all exported from `@maple-kit/ui/icons`.
+
+  The approve check is a plain stroked `CheckIcon` in the green treatment until given, then a neutral pressed button; the settings cog is redrawn after Phosphor's gear-six with six teeth; the publish plane is optically centred.
+
+### Patch Changes
+
+- 0e58cd2: Rename the island's first filter pill from "All" to "Active". With resolved comments hidden it counts only the unresolved ones, so a review with every comment resolved read "All 0". The `all` filter key in `@maple-kit/core/client` is unchanged: it still means no status narrowing.
+- b3a3f19: The island now reads the comments again the moment a GitHub sign-in completes, instead of keeping the "Sign in before this deployment can show you its comments" banner until a reload. The client state gains `pending`, a count of store calls in flight; the island shows a small ring beside the wordmark while it is above zero, and Publish, Approve, Resolve, Reopen and the account button spin and disable themselves while their own call is out (the ring holds still under reduced motion). The check button is now labelled "Approve" and also resolves the comments you left that are still open. The "Page context" header is padded and its label is centred on the chevron.
+- 8dd91fe: Island rows gain a Resolve button (Reopen on a resolved row) that appears on hover or focus and does not open the row. Reopen is now drawn neutral everywhere, so it no longer shares Resolve's colour. A deployment with no media connector shows one short note linking to the screenshots docs, instead of a thumbnail and a remove button. `Maple` and `Maple.Branch` take a `pullRequest` URL (and the script tag a `data-pull-request` attribute); the branch chip links to it in a new tab when it is a web address, and stays plain text otherwise.
+- Updated dependencies [0a71dab]
+- Updated dependencies [b62f2a0]
+- Updated dependencies [0a71dab]
+- Updated dependencies [0a71dab]
+- Updated dependencies [6a49a8c]
+- Updated dependencies [b3a3f19]
+- Updated dependencies [c689f72]
+- Updated dependencies [0a71dab]
+- Updated dependencies [b3a3f19]
+- Updated dependencies [817ab18]
+  - @maple-kit/core@0.19.0
+  - @maple-kit/mock@0.19.0
+  - @maple-kit/react@0.19.0
+
 ## 0.18.0
 
 ### Patch Changes
