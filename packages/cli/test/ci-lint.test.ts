@@ -198,7 +198,11 @@ describe("maple lint", () => {
       lint: lintWith([]),
     });
 
-    expect(JSON.parse(result.output)).toEqual({ conclusion: "success", findings: [] });
+    expect(JSON.parse(result.output)).toEqual({
+      conclusion: "success",
+      findings: [],
+      judgedErrors: [],
+    });
   });
 
   it("rejects a missing url and a malformed viewport", async () => {

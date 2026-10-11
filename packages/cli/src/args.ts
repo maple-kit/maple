@@ -11,8 +11,10 @@ import { parseArgs as parseNodeArgs } from "node:util";
 /**
  * Whether a flag takes a value (`--owner acme`), stands alone (`--gate`), or
  * takes a value it may be given more than once (`--tokens a.css --tokens b.css`).
+ * An `optional` one stands alone or takes a value only as `--changed=<base>`,
+ * and reads as an empty string when it stands alone.
  */
-export type FlagType = "boolean" | "string" | "strings";
+export type FlagType = "boolean" | "string" | "strings" | "optional";
 
 /** The flags one command accepts, by name without the leading dashes. */
 export type FlagSpec = Readonly<Record<string, FlagType>>;
@@ -57,12 +59,16 @@ export function parseArgs(
   const options = Object.fromEntries(
     Object.entries(spec).map(([name, type]) => [
       name,
-      type === "strings" ? { type: "string" as const, multiple: true } : { type },
+      type === "strings" ? { type: "string" as const, multiple: true } : { type: nodeType(type) },
     ]),
+  );
+  const optional = new Set(
+    Object.entries(spec).flatMap(([name, type]) => (type === "optional" ? [`--${name}`] : [])),
   );
   let parsed: { values: Record<string, unknown>; positionals: string[] };
   try {
-    parsed = parseNodeArgs({ args: [...argv], options, strict, allowPositionals: true });
+    const args = argv.map((arg) => (optional.has(arg) ? `${arg}=` : arg));
+    parsed = parseNodeArgs({ args, options, strict, allowPositionals: true });
   } catch (error) {
     throw new ArgsError(firstSentence(error));
   }
@@ -77,6 +83,10 @@ export function parseArgs(
   return { ...(command === undefined ? {} : { command }), positionals: rest, flags };
 }
 
+function nodeType(type: FlagType): "boolean" | "string" {
+  return type === "boolean" ? "boolean" : "string";
+}
+
 /** Node's own sentence naming the flag, without its advice on positionals. */
 function firstSentence(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
@@ -87,7 +97,10 @@ function firstSentence(error: unknown): string {
 /** The flags `spec` accepts, as a usage line: `--owner <value>, --gate`. */
 export function describeFlags(spec: FlagSpec): string {
   return Object.entries(spec)
-    .map(([name, type]) => (type === "boolean" ? `--${name}` : `--${name} <value>`))
+    .map(([name, type]) => {
+      if (type === "boolean") return `--${name}`;
+      return type === "optional" ? `--${name}[=<value>]` : `--${name} <value>`;
+    })
     .join(", ");
 }
 
