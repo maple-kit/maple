@@ -21,5 +21,6 @@
   "jsxImportSource": "A TypeScript compiler option.",
   "RemoveEnvironmentCleanupHook": "A Node native-addon API, quoted from an error.",
   "listByXIds": "A procedure-name pattern the eval cases describe, not a Maple symbol.",
-  "LanguageModel": "@effect/ai's interface, named as the one assist does not go through."
+  "LanguageModel": "@effect/ai's interface, named as the one assist does not go through.",
+  "maple.lint.config.ts": "A file in a host repository, which `maple lint` reads."
 }

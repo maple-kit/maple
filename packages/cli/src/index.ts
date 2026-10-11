@@ -7,5 +7,7 @@ export type { ConnectorKindRow } from "./commands/connectors.js";
 export { GITHUB_APP_PERMISSIONS } from "./commands/setup-app.js";
 export type { AppKind } from "./commands/setup-app.js";
 export { HELP } from "./help.js";
+export { defineLintConfig } from "./lint-config.js";
+export type { LintConfig } from "./lint-config.js";
 export { run } from "./run.js";
 export type { RunOptions, RunResult } from "./run.js";

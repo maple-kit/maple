@@ -249,35 +249,59 @@ function.
 
 ### The judged tier from the command line
 
-`--rules=<rules.json>` on `maple lint` and `maple ci lint` turns the judged
-tier on, with jev as the judge:
+`maple lint` and `maple ci lint` turn the judged tier on when a lint config
+file exists, with jev as the judge. The file is `maple.lint.config.ts` at the
+repository root, or the path given to `--config=<path>`:
 
-```json
-{
-  "rules": [
+```ts
+import { defineLintConfig } from "@maple-kit/cli";
+
+export default defineLintConfig({
+  rules: [
     {
-      "id": "app/one-primary",
-      "question": "Is this a second primary button in the same view?",
-      "appliesTo": "button",
-      "severity": "advice"
-    }
+      id: "app/one-primary",
+      question: "Is this a second primary button in the same view?",
+      appliesTo: "button",
+      severity: "advice",
+    },
   ],
-  "maxPerRule": 10,
-  "maxTargets": 40,
-  "maxHtml": 2000
-}
+  maxPerRule: 10,
+  maxTargets: 40,
+  maxHtml: 2000,
+});
 ```
 
-A bare array of rules is also accepted; the three caps are optional and are the
-`lintRendered` ones. Phrase `question` so that "yes" means the element
-violates the rule. `severity` is `advice` (the default), `warn` or `error`;
-only `error` blocks. The key is read from `TYPESAFE_API_KEY`, and
-`MAPLE_AI_MODEL` and `MAPLE_AI_API` apply as for the assist tier. Without
-`--rules` the tier is off and nothing else changes.
+`defineLintConfig` only types the object. The CLI imports the file with
+Node 24's built-in type stripping, so there is no loader to install; stay within
+erasable TypeScript (no enums, no parameter properties). The three caps are
+optional and are the `lintRendered` ones. Phrase `question` so that "yes"
+means the element violates the rule. `severity` is `advice` (the default),
+`warn` or `error`; only `error` blocks. The key is read from
+`TYPESAFE_API_KEY`, and `MAPLE_AI_MODEL` and `MAPLE_AI_API` apply as for the
+assist tier. With no config file the tier is off and nothing else changes.
 
-Rules without a key are an error for `maple lint`. For `maple ci lint` the tier
-is skipped, and the check run's summary says so. A viewport the judge failed on
-is listed in the summary and the terminal as "unchecked, not clean"; it does not
+A config that does not load or does not validate fails the run with exit 1, in
+`maple ci lint` too: a typo must not turn the tier off unseen. Rules without a
+key are an error for `maple lint`. For `maple ci lint` the tier is skipped, and
+the check run's summary says so.
+
+Changed code goes first. In `maple ci lint` on a pull request, the changed
+paths are read from GitHub (`GET /repos/{owner}/{repo}/pulls/{n}/files`,
+paginated, with the same token the check run uses) and passed as
+`judged.sources`. If they cannot be read, the summary says so and every
+matching element is judged. Locally, `maple lint --changed[=<base>]` uses
+`git diff --name-only <base>...HEAD`, with `origin/main` as the default base;
+without the flag nothing is filtered.
+
+What was not judged is printed by `maple lint` and in the check run's summary,
+from `judgedStats`, and none of it changes the conclusion:
+
+```text
+Judged 12 of 87 matches (5 groups); 3 rules hit the cap: a, b, c; skipped 40 unchanged
+Narrow `appliesTo` for: x
+```
+
+A viewport the judge failed on is listed as "unchecked, not clean"; it does not
 fail the check by itself. `@maple-kit/classifier` is an optional peer of
 `@maple-kit/cli`, loaded only when rules are given: install it, with its
 `effect` and `@effect/ai-typesafe` peers, to use the judge.

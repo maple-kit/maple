@@ -19,8 +19,16 @@ import {
   verdictFor,
 } from "@maple-kit/lint";
 
+import { describeJudgedStats } from "./judged-notes.js";
+
 import type { Finding } from "@maple-kit/core";
-import type { JudgedOptions, RenderedLintOptions, Verdict, Viewport } from "@maple-kit/lint";
+import type {
+  JudgedOptions,
+  JudgedStats,
+  RenderedLintOptions,
+  Verdict,
+  Viewport,
+} from "@maple-kit/lint";
 
 /** Where a verdict is published. Omitted from {@link CiLintOptions} for a dry run. */
 export interface CiLintPublish {
@@ -45,6 +53,8 @@ export interface CiLintOptions {
   readonly judged?: JudgedOptions;
   /** Why rules were given but not judged, which the summary says rather than hiding. */
   readonly judgedSkipped?: string;
+  /** Why the judged elements were not narrowed to the changed files, which the summary says. */
+  readonly judgedUnfiltered?: string;
   /** Where to write the SARIF log. Not written when omitted. */
   readonly sarifPath?: string;
   /** Where to publish the check run. Omitted, the run is a dry run. */
@@ -59,6 +69,10 @@ export interface CiLintResult {
   readonly judgedErrors: readonly string[];
   /** Set when rules were given and the judged tier did not run. */
   readonly judgedSkipped?: string;
+  /** Set when the pull request's files could not be read, so nothing was narrowed. */
+  readonly judgedUnfiltered?: string;
+  /** What the judge was and was not shown; absent without a judge. */
+  readonly judgedStats?: JudgedStats;
   readonly sarifPath?: string;
   readonly checkRunId?: number;
 }
@@ -69,6 +83,7 @@ export interface CiLintDeps {
   readonly lint?: (options: RenderedLintOptions) => Promise<{
     readonly findings: readonly Finding[];
     readonly judgedErrors?: readonly string[];
+    readonly judgedStats?: JudgedStats;
   }>;
   readonly fetch?: typeof fetch;
   /** Defaults to `https://api.github.com`. Set for Enterprise Server. */
@@ -95,32 +110,47 @@ function lintOptions(options: CiLintOptions): RenderedLintOptions {
   };
 }
 
+/** What the judged tier did not check or was not shown, for the summary. */
+export interface JudgedNotes {
+  readonly errors: readonly string[];
+  readonly skipped?: string | undefined;
+  readonly unfiltered?: string | undefined;
+  readonly stats?: JudgedStats | undefined;
+}
+
 /**
  * Says what the judged tier did not check. The conclusion is untouched: a judge
  * that was down or never configured must not block a merge, but "no findings"
- * beside it would read as clean.
+ * beside it would read as clean. Only an unchecked tier changes the title.
  */
-export function withJudgedNotes(
-  verdict: Verdict,
-  judgedErrors: readonly string[],
-  skipped?: string,
-): Verdict {
-  const notes: string[] = [];
-  if (judgedErrors.length > 0) {
-    notes.push(
+export function withJudgedNotes(verdict: Verdict, notes: JudgedNotes): Verdict {
+  const sections: string[] = [];
+  if (notes.errors.length > 0) {
+    sections.push(
       "### Judged tier: unchecked, not clean",
       "",
       "The judge failed at these viewports, so the rules were not checked there:",
       "",
-      ...judgedErrors.map((line) => `- ${line}`),
+      ...notes.errors.map((line) => `- ${line}`),
     );
   }
-  if (skipped !== undefined) notes.push("### Judged tier: skipped", "", skipped);
-  if (notes.length === 0) return verdict;
+  if (notes.skipped !== undefined) sections.push("### Judged tier: skipped", "", notes.skipped);
+  if (notes.unfiltered !== undefined) {
+    sections.push("### Judged tier: not narrowed to changed files", "", notes.unfiltered);
+  }
+  if (notes.stats !== undefined) {
+    sections.push(
+      "### Judged tier: coverage",
+      "",
+      ...describeJudgedStats(notes.stats).map((line) => `- ${line}`),
+    );
+  }
+  if (sections.length === 0) return verdict;
+  const unchecked = notes.errors.length > 0 || notes.skipped !== undefined;
   return {
     ...verdict,
-    title: `${verdict.title} (judged tier unchecked)`,
-    summary: `${verdict.summary}\n\n${notes.join("\n")}`,
+    title: unchecked ? `${verdict.title} (judged tier unchecked)` : verdict.title,
+    summary: `${verdict.summary}\n\n${sections.join("\n")}`,
   };
 }
 
@@ -128,16 +158,23 @@ async function judge(
   options: CiLintOptions,
   deps: CiLintDeps,
   root: string,
-): Promise<{ findings: readonly Finding[]; judgedErrors: readonly string[]; verdict: Verdict }> {
+): Promise<{
+  findings: readonly Finding[];
+  judgedErrors: readonly string[];
+  judgedStats?: JudgedStats;
+  verdict: Verdict;
+}> {
   try {
     const run = await (deps.lint ?? lintRendered)(lintOptions(options));
     const judgedErrors = run.judgedErrors ?? [];
-    const verdict = withJudgedNotes(
-      verdictFor(run.findings, root),
-      judgedErrors,
-      options.judgedSkipped,
-    );
-    return { findings: run.findings, judgedErrors, verdict };
+    const verdict = withJudgedNotes(verdictFor(run.findings, root), {
+      errors: judgedErrors,
+      skipped: options.judgedSkipped,
+      unfiltered: options.judgedUnfiltered,
+      stats: run.judgedStats,
+    });
+    const judgedStats = run.judgedStats === undefined ? {} : { judgedStats: run.judgedStats };
+    return { findings: run.findings, judgedErrors, verdict, ...judgedStats };
   } catch (error) {
     if (!isUnreachable(error)) throw error;
     const reason = error instanceof Error ? error.message : String(error);
@@ -160,7 +197,7 @@ export async function runCiLint(
   deps: CiLintDeps = {},
 ): Promise<CiLintResult> {
   const root = deps.root ?? process.cwd();
-  const { findings, judgedErrors, verdict } = await judge(options, deps, root);
+  const { findings, judgedErrors, judgedStats, verdict } = await judge(options, deps, root);
 
   if (options.sarifPath !== undefined) await writeSarif(options.sarifPath, findings, root);
 
@@ -183,6 +220,10 @@ export async function runCiLint(
     findings,
     judgedErrors,
     ...(options.judgedSkipped === undefined ? {} : { judgedSkipped: options.judgedSkipped }),
+    ...(options.judgedUnfiltered === undefined
+      ? {}
+      : { judgedUnfiltered: options.judgedUnfiltered }),
+    ...(judgedStats === undefined ? {} : { judgedStats }),
     ...(options.sarifPath === undefined ? {} : { sarifPath: options.sarifPath }),
     ...(checkRunId === undefined ? {} : { checkRunId }),
   };

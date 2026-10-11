@@ -90,6 +90,24 @@ describe("describeFlags", () => {
   });
 });
 
+describe("an optional flag", () => {
+  const spec = { changed: "optional", url: "string" } as const satisfies FlagSpec;
+
+  it.each<[string, string[], string | undefined]>([
+    ["absent", ["--url=x"], undefined],
+    ["bare", ["--changed", "--url=x"], ""],
+    ["bare at the end", ["--url=x", "--changed"], ""],
+    ["with a value", ["--changed=origin/dev", "--url=x"], "origin/dev"],
+  ])("reads %s", (_, argv, expected) => {
+    const { flags } = parseArgs(argv, spec);
+    expect(flags["changed"]).toBe(expected);
+  });
+
+  it("is described with its optional value", () => {
+    expect(describeFlags(spec)).toBe("--changed[=<value>], --url <value>");
+  });
+});
+
 describe("isSet", () => {
   it.each<[ParsedArgs["flags"], boolean]>([
     [{ json: true }, true],
