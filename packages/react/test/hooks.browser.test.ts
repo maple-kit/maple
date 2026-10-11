@@ -1,4 +1,4 @@
-import { createMapleClient } from "@maple-kit/core/client";
+import { commentModifier, createMapleClient } from "@maple-kit/core/client";
 import { createElement, useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
@@ -165,11 +165,14 @@ describe("a change a hook does not read", () => {
  * effect, which is where every listener on the page comes from.
  */
 describe("the controller the provider built", () => {
-  it("is started, so the page's own c shortcut reaches it", async () => {
+  it("is started, so the modifier tap reaches it", async () => {
     const screen = await mount({ autoLoad: false });
     await expect.element(screen.getByTestId("picker")).toHaveTextContent("idle");
 
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "c", bubbles: true }));
+    const key = commentModifier();
+    const flag = key === "Meta" ? { metaKey: true } : { ctrlKey: true };
+    document.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, ...flag }));
+    document.dispatchEvent(new KeyboardEvent("keyup", { key, bubbles: true }));
     await expect.element(screen.getByTestId("picker")).toHaveTextContent("element");
   });
 

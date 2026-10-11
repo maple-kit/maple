@@ -3,7 +3,7 @@
  *
  * Where Maple is mounted inside someone else's application it cannot move the
  * layout, so the panel gets out of the way instead. A bare key checks its
- * modifiers and where it landed for the same reason `c` does: Space in a
+ * modifiers and where it landed for the same reason the mock key does: Space in a
  * textarea is a space.
  */
 

@@ -8,7 +8,7 @@
  */
 
 export { pickerCss } from "./css.js";
-export { PICK_HINTS, PICKER_COPY, pickerLabel } from "./language.js";
+export { cycleHint, PICK_HINTS, PICKER_COPY, pickerLabel } from "./language.js";
 export { MaplePicker, MaplePicker as Picker, onOwnControl } from "./picker.js";
 export type { MaplePickerProps } from "./picker.js";
 export { startSession } from "./session.js";

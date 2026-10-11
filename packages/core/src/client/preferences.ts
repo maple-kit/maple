@@ -9,7 +9,6 @@
  * treat a throw as "nothing was stored".
  */
 
-import { COMMENT_SHORTCUT } from "./shortcut.js";
 import { CORNERS, DETAILS, PICK_ORDER, THEME_PREFERENCES } from "./types.js";
 
 import type { Logger } from "../logger/types.js";
@@ -24,7 +23,6 @@ export const MAPLE_DEFAULTS = {
   position: "bottom-right",
   detail: "default",
   hideResolved: true,
-  shortcut: COMMENT_SHORTCUT,
   allowUrlOverride: true,
   theme: "auto",
   assist: true,
@@ -40,8 +38,6 @@ export interface MapleProps {
   readonly theme?: ThemePreference;
   /** Whether resolved comments start hidden. The filter is one click away. */
   readonly hideResolved?: boolean;
-  /** The bare key that arms a pick. */
-  readonly shortcut?: string;
   /** Whether the query string may turn Maple **on**. Off is always allowed. */
   readonly allowUrlOverride?: boolean;
   /**
@@ -75,7 +71,7 @@ export interface StoredPreferences {
   readonly assist?: boolean;
   /** The card's size, kept per viewer. Null on a write puts it back to the default. */
   readonly islandSize?: IslandSize | null;
-  /** The pick `c` arms next time, which is the one the viewer armed last. */
+  /** The pick a tap of the modifier arms next time, which is the one the viewer armed last. */
   readonly lastPick?: PickKind;
 }
 
@@ -86,7 +82,6 @@ export interface MapleConfig {
   readonly detail: Detail;
   readonly theme: ThemePreference;
   readonly hideResolved: boolean;
-  readonly shortcut: string;
   readonly allowUrlOverride: boolean;
   readonly assist: boolean;
   /** Select it, scroll to it and draw its ring. */
@@ -182,7 +177,6 @@ export function resolveConfig(input: ConfigInput = {}): MapleConfig {
     enabled: enabledFrom(input, allowUrlOverride),
     ...viewerFrom(input),
     hideResolved: props?.hideResolved ?? MAPLE_DEFAULTS.hideResolved,
-    shortcut: props?.shortcut ?? MAPLE_DEFAULTS.shortcut,
     allowUrlOverride,
     assist: query?.assist ?? input.stored?.assist ?? props?.assist ?? MAPLE_DEFAULTS.assist,
     ...present({ comment: query?.comment, pick: query?.pick }),

@@ -139,9 +139,8 @@ describe("precedence", () => {
   });
 
   it("carries the props that no link may change", () => {
-    const config = resolveConfig({ props: { hideResolved: false, shortcut: "k" } });
+    const config = resolveConfig({ props: { hideResolved: false } });
     expect(config.hideResolved).toBe(false);
-    expect(config.shortcut).toBe("k");
   });
 });
 

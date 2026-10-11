@@ -580,7 +580,6 @@ describe("what a link asked for", () => {
         theme: "dark",
         hideResolved: false,
         assist: false,
-        shortcut: "c",
         allowUrlOverride: true,
         comment: "c_9",
         pick: "region",

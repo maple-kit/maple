@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createDraftKeeper, createMapleClient, watchTheme } from "../src/client/index.js";
+import {
+  commentModifier,
+  createDraftKeeper,
+  createMapleClient,
+  watchTheme,
+} from "../src/client/index.js";
 import { storedComment } from "../src/testing/fixtures.js";
 
 import type { ComposerTarget, MapleClient, ThemeState } from "../src/client/index.js";
@@ -130,13 +135,22 @@ function selectParagraph(): HTMLElement {
   return paragraph;
 }
 
-/** Copying a paragraph must not close the composer. This is that test. */
-describe("the c shortcut over a real page", () => {
+/** A tap of this platform's modifier: down and up with nothing between. */
+function tap(target: EventTarget = document, extra: KeyboardEventInit = {}): void {
+  const key = commentModifier();
+  const flag = key === "Meta" ? { metaKey: true } : { ctrlKey: true };
+  const init = { key, bubbles: true, composed: true, ...extra };
+  target.dispatchEvent(new KeyboardEvent("keydown", { ...init, ...flag }));
+  target.dispatchEvent(new KeyboardEvent("keyup", init));
+}
+
+/** Copying a paragraph must not start a comment. This is that test. */
+describe("the modifier tap over a real page", () => {
   it("arms a text pick of the passage already selected on the page", () => {
     const maple = client();
     const paragraph = selectParagraph();
 
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "c", bubbles: true }));
+    tap();
     expect(maple.getState().pick).toEqual({ armed: true, kind: "text" });
 
     paragraph.remove();
@@ -147,11 +161,11 @@ describe("the c shortcut over a real page", () => {
     maple.arm("region");
     maple.disarm();
     const paragraph = selectParagraph();
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "c", bubbles: true }));
+    tap();
     maple.disarm();
 
     getSelection()?.removeAllRanges();
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "c", bubbles: true }));
+    tap();
     expect(maple.getState().pick).toEqual({ armed: true, kind: "region" });
     paragraph.remove();
   });
@@ -159,14 +173,13 @@ describe("the c shortcut over a real page", () => {
   it("arms the remembered kind when the selection is collapsed", () => {
     const maple = client();
     getSelection()?.removeAllRanges();
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "c", bubbles: true }));
+    tap();
     expect(maple.getState().pick).toEqual({ armed: true, kind: "element" });
   });
 
   it("moves on to the next kind when pressed again while armed", () => {
     const maple = client();
-    const press = () =>
-      document.dispatchEvent(new KeyboardEvent("keydown", { key: "c", bubbles: true }));
+    const press = () => tap();
 
     press();
     expect(maple.getState().pick).toEqual({ armed: true, kind: "element" });
@@ -183,18 +196,33 @@ describe("the c shortcut over a real page", () => {
     maple?.destroy();
 
     const next = client();
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "c", bubbles: true }));
+    tap();
     expect(next.getState().pick).toEqual({ armed: true, kind: "region" });
   });
 
-  it("does nothing for the copy shortcut", () => {
+  it("does nothing for the copy shortcut or a click while it is down", () => {
     const maple = client();
-    document.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "c", ctrlKey: true, bubbles: true }),
-    );
-    document.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "c", metaKey: true, bubbles: true }),
-    );
+    const key = commentModifier();
+    const flag = key === "Meta" ? { metaKey: true } : { ctrlKey: true };
+    const send = (type: string, init: KeyboardEventInit) =>
+      document.dispatchEvent(new KeyboardEvent(type, { bubbles: true, ...init }));
+
+    send("keydown", { key, ...flag });
+    send("keydown", { key: "c", ...flag });
+    send("keyup", { key });
+    send("keydown", { key, ...flag });
+    document.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    send("keyup", { key });
+
+    expect(maple.getState().pick.armed).toBe(false);
+  });
+
+  it("does nothing for the other platform's modifier", () => {
+    const maple = client();
+    const key = commentModifier() === "Meta" ? "Control" : "Meta";
+    const flag = key === "Meta" ? { metaKey: true } : { ctrlKey: true };
+    document.dispatchEvent(new KeyboardEvent("keydown", { key, ...flag, bubbles: true }));
+    document.dispatchEvent(new KeyboardEvent("keyup", { key, bubbles: true }));
 
     expect(maple.getState().pick.armed).toBe(false);
   });
@@ -204,7 +232,7 @@ describe("the c shortcut over a real page", () => {
     const field = document.createElement("input");
     document.body.append(field);
     field.focus();
-    field.dispatchEvent(new KeyboardEvent("keydown", { key: "c", bubbles: true }));
+    tap(field);
 
     expect(maple.getState().pick.armed).toBe(false);
     field.remove();
@@ -217,7 +245,7 @@ describe("the c shortcut over a real page", () => {
     host.attachShadow({ mode: "open" }).append(field);
     document.body.append(host);
     field.focus();
-    field.dispatchEvent(new KeyboardEvent("keydown", { key: "c", bubbles: true, composed: true }));
+    tap(field);
 
     expect(maple.getState().pick.armed).toBe(false);
     host.remove();

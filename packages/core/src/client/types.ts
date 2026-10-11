@@ -65,7 +65,7 @@ export const DETAILS = ["default", "developer"] as const;
 export type Detail = (typeof DETAILS)[number];
 
 /**
- * The three picks, in the order the island shows them and `c` cycles them.
+ * The three picks, in the order the island shows them and a tap of the modifier cycles them.
  * One list, so the keyboard and the buttons never disagree about "next".
  */
 export const PICK_ORDER = ["element", "text", "region"] as const satisfies readonly PickKind[];

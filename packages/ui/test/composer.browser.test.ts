@@ -1,4 +1,4 @@
-import { createMapleClient } from "@maple-kit/core/client";
+import { commentModifier, createMapleClient } from "@maple-kit/core/client";
 import { toCommentContext } from "@maple-kit/core/overlay";
 import { http, HttpResponse } from "msw";
 import { createElement } from "react";
@@ -161,10 +161,10 @@ async function open(options: TreeOptions = {}): Promise<HTMLElement> {
 }
 
 /**
- * The trap this gate is named for: `c` opens comment mode, `Ctrl`+`C` is copy,
- * and the first build fired on the key alone.
+ * The trap this gate is named for: a tap of the modifier opens comment mode,
+ * `Cmd`+`C` is copy, and the first build fired on the key alone.
  */
-describe("the bare-key shortcut, with a real selection on the page", () => {
+describe("the modifier tap, with a real selection on the page", () => {
   function selectAPassage(): Selection {
     const passage = document.createElement("p");
     passage.dataset["probe"] = "passage";
@@ -198,34 +198,42 @@ describe("the bare-key shortcut, with a real selection on the page", () => {
     expect(selection.toString()).toContain("Retention fell");
   });
 
-  it("takes the selected passage as a text pick on a bare c", async () => {
+  function tap(target: EventTarget = document): void {
+    const key = commentModifier();
+    const flag = key === "Meta" ? { metaKey: true } : { ctrlKey: true };
+    const init = { key, bubbles: true, composed: true };
+    target.dispatchEvent(new KeyboardEvent("keydown", { ...init, ...flag }));
+    target.dispatchEvent(new KeyboardEvent("keyup", init));
+  }
+
+  it("takes the selected passage as a text pick on a tap", async () => {
     started();
     await render(tree());
     selectAPassage();
 
-    press({});
+    tap();
 
     expect(client.getState().pick).toEqual({ armed: true, kind: "text" });
   });
 
-  it("arms element picking on a bare c with nothing selected", async () => {
+  it("arms element picking on a tap with nothing selected", async () => {
     started();
     await render(tree());
     window.getSelection()?.removeAllRanges();
 
-    press({});
+    tap();
 
     expect(client.getState().pick).toEqual({ armed: true, kind: "element" });
   });
 
-  it("stays out of the way of anyone typing a c", async () => {
+  it("stays out of the way of anyone typing", async () => {
     started();
     await render(tree());
     const field = document.createElement("input");
     field.dataset["probe"] = "field";
     document.body.append(field);
 
-    press({}, field);
+    tap(field);
 
     expect(client.getState().pick.armed).toBe(false);
   });

@@ -20,7 +20,7 @@ import { useMapleUi } from "../context.js";
 import { ringLabel } from "../marks/label.js";
 import { MapleTargetRing } from "../marks/ring.js";
 import { useShots } from "../shots.js";
-import { PICK_HINTS, PICKER_COPY, pickerLabel } from "./language.js";
+import { cycleHint, PICK_HINTS, PICKER_COPY, pickerLabel } from "./language.js";
 import { startSession } from "./session.js";
 import { elementOf, targetFor } from "./target.js";
 
@@ -118,7 +118,7 @@ function reasonOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-/** Escape leaves picking. `c` again cycles the kind, and the controller owns that. */
+/** Escape leaves picking. A tap of the modifier again cycles the kind, and the controller owns that. */
 function useKeys(armed: boolean, client: ReturnType<typeof useMapleClient>): void {
   useEffect(() => {
     if (!armed) return;
@@ -155,7 +155,7 @@ function Hint(props: HintProps): ReactElement {
     createElement("span", { className: "mk-pick-say" }, PICK_HINTS[props.kind]),
     createElement(
       "span",
-      { className: "mk-pick-kinds" },
+      { className: "mk-pick-kinds", title: cycleHint() },
       ...PICK_ORDER.map((kind) =>
         createElement(
           "button",

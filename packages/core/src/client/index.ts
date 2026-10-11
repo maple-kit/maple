@@ -54,14 +54,27 @@ export type {
   StoredPreferences,
 } from "./preferences.js";
 export {
-  COMMENT_SHORTCUT,
+  commentModifier,
+  commentTapLabel,
   isEditable,
   MOCK_SHORTCUT,
-  opensComposer,
   opensMock,
+  TAP_IDLE,
+  TAP_MS,
+  tapStep,
+  watchCommentTap,
   watchEscape,
 } from "./shortcut.js";
-export type { EscapeOptions, ShortcutEvent } from "./shortcut.js";
+export type {
+  EscapeOptions,
+  PlatformSource,
+  ShortcutEvent,
+  TapInput,
+  TapModifier,
+  TapOptions,
+  TapState,
+  TapStep,
+} from "./shortcut.js";
 export {
   BRIDGE_PARAM,
   capturePairing,

@@ -6,6 +6,8 @@
  * beside it, and switches without going back to the island for it.
  */
 
+import { commentTapLabel } from "@maple-kit/core/client";
+
 import type { PickKind } from "@maple-kit/core/client";
 
 /** The instruction for each pick, which is the gesture and nothing else. */
@@ -20,10 +22,14 @@ export const PICKER_COPY = {
   cancel: "Cancel",
   cancelHint: "Esc",
   bar: "Choosing what to comment on",
-  cycle: "Press c again to cycle",
 } as const;
 
 /** What a screen reader hears on the bar while a pick is armed. */
 export function pickerLabel(kind: PickKind): string {
   return `${PICKER_COPY.bar}: ${PICK_HINTS[kind]}.`;
+}
+
+/** The tooltip on the kinds: tapping the comment modifier again moves to the next. */
+export function cycleHint(): string {
+  return `${commentTapLabel()} to switch`;
 }

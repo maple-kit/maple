@@ -22,7 +22,7 @@ import { startLink } from "./link.js";
 import { createNavigationGuard } from "./navigation.js";
 import { POLL_MS, startPolling } from "./poll.js";
 import { readMapleConfig, readPreferences, writePreferences } from "./preferences.js";
-import { opensComposer } from "./shortcut.js";
+import { watchCommentTap } from "./shortcut.js";
 import { capturePairing, forgetPairing, SOLO_PARAM } from "./solo.js";
 import { themeFrom, watchTheme } from "./theme.js";
 import { readDraftExport, writeDraftExport } from "./transfer.js";
@@ -295,7 +295,7 @@ interface Runtime {
   judges: AssistConfig | null;
   /** Whether the viewer wants judging at all, whatever the route offers. */
   assistOn: boolean;
-  /** What `c` arms from nothing: the kind the viewer armed last, remembered. */
+  /** What a tap arms from nothing: the kind the viewer armed last, remembered. */
   lastPick: PickKind;
   /** True while a quiet re-read is out, so a slow route never stacks them. */
   polling: boolean;
@@ -554,7 +554,7 @@ function start(runtime: Runtime): void {
 
   const abort = new AbortController();
   const { signal } = abort;
-  view.document.addEventListener("keydown", (event) => onKeydown(runtime, event), { signal });
+  watchCommentTap({ view, signal, onTap: () => onTap(runtime) });
   view.addEventListener("storage", (event) => onStorage(runtime, event), { signal });
   startPolling({
     intervalMs: runtime.options.pollMs ?? POLL_MS,
@@ -636,12 +636,11 @@ function destroy(runtime: Runtime): void {
 }
 
 /**
- * `c` arms the kind armed last, and again moves to the next. Over a selection
- * it picks that passage, not remembered as a choice. `Ctrl`+`C` is copy.
+ * A tap of the platform modifier arms the kind armed last, and again moves to
+ * the next. Over a selection it picks that passage, not remembered as a choice.
  */
-function onKeydown(runtime: Runtime, event: Event): void {
+function onTap(runtime: Runtime): void {
   if (runtime.state.composer.open) return;
-  if (!opensComposer(event as KeyboardEvent, runtime.config.shortcut)) return;
   const { pick } = runtime.state;
   if (pick.armed && pick.kind) return arm(runtime, nextPick(pick.kind));
 

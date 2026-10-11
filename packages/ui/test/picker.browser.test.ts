@@ -1,3 +1,4 @@
+import { commentModifier } from "@maple-kit/core/client";
 import { useMapleClient } from "@maple-kit/react";
 import { createElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -118,6 +119,14 @@ function topAt(x: number, y: number): Element {
   return root().elementFromPoint(x, y) ?? outer;
 }
 
+/** A tap of this platform's modifier: down and up with nothing between. */
+function tap(): void {
+  const key = commentModifier();
+  const flag = key === "Meta" ? { metaKey: true } : { ctrlKey: true };
+  document.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, ...flag }));
+  document.dispatchEvent(new KeyboardEvent("keyup", { key, bubbles: true }));
+}
+
 function press(key: string): void {
   document.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }));
 }
@@ -220,17 +229,17 @@ describe("an armed pick", () => {
     expect(root().querySelector(".mk-shield")).toBeNull();
   });
 
-  it("cycles the three kinds on c pressed again, without going back to the island", async () => {
-    press("c");
+  it("cycles the three kinds on the modifier tapped again, without going back to the island", async () => {
+    tap();
     await vi.waitFor(() =>
       expect(client.getState().pick).toEqual({ armed: true, kind: "element" }),
     );
 
-    press("c");
+    tap();
     await vi.waitFor(() => expect(client.getState().pick.kind).toBe("text"));
-    press("c");
+    tap();
     await vi.waitFor(() => expect(client.getState().pick.kind).toBe("region"));
-    press("c");
+    tap();
     await vi.waitFor(() => expect(client.getState().pick.kind).toBe("element"));
   });
 
@@ -246,7 +255,7 @@ describe("an armed pick", () => {
     press("Escape");
     await vi.waitFor(() => expect(client.getState().pick.armed).toBe(false));
 
-    press("c");
+    tap();
     await vi.waitFor(() => expect(client.getState().pick).toEqual({ armed: true, kind: "region" }));
   });
 
@@ -258,7 +267,7 @@ describe("an armed pick", () => {
     getSelection()?.removeAllRanges();
     getSelection()?.addRange(range);
 
-    press("c");
+    tap();
 
     await vi.waitFor(() => expect(client.getState().composer.open).toBe(true));
     const target = client.getState().composer.target;
