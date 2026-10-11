@@ -159,6 +159,7 @@ below the table.
 | `file` (media)       | —    | —      | —         | —    | —     | —         | —       | —         | ✓       | ✓      | —             | —           | —           | —       | —    | —     | —        | —    | —        |
 | `r2` (media)         | —    | —      | —         | —    | —     | —         | —       | —         | ✓       | ✓      | —             | —           | —           | —       | —    | —     | —        | —    | —        |
 | `memory` (reference) | ✓    | ✓      | ✓         | ✓    | —     | ✓         | ✓       | ✓         | —       | —      | —             | —           | —           | ✓       | ✓    | ✓     | ✓        | ✓    | —        |
+| `memory` (rules)     | —    | —      | —         | —    | —     | —         | —       | —         | —       | —      | —             | —           | —           | —       | —    | —     | —        | —    | ✓        |
 | `keyword` (baseline) | —    | —      | —         | —    | —     | —         | —       | —         | —       | —      | —             | —           | —           | —       | —    | ✓     | ✓        | ✓    | —        |
 
 `file` ships from `@maple-kit/core/local` and is the local store: see
