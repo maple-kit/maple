@@ -39,11 +39,11 @@ function Keep(): null {
   return null;
 }
 
-function tree(media = true, refuse?: number): ReactElement {
+function tree(media = true, refuse?: number, route?: typeof fetch): ReactElement {
   const answers = { media, ...(refuse === undefined ? {} : { refuse }) };
   return createElement(
     MapleRoot,
-    { branch: BRANCH, theme: "light", options: { fetch: offlineFetch(answers) } },
+    { branch: BRANCH, theme: "light", options: { fetch: route ?? offlineFetch(answers) } },
     createElement(Keep),
     createElement(MapleComposer, null, createElement(MapleAttachments)),
   );
@@ -225,6 +225,36 @@ describe("the default upload", () => {
     shotsOf().put(taken());
 
     await vi.waitFor(() => expect(strip()?.textContent).toContain("turn on screenshot storage"));
+  });
+});
+
+/** The first upload is refused, as a signed-out reviewer's is; the rest are kept. */
+function refusingOnce(): typeof fetch {
+  const offline = offlineFetch();
+  let refused = false;
+
+  return (input, init) => {
+    const url = String(input instanceof Request ? input.url : input);
+    if (!url.includes("/media") || refused) return offline(input, init);
+    refused = true;
+    return Promise.resolve(Response.json({ error: "Sign in" }, { status: 401 }));
+  };
+}
+
+/** A failed upload is said about its own image, not about the strip it was in. */
+describe("a failed upload", () => {
+  it("does not mark the next image as failed once it uploads", async () => {
+    await render(tree(true, undefined, refusingOnce()));
+    await vi.waitFor(() => expect(client?.getState().phase).toBe("ready"));
+    client?.openComposer({ kind: "element", anchor: { component: "YieldCard" } });
+    await vi.waitFor(() => expect(strip()).not.toBeNull());
+
+    shotsOf().put(taken());
+    await vi.waitFor(() => expect(strip()?.textContent).toContain("could not be attached"));
+
+    shotsOf().put(taken());
+    await vi.waitFor(() => expect(client?.getState().composer.attachments).toHaveLength(1));
+    expect(strip()?.textContent).not.toContain("could not be attached");
   });
 });
 

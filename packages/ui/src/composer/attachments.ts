@@ -249,7 +249,7 @@ function useUpload(
 ): boolean {
   const client = useMapleClient();
   const sent = useRef<PastedImage>(undefined);
-  const [failed, setFailed] = useState(false);
+  const [failedImage, setFailedImage] = useState<PastedImage>();
 
   useEffect(() => {
     const image = scope.pending?.image;
@@ -263,7 +263,7 @@ function useUpload(
       if (live) client.attach({ ...ref, source });
     };
     const broke = (): void => {
-      if (live) setFailed(true);
+      if (live) setFailedImage(image);
     };
 
     void put(image).then(done, broke);
@@ -272,7 +272,8 @@ function useUpload(
     };
   }, [scope.pending, upload, media, client]);
 
-  return failed;
+  // A failure belongs to the image it happened to, not to the strip.
+  return failedImage !== undefined && failedImage === scope.pending?.image;
 }
 
 /** The default seam: the route's own media endpoint, on the same origin. */
