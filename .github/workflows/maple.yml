@@ -5,6 +5,8 @@ name: Maple
 # and deletes ```maple comments as the reviewer, so those events re-run sync
 # and gate; the action's own GITHUB_TOKEN edits trigger nothing. issue_comment
 # runs the default branch's copy and checks nothing out, so no PR code runs.
+# A fork's pull_request token is read-only and cannot create the check run, and
+# a fork gets no preview to comment on, so fork pull requests are skipped.
 on:
   pull_request:
   issue_comment:
@@ -16,7 +18,8 @@ permissions:
 jobs:
   review:
     if: >-
-      github.event_name == 'pull_request' ||
+      (github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository) ||
       (github.event.issue.pull_request &&
       contains(github.event.comment.body, '```maple'))
     runs-on: ubuntu-latest
