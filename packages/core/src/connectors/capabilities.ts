@@ -26,6 +26,7 @@ export const CONNECTOR_METHODS = {
   identity: ["resolveUser"],
   gate: ["publish", "read"],
   classifier: ["score", "classify", "plan"],
+  rules: ["evaluate"],
 } as const satisfies Record<ConnectorKind, readonly string[]>;
 
 /**
@@ -42,6 +43,7 @@ export const REQUIRED_METHODS = {
   identity: ["resolveUser"],
   gate: ["publish"],
   classifier: [],
+  rules: ["evaluate"],
 } as const satisfies Record<ConnectorKind, readonly string[]>;
 
 /** The method names valid for a given connector kind. */

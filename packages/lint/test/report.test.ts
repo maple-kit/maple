@@ -5,7 +5,7 @@ import { describePlace, placeOf } from "../src/report/place.js";
 import { toSarif } from "../src/report/sarif.js";
 import { unreachableVerdict, verdictFor } from "../src/report/verdict.js";
 
-import type { Finding } from "../src/types.js";
+import type { Finding } from "@maple-kit/core/connectors";
 
 function finding(over: Partial<Finding> = {}): Finding {
   return {

@@ -202,8 +202,8 @@ export function myStore(options: MyOptions): StoreConnector {
 }
 ```
 
-There are six kinds — store, media, observability, identity, gate and
-classifier — and a connector's capabilities are exactly the methods it defines.
+There are seven kinds — store, media, observability, identity, gate,
+classifier and rules — and a connector's capabilities are exactly the methods it defines.
 Run `maple connectors` to print the matrix from the code, or see
 [`docs/connectors.md`](docs/connectors.md).
 

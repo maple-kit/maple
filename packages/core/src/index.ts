@@ -9,6 +9,7 @@ export type {
   ConnectorKind,
   ConnectorMeta,
   ConnectorMethod,
+  Finding,
   GateConnector,
   GateReport,
   GateTarget,
@@ -29,9 +30,15 @@ export type {
   PlannedCall,
   ReplayEvent,
   ReplayQuery,
+  Rule,
+  RuleConnector,
+  RuleRequest,
+  RuleTarget,
   ScoreRequest,
+  Severity,
   StateGuess,
   StoreConnector,
+  Tier,
 } from "./connectors/index.js";
 export {
   assertUsable,

@@ -11,8 +11,8 @@
 import { ADVISORY_AUTHORS } from "@maple-kit/core";
 
 import type { RenderedRun } from "./rendered/audit.js";
-import type { Finding } from "./types.js";
 import type { Comment, CommentAuthor, CommentContext } from "@maple-kit/core";
+import type { Finding } from "@maple-kit/core/connectors";
 
 /** Who a finding is from. Not a person, and it says so. */
 export const LINT_AUTHOR: CommentAuthor = {

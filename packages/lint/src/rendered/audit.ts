@@ -15,9 +15,9 @@ import { toCommentContext } from "@maple-kit/core/overlay";
 import { readTokenFiles, type TokenSet } from "../tokens.js";
 import { reducedMotionFindings, renderedFindings, unreadableColors } from "./rules.js";
 
-import type { Finding } from "../types.js";
 import type { Reading } from "./collect.js";
 import type { CommentContext } from "@maple-kit/core";
+import type { Finding } from "@maple-kit/core/connectors";
 import type { Logger } from "@maple-kit/core/logger";
 import type { Browser, BrowserContext, Page } from "playwright";
 

@@ -115,7 +115,7 @@ resolves to `undefined`, and `keepsApprovals` reads the capability report.
   is the caller's argument, not the backend, and it is refused identically
   however many times it is sent.
 
-## The six kinds
+## The seven kinds
 
 Run `maple connectors` to print this from the code.
 
@@ -127,12 +127,20 @@ Run `maple connectors` to print this from the code.
 | `identity`      | `resolveUser`       | —                                                                 |
 | `gate`          | `publish`           | `read`                                                            |
 | `classifier`    | —                   | `score`, `classify`, `plan`                                       |
+| `rules`         | `evaluate`          | —                                                                 |
 
 `classifier` is the one kind that requires nothing: all of its methods are
 optional, so one defining none is inert rather than invalid. `docs/assist.md`
 is its design record, and it is the only kind whose answers a reviewer reads
 rather than acts on — a score never blocks, gates, delays or rewrites a send.
 `plan` reads a mock request; `docs/mock.md` has its half.
+
+`rules` is the judged tier of design lint (`docs/lint.md`). A `RuleConnector`
+carries a `rules` list of `{ id, question, appliesTo, severity? }`, where
+`appliesTo` is a CSS selector, and `evaluate(request)` judges the matching
+elements and returns `Finding`s. `evaluate` is required: a rules connector that
+cannot judge has nothing to offer. `Finding`, `Tier` and `Severity` live in
+`@maple-kit/core`, so a connector author never depends on `@maple-kit/lint`.
 
 A backend can be more than one kind. One object may implement `StoreConnector`
 and `IdentityConnector` at once; Maple checks the methods it needs for the role
@@ -143,15 +151,15 @@ it is filling it in.
 `✓` implemented · `—` not implemented · `~` implemented with a caveat, explained
 below the table.
 
-| Connector            | list | append | setStatus | head | watch | approvals | approve | unapprove | putBlob | getUrl | getReplayLink | fetchEvents | resolveUser | publish | read | score | classify | plan |
-| -------------------- | ---- | ------ | --------- | ---- | ----- | --------- | ------- | --------- | ------- | ------ | ------------- | ----------- | ----------- | ------- | ---- | ----- | -------- | ---- |
-| `github` (store)     | ✓    | ✓      | ✓         | ✓    | —     | ✓         | ✓       | ✓         | —       | —      | —             | —           | —           | —       | —    | —     | —        | —    |
-| `github` (gate)      | —    | —      | —         | —    | —     | —         | —       | —         | —       | —      | —             | —           | —           | ✓       | ✓    | —     | —        | —    |
-| `file` (store)       | ✓    | ✓      | ✓         | —    | —     | ✓         | ✓       | ✓         | —       | —      | —             | —           | —           | —       | —    | —     | —        | —    |
-| `file` (media)       | —    | —      | —         | —    | —     | —         | —       | —         | ✓       | ✓      | —             | —           | —           | —       | —    | —     | —        | —    |
-| `r2` (media)         | —    | —      | —         | —    | —     | —         | —       | —         | ✓       | ✓      | —             | —           | —           | —       | —    | —     | —        | —    |
-| `memory` (reference) | ✓    | ✓      | ✓         | ✓    | —     | ✓         | ✓       | ✓         | —       | —      | —             | —           | —           | ✓       | ✓    | ✓     | ✓        | ✓    |
-| `keyword` (baseline) | —    | —      | —         | —    | —     | —         | —       | —         | —       | —      | —             | —           | —           | —       | —    | ✓     | ✓        | ✓    |
+| Connector            | list | append | setStatus | head | watch | approvals | approve | unapprove | putBlob | getUrl | getReplayLink | fetchEvents | resolveUser | publish | read | score | classify | plan | evaluate |
+| -------------------- | ---- | ------ | --------- | ---- | ----- | --------- | ------- | --------- | ------- | ------ | ------------- | ----------- | ----------- | ------- | ---- | ----- | -------- | ---- | -------- |
+| `github` (store)     | ✓    | ✓      | ✓         | ✓    | —     | ✓         | ✓       | ✓         | —       | —      | —             | —           | —           | —       | —    | —     | —        | —    | —        |
+| `github` (gate)      | —    | —      | —         | —    | —     | —         | —       | —         | —       | —      | —             | —           | —           | ✓       | ✓    | —     | —        | —    | —        |
+| `file` (store)       | ✓    | ✓      | ✓         | —    | —     | ✓         | ✓       | ✓         | —       | —      | —             | —           | —           | —       | —    | —     | —        | —    | —        |
+| `file` (media)       | —    | —      | —         | —    | —     | —         | —       | —         | ✓       | ✓      | —             | —           | —           | —       | —    | —     | —        | —    | —        |
+| `r2` (media)         | —    | —      | —         | —    | —     | —         | —       | —         | ✓       | ✓      | —             | —           | —           | —       | —    | —     | —        | —    | —        |
+| `memory` (reference) | ✓    | ✓      | ✓         | ✓    | —     | ✓         | ✓       | ✓         | —       | —      | —             | —           | —           | ✓       | ✓    | ✓     | ✓        | ✓    | —        |
+| `keyword` (baseline) | —    | —      | —         | —    | —     | —         | —       | —         | —       | —      | —             | —           | —           | —       | —    | ✓     | ✓        | ✓    | —        |
 
 `file` ships from `@maple-kit/core/local` and is the local store: see
 [A local store, for a laptop](#a-local-store-for-a-laptop).

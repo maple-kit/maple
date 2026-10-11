@@ -7,8 +7,8 @@
 
 import { placeOf } from "./place.js";
 
-import type { Finding, Severity } from "../types.js";
 import type { Verdict } from "./verdict.js";
+import type { Finding, Severity } from "@maple-kit/core/connectors";
 
 /** The name a branch-protection ruleset requires. */
 export const DESIGN_LINT_CHECK = "maple/design-lint";

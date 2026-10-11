@@ -8,7 +8,7 @@
 
 import { placeOf } from "./place.js";
 
-import type { Finding, Severity } from "../types.js";
+import type { Finding, Severity } from "@maple-kit/core/connectors";
 
 /** The SARIF log, as much of it as this writer produces. */
 export interface SarifLog {
