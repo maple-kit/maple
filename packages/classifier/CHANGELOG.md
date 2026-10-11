@@ -1,5 +1,26 @@
 # @maple-kit/classifier
 
+## 0.19.0
+
+### Patch Changes
+
+- Updated dependencies [0a71dab]
+- Updated dependencies [b62f2a0]
+- Updated dependencies [83bffd2]
+- Updated dependencies [0a71dab]
+- Updated dependencies [0a71dab]
+- Updated dependencies [6a49a8c]
+- Updated dependencies [b3a3f19]
+- Updated dependencies [c689f72]
+- Updated dependencies [0a71dab]
+- Updated dependencies [b3a3f19]
+- Updated dependencies [a2a3713]
+- Updated dependencies [817ab18]
+- Updated dependencies [aab18b6]
+- Updated dependencies [a2a3713]
+- Updated dependencies [1c7e69a]
+  - @maple-kit/core@0.19.0
+
 ## 0.18.0
 
 ### Patch Changes
