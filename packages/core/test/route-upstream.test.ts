@@ -73,7 +73,7 @@ describe("what the connector keeps of a refusal", () => {
       .catch((caught: unknown) => caught);
 
     expect(error).toBeInstanceOf(MapleStoreError);
-    expect((error as MapleStoreError).reason).toBe("rejected");
+    expect((error as MapleStoreError).reason).toBe(status === 401 ? "unauthorized" : "rejected");
     expect((error as MapleStoreError).upstream).toBeInstanceOf(UpstreamError);
     expect((error as MapleStoreError).upstream).toMatchObject({ service: "GitHub", status });
   });

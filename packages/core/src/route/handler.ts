@@ -7,7 +7,7 @@
  * identity is a five-line function rather than a second login.
  */
 
-import { assertSecret } from "../auth/cookie.js";
+import { assertSecret, clearCookie, SESSION_COOKIE } from "../auth/cookie.js";
 import { MapleStoreError } from "../errors.js";
 import { isAdvisoryId } from "../gate/decide.js";
 import { publishGate } from "../gate/publish.js";
@@ -168,7 +168,7 @@ export function createMapleHandler(options: RouteOptions): (request: Request) =>
     try {
       return await dispatch(mount, request, route, url);
     } catch (error) {
-      return failure(options.logger, error);
+      return failure(options.logger, error, options.githubAuth);
     }
   };
 }
@@ -356,7 +356,7 @@ async function link(options: RouteOptions, request: Request): Promise<Response> 
     if (request.method === "DELETE") return endLink(auth);
     return json({ error: "Method not allowed" }, 405);
   } catch (error) {
-    return linkFailure(error) ?? failure(options.logger, error);
+    return linkFailure(error) ?? failure(options.logger, error, options.githubAuth);
   }
 }
 
@@ -654,7 +654,11 @@ function isDraft(value: unknown): value is Omit<NewComment, "author"> & { author
  * A connector's message goes to the log, not to the browser. It can name a
  * repository, a rate limit or a token that is about to expire.
  */
-function failure(logger: Logger | undefined, error: unknown): Response {
+function failure(
+  logger: Logger | undefined,
+  error: unknown,
+  auth: GitHubAuthOptions | undefined,
+): Response {
   logger?.error(
     "The Maple route failed.",
     error instanceof Error ? error : new Error(String(error)),
@@ -662,6 +666,11 @@ function failure(logger: Logger | undefined, error: unknown): Response {
 
   if (error instanceof MapleStoreError && error.reason === "unavailable") {
     return json({ error: "The store could not be reached" }, 503);
+  }
+  if (auth && error instanceof MapleStoreError && error.reason === "unauthorized") {
+    return json({ error: "Your GitHub sign-in has expired. Sign in again." }, 401, [
+      clearCookie(SESSION_COOKIE, auth),
+    ]);
   }
   const refusal = error instanceof MapleStoreError ? upstreamRefusal(error.upstream) : undefined;
   if (refusal) return json({ error: refusal }, 502);
@@ -688,9 +697,8 @@ function upstreamRefusal(upstream: UpstreamError | undefined): string | undefine
   return undefined;
 }
 
-function json(body: unknown, status: number): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "content-type": "application/json", "cache-control": "no-store" },
-  });
+function json(body: unknown, status: number, cookies: readonly string[] = []): Response {
+  const headers = new Headers({ "content-type": "application/json", "cache-control": "no-store" });
+  for (const cookie of cookies) headers.append("set-cookie", cookie);
+  return new Response(JSON.stringify(body), { status, headers });
 }

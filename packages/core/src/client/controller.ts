@@ -1236,7 +1236,14 @@ function checkTagged(runtime: Runtime, page: Document): void {
 /** The failure a surface reads; the route's own words go to the log instead,
  * because a connector can name a repository or a rate limit. */
 function fail(runtime: Runtime, error: unknown, during: MapleFailure["during"]): void {
-  patch(runtime, { error: failureFrom(error, during) });
+  const failure = failureFrom(error, during);
+  // An expired token answers 401 while /me still says linked: offer sign-in.
+  patch(runtime, {
+    error: failure,
+    ...(failure.kind === "unauthorized" && runtime.state.github.state === "linked"
+      ? { github: { state: "unlinked" as const } }
+      : {}),
+  });
   runtime.options.logger?.error(
     `A Maple ${during} failed.`,
     error instanceof Error ? error : new Error(detailOf(error)),

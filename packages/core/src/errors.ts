@@ -27,8 +27,8 @@ export class MapleStoreError extends Error {
   readonly upstream: UpstreamError | undefined;
 
   constructor(
-    /** Whether another attempt could succeed. */
-    readonly reason: "rejected" | "unavailable",
+    /** Whether another attempt could succeed; `unauthorized` is a refused credential. */
+    readonly reason: "rejected" | "unauthorized" | "unavailable",
     readonly connector: string,
     readonly operation: string,
     override readonly cause: unknown,

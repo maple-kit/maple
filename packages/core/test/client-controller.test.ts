@@ -118,6 +118,29 @@ describe("loading a branch", () => {
     expect(maple.getState().github).toEqual({ state: "unlinked" });
   });
 
+  it("signs a linked reviewer out when the route says the token is no good", async () => {
+    server.use(
+      http.get(`${MAPLE_BASE}/me`, () =>
+        HttpResponse.json({ user: { id: "u_7", name: "Dana" }, github: { linked: true } }),
+      ),
+      http.post(`${MAPLE_BASE}/comments`, () =>
+        HttpResponse.json({ error: "expired" }, { status: 401 }),
+      ),
+    );
+    const maple = client();
+    await maple.load();
+    expect(maple.getState().github.state).toBe("linked");
+
+    maple.openComposer(TARGET);
+    maple.setBody("Spacing is off.");
+    maple.keepDraft();
+    await maple.publish().catch(() => undefined);
+
+    expect(maple.getState().error?.kind).toBe("unauthorized");
+    expect(maple.getState().github).toEqual({ state: "unlinked" });
+    expect(maple.getState().drafts).toHaveLength(1);
+  });
+
   it("takes a failure off the state when it is dismissed", async () => {
     server.use(
       http.get(`${MAPLE_BASE}/comments`, () => HttpResponse.json({ error: "no" }, { status: 500 })),

@@ -80,9 +80,15 @@ function call<A>(
   );
 }
 
+function reasonOf(error: StoreRejected | StoreUnavailable): MapleStoreError["reason"] {
+  if (error._tag === "StoreUnavailable") return "unavailable";
+  const { cause } = error;
+  return cause instanceof UpstreamError && cause.status === 401 ? "unauthorized" : "rejected";
+}
+
 /** Restates a tagged failure as the public error type. */
 function toPublicError(error: StoreRejected | StoreUnavailable): MapleStoreError {
-  const reason = error._tag === "StoreUnavailable" ? "unavailable" : "rejected";
+  const reason = reasonOf(error);
   return new MapleStoreError(reason, error.connector, error.operation, error.cause);
 }
 
