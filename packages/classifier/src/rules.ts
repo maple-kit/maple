@@ -6,6 +6,7 @@
  * page travel in ONE request whenever they fit: jev reads the page once and
  * answers them all in parallel. jev takes 64k tokens a request, 32k of them
  * state, so a page whose elements do not fit is split into a few requests.
+ * Choosing and truncating elements is the caller's: lint does both.
  */
 
 import { openSystemOne } from "./internal/systemone.js";
@@ -28,8 +29,6 @@ export interface JevRulesOptions {
   readonly rules: readonly Rule[];
   /** The API root `/systemone` is appended to, defaulting to TypeSafe's own. */
   readonly baseUrl?: string | undefined;
-  /** The most elements one `evaluate` call judges; more rejects. Defaults to 50. */
-  readonly maxTargets?: number | undefined;
   /** An alias or a pinned version. Defaults to the flagship alias. */
   readonly model?: string | undefined;
   /** The probability at or above which an element is flagged. Defaults to 0.5. */
@@ -44,25 +43,15 @@ const DEFAULT_MODEL = "jev-latest";
 /** A CI run waits for a whole page's batch; nobody is typing. */
 export const DEFAULT_RULES_TIMEOUT_MS = 60_000;
 
-/** Elements judged per `evaluate`, so a runaway selector costs a rejection rather than a bill. */
-export const DEFAULT_MAX_TARGETS = 50;
-
 /** The probability of yes that counts as a violation, as the planner uses. */
 export const DEFAULT_RULES_THRESHOLD = 0.5;
-
-/** One element's HTML past this is cut: markup is ~3 characters a token, and 8k is ~2.7k tokens. */
-export const MAX_TARGET_HTML_CHARS = 8000;
 
 /** One request's state: 80k characters is ~27k tokens, under jev's 32k for state plus a question. */
 export const MAX_REQUEST_STATE_CHARS = 80_000;
 
-/** Marks where an element's HTML was cut, so the judge knows it is not the whole. */
-const TRUNCATED = "<!-- truncated -->";
-
 /** Builds the connector. Nothing is requested until `evaluate` is called with targets. */
 export function jevRules(options: JevRulesOptions): RuleConnector {
   const threshold = options.threshold ?? DEFAULT_RULES_THRESHOLD;
-  const maxTargets = options.maxTargets ?? DEFAULT_MAX_TARGETS;
   const byId = new Map(options.rules.map((rule) => [rule.id, rule]));
   let system: SystemOne | undefined;
 
@@ -72,12 +61,9 @@ export function jevRules(options: JevRulesOptions): RuleConnector {
 
     async evaluate(request: RuleRequest): Promise<readonly Finding[]> {
       const { targets } = request;
-      if (targets.length > maxTargets) {
-        throw new Error(
-          `jev rules were asked to judge ${targets.length} elements; the limit is ${maxTargets}. Narrow a rule's \`appliesTo\` or raise \`maxTargets\`.`,
-        );
-      }
       const judged = targets.map((target) => ({ target, rule: ruleFor(byId, target) }));
+      const batches = batchesOf(judged);
+      if (batches.length === 0) return [];
 
       system ??= openSystemOne({
         apiKey: options.apiKey,
@@ -86,10 +72,10 @@ export function jevRules(options: JevRulesOptions): RuleConnector {
         timeoutMs: options.timeoutMs ?? DEFAULT_RULES_TIMEOUT_MS,
       });
       const open = system;
-      const batches = await Promise.all(
-        batchesOf(judged).map((batch) => judgeBatch(open, request, batch, threshold)),
+      const found = await Promise.all(
+        batches.map((batch) => judgeBatch(open, request, batch, threshold)),
       );
-      return batches.flat();
+      return found.flat();
     },
   };
 }
@@ -106,12 +92,20 @@ function ruleFor(byId: ReadonlyMap<string, Rule>, target: RuleTarget): Rule {
   return rule;
 }
 
-/** Groups elements, in order, so no request's HTML passes the state budget. */
+/**
+ * Groups elements, in order, so no request's HTML passes the state budget. An
+ * element that alone passes it rejects: selecting and truncating is the caller's.
+ */
 function batchesOf(judged: readonly Judged[]): Judged[][] {
   const batches: Judged[][] = [];
   let size = 0;
   for (const item of judged) {
-    const length = htmlOf(item.target).length;
+    const length = item.target.html.length;
+    if (length > MAX_REQUEST_STATE_CHARS) {
+      throw new Error(
+        `jev rule "${item.rule.id}" was given an element of ${length} characters; one request holds ${MAX_REQUEST_STATE_CHARS}. The caller must truncate it first (lint does).`,
+      );
+    }
     const last = batches.at(-1);
     if (last === undefined || size + length > MAX_REQUEST_STATE_CHARS) {
       batches.push([item]);
@@ -122,13 +116,6 @@ function batchesOf(judged: readonly Judged[]): Judged[][] {
     }
   }
   return batches;
-}
-
-/** An element's HTML within its own cap. */
-function htmlOf(target: RuleTarget): string {
-  return target.html.length > MAX_TARGET_HTML_CHARS
-    ? target.html.slice(0, MAX_TARGET_HTML_CHARS) + TRUNCATED
-    : target.html;
 }
 
 /** Asks one request's questions and flags the elements whose answer reaches the threshold. */
@@ -150,7 +137,7 @@ async function judgeBatch(
     signal: undefined,
     state: {
       page: { url: request.url, viewport: { ...request.viewport } },
-      targets: batch.map(({ target }) => ({ html: htmlOf(target) })),
+      targets: batch.map(({ target }) => ({ html: target.html })),
     },
   });
 

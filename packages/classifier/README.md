@@ -219,15 +219,14 @@ const rules = jevRules({
 });
 ```
 
-| Option       | Default                      | What it is                                                                   |
-| ------------ | ---------------------------- | ---------------------------------------------------------------------------- |
-| `apiKey`     | —                            | The credential. Server-side or CI only.                                      |
-| `rules`      | —                            | What to judge. `severity` defaults to `advice`.                              |
-| `baseUrl`    | `https://api.typesafe.ai/v1` | As for `jevClassifier`.                                                      |
-| `model`      | `jev-latest`                 | An alias or a pinned version id.                                             |
-| `threshold`  | `0.5`                        | The probability of yes at or above which an element is flagged.              |
-| `timeoutMs`  | `60000`                      | Per request. A CI run waits for a page; it is not a keystroke.               |
-| `maxTargets` | `50`                         | Elements one `evaluate` judges. More rejects, so a selector cannot run away. |
+| Option      | Default                      | What it is                                                      |
+| ----------- | ---------------------------- | --------------------------------------------------------------- |
+| `apiKey`    | —                            | The credential. Server-side or CI only.                         |
+| `rules`     | —                            | What to judge. `severity` defaults to `advice`.                 |
+| `baseUrl`   | `https://api.typesafe.ai/v1` | As for `jevClassifier`.                                         |
+| `model`     | `jev-latest`                 | An alias or a pinned version id.                                |
+| `threshold` | `0.5`                        | The probability of yes at or above which an element is flagged. |
+| `timeoutMs` | `60000`                      | Per request. A CI run waits for a page; it is not a keystroke.  |
 
 All the questions for a page travel in **one** request. jev takes text only and
 64k tokens a request, 32k of them state, so each element's HTML is cut at 8,000

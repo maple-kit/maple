@@ -1,12 +1,7 @@
 import { http, HttpResponse } from "msw";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import {
-  DEFAULT_RULES_TIMEOUT_MS,
-  jevRules,
-  MAX_REQUEST_STATE_CHARS,
-  MAX_TARGET_HTML_CHARS,
-} from "../src/index.js";
+import { DEFAULT_RULES_TIMEOUT_MS, jevRules, MAX_REQUEST_STATE_CHARS } from "../src/index.js";
 import { createTestServer, useTestServer } from "./msw/server.js";
 import { createSystemOneFake } from "./msw/systemone.js";
 
@@ -95,29 +90,21 @@ describe("jevRules", () => {
     });
   });
 
-  it("cuts one element's html at its cap", async () => {
-    await connector().evaluate(request(["app/one-primary"], "x".repeat(MAX_TARGET_HTML_CHARS * 2)));
-    const state = fake.asked[0]?.state as { targets: { html: string }[] };
-    expect(state.targets[0]?.html.length).toBeLessThan(MAX_TARGET_HTML_CHARS + 50);
-    expect(state.targets[0]?.html).toContain("truncated");
-  });
-
   it("splits a page that does not fit one request, keeping every element", async () => {
-    const count = Math.ceil(MAX_REQUEST_STATE_CHARS / MAX_TARGET_HTML_CHARS) + 2;
+    const size = MAX_REQUEST_STATE_CHARS / 4;
+    const count = 6;
     const ids = Array.from({ length: count }, () => "app/one-primary");
 
-    const findings = await connector({ maxTargets: 100 }).evaluate(
-      request(ids, "x".repeat(MAX_TARGET_HTML_CHARS)),
-    );
+    const findings = await connector().evaluate(request(ids, "x".repeat(size)));
     expect(fake.asked.length).toBeGreaterThan(1);
     expect(fake.asked.flatMap((asked) => Object.keys(asked.questions))).toHaveLength(count);
     expect(findings.length).toBeGreaterThan(0);
   });
 
-  it("rejects more elements than maxTargets, before any request", async () => {
+  it("rejects one element too large for any request, naming the rule, before a request", async () => {
     await expect(
-      connector({ maxTargets: 1 }).evaluate(request(["app/one-primary", "app/one-primary"])),
-    ).rejects.toThrow(/limit is 1/);
+      connector().evaluate(request(["app/one-primary"], "x".repeat(MAX_REQUEST_STATE_CHARS + 1))),
+    ).rejects.toThrow(/"app\/one-primary".*must truncate/);
     expect(fake.asked).toHaveLength(0);
   });
 
