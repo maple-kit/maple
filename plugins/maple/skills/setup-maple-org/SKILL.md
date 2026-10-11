@@ -49,7 +49,7 @@ App** and fill it in as follows.
 | Callback URL                                      | Your organisation's home page                  |
 | Request user authorisation (OAuth) during install | Off                                            |
 | Enable Device Flow                                | **On**                                         |
-| Expire user authorisation tokens                  | **Off**                                        |
+| Expire user authorisation tokens                  | **On** (recommended) or Off                    |
 | Webhook → Active                                  | Off                                            |
 | Where can this app be installed?                  | Only on this account                           |
 
@@ -68,11 +68,13 @@ host whose URL is different on every deployment. Without it, the first sign-in
 attempt fails with `device_flow_disabled` and nothing else about this setup
 matters.
 
-**Expire user authorisation tokens must be off.** With expiry on, refreshing a
-token needs the App's `client_secret`, which would mean putting a GitHub secret
-into every preview environment. That is the thing this design exists to prevent.
-Off, the token is bounded by Maple's seven-day cookie instead, and the reviewer
-can revoke it at any time.
+**Expire user authorisation tokens: on is recommended, off is supported.** On,
+tokens die after eight hours (fixed by GitHub), nothing refreshes them, and the
+reviewer signs in again with a new device code; drafts are kept. Refreshing
+would need the App's `client_secret` in every preview, which this design
+forbids. Needs `@maple-kit/core` 0.20.0 or later. Off, there is no re-sign-in,
+but a leaked token works until the reviewer revokes it; the cookie is still
+checked against `maxAgeSeconds`.
 
 Then set **Repository permissions** to exactly this, and nothing more:
 

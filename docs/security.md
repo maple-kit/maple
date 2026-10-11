@@ -41,7 +41,8 @@ holds, so the comment App must not carry the gate's.
 | Gate     | `Checks` read and write (optional)              | itself           | on the route or in CI only |
 
 No `Contents` and no `Issues`. Device Flow on; "Expire user authorisation
-tokens" off, which is what keeps the client secret out of the preview. The
+tokens" on (reviewers sign in again every eight hours) or off; neither needs the
+client secret in the preview. The
 reasoning is in [`github-auth.md`](github-auth.md#what-the-app-may-do); the
 registration runbook is the
 [`setup-maple-org`](../plugins/maple/skills/setup-maple-org/SKILL.md) skill, and
@@ -166,7 +167,8 @@ used.
 
 - [ ] Two Apps registered: comments (`Pull requests` rw, `Metadata` r) and, if
       the route publishes the gate, a separate gate App (`Checks` rw).
-- [ ] Device Flow on, "Expire user authorisation tokens" off, and
+- [ ] Device Flow on, "Expire user authorisation tokens" chosen (on is
+      recommended; needs core 0.20.0+), and
       `maple setup verify` passes.
 - [ ] Each App installed only on the repositories that should be reviewable.
 - [ ] `MAPLE_PREVIEW=1` in previews only; a production build answers `404` on

@@ -79,7 +79,7 @@ describe("maple setup app", () => {
     for (const said of [
       "https://github.com/organizations/acme/settings/apps/new?",
       "Enable Device Flow on",
-      "Expire user authorization tokens off",
+      "Expire user authorization tokens: leave on",
       "Do not generate a private key",
       "app-logo.png",
       "#fdf8e8",

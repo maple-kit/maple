@@ -104,7 +104,7 @@ export function manualSteps(kind: AppKind): readonly string[] {
   }
   return [
     "Under Identifying and authorizing users, turn Enable Device Flow on.",
-    "Turn Expire user authorization tokens off.",
+    "Expire user authorization tokens: leave on (reviewers sign in again every 8 hours, needs @maple-kit/core 0.20.0+) or turn off (no re-sign-in, a leaked token works until revoked).",
     "Create the App. Do not generate a private key: nothing in the comment path uses one.",
     LOGO_STEP,
     "Install App → Only select repositories → the ones that should be reviewable.",

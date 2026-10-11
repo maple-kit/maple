@@ -185,17 +185,24 @@ nothing a commit would not.
 
 ## Two settings that decide whether this works
 
-**Expire user authorisation tokens — off.** With expiry on, a user-to-server
-token lasts eight hours and refreshing it requires the `client_secret`. That
-puts the secret back into the preview environment and defeats the design.
+**Expire user authorisation tokens — on (recommended) or off.** Either works.
 
-Off means a non-expiring token, bounded by the seven-day cookie and by the
-reviewer's own revocation. Be clear about the trade: seven days is a **longer**
-window than the eight hours expiry would have given. What is bought with it is
-that no GitHub secret exists in the preview environment at all — and a secret
-sitting in a constantly rebuilt environment, readable by everything deployed
-beside it, is the larger exposure of the two. Shorten `maxAgeSeconds` if the
-trade reads differently for a given repository; nothing else has to change.
+On: a user-to-server token dies after eight hours, a period GitHub fixes. Maple
+never refreshes it, because refreshing needs the `client_secret`, which would
+put a GitHub secret in the preview environment and defeat the design. The route
+answers `401` and clears the cookie, the overlay shows "Sign in" with drafts
+kept, and the reviewer signs in again with a new device code. A leaked token
+dies within eight hours. Needs `@maple-kit/core` 0.20.0 or later; earlier
+versions showed a store error.
+
+Off: a non-expiring token, so no re-sign-in. A leaked raw token works until the
+reviewer revokes it; the sealed cookie is still checked server-side against
+`maxAgeSeconds` (seven days by default). Choose this if a daily sign-in is
+unacceptable. Shorten `maxAgeSeconds` if seven days reads too long.
+
+Either way no GitHub secret exists in the preview environment, and a secret in
+a constantly rebuilt environment, readable by everything deployed beside it, is
+the larger exposure.
 
 **Device Flow — on.** Without it GitHub answers the device-code request with
 `device_flow_disabled`, which surfaces as a `DeviceFlowError` with reason
