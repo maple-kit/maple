@@ -11,10 +11,12 @@ import { appendFile, readFile } from "node:fs/promises";
 
 import { isSet } from "../args.js";
 import { runCiLint } from "../ci-lint.js";
+import { judgedFrom } from "../judged-rules.js";
 import { LINT_FLAGS, readInputs, renderFindings } from "./lint.js";
 
 import type { FlagSpec, ParsedArgs } from "../args.js";
 import type { CiLintDeps, CiLintOptions, CiLintResult } from "../ci-lint.js";
+import type { ConnectRules } from "../judged-rules.js";
 
 export const CI_LINT_FLAGS = {
   ...LINT_FLAGS,
@@ -27,11 +29,16 @@ export const CI_LINT_FLAGS = {
 
 export const CI_LINT_USAGE = `Usage
   maple ci lint --url=<preview> [--tokens=<file.css>]... [--viewport=<W>x<H>]...
-                [--sarif=<path>] [--repo=<owner/name>] [--sha=<sha>] [--dry-run]
+                [--rules=<rules.json>] [--sarif=<path>] [--repo=<owner/name>] [--sha=<sha>] [--dry-run]
 
   Lints the preview, writes SARIF to --sarif, and publishes the maple/design-lint
   check run on the head commit.
 
+  --rules    A JSON file of rules for the judged tier; see maple lint --help.
+             Needs TYPESAFE_API_KEY. Without the key the check says the judged
+             tier was skipped. Viewports the judge failed on are listed as
+             unchecked; neither blocks the check. Findings are advice unless
+             a rule says "severity": "error".
   --repo     Defaults to GITHUB_REPOSITORY.
   --sha      Defaults to the pull request's head commit in GITHUB_EVENT_PATH,
              then GITHUB_SHA.
@@ -45,6 +52,8 @@ export const CI_LINT_USAGE = `Usage
 /** What the command needs from its environment. */
 export interface CiLintEnvironment extends CiLintDeps {
   readonly env?: NodeJS.ProcessEnv;
+  /** Builds the judge from the rules file. Defaults to jev. */
+  readonly connect?: ConnectRules;
 }
 
 /** What the command prints, and its exit code. */
@@ -106,6 +115,7 @@ async function writeOutputs(path: string | undefined, result: CiLintResult): Pro
   const lines = [
     `conclusion=${result.conclusion}`,
     `findings=${String(result.findings.length)}`,
+    `judged-unchecked=${String(result.judgedErrors.length)}`,
     ...(result.sarifPath === undefined ? [] : [`sarif-path=${result.sarifPath}`]),
     ...(result.checkRunId === undefined ? [] : [`check-run-id=${String(result.checkRunId)}`]),
   ];
@@ -113,7 +123,12 @@ async function writeOutputs(path: string | undefined, result: CiLintResult): Pro
 }
 
 function describe(result: CiLintResult, dryRun: boolean): string {
-  const lines = [renderFindings(result.findings), "", `maple/design-lint: ${result.conclusion}`];
+  const lines = [
+    renderFindings(result.findings, undefined, result.judgedErrors),
+    ...(result.judgedSkipped === undefined ? [] : [`Judged tier skipped: ${result.judgedSkipped}`]),
+    "",
+    `maple/design-lint: ${result.conclusion}`,
+  ];
   if (result.sarifPath !== undefined) lines.push(`SARIF written to ${result.sarifPath}`);
   if (result.checkRunId !== undefined)
     lines.push(`Check run ${String(result.checkRunId)} published`);
@@ -124,14 +139,15 @@ function describe(result: CiLintResult, dryRun: boolean): string {
 /** Runs the command. */
 export async function ciLint(
   { flags }: ParsedArgs,
-  { env = process.env, ...deps }: CiLintEnvironment = {},
+  { env = process.env, connect, ...deps }: CiLintEnvironment = {},
 ): Promise<CiLintCommandResult> {
   const failed = (reason: string): CiLintCommandResult => ({
     output: `maple ci lint: ${reason}\n\n${CI_LINT_USAGE}`,
     exitCode: 1,
   });
-  const inputs = readInputs(flags);
-  if ("error" in inputs) return failed(inputs.error);
+  const read = readInputs(flags);
+  if ("error" in read) return failed(read.error);
+  const { rules, ...inputs } = read;
 
   const dryRun = isSet(flags, "dry-run");
   const publish = dryRun ? undefined : await publishTarget(flags, env);
@@ -141,9 +157,12 @@ export async function ciLint(
   const baseUrl = env["GITHUB_API_URL"];
   let result: CiLintResult;
   try {
+    const setup = await judgedFrom(rules, env, connect);
     result = await runCiLint(
       {
         ...inputs,
+        ...(setup.judged ? { judged: setup.judged } : {}),
+        ...(setup.skipped === undefined ? {} : { judgedSkipped: setup.skipped }),
         ...(sarif === undefined ? {} : { sarifPath: sarif }),
         ...(publish ? { publish } : {}),
       },

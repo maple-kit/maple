@@ -213,6 +213,9 @@ importers:
         specifier: ^1.50.0
         version: 1.63.0
     devDependencies:
+      '@maple-kit/classifier':
+        specifier: workspace:*
+        version: link:../classifier
       '@trpc/openapi':
         specifier: 11.19.0-alpha
         version: 11.19.0-alpha(@trpc/server@11.19.0(typescript@6.0.3))(typescript@6.0.3)(zod@4.6.5)

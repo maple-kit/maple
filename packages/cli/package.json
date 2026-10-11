@@ -39,14 +39,19 @@
     "access": "public"
   },
   "devDependencies": {
+    "@maple-kit/classifier": "workspace:*",
     "@trpc/openapi": "11.19.0-alpha",
     "@trpc/server": "11.19.0"
   },
   "peerDependencies": {
+    "@maple-kit/classifier": "workspace:^",
     "@trpc/openapi": "11.19.0-alpha",
     "playwright": "^1.50.0"
   },
   "peerDependenciesMeta": {
+    "@maple-kit/classifier": {
+      "optional": true
+    },
     "playwright": {
       "optional": true
     },

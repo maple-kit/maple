@@ -16,6 +16,7 @@ import type { RunLint } from "./commands/lint.js";
 import type { Generate } from "./commands/mock-schema.js";
 import type { WorkflowFs } from "./commands/setup-ci.js";
 import type { SoloOptions } from "./commands/solo.js";
+import type { ConnectRules } from "./judged-rules.js";
 
 /** What the CLI needs from its environment, so tests can supply their own. */
 export interface RunOptions {
@@ -34,6 +35,8 @@ export interface RunOptions {
   /** `maple lint` and `maple ci lint`'s linter, in place of a real browser. */
   readonly lint?: RunLint;
   /** What `maple ci lint` reads its GitHub inputs from. Defaults to the process's. */
+  /** How `maple lint` and `maple ci lint` build the judge from a rules file. Defaults to jev. */
+  readonly connect?: ConnectRules;
   readonly env?: NodeJS.ProcessEnv;
 }
 
@@ -58,6 +61,7 @@ export const COMMANDS: Readonly<Record<string, Command>> = {
     run: (args, options) =>
       ciLint(args, {
         ...(options.env === undefined ? {} : { env: options.env }),
+        ...(options.connect === undefined ? {} : { connect: options.connect }),
         ...(options.lint === undefined ? {} : { lint: options.lint }),
         ...(options.fetch === undefined ? {} : { fetch: options.fetch }),
         ...(options.cwd === undefined ? {} : { root: options.cwd }),
@@ -70,7 +74,14 @@ export const COMMANDS: Readonly<Record<string, Command>> = {
       return present(isSet(flags, "json"), rows, renderConnectorKinds(rows));
     },
   },
-  lint: { flags: LINT_FLAGS, run: (args, options) => lint(args, options.lint, options.cwd) },
+  lint: {
+    flags: LINT_FLAGS,
+    run: (args, options) =>
+      lint(args, options.lint, options.cwd, {
+        ...(options.env === undefined ? {} : { env: options.env }),
+        ...(options.connect === undefined ? {} : { connect: options.connect }),
+      }),
+  },
   "mock schema": {
     flags: MOCK_SCHEMA_FLAGS,
     run: (args, options) => mockSchema(args, options.generate),

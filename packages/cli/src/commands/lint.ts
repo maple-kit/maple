@@ -1,14 +1,16 @@
 /**
  * `maple lint --url=<preview> --tokens=<css>`: the design-system lint, run
  * locally. Exits 1 when a finding is an error, which is the verdict
- * `maple ci lint` publishes for the same preview.
+ * `maple ci lint` publishes for the same preview. `--rules` adds the judged tier.
  */
 
 import { describePlace, groupByRule, lintRendered, verdictFor } from "@maple-kit/lint";
 
 import { isSet } from "../args.js";
+import { judgedFrom } from "../judged-rules.js";
 
 import type { FlagSpec, ParsedArgs } from "../args.js";
+import type { ConnectRules } from "../judged-rules.js";
 import type { Finding } from "@maple-kit/core";
 import type { RenderedLintOptions, Viewport } from "@maple-kit/lint";
 
@@ -16,15 +18,21 @@ export const LINT_FLAGS = {
   url: "string",
   tokens: "strings",
   viewport: "strings",
+  rules: "string",
 } as const satisfies FlagSpec;
 
 export const LINT_USAGE = `Usage
-  maple lint --url=<preview> [--tokens=<file.css>]... [--viewport=<W>x<H>]... [--json]
+  maple lint --url=<preview> [--tokens=<file.css>]... [--viewport=<W>x<H>]...
+                [--rules=<rules.json>] [--json]
 
   --url       The preview to lint.
   --tokens    A CSS file the design tokens are read from. Repeat for several.
   --viewport  A size to judge at, such as 375x812. Repeat for several; the
               default is a phone, a tablet and a laptop.
+  --rules     A JSON file of rules for the judged tier: { "rules": [{ "id",
+              "question", "appliesTo", "severity"? }] }, where a "yes" answer is
+              a violation and appliesTo is a CSS selector. Needs
+              TYPESAFE_API_KEY. Without the flag the judged tier is off.
 
   Exits 1 when any finding is an error.`;
 
@@ -35,15 +43,24 @@ export interface LintResult {
 }
 
 /** The lint, as a test supplies it in place of a browser. */
-export type RunLint = (
-  options: RenderedLintOptions,
-) => Promise<{ readonly findings: readonly Finding[] }>;
+export type RunLint = (options: RenderedLintOptions) => Promise<{
+  readonly findings: readonly Finding[];
+  readonly judgedErrors?: readonly string[];
+}>;
 
 /** What both lint commands read from their flags. */
 export interface LintInputs {
   readonly url: string;
   readonly tokenFiles: readonly string[];
   readonly viewports?: readonly Viewport[];
+  /** The `--rules` file, which is read later, where the environment is known. */
+  readonly rules?: string;
+}
+
+/** What the judged tier reads from outside, which a test supplies. */
+export interface Judging {
+  readonly env?: NodeJS.ProcessEnv;
+  readonly connect?: ConnectRules;
 }
 
 /** The values of a flag that may repeat, however many times it was given. */
@@ -74,13 +91,21 @@ export function readInputs(flags: ParsedArgs["flags"]): LintInputs | { readonly 
   return {
     url: url.trim(),
     tokenFiles: valuesOf(flags, "tokens"),
+    ...(typeof flags["rules"] === "string" && flags["rules"].trim() !== ""
+      ? { rules: flags["rules"].trim() }
+      : {}),
     ...(given.length === 0 ? {} : { viewports: viewports as Viewport[] }),
   };
 }
 
 /** The findings grouped by rule, each with the `file:line:col` it anchors to. */
-export function renderFindings(findings: readonly Finding[], root?: string): string {
-  if (findings.length === 0) return "No design findings.";
+export function renderFindings(
+  findings: readonly Finding[],
+  root?: string,
+  judgedErrors: readonly string[] = [],
+): string {
+  const unchecked = judgedErrors.map((line) => `Judged tier unchecked, not clean: ${line}`);
+  if (findings.length === 0) return ["No design findings.", ...unchecked].join("\n");
   const lines: string[] = [];
   for (const [rule, group] of groupByRule(findings)) {
     lines.push(`${rule} (${String(group.length)})`);
@@ -91,7 +116,7 @@ export function renderFindings(findings: readonly Finding[], root?: string): str
     }
     lines.push("");
   }
-  lines.push(verdictFor(findings, root).title);
+  lines.push(verdictFor(findings, root).title, ...unchecked);
   return lines.join("\n");
 }
 
@@ -100,14 +125,21 @@ export async function lint(
   { flags }: ParsedArgs,
   run: RunLint = lintRendered,
   root: string = process.cwd(),
+  { env = process.env, connect }: Judging = {},
 ): Promise<LintResult> {
   const inputs = readInputs(flags);
   if ("error" in inputs)
     return { output: `maple lint: ${inputs.error}\n\n${LINT_USAGE}`, exitCode: 1 };
 
   let findings: readonly Finding[];
+  let judgedErrors: readonly string[];
   try {
-    findings = (await run(inputs)).findings;
+    const { rules, ...options } = inputs;
+    const setup = await judgedFrom(rules, env, connect);
+    if (setup.skipped !== undefined) return { output: `maple lint: ${setup.skipped}`, exitCode: 1 };
+    const found = await run({ ...options, ...(setup.judged ? { judged: setup.judged } : {}) });
+    findings = found.findings;
+    judgedErrors = found.judgedErrors ?? [];
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     return { output: `maple lint: ${reason}`, exitCode: 1 };
@@ -117,8 +149,8 @@ export async function lint(
   const json = isSet(flags, "json");
   return {
     output: json
-      ? JSON.stringify({ conclusion, findings }, null, 2)
-      : renderFindings(findings, root),
+      ? JSON.stringify({ conclusion, findings, judgedErrors }, null, 2)
+      : renderFindings(findings, root, judgedErrors),
     exitCode: conclusion === "failure" ? 1 : 0,
   };
 }

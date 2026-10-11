@@ -231,3 +231,38 @@ is `MAPLE_GITHUB_TOKEN`, then `GITHUB_TOKEN`, never an argument. `--dry-run`
 prints the verdict and publishes nothing. A preview that cannot be reached is
 neutral, not a failure. `runCiLint` from `@maple-kit/cli` is the same thing as a
 function.
+
+### The judged tier from the command line
+
+`--rules=<rules.json>` on `maple lint` and `maple ci lint` turns the judged
+tier on, with jev as the judge:
+
+```json
+{
+  "rules": [
+    {
+      "id": "app/one-primary",
+      "question": "Is this a second primary button in the same view?",
+      "appliesTo": "button",
+      "severity": "advice"
+    }
+  ],
+  "maxPerRule": 10,
+  "maxTargets": 40,
+  "maxHtml": 2000
+}
+```
+
+A bare array of rules is also accepted; the three caps are optional and are the
+`lintRendered` ones. Phrase `question` so that "yes" means the element
+violates the rule. `severity` is `advice` (the default), `warn` or `error`;
+only `error` blocks. The key is read from `TYPESAFE_API_KEY`, and
+`MAPLE_AI_MODEL` and `MAPLE_AI_API` apply as for the assist tier. Without
+`--rules` the tier is off and nothing else changes.
+
+Rules without a key are an error for `maple lint`. For `maple ci lint` the tier
+is skipped, and the check run's summary says so. A viewport the judge failed on
+is listed in the summary and the terminal as "unchecked, not clean"; it does not
+fail the check by itself. `@maple-kit/classifier` is an optional peer of
+`@maple-kit/cli`, loaded only when rules are given: install it, with its
+`effect` and `@effect/ai-typesafe` peers, to use the judge.
