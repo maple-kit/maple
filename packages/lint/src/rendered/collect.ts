@@ -12,6 +12,7 @@ import { describeElement } from "@maple-kit/core/anchor";
 import { captureContext } from "@maple-kit/core/overlay";
 
 import type { Anchor } from "@maple-kit/core/anchor";
+import type { Rule, RuleTarget } from "@maple-kit/core/connectors";
 import type { PageContext } from "@maple-kit/core/overlay";
 
 /** One element's rendered state, as a rule needs to see it. */
@@ -45,10 +46,47 @@ export interface StyleRecord {
   readonly animationProperties: readonly string[];
 }
 
+/** How much of a page is sent to the judge. Every field is optional. */
+export interface TargetLimits {
+  /** Most elements one rule sends. Default `MAX_TARGETS_PER_RULE`. */
+  readonly maxPerRule?: number;
+  /** Most elements one page sends across every rule. Default `MAX_TARGETS`. */
+  readonly maxTargets?: number;
+  /** Longest subtree HTML for one element, in characters. Default `MAX_TARGET_HTML`. */
+  readonly maxHtml?: number;
+}
+
+/** Sized for a judge with about 32k tokens of state: 40 x 2000 characters is ~20k. */
+export const MAX_TARGETS_PER_RULE = 10;
+/** Most elements one page sends to the judge across every rule. */
+export const MAX_TARGETS = 40;
+/** Longest subtree HTML sent for one element, in characters. */
+export const MAX_TARGET_HTML = 2000;
+/** Appended where a subtree was cut, so the judge knows it is not seeing all of it. */
+export const TRUNCATED = "<!-- truncated -->";
+/** Elements that carry no design a judge should read, and a good deal of noise. */
+const NOISE = "script, style, noscript, template";
+
+/** The elements the rules chose on one page, and what could not be sent. */
+export interface Targets {
+  readonly targets: readonly RuleTarget[];
+  /** Ids of rules whose `appliesTo` is not a valid selector. */
+  readonly invalid: readonly string[];
+  /** Matches left out by the per-rule or page-wide cap. */
+  readonly dropped: number;
+}
+
+/** What a pass is asked to read for the judge. */
+export interface JudgedRead extends TargetLimits {
+  readonly rules: readonly Rule[];
+}
+
 /** One pass over the page: what was on it, and what it was being shown in. */
 export interface Reading {
   readonly context: PageContext;
   readonly records: readonly StyleRecord[];
+  /** Empty unless the pass was given rules. */
+  readonly judged: Targets;
 }
 
 const INTERACTIVE_TAGS = ["a", "button", "input", "select", "summary", "textarea"];
@@ -143,12 +181,63 @@ function recordOf(element: Element): StyleRecord {
   };
 }
 
+/** An element's subtree as HTML, without scripts or styles, capped in size. */
+function subtreeHtml(element: Element, cap: number): string {
+  const copy = element.cloneNode(true) as Element;
+  for (const noise of [...copy.querySelectorAll(NOISE)]) noise.remove();
+  const html = copy.outerHTML;
+  return html.length > cap ? html.slice(0, cap) + TRUNCATED : html;
+}
+
+function matches(selector: string): Element[] | undefined {
+  try {
+    return [...document.querySelectorAll(selector)];
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * The elements each rule applies to, in rule order, capped per rule and in
+ * all. Rules run first to last, so the ones a host lists first are kept when
+ * the page-wide cap is reached.
+ */
+export function readTargets(read: JudgedRead): Targets {
+  const perRule = read.maxPerRule ?? MAX_TARGETS_PER_RULE;
+  const total = read.maxTargets ?? MAX_TARGETS;
+  const cap = read.maxHtml ?? MAX_TARGET_HTML;
+  const targets: RuleTarget[] = [];
+  const invalid: string[] = [];
+  let dropped = 0;
+  for (const rule of read.rules) {
+    const found = matches(rule.appliesTo);
+    if (found === undefined) {
+      invalid.push(rule.id);
+      continue;
+    }
+    const room = Math.max(0, Math.min(perRule, total - targets.length));
+    for (const element of found.slice(0, room)) {
+      targets.push({
+        rule: rule.id,
+        html: subtreeHtml(element, cap),
+        anchor: describeElement(element),
+      });
+    }
+    dropped += Math.max(0, found.length - room);
+  }
+  return { targets, invalid, dropped };
+}
+
 /**
  * Reads every tagged element, and the page they are on. Returns plain data:
  * only what survives structured cloning comes back out of the browser, and a
  * rule should not hold a live node it might read a second, different value from.
  */
-export function readPage(): Reading {
+export function readPage(judged: JudgedRead = { rules: [] }): Reading {
   const elements = [...document.querySelectorAll("[data-maple-src]")];
-  return { context: captureContext(), records: elements.map(recordOf) };
+  return {
+    context: captureContext(),
+    records: elements.map(recordOf),
+    judged: readTargets(judged),
+  };
 }

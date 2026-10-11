@@ -2,8 +2,8 @@
  * Design-system lint for Maple. This entrypoint is the rendered tier: the
  * rules that need a browser to have laid the page out before they can judge it.
  *
- * The static and judged tiers of the tracking issue land beside it and report
- * the same `Finding`.
+ * The judged tier rides the same pages: pass a `RuleConnector` as `judged`. The
+ * static tier lands beside it and reports the same `Finding`.
  */
 
 export {
@@ -25,9 +25,31 @@ export {
 export type { FindingCommentOptions, RunCommentOptions } from "./comment.js";
 export { NAMED_COLORS } from "./named-colors.js";
 export { DEFAULT_VIEWPORTS, dedupe, lintRendered } from "./rendered/audit.js";
-export type { Pass, RenderedLintOptions, RenderedRun, Seen, Viewport } from "./rendered/audit.js";
-export { readPage } from "./rendered/collect.js";
-export type { Reading, StyleRecord } from "./rendered/collect.js";
+export type {
+  JudgedOptions,
+  Pass,
+  RenderedLintOptions,
+  RenderedRun,
+  Seen,
+  Viewport,
+} from "./rendered/audit.js";
+export {
+  MAX_TARGET_HTML,
+  MAX_TARGETS,
+  MAX_TARGETS_PER_RULE,
+  readPage,
+  readTargets,
+  TRUNCATED,
+} from "./rendered/collect.js";
+export type {
+  JudgedRead,
+  Reading,
+  StyleRecord,
+  TargetLimits,
+  Targets,
+} from "./rendered/collect.js";
+export { lintJudged } from "./rendered/judged.js";
+export type { JudgedPage, JudgedResult } from "./rendered/judged.js";
 export {
   MIN_TOUCH_TARGET,
   MOTION_SAFE,

@@ -105,6 +105,33 @@ export default tseslint.config(
   },
 
   {
+    // Lint calls a RuleConnector and nothing behind it. Which classifier or
+    // model answers is the host's wiring, so lint imports none of them.
+    files: ["packages/lint/src/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: [
+                "@maple-kit/classifier",
+                "@maple-kit/classifier/*",
+                "@effect/ai*",
+                "typesafe*",
+                "openai",
+                "openai/*",
+                "@anthropic-ai/*",
+              ],
+              message: "@maple-kit/lint judges through a RuleConnector only. See docs/lint.md.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+
+  {
     // The mock runtime is imported from a host's entry before anything else,
     // so it carries no framework. The packages that render depend on it
     // through their ./mock subpaths; the arrow never points the other way.

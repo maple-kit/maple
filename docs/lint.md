@@ -175,6 +175,48 @@ A run sends the preview platform's bypass as request headers and nothing else.
 Reviewer cookies are never used: CI's lint run does not borrow a person's
 session to see a page.
 
+## The judged tier
+
+A rule a script cannot decide ("is there one primary action?") is put to a
+judge as a question about one kind of element. Lint knows only the
+`RuleConnector` contract from `@maple-kit/core`; which model answers is the
+host's wiring, and lint imports none of them.
+
+```ts
+const run = await lintRendered({
+  url,
+  tokenFiles,
+  judged: { connector, maxTargets: 30 },
+});
+```
+
+Each rule's `appliesTo` is a CSS selector. At every viewport the matching
+elements are serialised as HTML, with scripts and styles removed, anchored the
+way a rendered finding is, and sent to `connector.evaluate` in one call. It
+reuses the page the rendered tier opens; no second browser starts. No
+screenshot is sent: the judge reads markup.
+
+Size is bounded because a judge has a fixed budget. The defaults are 10
+elements per rule (`maxPerRule`), 40 per page (`maxTargets`) and 2000
+characters per element (`maxHtml`); a longer subtree ends in
+`<!-- truncated -->`. Rules are served in the order listed, so list the ones
+that matter first. Matches over a cap, and a rule whose selector is invalid, are
+named in a warning rather than skipped silently.
+
+What comes back is normalised:
+
+- `tier` is `judged`, and `severity` is the rule's, `advice` when it names none.
+  Set `severity: "error"` on a rule to let it gate; a judge's opinion can change
+  between runs, so that is a choice to make rule by rule.
+- A finding for a rule id the connector does not list is dropped.
+- A finding at several viewports is one finding. Its identity is the rule and
+  the place, not the message, which a judge words differently every run.
+
+A judge that fails does not fail the run. The rendered findings are returned
+as usual, the logger warns, and `RenderedRun.judgedErrors` lists each viewport
+that was not judged. Empty judged findings with a non-empty `judgedErrors` is
+an unchecked page, not a clean one.
+
 ## From the command line
 
 `maple lint --url=<preview> --tokens=<file.css>` runs the rendered tier and

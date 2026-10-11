@@ -7,12 +7,12 @@
 
 import { readPage } from "./collect.js";
 
-import type { Reading } from "./collect.js";
+import type { JudgedRead, Reading } from "./collect.js";
 
 declare global {
   interface Window {
     /** Set by this bundle; the driver calls it once per pass. */
-    __mapleLintRead?: () => Reading;
+    __mapleLintRead?: (judged: JudgedRead) => Reading;
   }
 }
 
