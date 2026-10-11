@@ -3,7 +3,7 @@
 Every AI path in Maple ships with an eval set and a pass-rate threshold that CI
 enforces. A prompt without an eval is a prompt nobody can change safely.
 
-**Status:** three sets, each scoring its keyword baseline on every CI run and
+**Status:** four sets, each scoring its baseline on every CI run and
 the model tier whenever a credential is in the environment.
 
 - `assist`: thirty review comments written against a real running application.
@@ -16,6 +16,9 @@ the model tier whenever a credential is in the environment.
 - `doc-drift`: 71 paragraphs from Maple's own docs, 34 a code change had made
   false and 37 it had not, each paired with the hunk that decides it: the
   setup-docs audit's 26, and 45 more from the repository's history.
+- `design-lint`: thirty coffee-app elements, fifteen violating one of five
+  design rules and fifteen not, all `by: agent`, scored for `jevRules` against
+  a regex baseline. Its labels are frozen by a hash test.
 
 ## Harness
 

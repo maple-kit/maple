@@ -1,0 +1,42 @@
+name: Design-lint eval
+
+# Scores jevRules on evals/cases/design-lint. Only when the connector, its cases
+# or this file change: thirty model calls per sample, and a threshold near the
+# measured rate, would otherwise redden unrelated pull requests at random.
+on:
+  pull_request:
+    paths:
+      - packages/classifier/src/rules.ts
+      - packages/classifier/src/internal/**
+      - evals/cases/design-lint/**
+      - evals/design-lint.eval.test.ts
+      - .github/workflows/design-lint-eval.yml
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  eval:
+    # The model tier of evals/design-lint.eval.test.ts, which `pnpm test` skips
+    # without the key. Its threshold is what may one day let a judged rule gate.
+    runs-on: ubuntu-latest
+    env:
+      TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
+      # jev is not deterministic. Three samples score the rate rather than one
+      # draw of it.
+      EVAL_SAMPLES: "3"
+    steps:
+      - name: Skip without the key
+        if: env.TYPESAFE_API_KEY == ''
+        run: echo "TYPESAFE_API_KEY is not set (a fork's pull request gets no secrets), so jev is not scored."
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: env.TYPESAFE_API_KEY != ''
+      - uses: ./.github/actions/setup
+        if: env.TYPESAFE_API_KEY != ''
+      - name: Score jev on the design-lint cases
+        if: env.TYPESAFE_API_KEY != ''
+        run: pnpm vitest run --project node evals/design-lint.eval.test.ts

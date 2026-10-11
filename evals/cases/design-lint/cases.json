@@ -1,0 +1,302 @@
+[
+  {
+    "id": "design-001",
+    "by": "agent",
+    "rule": "design/error-banner-tokens",
+    "violation": true,
+    "html": "<div role=\"alert\" class=\"banner banner--error\" style=\"background:#fdecea;color:#b42318;border:1px solid var(--color-feedback-danger-border)\"><div class=\"banner__body\"><svg class=\"banner__icon\" viewBox=\"0 0 20 20\" width=\"20\" height=\"20\" aria-hidden=\"true\"><path fill=\"var(--color-feedback-danger-fg)\" d=\"M10 2a8 8 0 100 16 8 8 0 000-16zm1 11H9v-2h2zm0-4H9V5h2z\"/></svg><p class=\"banner__title\">We could not charge your card</p><p class=\"banner__text\">Check the card details and try again.</p></div></div>",
+    "anchor": {
+      "selector": "[role=alert]"
+    }
+  },
+  {
+    "id": "design-002",
+    "by": "agent",
+    "rule": "design/error-banner-tokens",
+    "violation": false,
+    "html": "<div role=\"alert\" class=\"banner banner--error\" style=\"background:var(--color-feedback-danger-bg);color:var(--color-feedback-danger-fg);border:1px solid var(--color-feedback-danger-border)\"><div class=\"banner__body\"><svg class=\"banner__icon\" viewBox=\"0 0 20 20\" width=\"20\" height=\"20\" aria-hidden=\"true\"><path fill=\"currentColor\" d=\"M10 2a8 8 0 100 16 8 8 0 000-16zm1 11H9v-2h2zm0-4H9V5h2z\"/></svg><p class=\"banner__title\">We could not charge your card</p><p class=\"banner__text\">Check the card details and try again.</p></div></div>",
+    "anchor": {
+      "selector": "[role=alert]"
+    }
+  },
+  {
+    "id": "design-003",
+    "by": "agent",
+    "rule": "design/error-banner-tokens",
+    "violation": true,
+    "html": "<div role=\"alert\" class=\"banner banner--error\" style=\"background:var(--color-feedback-danger-bg);border:1px solid var(--color-feedback-danger-border);color:tomato\"><div class=\"banner__body\"><svg class=\"banner__icon\" viewBox=\"0 0 20 20\" width=\"20\" height=\"20\" aria-hidden=\"true\"><path fill=\"currentColor\" d=\"M10 2a8 8 0 100 16 8 8 0 000-16zm1 11H9v-2h2zm0-4H9V5h2z\"/></svg><p class=\"banner__title\">Grind size is not available for this bag</p><button type=\"button\" class=\"link-button\" style=\"color:var(--color-feedback-danger-fg)\">Pick another size</button></div></div>",
+    "anchor": {
+      "selector": "[role=alert]"
+    }
+  },
+  {
+    "id": "design-004",
+    "by": "agent",
+    "rule": "design/error-banner-tokens",
+    "violation": false,
+    "html": "<div role=\"alert\" class=\"banner banner--error\" style=\"background:var(--color-feedback-danger-bg);color:var(--color-feedback-danger-fg);border:1px solid var(--color-feedback-danger-border)\"><div class=\"banner__body\"><svg class=\"banner__icon\" viewBox=\"0 0 20 20\" width=\"20\" height=\"20\" aria-hidden=\"true\"><path fill=\"currentColor\" d=\"M10 2a8 8 0 100 16 8 8 0 000-16zm1 11H9v-2h2zm0-4H9V5h2z\"/></svg><p class=\"banner__title\">Payment declined for order #A1B2C3</p><p class=\"banner__text\">Reference <code>#fdecea</code> is safe to quote to support.</p></div></div>",
+    "anchor": {
+      "selector": "[role=alert]"
+    }
+  },
+  {
+    "id": "design-005",
+    "by": "agent",
+    "rule": "design/error-banner-tokens",
+    "violation": true,
+    "html": "<div role=\"alert\" class=\"banner banner--error\" style=\"background:var(--color-feedback-danger-bg);color:var(--color-feedback-danger-fg);border:1px solid var(--color-feedback-danger-border)\"><div class=\"banner__body\"><svg class=\"banner__icon\" viewBox=\"0 0 20 20\" width=\"20\" height=\"20\" aria-hidden=\"true\"><path fill=\"#d92d20\" d=\"M10 2a8 8 0 100 16 8 8 0 000-16zm1 11H9v-2h2zm0-4H9V5h2z\"/></svg><p class=\"banner__title\">The delivery slot you chose just filled up</p><a class=\"banner__link\" href=\"/checkout/slots\">Choose a new slot</a></div></div>",
+    "anchor": {
+      "selector": "[role=alert]"
+    }
+  },
+  {
+    "id": "design-006",
+    "by": "agent",
+    "rule": "design/error-banner-tokens",
+    "violation": false,
+    "html": "<div role=\"alert\" class=\"banner banner--error\" style=\"background:var(--color-feedback-danger-bg);color:var(--color-feedback-danger-fg);border:1px solid var(--color-feedback-danger-border)\"><div class=\"banner__body\"><svg class=\"banner__icon\" viewBox=\"0 0 20 20\" width=\"20\" height=\"20\" aria-hidden=\"true\"><path fill=\"currentColor\" d=\"M10 2a8 8 0 100 16 8 8 0 000-16zm1 11H9v-2h2zm0-4H9V5h2z\"/></svg><p class=\"banner__title\">Your basket changed while you were away</p><button type=\"button\" class=\"banner__dismiss\" style=\"background:transparent;color:inherit;border:0\" aria-label=\"Dismiss\">x</button></div></div>",
+    "anchor": {
+      "selector": "[role=alert]"
+    }
+  },
+  {
+    "id": "design-007",
+    "by": "agent",
+    "rule": "design/destructive-button",
+    "violation": true,
+    "html": "<li class=\"address-row\"><span class=\"address-row__text\">14 Alder Lane, Leeds</span><button type=\"button\" class=\"btn btn-secondary\" data-variant=\"secondary\" data-action=\"address.delete\">Delete saved address</button></li>",
+    "anchor": {
+      "selector": "button[data-action]"
+    }
+  },
+  {
+    "id": "design-008",
+    "by": "agent",
+    "rule": "design/destructive-button",
+    "violation": false,
+    "html": "<li class=\"address-row\"><span class=\"address-row__text\">14 Alder Lane, Leeds</span><button type=\"button\" class=\"btn btn-danger\" data-variant=\"destructive\" data-action=\"address.delete\">Delete saved address</button></li>",
+    "anchor": {
+      "selector": "button[data-action]"
+    }
+  },
+  {
+    "id": "design-009",
+    "by": "agent",
+    "rule": "design/destructive-button",
+    "violation": true,
+    "html": "<section class=\"plan-card\"><h3 class=\"plan-card__title\">Monthly beans box</h3><p class=\"plan-card__meta\">Next delivery 24 Oct</p><div class=\"plan-card__actions\"><button type=\"button\" class=\"btn btn-primary\" data-variant=\"primary\" data-action=\"plan.cancel\">Cancel subscription</button></div></section>",
+    "anchor": {
+      "selector": "button[data-action]"
+    }
+  },
+  {
+    "id": "design-010",
+    "by": "agent",
+    "rule": "design/destructive-button",
+    "violation": false,
+    "html": "<footer class=\"dialog__footer\"><button type=\"button\" class=\"btn btn-secondary\" data-variant=\"secondary\" data-action=\"dialog.close\">Cancel</button><button type=\"submit\" class=\"btn btn-primary\" data-variant=\"primary\">Save grind preference</button></footer>",
+    "anchor": {
+      "selector": "button[data-action]"
+    }
+  },
+  {
+    "id": "design-011",
+    "by": "agent",
+    "rule": "design/destructive-button",
+    "violation": true,
+    "html": "<div class=\"account-danger\"><h3>Order history</h3><p>Past orders are used for your reorder suggestions.</p><button type=\"button\" class=\"btn btn-secondary\" data-variant=\"secondary\" data-action=\"history.purge\">Wipe order history</button></div>",
+    "anchor": {
+      "selector": "button[data-action]"
+    }
+  },
+  {
+    "id": "design-012",
+    "by": "agent",
+    "rule": "design/destructive-button",
+    "violation": false,
+    "html": "<ul class=\"filter-chips\"><li class=\"chip\"><span class=\"chip__label\">Roast: medium</span><button type=\"button\" class=\"chip__remove btn-ghost\" data-variant=\"ghost\" data-action=\"filter.remove\" aria-label=\"Remove filter Roast: medium\">x</button></li></ul>",
+    "anchor": {
+      "selector": "button[data-action]"
+    }
+  },
+  {
+    "id": "design-013",
+    "by": "agent",
+    "rule": "design/empty-state-cta",
+    "violation": true,
+    "html": "<section class=\"empty-state\" data-component=\"EmptyState\"><img class=\"empty-state__art\" src=\"/img/empty-orders.svg\" alt=\"\"><h3 class=\"empty-state__title\">No orders yet</h3><p class=\"empty-state__text\">Orders you place will be listed here.</p></section>",
+    "anchor": {
+      "selector": ".empty-state"
+    }
+  },
+  {
+    "id": "design-014",
+    "by": "agent",
+    "rule": "design/empty-state-cta",
+    "violation": false,
+    "html": "<section class=\"empty-state\" data-component=\"EmptyState\"><img class=\"empty-state__art\" src=\"/img/empty-orders.svg\" alt=\"\"><h3 class=\"empty-state__title\">No orders yet</h3><p class=\"empty-state__text\">Orders you place will be listed here.</p><a class=\"btn btn-primary\" data-variant=\"primary\" href=\"/beans\">Browse beans</a></section>",
+    "anchor": {
+      "selector": ".empty-state"
+    }
+  },
+  {
+    "id": "design-015",
+    "by": "agent",
+    "rule": "design/empty-state-cta",
+    "violation": true,
+    "html": "<section class=\"empty-state empty-state--compact\" data-component=\"EmptyState\"><h3 class=\"empty-state__title\">No tasting notes saved</h3><p class=\"empty-state__text\">Notes you add after a delivery appear here.</p><button type=\"button\" class=\"link-button empty-state__dismiss\" aria-label=\"Dismiss this tip\">Dismiss tip</button></section>",
+    "anchor": {
+      "selector": ".empty-state"
+    }
+  },
+  {
+    "id": "design-016",
+    "by": "agent",
+    "rule": "design/empty-state-cta",
+    "violation": false,
+    "html": "<section class=\"empty-state\" data-component=\"EmptyState\"><h3 class=\"empty-state__title\">No beans match these filters</h3><div role=\"button\" tabindex=\"0\" class=\"btn btn-secondary\" data-variant=\"secondary\" data-action=\"filters.reset\">Reset filters</div></section>",
+    "anchor": {
+      "selector": ".empty-state"
+    }
+  },
+  {
+    "id": "design-017",
+    "by": "agent",
+    "rule": "design/empty-state-cta",
+    "violation": true,
+    "html": "<section class=\"empty-state\" data-component=\"EmptyState\"><h3 class=\"empty-state__title\">Your wishlist is empty</h3><p class=\"empty-state__text\">Beans you save show up here.</p><p class=\"empty-state__foot\">Updated just now</p></section>",
+    "anchor": {
+      "selector": ".empty-state"
+    }
+  },
+  {
+    "id": "design-018",
+    "by": "agent",
+    "rule": "design/empty-state-cta",
+    "violation": false,
+    "html": "<section class=\"empty-state\" data-component=\"EmptyState\"><svg class=\"empty-state__art\" viewBox=\"0 0 64 64\" width=\"64\" height=\"64\" aria-hidden=\"true\"><circle cx=\"32\" cy=\"32\" r=\"30\" fill=\"var(--color-surface-sunken)\"/></svg><h3 class=\"empty-state__title\">Your basket is empty</h3><button type=\"button\" class=\"btn btn-primary\" data-variant=\"primary\" data-action=\"basket.start\">Start an order</button></section>",
+    "anchor": {
+      "selector": ".empty-state"
+    }
+  },
+  {
+    "id": "design-019",
+    "by": "agent",
+    "rule": "design/truncated-title",
+    "violation": true,
+    "html": "<a class=\"bean-card__link\" href=\"/beans/guji-14\"><span class=\"bean-card__name truncate\" style=\"max-width:180px\">Ethiopia Guji Hambela Natural Anaerobic Reserve Lot 14</span></a>",
+    "anchor": {
+      "selector": ".truncate"
+    }
+  },
+  {
+    "id": "design-020",
+    "by": "agent",
+    "rule": "design/truncated-title",
+    "violation": false,
+    "html": "<a class=\"bean-card__link\" href=\"/beans/guji-14\"><span class=\"bean-card__name truncate\" style=\"max-width:180px\" title=\"Ethiopia Guji Hambela Natural Anaerobic Reserve Lot 14\">Ethiopia Guji Hambela Natural Anaerobic Reserve Lot 14</span></a>",
+    "anchor": {
+      "selector": ".truncate"
+    }
+  },
+  {
+    "id": "design-021",
+    "by": "agent",
+    "rule": "design/truncated-title",
+    "violation": true,
+    "html": "<td class=\"orders-table__cell\"><a href=\"/orders/88213\" style=\"display:block;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap\">Single origin sampler with two 250 g bags and a tasting card</a></td>",
+    "anchor": {
+      "selector": "td a"
+    }
+  },
+  {
+    "id": "design-022",
+    "by": "agent",
+    "rule": "design/truncated-title",
+    "violation": false,
+    "html": "<span class=\"roaster-name truncate\" style=\"max-width:160px\" aria-label=\"Harbour Lane Small Batch Roasters, Bristol\">Harbour Lane Small Batch Roasters, Bristol</span>",
+    "anchor": {
+      "selector": ".truncate"
+    }
+  },
+  {
+    "id": "design-023",
+    "by": "agent",
+    "rule": "design/truncated-title",
+    "violation": true,
+    "html": "<span class=\"bean-card__name truncate\" style=\"max-width:180px\" title=\"Beans\">Colombia Huila Pink Bourbon Honey Process Micro Lot</span>",
+    "anchor": {
+      "selector": ".truncate"
+    }
+  },
+  {
+    "id": "design-024",
+    "by": "agent",
+    "rule": "design/truncated-title",
+    "violation": false,
+    "html": "<span class=\"bean-card__name text-wrap\" style=\"max-width:180px;overflow-wrap:anywhere\">Colombia Huila Pink Bourbon Honey Process Micro Lot</span>",
+    "anchor": {
+      "selector": ".bean-card__name"
+    }
+  },
+  {
+    "id": "design-025",
+    "by": "agent",
+    "rule": "design/disabled-reason",
+    "violation": true,
+    "html": "<div class=\"checkout__actions\"><button type=\"submit\" class=\"btn btn-primary\" data-variant=\"primary\" disabled>Place order</button></div>",
+    "anchor": {
+      "selector": "button[disabled]"
+    }
+  },
+  {
+    "id": "design-026",
+    "by": "agent",
+    "rule": "design/disabled-reason",
+    "violation": false,
+    "html": "<div class=\"checkout__actions\"><button type=\"submit\" class=\"btn btn-primary\" data-variant=\"primary\" disabled aria-describedby=\"min-order-hint\">Place order</button><p id=\"min-order-hint\" class=\"hint\">Add $4.50 more to reach the $15 minimum order.</p></div>",
+    "anchor": {
+      "selector": "button[disabled]"
+    }
+  },
+  {
+    "id": "design-027",
+    "by": "agent",
+    "rule": "design/disabled-reason",
+    "violation": true,
+    "html": "<li class=\"order-row\"><span class=\"order-row__title\">Order 88213</span><button type=\"button\" class=\"btn btn-secondary\" data-variant=\"secondary\" aria-disabled=\"true\">Reorder</button></li>",
+    "anchor": {
+      "selector": "button[aria-disabled]"
+    }
+  },
+  {
+    "id": "design-028",
+    "by": "agent",
+    "rule": "design/disabled-reason",
+    "violation": false,
+    "html": "<li class=\"product-row\"><span class=\"product-row__title\">Kenya Nyeri AA, 250 g</span><button type=\"button\" class=\"btn btn-secondary\" data-variant=\"secondary\" disabled title=\"Out of stock until 20 Oct\">Add to basket</button></li>",
+    "anchor": {
+      "selector": "button[disabled]"
+    }
+  },
+  {
+    "id": "design-029",
+    "by": "agent",
+    "rule": "design/disabled-reason",
+    "violation": true,
+    "html": "<li class=\"product-row\"><span class=\"product-row__title\">Kenya Nyeri AA, 250 g</span><button type=\"button\" class=\"btn btn-secondary\" data-variant=\"secondary\" disabled title=\"Disabled\">Add to basket</button></li>",
+    "anchor": {
+      "selector": "button[disabled]"
+    }
+  },
+  {
+    "id": "design-030",
+    "by": "agent",
+    "rule": "design/disabled-reason",
+    "violation": false,
+    "html": "<label class=\"toggle\"><input type=\"checkbox\" class=\"toggle__input\" name=\"showDisabled\"><span class=\"toggle__label\">Show disabled products</span></label>",
+    "anchor": {
+      "selector": "input"
+    }
+  }
+]
