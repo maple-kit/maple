@@ -197,6 +197,44 @@ than any schedule. A request is abandoned when its `signal` aborts, and a
 failure is the caller's to swallow: the field keeps working, the score just
 does not arrive.
 
+## Judging design rules
+
+`jevRules` is the judged tier of design lint (#126): a `RuleConnector` that asks
+jev one yes/no question per (rule, element) and returns a `Finding` with tier
+`judged` for each element whose probability of yes reaches the threshold. Write
+each rule's `question` so that yes means a violation.
+
+```ts
+import { jevRules } from "@maple-kit/classifier";
+
+const rules = jevRules({
+  apiKey: process.env.TYPESAFE_API_KEY ?? "",
+  rules: [
+    {
+      id: "app/one-primary",
+      question: "Is this a second primary button on the page?",
+      appliesTo: "button",
+    },
+  ],
+});
+```
+
+| Option       | Default                      | What it is                                                                   |
+| ------------ | ---------------------------- | ---------------------------------------------------------------------------- |
+| `apiKey`     | —                            | The credential. Server-side or CI only.                                      |
+| `rules`      | —                            | What to judge. `severity` defaults to `advice`.                              |
+| `baseUrl`    | `https://api.typesafe.ai/v1` | As for `jevClassifier`.                                                      |
+| `model`      | `jev-latest`                 | An alias or a pinned version id.                                             |
+| `threshold`  | `0.5`                        | The probability of yes at or above which an element is flagged.              |
+| `timeoutMs`  | `60000`                      | Per request. A CI run waits for a page; it is not a keystroke.               |
+| `maxTargets` | `50`                         | Elements one `evaluate` judges. More rejects, so a selector cannot run away. |
+
+All the questions for a page travel in **one** request. jev takes text only and
+64k tokens a request, 32k of them state, so each element's HTML is cut at 8,000
+characters and a page whose elements together pass 80,000 characters is split
+into as few requests as hold them. There is no screenshot input. There are no
+retries; a failure rejects with `ClassifierRequestError`.
+
 ## Contributing another
 
 The seam is `ClassifierConnector`, not a vendor SDK: optional `score`,
