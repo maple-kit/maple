@@ -11,7 +11,10 @@
 import { describeElement } from "@maple-kit/core/anchor";
 import { captureContext } from "@maple-kit/core/overlay";
 
+import { choose, groupBySignature, signatureOf } from "./select.js";
+
 import type { Anchor } from "@maple-kit/core/anchor";
+import type { Rule, RuleTarget } from "@maple-kit/core/connectors";
 import type { PageContext } from "@maple-kit/core/overlay";
 
 /** One element's rendered state, as a rule needs to see it. */
@@ -45,10 +48,73 @@ export interface StyleRecord {
   readonly animationProperties: readonly string[];
 }
 
+/** How much of a page is sent to the judge. Every field is optional. */
+export interface TargetLimits {
+  /** Most elements one rule sends. Default `MAX_TARGETS_PER_RULE`. */
+  readonly maxPerRule?: number;
+  /** Most elements one page sends across every rule. Default `MAX_TARGETS`. */
+  readonly maxTargets?: number;
+  /** Longest subtree HTML for one element, in characters. Default `MAX_TARGET_HTML`. */
+  readonly maxHtml?: number;
+}
+
+/** A rule with more groups than this many times its cap is called broad. */
+export const BROAD_RULE_FACTOR = 3;
+/** Sized for a judge with about 32k tokens of state: 40 x 2000 characters is ~20k. */
+export const MAX_TARGETS_PER_RULE = 10;
+/** Most elements one page sends to the judge across every rule. */
+export const MAX_TARGETS = 40;
+/** Longest subtree HTML sent for one element, in characters. */
+export const MAX_TARGET_HTML = 2000;
+/** Appended where a subtree was cut, so the judge knows it is not seeing all of it. */
+export const TRUNCATED = "<!-- truncated -->";
+/** Elements that carry no design a judge should read, and a good deal of noise. */
+const NOISE = "script, style, noscript, template";
+
+/** What was matched, what was sent and what was not, for one page. */
+export interface JudgedStats {
+  /** Elements matched by every rule's `appliesTo`. */
+  readonly matched: number;
+  /** Distinct components among them: repeats collapsed to one. */
+  readonly groups: number;
+  /** Elements actually sent to the judge. */
+  readonly sent: number;
+  /** Groups left out by the per-rule or page-wide cap. */
+  readonly droppedByCap: number;
+  /** Groups left out because their file is not among `sources`. */
+  readonly notChanged: number;
+  /** Rules that had groups cut by a cap. */
+  readonly rulesAtCap: readonly string[];
+  /** Rules with over `BROAD_RULE_FACTOR` times the per-rule cap in groups: narrow `appliesTo`. */
+  readonly broadRules: readonly string[];
+  /** Rules whose `appliesTo` is not a valid selector. */
+  readonly invalidSelectors: readonly string[];
+}
+
+/** The elements the rules chose on one page, and what could not be sent. */
+export interface Targets {
+  readonly targets: readonly RuleTarget[];
+  /**
+   * Aligned with `targets`: how many other identical instances each stands
+   * for, so a finding on it can say so.
+   */
+  readonly repeats: readonly number[];
+  readonly stats: JudgedStats;
+}
+
+/** What a pass is asked to read for the judge. */
+export interface JudgedRead extends TargetLimits {
+  readonly rules: readonly Rule[];
+  /** Repo-relative files whose elements go first; see `JudgedOptions.sources`. */
+  readonly sources?: readonly string[];
+}
+
 /** One pass over the page: what was on it, and what it was being shown in. */
 export interface Reading {
   readonly context: PageContext;
   readonly records: readonly StyleRecord[];
+  /** Empty unless the pass was given rules. */
+  readonly judged: Targets;
 }
 
 const INTERACTIVE_TAGS = ["a", "button", "input", "select", "summary", "textarea"];
@@ -143,12 +209,144 @@ function recordOf(element: Element): StyleRecord {
   };
 }
 
+/** An element's subtree as HTML, without scripts or styles, capped in size. */
+function subtreeHtml(element: Element, cap: number): string {
+  const copy = element.cloneNode(true) as Element;
+  for (const noise of [...copy.querySelectorAll(NOISE)]) noise.remove();
+  const html = copy.outerHTML;
+  return html.length > cap ? html.slice(0, cap) + TRUNCATED : html;
+}
+
+function matches(selector: string): Element[] | undefined {
+  try {
+    return [...document.querySelectorAll(selector)];
+  } catch {
+    return undefined;
+  }
+}
+
+/** Attributes whose value differs per instance of one component. */
+const VOLATILE = ["id", "data-testid", "href", "src"];
+
+/** Replaces what varies per instance: ink in text nodes and volatile values. */
+function neutralise(root: Element): void {
+  for (const element of [root, ...root.querySelectorAll("*")]) {
+    for (const name of VOLATILE) {
+      if (element.hasAttribute(name)) element.setAttribute(name, "");
+    }
+  }
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+    if ((node.textContent ?? "").trim() !== "") node.textContent = "#";
+  }
+}
+
+/** A matched element, with what it is told apart from its repeats by. */
+interface Candidate {
+  readonly element: Element;
+  readonly source: string | undefined;
+  readonly signature: string;
+}
+
+function candidateOf(element: Element): Candidate {
+  const source = element.closest("[data-maple-src]")?.getAttribute("data-maple-src") ?? undefined;
+  const copy = element.cloneNode(true) as Element;
+  for (const noise of [...copy.querySelectorAll(NOISE)]) noise.remove();
+  neutralise(copy);
+  return { element, source, signature: signatureOf(source, copy.outerHTML) };
+}
+
+interface Limits {
+  readonly perRule: number;
+  readonly total: number;
+  readonly html: number;
+  readonly sources: readonly string[] | undefined;
+  /** What the page-wide cap leaves for the rule being read. */
+  readonly room: number;
+}
+
+/** Counts that accumulate over the rules of one page. */
+interface Tally {
+  matched: number;
+  groups: number;
+  droppedByCap: number;
+  notChanged: number;
+  readonly rulesAtCap: string[];
+  readonly broadRules: string[];
+  readonly invalidSelectors: string[];
+}
+
+function takeRule(rule: Rule, found: Element[], limits: Limits, tally: Tally) {
+  const groups = groupBySignature(found.map(candidateOf));
+  const chosen = choose(groups, Math.max(0, Math.min(limits.perRule, limits.room)), limits.sources);
+  tally.matched += found.length;
+  tally.groups += groups.length;
+  tally.droppedByCap += chosen.capped;
+  tally.notChanged += chosen.notChanged;
+  if (chosen.capped > 0) tally.rulesAtCap.push(rule.id);
+  if (groups.length > limits.perRule * BROAD_RULE_FACTOR) tally.broadRules.push(rule.id);
+  return chosen.kept;
+}
+
+/**
+ * The elements each rule applies to, in rule order. Repeats of one component
+ * are one target; the caps count those groups, not raw matches. Rules run first
+ * to last, so the ones a host lists first are kept when the page-wide cap is
+ * reached.
+ */
+export function readTargets(read: JudgedRead): Targets {
+  const limits: Limits = {
+    perRule: read.maxPerRule ?? MAX_TARGETS_PER_RULE,
+    total: read.maxTargets ?? MAX_TARGETS,
+    html: read.maxHtml ?? MAX_TARGET_HTML,
+    sources: read.sources,
+    room: 0,
+  };
+  const tally: Tally = {
+    matched: 0,
+    groups: 0,
+    droppedByCap: 0,
+    notChanged: 0,
+    rulesAtCap: [],
+    broadRules: [],
+    invalidSelectors: [],
+  };
+  const targets: RuleTarget[] = [];
+  const repeats: number[] = [];
+  for (const rule of read.rules) {
+    const found = matches(rule.appliesTo);
+    if (found === undefined) {
+      tally.invalidSelectors.push(rule.id);
+      continue;
+    }
+    for (const group of takeRule(
+      rule,
+      found,
+      { ...limits, room: limits.total - targets.length },
+      tally,
+    )) {
+      const { element } = group.first;
+      targets.push({
+        rule: rule.id,
+        html: subtreeHtml(element, limits.html),
+        anchor: describeElement(element),
+      });
+      repeats.push(group.size - 1);
+    }
+  }
+  return { targets, repeats, stats: { ...tally, sent: targets.length } };
+}
+
 /**
  * Reads every tagged element, and the page they are on. Returns plain data:
  * only what survives structured cloning comes back out of the browser, and a
  * rule should not hold a live node it might read a second, different value from.
  */
-export function readPage(): Reading {
+export function readPage(judged: JudgedRead = { rules: [] }): Reading {
   const elements = [...document.querySelectorAll("[data-maple-src]")];
-  return { context: captureContext(), records: elements.map(recordOf) };
+  return {
+    context: captureContext(),
+    records: elements.map(recordOf),
+    judged: readTargets(judged),
+  };
 }

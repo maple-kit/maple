@@ -119,6 +119,7 @@ describe("commentsForRun", () => {
       findings: [finding(), finding({ message: "Second." })],
       contexts: [phone, SAMPLE_CONTEXT],
       context: SAMPLE_CONTEXT,
+      judgedErrors: [],
     };
     const comments = commentsForRun(run, { branch: "feature/x", now: NOW });
     expect(comments[0]!.context.viewportWidth).toBe(375);
@@ -126,7 +127,7 @@ describe("commentsForRun", () => {
   });
 
   it("falls back to the run's context when one is missing", () => {
-    const run = { findings: [finding()], contexts: [], context: SAMPLE_CONTEXT };
+    const run = { findings: [finding()], contexts: [], context: SAMPLE_CONTEXT, judgedErrors: [] };
     expect(commentsForRun(run, { branch: "feature/x", now: NOW })[0]!.context).toEqual(
       SAMPLE_CONTEXT,
     );

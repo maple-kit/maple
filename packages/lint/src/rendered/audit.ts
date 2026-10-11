@@ -13,11 +13,12 @@ import { createLogger } from "@maple-kit/core/logger";
 import { toCommentContext } from "@maple-kit/core/overlay";
 
 import { readTokenFiles, type TokenSet } from "../tokens.js";
+import { lintJudged } from "./judged.js";
 import { reducedMotionFindings, renderedFindings, unreadableColors } from "./rules.js";
 
-import type { Reading } from "./collect.js";
+import type { JudgedRead, JudgedStats, Reading, TargetLimits } from "./collect.js";
 import type { CommentContext } from "@maple-kit/core";
-import type { Finding } from "@maple-kit/core/connectors";
+import type { Finding, RuleConnector } from "@maple-kit/core/connectors";
 import type { Logger } from "@maple-kit/core/logger";
 import type { Browser, BrowserContext, Page } from "playwright";
 
@@ -33,6 +34,20 @@ export const DEFAULT_VIEWPORTS: readonly Viewport[] = [
   { width: 768, height: 1024 },
   { width: 1440, height: 900 },
 ];
+
+/** The judged tier, switched on by passing a connector. */
+export interface JudgedOptions extends TargetLimits {
+  /**
+   * What judges the page. Each viewport's elements go to `evaluate` in one
+   * call. Findings are `judged`, `advice` unless the rule says otherwise.
+   */
+  readonly connector: RuleConnector;
+  /**
+   * Repo-relative changed files. When set, elements from those files go
+   * first, untagged ones follow if there is room, other files are skipped.
+   */
+  readonly sources?: readonly string[];
+}
 
 /** What a rendered run needs to know. */
 export interface RenderedLintOptions {
@@ -60,6 +75,11 @@ export interface RenderedLintOptions {
   /** An already-launched browser, which a test supplies and a run does not. */
   readonly browser?: Browser;
   /**
+   * Also put the page's rules to a judge, on the pages this run opens.
+   * A judge that fails is reported in `judgedErrors` and never fails the run.
+   */
+  readonly judged?: JudgedOptions;
+  /**
    * Where a run says what it could not check. Defaults to warning through
    * Maple's own logger; a host that captures its own passes one in.
    */
@@ -76,6 +96,16 @@ export interface RenderedRun {
   readonly contexts: readonly CommentContext[];
   /** The widest viewport read, for a caller that wants one context. */
   readonly context: CommentContext;
+  /**
+   * One line per viewport whose judge rejected. A viewport listed here was
+   * not judged: no judged findings there is not a pass.
+   */
+  readonly judgedErrors: readonly string[];
+  /**
+   * What the judge was and was not shown; absent without a judge. Counts are
+   * the largest any viewport saw, the lists the union.
+   */
+  readonly judgedStats?: JudgedStats;
 }
 
 /**
@@ -99,6 +129,60 @@ function warnGaps(log: Logger, tokens: TokenSet, seen: readonly string[]): void 
   }
 }
 
+/** One stats object for the run: the largest counts, the union of the lists. */
+export function mergeStats(passes: readonly Pass[]): JudgedStats | undefined {
+  const all = passes.flatMap((pass) => pass.judgedStats ?? []);
+  if (all.length === 0) return undefined;
+  const most = (pick: (stats: JudgedStats) => number) => Math.max(...all.map(pick));
+  const union = (pick: (stats: JudgedStats) => readonly string[]) => [
+    ...new Set(all.flatMap(pick)),
+  ];
+  return {
+    matched: most((s) => s.matched),
+    groups: most((s) => s.groups),
+    sent: most((s) => s.sent),
+    droppedByCap: most((s) => s.droppedByCap),
+    notChanged: most((s) => s.notChanged),
+    rulesAtCap: union((s) => s.rulesAtCap),
+    broadRules: union((s) => s.broadRules),
+    invalidSelectors: union((s) => s.invalidSelectors),
+  };
+}
+
+/** Says what the judge could not do, one warning each, so none is mistaken for a pass. */
+function warnJudged(log: Logger, passes: readonly Pass[]): readonly string[] {
+  const errors: string[] = [];
+  for (const pass of passes) {
+    const at = label(pass.viewport);
+    if (pass.judgedError !== undefined) {
+      errors.push(`${at}: ${pass.judgedError}`);
+      log.warn("The judge failed, so this viewport was not judged", {
+        viewport: at,
+        error: pass.judgedError,
+      });
+    }
+  }
+  const stats = mergeStats(passes);
+  if (stats === undefined) return errors;
+  if (stats.invalidSelectors.length > 0) {
+    log.warn("A rule's selector is not valid, so the rule judged nothing", {
+      rules: stats.invalidSelectors,
+    });
+  }
+  if (stats.droppedByCap > 0) {
+    log.warn("Some matching elements were over the caps and were not judged", {
+      dropped: stats.droppedByCap,
+      rules: stats.rulesAtCap,
+    });
+  }
+  if (stats.broadRules.length > 0) {
+    log.warn("These rules match far more than the caps allow; narrow their appliesTo", {
+      rules: stats.broadRules,
+    });
+  }
+  return errors;
+}
+
 /** A finding and the environment it was first seen in. */
 export interface Seen {
   readonly finding: Finding;
@@ -112,6 +196,10 @@ export interface Pass {
   readonly context: CommentContext;
   /** Colours this viewport painted that no rule could read. */
   readonly unreadable: readonly string[];
+  /** Why this viewport's judge call failed, if it did. */
+  readonly judgedError?: string;
+  /** What this viewport's judge was and was not shown. */
+  readonly judgedStats?: JudgedStats;
 }
 
 function label(viewport: Viewport): string {
@@ -128,13 +216,13 @@ function pageBundle(): string {
 }
 
 /** Loads the reader into the page and calls it. */
-async function read(page: Page): Promise<Reading> {
+async function read(page: Page, judged: JudgedRead): Promise<Reading> {
   await page.addScriptTag({ path: pageBundle() });
-  const reading = await page.evaluate(() => {
+  const reading = await page.evaluate((arg) => {
     const run = window.__mapleLintRead;
     if (!run) throw new Error("@maple-kit/lint: the page bundle did not install its reader.");
-    return run();
-  });
+    return run(arg);
+  }, judged);
   return reading;
 }
 
@@ -143,6 +231,8 @@ interface Visit {
   readonly url: string;
   readonly timeout: number;
   readonly settleMs: number;
+  /** What to read for the judge; the reduced-motion pass reads none. */
+  readonly judged: JudgedRead;
 }
 
 /** Opens a page, reads it, and closes the context it opened. */
@@ -152,10 +242,16 @@ async function collect(context: BrowserContext, visit: Visit): Promise<Reading> 
   try {
     await page.goto(url, { waitUntil: "load", timeout });
     if (settleMs > 0) await page.waitForTimeout(settleMs);
-    return await read(page);
+    return await read(page, visit.judged);
   } finally {
     await context.close();
   }
+}
+
+/** What a pass reads for the judge: the connector stays in Node. */
+function readFor(judged: JudgedOptions): JudgedRead {
+  const { connector, sources, ...limits } = judged;
+  return { ...limits, rules: connector.rules, ...(sources === undefined ? {} : { sources }) };
 }
 
 /** Both passes at one viewport. */
@@ -172,16 +268,25 @@ async function auditViewport(
     bypassCSP: true,
     ...(options.bypassHeaders === undefined ? {} : { extraHTTPHeaders: options.bypassHeaders }),
   };
+  const { judged } = options;
   const visit: Visit = {
     url: options.url,
     timeout: options.timeout ?? 30_000,
     settleMs: options.settleMs ?? 0,
+    judged: { rules: [] },
   };
-  const seen = await collect(await browser.newContext(shared), visit);
+  const seen = await collect(await browser.newContext(shared), {
+    ...visit,
+    judged: judged === undefined ? visit.judged : readFor(judged),
+  });
   const reduced = await collect(
     await browser.newContext({ ...shared, reducedMotion: "reduce" }),
     visit,
   );
+  const verdict =
+    judged === undefined
+      ? undefined
+      : await lintJudged(judged.connector, { url: options.url, viewport, judged: seen.judged });
   return {
     viewport,
     context: toCommentContext(seen.context),
@@ -189,18 +294,22 @@ async function auditViewport(
     findings: [
       ...renderedFindings(seen.records, tokens),
       ...reducedMotionFindings(reduced.records),
+      ...(verdict?.findings ?? []),
     ],
+    ...(verdict?.error === undefined ? {} : { judgedError: verdict.error }),
+    ...(judged === undefined ? {} : { judgedStats: seen.judged.stats }),
   };
 }
 
 /**
  * What makes a finding the same finding: every rung, not the selector alone.
- * `cssPathTo` gives none when no path identifies the element uniquely.
+ * A judged message is left out, as its wording changes run to run.
  */
 function keyOf(found: Finding): string {
   const { key, source, component, selector } = found.anchor;
   const place = [key, source, component, selector].map((rung) => rung ?? "").join("\u0000");
-  return `${found.rule}\u0000${place}\u0000${found.message}`;
+  const said = found.tier === "judged" ? "" : found.message;
+  return `${found.rule}\u0000${place}\u0000${said}`;
 }
 
 /**
@@ -257,8 +366,12 @@ export async function lintRendered(options: RenderedLintOptions): Promise<Render
     }
     const log = options.logger ?? createLogger({ level: "warn" });
     warnGaps(log, tokens, [...new Set(passes.flatMap((pass) => pass.unreadable))]);
+    const judgedErrors = warnJudged(log, passes);
+    const judgedStats = mergeStats(passes);
     const seen = dedupe(passes);
     return {
+      judgedErrors,
+      ...(judgedStats === undefined ? {} : { judgedStats }),
       findings: seen.map((one) => one.finding),
       contexts: seen.map((one) => one.context),
       context: widest(passes),

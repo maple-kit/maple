@@ -175,6 +175,63 @@ A run sends the preview platform's bypass as request headers and nothing else.
 Reviewer cookies are never used: CI's lint run does not borrow a person's
 session to see a page.
 
+## The judged tier
+
+A rule a script cannot decide ("is there one primary action?") is put to a
+judge as a question about one kind of element. Lint knows only the
+`RuleConnector` contract from `@maple-kit/core`; which model answers is the
+host's wiring, and lint imports none of them.
+
+```ts
+const run = await lintRendered({
+  url,
+  tokenFiles,
+  judged: { connector, maxTargets: 30 },
+});
+```
+
+Each rule's `appliesTo` is a CSS selector. At every viewport the matching
+elements are serialised as HTML, with scripts and styles removed, anchored the
+way a rendered finding is, and sent to `connector.evaluate` in one call. It
+reuses the page the rendered tier opens; no second browser starts. No
+screenshot is sent: the judge reads markup.
+
+Repeated components are one question, not forty. Matches of a rule are
+grouped by a signature: the element's `data-maple-src` tag plus its HTML with
+text, ids, `data-testid`, `href` and `src` values removed. The first
+of each group is sent. A finding on it is returned once, with the count in the
+message ("... (and 12 identical instances)").
+
+Size is bounded because a judge has a fixed budget, and the caps count groups.
+The defaults are 10 per rule (`maxPerRule`), 40 per page (`maxTargets`) and 2000
+characters per element (`maxHtml`); a longer subtree ends in
+`<!-- truncated -->`. Rules are served in the order listed, so list the ones
+that matter first. Lint owns these limits; a connector should not add its own.
+
+`judged.sources` is a list of repo-relative files, normally the PR's changed
+ones. When set, groups from those files go first, untagged groups follow only
+if the caps leave room, and groups from any other file are skipped.
+
+Nothing is dropped silently. `RenderedRun.judgedStats` reports `matched`,
+`groups`, `sent`, `droppedByCap`, `notChanged`, `rulesAtCap`, `invalidSelectors`
+and `broadRules` (a rule with more than 3 times `maxPerRule` groups: narrow its
+`appliesTo`), and the logger warns for each. Across viewports the counts are the
+largest any viewport saw and the lists are unions.
+
+What comes back is normalised:
+
+- `tier` is `judged`, and `severity` is the rule's, `advice` when it names none.
+  Set `severity: "error"` on a rule to let it gate; a judge's opinion can change
+  between runs, so that is a choice to make rule by rule.
+- A finding for a rule id the connector does not list is dropped.
+- A finding at several viewports is one finding. Its identity is the rule and
+  the place, not the message, which a judge words differently every run.
+
+A judge that fails does not fail the run. The rendered findings are returned
+as usual, the logger warns, and `RenderedRun.judgedErrors` lists each viewport
+that was not judged. Empty judged findings with a non-empty `judgedErrors` is
+an unchecked page, not a clean one.
+
 ## From the command line
 
 `maple lint --url=<preview> --tokens=<file.css>` runs the rendered tier and
