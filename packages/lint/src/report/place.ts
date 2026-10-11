@@ -7,7 +7,7 @@
 
 import { isAbsolute, relative, sep } from "node:path";
 
-import type { Finding } from "../types.js";
+import type { Finding } from "@maple-kit/core/connectors";
 
 /** A file, line and column in the checkout. */
 export interface Place {

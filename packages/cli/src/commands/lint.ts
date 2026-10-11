@@ -9,7 +9,8 @@ import { describePlace, groupByRule, lintRendered, verdictFor } from "@maple-kit
 import { isSet } from "../args.js";
 
 import type { FlagSpec, ParsedArgs } from "../args.js";
-import type { Finding, RenderedLintOptions, Viewport } from "@maple-kit/lint";
+import type { Finding } from "@maple-kit/core";
+import type { RenderedLintOptions, Viewport } from "@maple-kit/lint";
 
 export const LINT_FLAGS = {
   url: "string",

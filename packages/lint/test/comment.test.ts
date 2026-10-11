@@ -9,7 +9,7 @@ import {
   LINT_AUTHOR,
 } from "../src/comment.js";
 
-import type { Finding } from "../src/types.js";
+import type { Finding } from "@maple-kit/core/connectors";
 
 const NOW = "2026-01-01T12:00:00.000Z";
 const OPTIONS = { branch: "feature/x", context: SAMPLE_CONTEXT, now: NOW };

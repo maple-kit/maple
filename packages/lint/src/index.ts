@@ -46,4 +46,3 @@ export { groupByRule, unreachableVerdict, verdictFor } from "./report/verdict.js
 export type { Conclusion, Verdict } from "./report/verdict.js";
 export { lengthToPx, parseTokens, readTokenFiles, ROOT_FONT_SIZE } from "./tokens.js";
 export type { TokenSet } from "./tokens.js";
-export type { Finding, Severity, Tier } from "./types.js";

@@ -9,7 +9,28 @@ import {
 } from "../src/connectors/capabilities.js";
 import { memoryStore } from "../src/testing/memory-store.js";
 
-import type { AnyConnector, ClassifierConnector, StoreConnector } from "../src/connectors/types.js";
+import type {
+  AnyConnector,
+  ClassifierConnector,
+  RuleConnector,
+  StoreConnector,
+} from "../src/connectors/types.js";
+
+describe("the rules kind", () => {
+  const judge: RuleConnector = { name: "judge", rules: [], evaluate: () => Promise.resolve([]) };
+
+  it("requires evaluate, and nothing else", () => {
+    expect(() => assertUsable("rules", judge)).not.toThrow();
+    expect(capabilitiesOf("rules", judge)).toEqual({ evaluate: true });
+  });
+
+  it("refuses a connector with a rules list and no evaluate", () => {
+    const inert = { name: "inert", rules: [] } as unknown as RuleConnector;
+
+    expect(missingRequirements("rules", inert)).toEqual(["evaluate"]);
+    expect(() => assertUsable("rules", inert)).toThrow(MissingCapabilityError);
+  });
+});
 
 describe("capability detection", () => {
   it("reports every method of the kind", () => {

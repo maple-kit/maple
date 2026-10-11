@@ -19,7 +19,8 @@ import {
   verdictFor,
 } from "@maple-kit/lint";
 
-import type { Finding, RenderedLintOptions, Verdict, Viewport } from "@maple-kit/lint";
+import type { Finding } from "@maple-kit/core";
+import type { RenderedLintOptions, Verdict, Viewport } from "@maple-kit/lint";
 
 /** Where a verdict is published. Omitted from {@link CiLintOptions} for a dry run. */
 export interface CiLintPublish {

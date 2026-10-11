@@ -43,6 +43,12 @@ describe("run", () => {
     expect(output).toContain("classifier    required: none");
   });
 
+  it("lists the rules kind with its one required method", async () => {
+    const output = (await run(["connectors"], OPTIONS)).output;
+
+    expect(output).toContain("rules         required: evaluate");
+  });
+
   it("emits JSON for --json", async () => {
     const result = await run(["connectors", "--json"], OPTIONS);
     const parsed: unknown = JSON.parse(result.output);

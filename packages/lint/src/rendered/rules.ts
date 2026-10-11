@@ -10,8 +10,8 @@ import { colorKey, contrastRatio, isUnreadableColor, over, parseColor } from "..
 import { type TokenSet } from "../tokens.js";
 
 import type { Rgb } from "../color.js";
-import type { Finding, Severity } from "../types.js";
 import type { StyleRecord } from "./collect.js";
+import type { Finding, Severity } from "@maple-kit/core/connectors";
 
 /** What a rule is, for the docs table and for a host overriding a severity. */
 export interface RuleDefinition {

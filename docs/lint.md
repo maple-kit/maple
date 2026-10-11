@@ -3,7 +3,8 @@
 Visual review catches what a person notices. A design system also has rules a
 machine can check on every pull request, and this is where those live.
 
-Lint reports a `Finding`, the same shape from every tier:
+Lint reports a `Finding`, the same shape from every tier. It is defined in
+`@maple-kit/core`, beside the `rules` connector kind that produces judged ones:
 
 ```ts
 interface Finding {

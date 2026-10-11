@@ -126,6 +126,8 @@ Connector kinds
                 optional: read
   classifier    required: none
                 optional: score, classify, plan
+  rules         required: evaluate
+                optional: none
 ```
 
 <!-- /generated:connector-kinds -->

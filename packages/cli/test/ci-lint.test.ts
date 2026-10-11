@@ -9,7 +9,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { runCiLint } from "../src/ci-lint.js";
 import { run } from "../src/run.js";
 
-import type { Finding } from "@maple-kit/lint";
+import type { Finding } from "@maple-kit/core";
 
 const API = "https://api.github.com/repos/acme/web";
 const sent: { method: string; url: string; body: unknown }[] = [];

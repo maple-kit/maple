@@ -8,6 +8,7 @@
  * capabilities twice.
  */
 
+import type { Anchor } from "../anchor/index.js";
 import type { FlagValue, MockState } from "../mock/recipe.js";
 import type {
   Approval,
@@ -22,9 +23,9 @@ import type {
   NewComment,
 } from "../types.js";
 
-/** The six kinds of backend Maple knows how to talk to. */
+/** The seven kinds of backend Maple knows how to talk to. */
 export type ConnectorKind =
-  "classifier" | "gate" | "identity" | "media" | "observability" | "store";
+  "classifier" | "gate" | "identity" | "media" | "observability" | "rules" | "store";
 
 /** Fields every connector carries, whatever its kind. */
 export interface ConnectorMeta {
@@ -342,4 +343,73 @@ export type AnyConnector =
   | IdentityConnector
   | MediaConnector
   | ObservabilityConnector
+  | RuleConnector
   | StoreConnector;
+
+/** Which tier found it: how much the finding can be trusted to be exact. */
+export type Tier = "judged" | "rendered" | "static";
+
+/**
+ * How a host is asked to treat it. Deterministic tiers may block; a judged
+ * finding defaults to advice, because a model's opinion is not a gate.
+ */
+export type Severity = "advice" | "error" | "warn";
+
+/**
+ * One thing a rule found, at one place on the page. Every lint tier reports
+ * this shape, so the overlay, the CI check and the SARIF writer read one type.
+ */
+export interface Finding {
+  /** Rule id, `maple/` for a predefined rule. */
+  readonly rule: string;
+  readonly tier: Tier;
+  readonly severity: Severity;
+  /** One sentence, in the reviewer's words, naming the value that is wrong. */
+  readonly message: string;
+  /**
+   * Where it is, in the cascade's own type. A finding and a comment mean the
+   * same thing by "where", which is what lets one be pinned beside the other.
+   */
+  readonly anchor: Anchor;
+  /** Where the rule is documented. */
+  readonly url?: string;
+}
+
+/** A design rule put to a judge as a question about one kind of element. */
+export interface Rule {
+  /** Stable id, namespaced by whoever wrote it; reported as `Finding.rule`. */
+  readonly id: string;
+  /** What the judge is asked of each matching element, answerable yes or no. */
+  readonly question: string;
+  /** CSS selector choosing the elements the question is asked of. */
+  readonly appliesTo: string;
+  /** What a violation is reported as. Defaults to `advice` where resolved. */
+  readonly severity?: Severity;
+}
+
+/** One element a rule applies to, as the judge is shown it. */
+export interface RuleTarget {
+  /** The `Rule.id` this element is to be judged against. */
+  readonly rule: string;
+  /** The element's subtree, serialised as HTML. */
+  readonly html: string;
+  /** Where the element is, so a finding can be placed on it. */
+  readonly anchor: Anchor;
+}
+
+/** The elements of one rendered page, grouped for one evaluation. */
+export interface RuleRequest {
+  /** The page the elements were read from. */
+  readonly url: string;
+  readonly viewport: { readonly width: number; readonly height: number };
+  readonly targets: readonly RuleTarget[];
+}
+
+/**
+ * Judges rendered elements against design rules. `evaluate` returns judged
+ * findings only for the rules that were violated; an empty list is a pass.
+ */
+export interface RuleConnector extends ConnectorMeta {
+  readonly rules: readonly Rule[];
+  evaluate(request: RuleRequest): Promise<readonly Finding[]>;
+}

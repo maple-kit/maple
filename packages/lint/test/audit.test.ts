@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { dedupe, DEFAULT_VIEWPORTS } from "../src/rendered/audit.js";
 
-import type { Finding } from "../src/types.js";
+import type { Finding } from "@maple-kit/core/connectors";
 
 const PHONE = { width: 375, height: 812 };
 const LAPTOP = { width: 1440, height: 900 };

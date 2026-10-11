@@ -7,7 +7,7 @@
 
 import { describePlace } from "./place.js";
 
-import type { Finding } from "../types.js";
+import type { Finding } from "@maple-kit/core/connectors";
 
 /** `neutral` is a run that could not judge, which must not block a merge. */
 export type Conclusion = "failure" | "neutral" | "success";
