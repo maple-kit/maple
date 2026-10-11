@@ -171,7 +171,7 @@ the surface.
 ## Where the model tier goes
 
 Not in `@maple-kit/core`. The provider lives in `@maple-kit/classifier` so core
-stays on Effect v3, and it is reached **from the SDK route and never from the
+keeps Effect behind its own boundary, and it is reached **from the SDK route and never from the
 browser** — a model credential does not belong anywhere a reviewer can read it,
 and routing through the same origin is what keeps `connect-src` unchanged.
 
@@ -180,9 +180,9 @@ local one differ by configuration rather than by architecture.
 
 ## The jev provider
 
-`jevClassifier()` is the first implementation. It peers on the Effect v4
-release candidate, which carries the TypeSafe provider; core does not move, and
-Effect appears nowhere on the package's boundary.
+`jevClassifier()` is the first implementation. It peers on Effect v4, which
+carries the TypeSafe provider, at the same version core uses; Effect appears
+nowhere on the package's boundary.
 
 **Every pillar's question and the kind's travel in one request.** The System
 One endpoint takes a `state` and a _named map_ of questions, reads the state

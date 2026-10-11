@@ -9,7 +9,7 @@
  * method the connector omits resolves to the absent value its export names.
  */
 
-import { Cause, Effect, Exit, Option, Schedule } from "effect";
+import { Cause, Effect, Exit, Result, Schedule } from "effect";
 
 import { MapleStoreError, UpstreamError } from "../../errors.js";
 import { StoreRejected, StoreUnavailable } from "./errors.js";
@@ -26,7 +26,7 @@ import type {
 
 /** Three tries, 100ms apart, doubling, with jitter so retries do not synchronise. */
 const RETRY_POLICY = Schedule.jittered(
-  Schedule.intersect(Schedule.exponential("100 millis", 2), Schedule.recurs(2)),
+  Schedule.max([Schedule.exponential("100 millis", 2), Schedule.recurs(2)]),
 );
 
 /** How long any single connector call may take before it is abandoned. */
@@ -67,14 +67,16 @@ function call<A>(
   run: () => Promise<A>,
 ): Effect.Effect<A, StoreRejected | StoreUnavailable> {
   return attempt(connector, operation, run).pipe(
-    Effect.timeoutFail({
+    Effect.timeoutOrElse({
       duration: CALL_TIMEOUT,
-      onTimeout: () =>
-        new StoreUnavailable({
-          connector: connector.name,
-          operation,
-          cause: new Error(`Timed out after ${CALL_TIMEOUT}.`),
-        }),
+      orElse: () =>
+        Effect.fail(
+          new StoreUnavailable({
+            connector: connector.name,
+            operation,
+            cause: new Error(`Timed out after ${CALL_TIMEOUT}.`),
+          }),
+        ),
     }),
     Effect.retry({ schedule: RETRY_POLICY, while: (error) => error._tag === "StoreUnavailable" }),
   );
@@ -100,8 +102,8 @@ async function run<A>(program: Effect.Effect<A, StoreRejected | StoreUnavailable
   const exit = await Effect.runPromiseExit(program.pipe(Effect.mapError(toPublicError)));
   if (Exit.isSuccess(exit)) return exit.value;
 
-  const failure = Cause.failureOption(exit.cause);
-  throw Option.getOrElse(failure, () => new Error(Cause.pretty(exit.cause)));
+  const failure = Cause.findError(exit.cause);
+  throw Result.isSuccess(failure) ? failure.success : new Error(Cause.pretty(exit.cause));
 }
 
 /** Lists comments, retrying transient failures. */

@@ -9,7 +9,7 @@
 
 import { TypeSafeClient } from "@effect/ai-typesafe";
 import { Cause, Effect, Exit, Layer, ManagedRuntime, Redacted } from "effect";
-import * as FetchHttpClient from "effect/unstable/http/FetchHttpClient";
+import * as FetchHttpClient from "effect/http/FetchHttpClient";
 
 import { ClassifierRequestError } from "../errors.js";
 

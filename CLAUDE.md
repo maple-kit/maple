@@ -66,7 +66,7 @@ replaced rather than edited.
 
 ### Effect
 
-Effect v3 is used **inside** `packages/core`. It must not appear in any public
+Effect v4 is used **inside** `packages/core`. It must not appear in any public
 entrypoint: the contract a connector author implements is plain Promises and
 structural types.
 

@@ -8,12 +8,11 @@ packages:
 # usually caught and unpublished within hours; waiting costs nothing.
 minimumReleaseAge: 4320
 
-# A scoped exception to minimumReleaseAge, not a relaxation of it. The Effect v4
-# release candidate and its TypeSafe provider are the only published build of
-# the jev provider, and the RC line republishes faster than three days, so the
-# guard refuses every version of it there has ever been. Only these two names
-# are excluded; everything else, `effect` v3 in packages/core included, still
-# waits. Revisit when Effect v4 reaches a stable release.
+# A scoped exception to minimumReleaseAge, not a relaxation of it. Effect v4 and
+# its TypeSafe provider were pinned at the newest stable release the day it
+# shipped, as the owner asked, so the three-day wait is waived for these two
+# names only. Everything else still waits. Remove this once the next Effect
+# bump can wait its three days.
 minimumReleaseAgeExclude:
   - "effect"
   - "@effect/ai-typesafe"
