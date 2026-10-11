@@ -1,5 +1,6 @@
 import { createMapleClient } from "@maple-kit/core/client";
 import { toCommentContext } from "@maple-kit/core/overlay";
+import { http, HttpResponse } from "msw";
 import { createElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
@@ -18,9 +19,9 @@ import {
   createMapleFake,
   fetchThrough,
   MAPLE_BASE,
+  mediaUnavailable,
   UPLOAD_PATH,
   uploadRoute,
-  uploadUnavailable,
 } from "./msw/composer.js";
 
 import type { LeaveAsk } from "../src/composer/leave.js";
@@ -351,61 +352,169 @@ describe("attachments", () => {
     };
   }
 
-  it("previews a pasted image and attaches it to the comment", async () => {
-    started();
-    const surface = await open({ upload: uploadThrough(fetchThrough([uploadRoute()])) });
+  /** Every call the route saw, in order, so what happens when is the assertion. */
+  function recording(...extra: RequestHandler[]): { calls: string[]; fetch: typeof fetch } {
+    const calls: string[] = [];
+    const through = routes(...extra);
+    const fetch: typeof globalThis.fetch = (input, init) => {
+      const url = new URL(input instanceof Request ? input.url : String(input));
+      calls.push(
+        `${init?.method ?? "GET"} ${url.pathname.slice(MAPLE_BASE.length - url.origin.length)}`,
+      );
+      return through(input, init);
+    };
+    return { calls, fetch };
+  }
 
-    pasteAnImage(surface);
+  const wrote = (calls: readonly string[]): string[] => calls.filter((call) => call !== "GET /me");
 
-    const shot = await vi.waitFor(() => {
-      const found = root().querySelector<HTMLImageElement>("img.mk-shot");
-      if (!found) throw new Error("no preview yet");
+  async function publishing(surface: HTMLElement): Promise<void> {
+    client.setBody("The legend overlaps the bars.");
+    const publish = await vi.waitFor(() => {
+      const found = [...surface.querySelectorAll("button")].find(
+        (one) => one.textContent === "Publish",
+      );
+      if (!found || found.disabled) throw new Error("not publishable yet");
       return found;
     });
-    expect(shot.src.startsWith("blob:")).toBe(true);
-    expect(shot.alt).toBe(ATTACH_WORDS.alt);
+    publish.click();
+  }
 
-    await vi.waitFor(() => expect(client.getState().composer.attachments).toHaveLength(1));
-  });
+  const previewed = (): HTMLImageElement | null =>
+    root().querySelector<HTMLImageElement>("img.mk-shot");
 
-  it("keeps the preview and says so when the upload fails", async () => {
-    started();
-    const surface = await open({ upload: uploadThrough(fetchThrough([uploadUnavailable()])) });
+  it("previews a pasted image from memory and makes no upload while it is a draft", async () => {
+    const seen = recording();
+    started({ fetch: seen.fetch });
+    const surface = await open();
 
     pasteAnImage(surface);
 
-    await vi.waitFor(() =>
-      expect(root().querySelector(".mk-shots")?.textContent).toContain(ATTACH_WORDS.failed),
-    );
+    await vi.waitFor(() => expect(previewed()).not.toBeNull());
+    expect(previewed()?.src.startsWith("blob:")).toBe(true);
+    expect(previewed()?.alt).toBe(ATTACH_WORDS.alt);
+    expect(client.getState().composer.held).toMatchObject({ source: "offered" });
     expect(client.getState().composer.attachments).toHaveLength(0);
-    expect(root().querySelector("img.mk-shot")).not.toBeNull();
+    expect(wrote(seen.calls).filter((call) => call.includes("/media"))).toEqual([]);
   });
 
-  it("keeps the success row's layout when the upload fails", async () => {
-    started();
-    const surface = await open({ upload: uploadThrough(fetchThrough([uploadUnavailable()])) });
-
+  it("uploads the image when the comment is sent, and then posts the comment", async () => {
+    const seen = recording();
+    started({ fetch: seen.fetch });
+    const surface = await open();
     pasteAnImage(surface);
+    await vi.waitFor(() => expect(previewed()).not.toBeNull());
 
-    const chip = await vi.waitFor(() => {
-      const found = root().querySelector<HTMLElement>(".mk-shots .mk-chip");
-      if (!found) throw new Error("no failure yet");
-      return found;
+    await publishing(surface);
+
+    await vi.waitFor(() => expect(client.getState().comments).toHaveLength(1));
+    expect(wrote(seen.calls).filter((call) => call.startsWith("POST"))).toEqual([
+      "POST /media",
+      "POST /comments",
+    ]);
+    expect(client.getState().comments[0]?.attachments).toMatchObject([
+      { connector: "memory", source: "offered" },
+    ]);
+  });
+
+  it("calls the application's own upload at send and not before", async () => {
+    started();
+    const put = vi.fn(uploadThrough(fetchThrough([uploadRoute()])));
+    const surface = await open({ upload: put });
+    pasteAnImage(surface);
+    await vi.waitFor(() => expect(previewed()).not.toBeNull());
+    expect(put).not.toHaveBeenCalled();
+
+    await publishing(surface);
+
+    await vi.waitFor(() => expect(client.getState().comments).toHaveLength(1));
+    expect(put).toHaveBeenCalledTimes(1);
+    expect(client.getState().comments[0]?.attachments).toMatchObject([{ connector: "test" }]);
+  });
+
+  it("keeps the draft, the image and a clear message when the upload fails", async () => {
+    const seen = recording(mediaUnavailable());
+    started({ fetch: seen.fetch });
+    const surface = await open();
+    pasteAnImage(surface);
+    await vi.waitFor(() => expect(previewed()).not.toBeNull());
+
+    await publishing(surface);
+
+    await vi.waitFor(() => expect(client.getState().error?.during).toBe("upload"));
+    expect(client.getState().error?.message).toContain("screenshot");
+    expect(wrote(seen.calls)).not.toContain("POST /comments");
+    expect(client.getState().comments).toHaveLength(0);
+    expect(client.getState().composer).toMatchObject({
+      open: true,
+      body: "The legend overlaps the bars.",
     });
-    const at = (selector: string) => root().querySelector(selector)!.getBoundingClientRect();
-    const sheet = surface.getBoundingClientRect();
-    const chipBox = chip.getBoundingClientRect();
-    const words = root().querySelector<HTMLElement>(".mk-shots .mk-shot-words")!;
+    expect(client.getState().composer.held).toBeDefined();
+    expect(previewed()).not.toBeNull();
+    expect(client.getState().publishing).toBe(false);
+  });
 
-    expect(chipBox.left).toBeGreaterThanOrEqual(sheet.left);
-    expect(chipBox.right).toBeLessThanOrEqual(sheet.right);
-    expect(words.getClientRects()).toHaveLength(1);
-    expect(words.getBoundingClientRect().height).toBeLessThan(20);
-    expect(chipBox.top).toBeGreaterThanOrEqual(words.getBoundingClientRect().bottom);
-    expect(at(".mk-shots .mk-btn").left).toBeGreaterThanOrEqual(
-      at(".mk-shots .mk-shot-body").right,
+  it("retries the send with the same image once the upload can succeed", async () => {
+    let refuse = true;
+    const refusing = http.post(`${MAPLE_BASE}/media`, () =>
+      refuse ? HttpResponse.json({ error: "no" }, { status: 500 }) : undefined,
     );
-    expect(at(".mk-shots .mk-btn").right).toBeLessThanOrEqual(sheet.right);
+    started({ fetch: routes(refusing) });
+    const surface = await open();
+    pasteAnImage(surface);
+    await publishing(surface);
+    await vi.waitFor(() => expect(client.getState().error?.during).toBe("upload"));
+
+    refuse = false;
+    await client.publish();
+
+    expect(client.getState().comments[0]?.attachments).toHaveLength(1);
+  });
+
+  it("uploads nothing for an image that was removed before sending", async () => {
+    const seen = recording();
+    started({ fetch: seen.fetch });
+    const surface = await open();
+    pasteAnImage(surface);
+    await vi.waitFor(() => expect(previewed()).not.toBeNull());
+
+    const remove = [...root().querySelectorAll<HTMLButtonElement>(".mk-shots button")].find(
+      (one) => one.textContent === ATTACH_WORDS.remove,
+    );
+    remove?.click();
+    await vi.waitFor(() => expect(previewed()).toBeNull());
+    await publishing(surface);
+
+    await vi.waitFor(() => expect(client.getState().comments).toHaveLength(1));
+    expect(wrote(seen.calls).some((call) => call.includes("/media"))).toBe(false);
+    expect(client.getState().comments[0]?.attachments ?? []).toHaveLength(0);
+  });
+
+  it("uploads nothing for an image on a draft that is discarded", async () => {
+    const seen = recording();
+    started({ fetch: seen.fetch });
+    const surface = await open();
+    pasteAnImage(surface);
+    await vi.waitFor(() => expect(previewed()).not.toBeNull());
+
+    client.discardDraft();
+
+    expect(client.getState().composer.open).toBe(false);
+    expect(seen.calls.some((call) => call.includes("/media"))).toBe(false);
+  });
+
+  it("holds the image across closing and resuming the draft in the same page", async () => {
+    started();
+    const surface = await open();
+    pasteAnImage(surface);
+    await vi.waitFor(() => expect(previewed()).not.toBeNull());
+    client.setBody("Legend overlap");
+
+    client.keepDraft();
+    client.openComposer({ kind: "element", anchor: { component: "YieldCard" } });
+
+    await vi.waitFor(() => expect(previewed()).not.toBeNull());
+    expect(client.getState().composer.held).toBeDefined();
   });
 
   it("asks for a paste or a drop, and offers no button to do it with", async () => {

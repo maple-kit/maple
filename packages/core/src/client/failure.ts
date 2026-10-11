@@ -14,7 +14,7 @@ import { MapleRequestError } from "./transport.js";
 export type FailureKind = "offline" | "store" | "unauthorized" | "unknown";
 
 /** Which call failed, so a retry knows what to run again. */
-export type FailedCall = "approve" | "link" | "load" | "send" | "status";
+export type FailedCall = "approve" | "link" | "load" | "send" | "status" | "upload";
 
 /** A failure, in the words a reviewer reads and the shape a surface reads. */
 export interface MapleFailure {
@@ -34,6 +34,7 @@ const SAID: Readonly<Record<FailureKind, Readonly<Record<FailedCall, string>>>> 
     send: "Sign in before this deployment can post your comment.",
     status: "Sign in before this deployment can change a comment.",
     link: "GitHub would not accept the sign-in.",
+    upload: "Sign in before this deployment can keep your screenshot.",
   },
   offline: {
     approve: "Could not reach this deployment to approve the preview.",
@@ -41,6 +42,7 @@ const SAID: Readonly<Record<FailureKind, Readonly<Record<FailedCall, string>>>> 
     send: "Could not reach this deployment. Your comment is kept here.",
     status: "Could not reach this deployment to change the comment.",
     link: "Could not reach this deployment to sign in.",
+    upload: "Could not reach this deployment to upload the screenshot. Your comment is kept here.",
   },
   store: {
     approve: "The comment store refused the approval.",
@@ -48,6 +50,7 @@ const SAID: Readonly<Record<FailureKind, Readonly<Record<FailedCall, string>>>> 
     send: "The comment store refused your comment. It is kept here.",
     status: "The comment store refused the change.",
     link: "The comment store refused the sign-in.",
+    upload: "This deployment refused the screenshot. Your comment is kept here.",
   },
   unknown: {
     approve: "Something went wrong approving the preview.",
@@ -55,6 +58,7 @@ const SAID: Readonly<Record<FailureKind, Readonly<Record<FailedCall, string>>>> 
     send: "Something went wrong sending your comment. It is kept here.",
     status: "Something went wrong changing the comment.",
     link: "Something went wrong signing in.",
+    upload: "Something went wrong uploading the screenshot. Your comment is kept here.",
   },
 };
 

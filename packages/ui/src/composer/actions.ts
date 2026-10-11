@@ -17,7 +17,6 @@ import { useSignedOut } from "../island/saved.js";
 import { StatusButton } from "../island/status-button.js";
 import { Slot } from "../slot.js";
 import { spun } from "../spinner.js";
-import { useComposerScope } from "./scope.js";
 
 import type { AsChildProps } from "../slot.js";
 import type { ReactNode } from "react";
@@ -118,18 +117,15 @@ function signInHint(client: ReturnType<typeof useMapleClient>): ReactNode {
 }
 
 /**
- * Publishes what the composer holds and drops the pasted image with it. The
- * button and ⌘/Ctrl+Enter in the field share it, so the two cannot drift.
+ * Publishes what the composer holds, and the controller uploads its image on
+ * the way. The button and ⌘/Ctrl+Enter in the field share it, so the two
+ * cannot drift. A failure is already on the controller's error.
  */
 export function usePublish(): () => void {
   const client = useMapleClient();
-  const scope = useComposerScope("Maple.Actions");
 
   return () => {
-    void client.publish().then(
-      () => scope.clear(),
-      () => undefined,
-    );
+    void client.publish().catch(() => undefined);
   };
 }
 

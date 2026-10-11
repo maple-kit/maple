@@ -3,13 +3,13 @@
  *
  * A capture is taken at pick time and lands here on its own, so the usual case
  * needs no control. Paste and drop override it, and the panel already listens
- * for both. Everything that can go wrong here is said out loud: a capture that
- * failed, an upload that failed, and a deployment with nowhere to keep one at
- * all — three silences that each looked like a tool with no screenshots in it.
+ * for both. The image stays in memory until the comment is published, which is
+ * when it is uploaded. A capture that failed and a deployment with nowhere to
+ * keep one are said out loud: each looked like a tool with no screenshots.
  */
 
 import { useMaple, useMapleClient } from "@maple-kit/react";
-import { createElement, forwardRef, useEffect, useRef, useState } from "react";
+import { createElement, forwardRef, useEffect, useState } from "react";
 
 import { SparkleIcon } from "../icons/sparkle.js";
 import { useShots } from "../shots.js";
@@ -26,8 +26,8 @@ import type { ReactElement, ReactNode } from "react";
 export interface MapleAttachmentsProps extends AsChildProps {
   readonly className?: string;
   /**
-   * Puts the image wherever blobs live and returns the ref a comment keeps.
-   * Defaults to `POST /media` on the route, served by its media connector.
+   * Puts the image wherever blobs live and returns the ref a comment keeps,
+   * when the comment is published. Defaults to `POST /media` on the route.
    */
   readonly upload?: (image: PastedImage) => Promise<MediaRef>;
   /**
@@ -47,7 +47,6 @@ export const ATTACH_WORDS = {
   remove: "Remove",
   alt: "Screenshot attached to this comment",
   kept: "A screenshot was attached when this was sent",
-  failed: "That image could not be attached.",
   nowhere: "This deployment keeps no screenshots \u2014 turn on ",
   nowhereLink: "screenshot storage",
   nowhereEnd: " to attach them.",
@@ -63,7 +62,7 @@ export const MapleAttachments = /** @__PURE__ */ forwardRef<HTMLElement, MapleAt
     const resolve = props.resolve ?? ((one: MediaRef) => client.mediaUrl(one));
 
     const claimed = useClaimed(scope);
-    const failed = useUpload(scope, media, props.upload);
+    useOverride(scope, props.upload);
     const Element = (props.asChild ? Slot : "div") as "div";
 
     const className = ["mk-composer-row", "mk-shots", props.className].filter(Boolean).join(" ");
@@ -81,7 +80,7 @@ export const MapleAttachments = /** @__PURE__ */ forwardRef<HTMLElement, MapleAt
       return createElement(Element, { ref, className: note }, ...nowhere());
     }
     const children = scope.pending
-      ? filled(scope, { failed, captured })
+      ? filled(scope, captured)
       : [said(resting(claimed), false, "said")];
 
     return createElement(
@@ -154,15 +153,8 @@ function kept(props: KeptProps, ref: React.ForwardedRef<HTMLElement>): ReactElem
   );
 }
 
-/** What the strip is saying about the one image it is holding. */
-interface Held {
-  readonly failed: boolean;
-  readonly captured: boolean;
-}
-
 /** The thumbnail, where it came from, and the control that takes it off. */
-function filled(scope: ComposerScopeValue, held: Held): ReactNode[] {
-  const { captured, failed } = held;
+function filled(scope: ComposerScopeValue, captured: boolean): ReactNode[] {
   return [
     createElement("img", {
       key: "shot",
@@ -173,10 +165,7 @@ function filled(scope: ComposerScopeValue, held: Held): ReactNode[] {
     createElement(
       "span",
       { key: "body", className: "mk-shot-body" },
-      said(taking(held), captured, "said", "mk-shot-said mk-shot-line"),
-      failed
-        ? createElement("span", { key: "bad", className: "mk-chip" }, ATTACH_WORDS.failed)
-        : null,
+      said(taking(captured), captured, "said", "mk-shot-said mk-shot-line"),
     ),
     createElement(
       "button",
@@ -209,8 +198,8 @@ function said(
   );
 }
 
-function taking(held: Held): string {
-  return held.captured ? ATTACH_WORDS.taken : ATTACH_WORDS.hint;
+function taking(captured: boolean): string {
+  return captured ? ATTACH_WORDS.taken : ATTACH_WORDS.hint;
 }
 
 /** Nothing claimed yet, an image claimed, or a capture that did not work. */
@@ -239,44 +228,11 @@ function useClaimed(scope: ComposerScopeValue): Claimed {
 }
 
 /**
- * Uploads what was offered, through the route unless the application replaced
- * the seam. Nothing is attempted where the deployment keeps no screenshots.
+ * Hands the application's own upload to the scope, which reads it when an
+ * image is held. The route's media endpoint is the controller's default.
  */
-function useUpload(
-  scope: ComposerScopeValue,
-  media: boolean,
-  upload: MapleAttachmentsProps["upload"],
-): boolean {
-  const client = useMapleClient();
-  const sent = useRef<PastedImage>(undefined);
-  const [failedImage, setFailedImage] = useState<PastedImage>();
-
+function useOverride(scope: ComposerScopeValue, upload: MapleAttachmentsProps["upload"]): void {
   useEffect(() => {
-    const image = scope.pending?.image;
-    const put = upload ?? (media ? routed(client) : undefined);
-    if (!image || !put || sent.current === image) return;
-
-    sent.current = image;
-    const source = scope.pending?.source ?? "offered";
-    let live = true;
-    const done = (ref: MediaRef): void => {
-      if (live) client.attach({ ...ref, source });
-    };
-    const broke = (): void => {
-      if (live) setFailedImage(image);
-    };
-
-    void put(image).then(done, broke);
-    return () => {
-      live = false;
-    };
-  }, [scope.pending, upload, media, client]);
-
-  // A failure belongs to the image it happened to, not to the strip.
-  return failedImage !== undefined && failedImage === scope.pending?.image;
-}
-
-/** The default seam: the route's own media endpoint, on the same origin. */
-function routed(client: ReturnType<typeof useMapleClient>) {
-  return (image: PastedImage) => client.uploadMedia(image.blob, image.type);
+    scope.upload.set(upload);
+  }, [scope.upload, upload]);
 }

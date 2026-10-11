@@ -11,7 +11,15 @@
 import type { Anchor } from "../anchor/types.js";
 import type { CommentKind, KindGuess, Pillar, PillarScore } from "../connectors/types.js";
 import type { Draft } from "../overlay/drafts.js";
-import type { Approval, Comment, CommentContext, MapleUser, MediaRef, PickKind } from "../types.js";
+import type {
+  Approval,
+  Comment,
+  CommentContext,
+  MapleUser,
+  MediaRef,
+  MediaSource,
+  PickKind,
+} from "../types.js";
 import type { MapleFailure } from "./failure.js";
 
 /** The picker's word. Declared with the domain vocabulary, because the anchor
@@ -111,6 +119,18 @@ export interface AssistState {
   readonly chosenKind?: CommentKind;
 }
 
+/**
+ * An image kept in memory until its comment is published. Nothing is uploaded
+ * while it is only held: a draft that is removed or discarded costs no storage.
+ */
+export interface HeldImage {
+  readonly blob: Blob;
+  readonly contentType: string;
+  readonly source: MediaSource;
+  /** Puts it somewhere else than the route's own media endpoint, at publish. */
+  readonly upload?: (blob: Blob, contentType: string) => Promise<MediaRef>;
+}
+
 /** The composer, whether or not it is showing. */
 export interface ComposerState {
   readonly open: boolean;
@@ -129,6 +149,11 @@ export interface ComposerState {
   readonly resumed?: boolean;
   readonly body: string;
   readonly attachments: readonly MediaRef[];
+  /**
+   * The image held for this draft, uploaded when it is published. It lives as
+   * long as the page: a reload keeps the words of a draft and not the image.
+   */
+  readonly held?: HeldImage | undefined;
   /** There is something unsent. The only thing `beforeunload` is keyed off. */
   readonly dirty: boolean;
   readonly sending: boolean;

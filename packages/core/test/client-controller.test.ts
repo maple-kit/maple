@@ -408,6 +408,132 @@ describe("publishing", () => {
   });
 });
 
+/** A screenshot stays on the page while its comment is a draft. */
+describe("a held image", () => {
+  const image = { blob: new Blob([new Uint8Array([137, 80])]), contentType: "image/png" } as const;
+
+  afterEach(() => server.events.removeAllListeners());
+
+  function posts(): string[] {
+    const seen: string[] = [];
+    server.events.on("request:start", ({ request }) => {
+      if (request.method === "POST") seen.push(new URL(request.url).pathname.split("/").pop()!);
+    });
+    return seen;
+  }
+
+  it("is uploaded when the comment is published, ahead of the comment", async () => {
+    const seen = posts();
+    const maple = client();
+    maple.openComposer(TARGET);
+    maple.setBody("The spacing is off.");
+    maple.holdImage({ ...image, source: "capture" });
+    expect(seen).toEqual([]);
+
+    const [comment] = await maple.publish();
+
+    expect(seen).toEqual(["media", "comments"]);
+    expect(comment?.attachments).toMatchObject([{ connector: "memory", source: "capture" }]);
+  });
+
+  it("is not uploaded once it is released", async () => {
+    const seen = posts();
+    const maple = client();
+    maple.openComposer(TARGET);
+    maple.setBody("The spacing is off.");
+    maple.holdImage({ ...image, source: "offered" });
+    maple.releaseImage();
+
+    const [comment] = await maple.publish();
+
+    expect(seen).toEqual(["comments"]);
+    expect(comment?.attachments ?? []).toEqual([]);
+  });
+
+  it("is not uploaded when its draft is discarded", () => {
+    const seen = posts();
+    const maple = client();
+    maple.openComposer(TARGET);
+    maple.holdImage({ ...image, source: "offered" });
+
+    maple.discardDraft();
+
+    expect(maple.getState().composer.held).toBeUndefined();
+    expect(seen).toEqual([]);
+  });
+
+  it("comes back with its draft when the composer is opened on it again", () => {
+    const maple = client();
+    maple.openComposer(TARGET);
+    maple.setBody("The spacing is off.");
+    maple.holdImage({ ...image, source: "offered" });
+    maple.keepDraft();
+    expect(maple.getState().composer.held).toBeUndefined();
+
+    maple.openComposer(TARGET);
+
+    expect(maple.getState().composer.held).toMatchObject({ contentType: "image/png" });
+  });
+
+  it("keeps the draft and the image, and says it was the upload, when it fails", async () => {
+    server.use(
+      http.post(`${MAPLE_BASE}/media`, () =>
+        HttpResponse.json({ error: "Something went wrong" }, { status: 500 }),
+      ),
+    );
+    const seen = posts();
+    const maple = client();
+    maple.openComposer(TARGET);
+    maple.setBody("The spacing is off.");
+    maple.holdImage({ ...image, source: "offered" });
+
+    await expect(maple.publish()).rejects.toThrow("Something went wrong");
+
+    expect(seen).toEqual(["media"]);
+    expect(maple.getState().drafts).toHaveLength(1);
+    expect(maple.getState().composer.held).toBeDefined();
+    expect(maple.getState().publishing).toBe(false);
+    expect(maple.getState().error).toMatchObject({ during: "upload", kind: "store", status: 500 });
+  });
+
+  it("is uploaded once even when the comment itself has to be sent twice", async () => {
+    let refuse = true;
+    server.use(
+      http.post(`${MAPLE_BASE}/comments`, () =>
+        refuse ? HttpResponse.json({ error: "no" }, { status: 400 }) : undefined,
+      ),
+    );
+    const seen = posts();
+    const maple = client();
+    maple.openComposer(TARGET);
+    maple.setBody("The spacing is off.");
+    maple.holdImage({ ...image, source: "offered" });
+    await expect(maple.publish()).rejects.toThrow();
+
+    refuse = false;
+    await maple.publish();
+
+    expect(seen.filter((one) => one === "media")).toHaveLength(1);
+  });
+
+  it("goes where the host's own upload puts it, when it gave one", async () => {
+    const seen = posts();
+    const upload = vi.fn(() =>
+      Promise.resolve({ connector: "s3", key: "k1", contentType: "image/png" }),
+    );
+    const maple = client();
+    maple.openComposer(TARGET);
+    maple.setBody("The spacing is off.");
+    maple.holdImage({ ...image, source: "offered", upload });
+
+    const [comment] = await maple.publish();
+
+    expect(upload).toHaveBeenCalledTimes(1);
+    expect(seen).toEqual(["comments"]);
+    expect(comment?.attachments).toMatchObject([{ connector: "s3", key: "k1" }]);
+  });
+});
+
 describe("resolving", () => {
   it("replaces the comment in place with what the route stored", async () => {
     const maple = client();

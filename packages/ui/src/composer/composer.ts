@@ -7,22 +7,26 @@
  * that names an unsent comment before a link takes it away.
  */
 
-import { imageFrom, previewOf } from "@maple-kit/core/screenshot";
+import { imageFrom } from "@maple-kit/core/screenshot";
 import { useMaple, useMapleClient } from "@maple-kit/react";
 import { createElement, forwardRef, Fragment, useEffect, useMemo, useState } from "react";
 
 import { useMapleUi } from "../context.js";
 import { dataAttributes } from "../data.js";
 import { Slot } from "../slot.js";
+import { createPreviews, createUploadSeam } from "./held.js";
 import { useInset } from "./inset.js";
 import { useHoldToPeek } from "./peek.js";
 import { LeavePrompt } from "./prompt.js";
 import { ComposerScope } from "./scope.js";
 
 import type { AsChildProps } from "../slot.js";
+import type { Previews, Upload } from "./held.js";
 import type { LeaveAsk } from "./leave.js";
 import type { ComposerScopeValue, PendingImage, SheetDetent } from "./scope.js";
-import type { MapleClient } from "@maple-kit/core/client";
+import type { MediaSource } from "@maple-kit/core";
+import type { HeldImage, MapleClient } from "@maple-kit/core/client";
+import type { PastedImage } from "@maple-kit/core/screenshot";
 import type {
   ClipboardEvent,
   DragEvent,
@@ -170,24 +174,59 @@ function composeInto(
   };
 }
 
-/** The shared scope. A replaced preview is revoked, so nothing leaks blobs. */
+/**
+ * The shared scope. The image is held by the controller, per draft, and
+ * previewed here from memory; a preview that is replaced or gone is revoked.
+ */
 function useScopeValue(open: boolean, view: Window | null, peekable: boolean): ComposerScopeValue {
+  const client = useMapleClient();
+  const { composer, media, phase } = useMaple();
+  const { held } = composer;
+  // Where the deployment keeps no screenshots there is nothing to publish one to.
+  const keeps = media || (phase !== "ready" && phase !== "error");
   const [detent, setDetent] = useState<SheetDetent>("half");
-  const [pending, setPending] = useState<PendingImage>();
+  const [previews] = useState(createPreviews);
+  const [upload] = useState(createUploadSeam);
   const peeking = useHoldToPeek(view, open && peekable);
 
-  useEffect(() => (pending ? () => pending.preview.revoke() : undefined), [pending]);
+  useEffect(() => () => previews.clear(), [previews]);
 
   return useMemo(
     () => ({
       peeking,
       detent,
       toggleDetent: () => setDetent((was) => (was === "half" ? "full" : "half")),
-      pending,
-      offer: (image, source) =>
-        setPending({ image, preview: previewOf(image), source: source ?? "offered" }),
-      clear: () => setPending(undefined),
+      pending: pendingFrom(held, previews),
+      upload,
+      offer: (image, source) => {
+        if (!keeps) return;
+        const next = heldFrom(image, source, upload.get());
+        previews.forget(client.getState().composer.held);
+        previews.make(next);
+        client.holdImage(next);
+      },
+      clear: () => {
+        previews.forget(client.getState().composer.held);
+        client.releaseImage();
+      },
     }),
-    [peeking, detent, pending],
+    [peeking, detent, held, previews, upload, client, keeps],
   );
+}
+
+/** What the controller keeps: the blob, who chose it, and where the host wants it. */
+function heldFrom(image: PastedImage, source: MediaSource | undefined, put: Upload | undefined) {
+  return {
+    blob: image.blob,
+    contentType: image.type,
+    source: source ?? "offered",
+    ...(put ? { upload: (blob: Blob, type: string) => put({ blob, type }) } : {}),
+  } satisfies HeldImage;
+}
+
+/** The held image with the preview that was made for it, if this panel made one. */
+function pendingFrom(held: HeldImage | undefined, previews: Previews): PendingImage | undefined {
+  const preview = previews.of(held);
+  if (!held || !preview) return undefined;
+  return { image: { blob: held.blob, type: held.contentType }, preview, source: held.source };
 }

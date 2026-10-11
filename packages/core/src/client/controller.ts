@@ -17,6 +17,7 @@ import { ASSIST_IDLE, createAssistRunner } from "./assist.js";
 import { createDraftKeeper, draftIdFor } from "./drafts.js";
 import { detailOf, failureFrom } from "./failure.js";
 import { openCount, visibleComments } from "./filters.js";
+import { createImageKeeper } from "./images.js";
 import { startLink } from "./link.js";
 import { createNavigationGuard } from "./navigation.js";
 import { POLL_MS, startPolling } from "./poll.js";
@@ -35,6 +36,7 @@ import type { Approval, Comment, CommentStatus, MediaRef } from "../types.js";
 import type { AssistRunner } from "./assist.js";
 import type { DraftKeeper } from "./drafts.js";
 import type { MapleFailure } from "./failure.js";
+import type { ImageKeeper } from "./images.js";
 import type { LinkRun } from "./link.js";
 import type {
   LeaveAnswer,
@@ -65,6 +67,7 @@ import type {
   Corner,
   Detail,
   GitHubLink,
+  HeldImage,
   IslandSize,
   PickKind,
   PickState,
@@ -192,6 +195,13 @@ export interface MapleClient {
   setBody(body: string): void;
   attach(ref: MediaRef): void;
   detach(key: string): void;
+  /**
+   * Keeps an image for the open draft, in memory, replacing any held. It is
+   * uploaded when the draft is published, so a removed one costs nothing.
+   */
+  holdImage(image: HeldImage): void;
+  /** Lets go of the open draft's image without uploading it. */
+  releaseImage(): void;
   /** Leaves the draft where it is, open. Only a publish clears one. */
   closeComposer(): void;
   /** Throws a draft away. With no id, the one the composer is writing into. */
@@ -279,6 +289,7 @@ interface Runtime {
   readonly config: MapleConfig;
   transport: Transport;
   readonly drafts: DraftKeeper;
+  readonly images: ImageKeeper;
   readonly assist: AssistRunner;
   /** What the route said it can judge. Null until `/me` has answered. */
   judges: AssistConfig | null;
@@ -340,6 +351,8 @@ export function createMapleClient(options: MapleClientOptions): MapleClient {
       write(runtime, {
         attachments: runtime.state.composer.attachments.filter((ref) => ref.key !== key),
       }),
+    holdImage: (image) => holdImage(runtime, image),
+    releaseImage: () => releaseImage(runtime),
     closeComposer: () => closeComposer(runtime),
     keepDraft: () => keepDraft(runtime),
     publish: (ids) => publish(runtime, ids),
@@ -380,6 +393,7 @@ function runtimeFor(options: MapleClientOptions): Runtime {
     config,
     transport: createTransport({ ...options, ...(pairing ? { solo: pairing } : {}) }),
     drafts,
+    images: createImageKeeper(),
     assist: createAssistRunner({
       judge: (body, signal) => runtime.transport.assist(body, signal),
       onChange: (assist) => judged(runtime, assist),
@@ -819,6 +833,7 @@ function openComposer(runtime: Runtime, target: ComposerTarget): void {
       resumed: existing !== undefined,
       body: existing?.body ?? "",
       attachments: existing?.attachments ?? [],
+      held: runtime.images.get(draftId),
       dirty: existing !== undefined,
       sending: false,
       assist: ASSIST_IDLE,
@@ -905,6 +920,20 @@ function write(runtime: Runtime, change: Partial<ComposerState>): void {
   if (change.body !== undefined && runtime.state.assist) runtime.assist.ask(change.body);
 }
 
+function holdImage(runtime: Runtime, image: HeldImage): void {
+  const { draftId } = runtime.state.composer;
+  if (draftId === undefined) return;
+  runtime.images.hold(draftId, image);
+  write(runtime, { held: image });
+}
+
+function releaseImage(runtime: Runtime): void {
+  const { draftId } = runtime.state.composer;
+  if (draftId === undefined) return;
+  runtime.images.drop(draftId);
+  write(runtime, { held: undefined });
+}
+
 /** The reviewer's own label, or nothing to hand the kind back to the guess. */
 function chooseKind(runtime: Runtime, kind: CommentKind | undefined): void {
   const { assist } = runtime.state.composer;
@@ -966,6 +995,7 @@ function discardDraft(runtime: Runtime, id?: string): void {
   if (wanted === undefined) return;
 
   runtime.drafts.discard(wanted);
+  runtime.images.drop(wanted);
   const closes = wanted === open;
   if (closes) runtime.assist.cancel();
 
@@ -1004,10 +1034,14 @@ async function publish(runtime: Runtime, ids?: readonly string[]): Promise<reado
 
   patch(runtime, { publishing: true });
   try {
+    const sendable = await uploaded(runtime, chosen);
     const comments = await tracked(runtime, () =>
-      runtime.transport.appendMany(chosen.map((draft) => postedFromDraft(runtime, draft))),
+      runtime.transport.appendMany(sendable.map((draft) => postedFromDraft(runtime, draft))),
     );
-    for (const draft of chosen) runtime.drafts.markSent(draft.id);
+    for (const draft of chosen) {
+      runtime.drafts.markSent(draft.id);
+      runtime.images.drop(draft.id);
+    }
 
     patch(runtime, {
       comments: [...comments].reverse().concat(runtime.state.comments),
@@ -1021,8 +1055,33 @@ async function publish(runtime: Runtime, ids?: readonly string[]): Promise<reado
     return comments;
   } catch (error) {
     patch(runtime, { publishing: false });
-    fail(runtime, error, "send");
-    throw error;
+    const upload = error instanceof UploadFailure;
+    const cause = upload ? error.original : error;
+    fail(runtime, cause, upload ? "upload" : "send");
+    throw cause;
+  }
+}
+
+/**
+ * Puts each draft's held image on the route, so the comment can name it. A
+ * failure is said as an upload's and leaves every draft where it was.
+ */
+async function uploaded(runtime: Runtime, chosen: readonly Draft[]): Promise<readonly Draft[]> {
+  try {
+    return await tracked(runtime, () =>
+      runtime.images.upload(chosen, (blob, type) => runtime.transport.putMedia(blob, type)),
+    );
+  } catch (error) {
+    throw new UploadFailure(error);
+  }
+}
+
+/** Marks an error as the screenshot's, so `publish` reports the right call. */
+class UploadFailure extends Error {
+  override readonly name = "UploadFailure";
+
+  constructor(readonly original: unknown) {
+    super("A screenshot could not be uploaded.", { cause: original });
   }
 }
 

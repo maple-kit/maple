@@ -29,7 +29,7 @@ describe("what a failed call becomes", () => {
     expect(failure.status).toBeUndefined();
   });
 
-  const CALLS: readonly FailedCall[] = ["link", "load", "send", "status"];
+  const CALLS: readonly FailedCall[] = ["link", "load", "send", "status", "upload"];
 
   it.each(CALLS)("says something different about a %s", (during) => {
     const failure = failureFrom(new MapleRequestError(401, "/comments", "no"), during);

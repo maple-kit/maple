@@ -54,7 +54,7 @@ import type { ReactElement } from "react";
 
 /** The island answers for the calls it makes; the panel answers for the send. */
 const LOAD_CALLS: readonly FailedCall[] = ["load", "status", "link"];
-const SEND_CALLS: readonly FailedCall[] = ["send"];
+const SEND_CALLS: readonly FailedCall[] = ["send", "upload"];
 
 /** Everything the root takes, plus the few choices the composition itself has. */
 export interface MapleProps extends MapleRootProps {

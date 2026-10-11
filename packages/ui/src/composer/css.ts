@@ -299,12 +299,6 @@ function shotBodyCss(): string {
   text-overflow: ellipsis;
 }
 
-.mk-shot-body .mk-chip {
-  max-width: 100%;
-  white-space: normal;
-  border-radius: var(--mk-r-xs);
-}
-
 .mk-shots > .mk-btn {
   flex: none;
 }

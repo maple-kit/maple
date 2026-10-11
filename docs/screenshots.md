@@ -16,10 +16,30 @@ thumbnail and then dropped it. This file is the path now.
 | ------------------------------ | ------------------------------------- |
 | Captured when the pick commits | `core/screenshot`, through the picker |
 | Handed to the strip            | `ui/shots`, one slot, one composer    |
-| Uploaded                       | `POST {base}/media`                   |
+| Held while it is a draft       | memory, per draft: `client.holdImage` |
+| Uploaded when published        | `POST {base}/media`                   |
 | Kept                           | the route's `MediaConnector`          |
 | Referenced on the comment      | `Comment.attachments`, a `MediaRef`   |
 | Read back                      | `GET {base}/media/{key}?type=…`       |
+
+## When it is uploaded
+
+An image is uploaded when its comment is **published**, never when it is
+attached. While the comment is a draft the image is a blob in memory, previewed
+through a `blob:` URL, and the strip makes no request at all. `client.publish()`
+uploads the image of each draft it sends, one after another, and only then posts
+the comments with the returned `MediaRef`s.
+
+- **Removing the image, or discarding the draft, uploads nothing**, so a
+  reviewer who changes their mind leaves nothing in the bucket.
+- **A failed upload fails the publish.** Nothing is posted, the draft and its
+  image stay where they were, and the panel says the screenshot could not be
+  uploaded (`MapleFailure.during` is `"upload"`). Publishing again retries, and
+  an image that already uploaded is not uploaded twice.
+- **The image is not saved with the draft.** Drafts are kept in `localStorage`
+  and a blob is not, so the image survives closing the panel and switching
+  drafts, but not a reload: the words come back and the image does not. Publish
+  before reloading, or paste it again.
 
 A `MediaRef` is a connector name, a key and a content type. It is never a URL:
 a URL is minted per read, because the ones a real blob store hands out are
@@ -37,8 +57,8 @@ createMapleHandler({ store, media: s3Media({ bucket: "maple-previews" }) });
 the credential can be the reviewer's rather than the deployment's.
 
 `Maple.Attachments` still takes `upload` and `resolve`, but they are **overrides
-now, not requirements**: without them the strip posts to the route and reads
-back from it.
+now, not requirements**: without them the route is where an image is published
+to and read back from. `upload` is called when the comment is published.
 
 ## Reading an image back
 

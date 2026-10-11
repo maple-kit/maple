@@ -45,6 +45,13 @@ export function uploadUnavailable(): RequestHandler {
   );
 }
 
+/** The route's own media endpoint refusing, which says nothing about why. */
+export function mediaUnavailable(): RequestHandler {
+  return http.post(`${MAPLE_BASE}/media`, () =>
+    HttpResponse.json({ error: "Something went wrong" }, { status: 500 }),
+  );
+}
+
 /**
  * A `fetch` that answers from these handlers and throws on anything else, the
  * way `onUnhandledRequest: "error"` does for the node suites.

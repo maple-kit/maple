@@ -103,6 +103,7 @@ export type {
   CommentFilter,
   GitHubLink,
   ComposerState,
+  HeldImage,
   ComposerTarget,
   Corner,
   Detail,

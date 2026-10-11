@@ -7,13 +7,14 @@
 
 import { createContext, useContext } from "react";
 
+import type { UploadSeam } from "./held.js";
 import type { MediaSource } from "@maple-kit/core";
 import type { PastedImage, Preview } from "@maple-kit/core/screenshot";
 
 /** How much of the sheet is showing. Two, and no third. */
 export type SheetDetent = "full" | "half";
 
-/** An image on its way onto a comment, previewing until it uploads. */
+/** An image held for the comment, previewed from memory until it is published. */
 export interface PendingImage {
   readonly image: PastedImage;
   /** `img-src blob:` is the one CSP directive Maple asks for, and this is why. */
@@ -31,6 +32,8 @@ export interface ComposerScopeValue {
   readonly detent: SheetDetent;
   readonly toggleDetent: () => void;
   readonly pending: PendingImage | undefined;
+  /** The application's own upload, set by `Maple.Attachments`, read when an image is held. */
+  readonly upload: UploadSeam;
   readonly offer: (image: PastedImage, source?: MediaSource) => void;
   readonly clear: () => void;
 }
