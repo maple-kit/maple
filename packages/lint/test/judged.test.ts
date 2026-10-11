@@ -4,20 +4,32 @@ import { describe, expect, it } from "vitest";
 import { dedupe } from "../src/rendered/audit.js";
 import { lintJudged } from "../src/rendered/judged.js";
 
+import type { Targets } from "../src/rendered/collect.js";
 import type { Finding, Rule, RuleConnector, RuleRequest } from "@maple-kit/core/connectors";
 
 const RULES: readonly Rule[] = [
   { id: "acme/one-primary", question: "Is there one primary button?", appliesTo: "form" },
   { id: "acme/tone", question: "Is the copy calm?", appliesTo: "p", severity: "warn" },
 ];
+const STATS = {
+  matched: 1,
+  groups: 1,
+  sent: 1,
+  droppedByCap: 0,
+  notChanged: 0,
+  rulesAtCap: [],
+  broadRules: [],
+  invalidSelectors: [],
+};
+const JUDGED: Targets = {
+  targets: [{ rule: "acme/tone", html: "<p>HURRY</p>", anchor: { selector: "p" } }],
+  repeats: [0],
+  stats: STATS,
+};
 const PAGE = {
   url: "https://preview.example.app",
   viewport: { width: 375, height: 812 },
-  judged: {
-    targets: [{ rule: "acme/tone", html: "<p>HURRY</p>", anchor: { selector: "p" } }],
-    invalid: [],
-    dropped: 0,
-  },
+  judged: JUDGED,
 };
 
 function found(over: Partial<Finding> = {}): Finding {
@@ -56,7 +68,7 @@ describe("lintJudged", () => {
 
   it("does not ask when no element matched", async () => {
     const { connector, requests } = fake(() => Promise.resolve([]));
-    const empty = { ...PAGE, judged: { ...PAGE.judged, targets: [] } };
+    const empty = { ...PAGE, judged: { ...JUDGED, targets: [], repeats: [] } };
     expect(await lintJudged(connector, empty)).toEqual({ findings: [] });
     expect(requests).toHaveLength(0);
   });
@@ -84,6 +96,41 @@ describe("lintJudged", () => {
   ])("returns an error rather than throwing on %s", async (_name, answer, message) => {
     const { connector } = fake(answer);
     expect(await lintJudged(connector, PAGE)).toEqual({ findings: [], error: message });
+  });
+});
+
+describe("repeated instances", () => {
+  const shared = (repeats: number) => ({ ...PAGE, judged: { ...JUDGED, repeats: [repeats] } });
+
+  it.each([
+    [12, "Shouty. (and 12 identical instances)"],
+    [1, "Shouty. (and 1 identical instance)"],
+    [0, "Shouty."],
+  ])("with %i others, the message is %s", async (repeats, message) => {
+    const { connector } = fake(() => Promise.resolve([found()]));
+    const result = await lintJudged(connector, shared(repeats));
+    expect(result.findings.map((one) => one.message)).toEqual([message]);
+  });
+
+  it("does not touch a finding on another element", async () => {
+    const other = found({ anchor: { selector: "section > p" } });
+    const { connector } = fake(() => Promise.resolve([other]));
+    const result = await lintJudged(connector, shared(5));
+    expect(result.findings[0]?.message).toBe("Shouty.");
+  });
+
+  it("matches by source when no selector is given", async () => {
+    const anchor = { source: "a.tsx:1:1" };
+    const page = {
+      ...PAGE,
+      judged: {
+        ...JUDGED,
+        targets: [{ rule: "acme/tone", html: "<p>x</p>", anchor }],
+        repeats: [3],
+      },
+    };
+    const { connector } = fake(() => Promise.resolve([found({ anchor })]));
+    expect((await lintJudged(connector, page)).findings[0]?.message).toContain("and 3 identical");
   });
 });
 

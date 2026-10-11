@@ -16,7 +16,7 @@ import { readTokenFiles, type TokenSet } from "../tokens.js";
 import { lintJudged } from "./judged.js";
 import { reducedMotionFindings, renderedFindings, unreadableColors } from "./rules.js";
 
-import type { JudgedRead, Reading, TargetLimits } from "./collect.js";
+import type { JudgedRead, JudgedStats, Reading, TargetLimits } from "./collect.js";
 import type { CommentContext } from "@maple-kit/core";
 import type { Finding, RuleConnector } from "@maple-kit/core/connectors";
 import type { Logger } from "@maple-kit/core/logger";
@@ -42,6 +42,11 @@ export interface JudgedOptions extends TargetLimits {
    * call. Findings are `judged`, `advice` unless the rule says otherwise.
    */
   readonly connector: RuleConnector;
+  /**
+   * Repo-relative changed files. When set, elements from those files go
+   * first, untagged ones follow if there is room, other files are skipped.
+   */
+  readonly sources?: readonly string[];
 }
 
 /** What a rendered run needs to know. */
@@ -96,6 +101,11 @@ export interface RenderedRun {
    * not judged: no judged findings there is not a pass.
    */
   readonly judgedErrors: readonly string[];
+  /**
+   * What the judge was and was not shown; absent without a judge. Counts are
+   * the largest any viewport saw, the lists the union.
+   */
+  readonly judgedStats?: JudgedStats;
 }
 
 /**
@@ -119,6 +129,26 @@ function warnGaps(log: Logger, tokens: TokenSet, seen: readonly string[]): void 
   }
 }
 
+/** One stats object for the run: the largest counts, the union of the lists. */
+export function mergeStats(passes: readonly Pass[]): JudgedStats | undefined {
+  const all = passes.flatMap((pass) => pass.judgedStats ?? []);
+  if (all.length === 0) return undefined;
+  const most = (pick: (stats: JudgedStats) => number) => Math.max(...all.map(pick));
+  const union = (pick: (stats: JudgedStats) => readonly string[]) => [
+    ...new Set(all.flatMap(pick)),
+  ];
+  return {
+    matched: most((s) => s.matched),
+    groups: most((s) => s.groups),
+    sent: most((s) => s.sent),
+    droppedByCap: most((s) => s.droppedByCap),
+    notChanged: most((s) => s.notChanged),
+    rulesAtCap: union((s) => s.rulesAtCap),
+    broadRules: union((s) => s.broadRules),
+    invalidSelectors: union((s) => s.invalidSelectors),
+  };
+}
+
 /** Says what the judge could not do, one warning each, so none is mistaken for a pass. */
 function warnJudged(log: Logger, passes: readonly Pass[]): readonly string[] {
   const errors: string[] = [];
@@ -132,14 +162,23 @@ function warnJudged(log: Logger, passes: readonly Pass[]): readonly string[] {
       });
     }
   }
-  const gaps = passes.flatMap((pass) => pass.judgedGaps ?? []);
-  const invalid = [...new Set(gaps.flatMap((gap) => gap.invalid))];
-  if (invalid.length > 0) {
-    log.warn("A rule's selector is not valid, so the rule judged nothing", { rules: invalid });
+  const stats = mergeStats(passes);
+  if (stats === undefined) return errors;
+  if (stats.invalidSelectors.length > 0) {
+    log.warn("A rule's selector is not valid, so the rule judged nothing", {
+      rules: stats.invalidSelectors,
+    });
   }
-  const dropped = Math.max(0, ...gaps.map((gap) => gap.dropped));
-  if (dropped > 0) {
-    log.warn("Some matching elements were over the caps and were not judged", { dropped });
+  if (stats.droppedByCap > 0) {
+    log.warn("Some matching elements were over the caps and were not judged", {
+      dropped: stats.droppedByCap,
+      rules: stats.rulesAtCap,
+    });
+  }
+  if (stats.broadRules.length > 0) {
+    log.warn("These rules match far more than the caps allow; narrow their appliesTo", {
+      rules: stats.broadRules,
+    });
   }
   return errors;
 }
@@ -159,8 +198,8 @@ export interface Pass {
   readonly unreadable: readonly string[];
   /** Why this viewport's judge call failed, if it did. */
   readonly judgedError?: string;
-  /** Rules whose selector was invalid, and matches over the caps. */
-  readonly judgedGaps?: { readonly invalid: readonly string[]; readonly dropped: number };
+  /** What this viewport's judge was and was not shown. */
+  readonly judgedStats?: JudgedStats;
 }
 
 function label(viewport: Viewport): string {
@@ -209,6 +248,12 @@ async function collect(context: BrowserContext, visit: Visit): Promise<Reading> 
   }
 }
 
+/** What a pass reads for the judge: the connector stays in Node. */
+function readFor(judged: JudgedOptions): JudgedRead {
+  const { connector, sources, ...limits } = judged;
+  return { ...limits, rules: connector.rules, ...(sources === undefined ? {} : { sources }) };
+}
+
 /** Both passes at one viewport. */
 async function auditViewport(
   browser: Browser,
@@ -232,7 +277,7 @@ async function auditViewport(
   };
   const seen = await collect(await browser.newContext(shared), {
     ...visit,
-    judged: judged === undefined ? visit.judged : { ...judged, rules: judged.connector.rules },
+    judged: judged === undefined ? visit.judged : readFor(judged),
   });
   const reduced = await collect(
     await browser.newContext({ ...shared, reducedMotion: "reduce" }),
@@ -252,9 +297,7 @@ async function auditViewport(
       ...(verdict?.findings ?? []),
     ],
     ...(verdict?.error === undefined ? {} : { judgedError: verdict.error }),
-    ...(judged === undefined
-      ? {}
-      : { judgedGaps: { invalid: seen.judged.invalid, dropped: seen.judged.dropped } }),
+    ...(judged === undefined ? {} : { judgedStats: seen.judged.stats }),
   };
 }
 
@@ -324,9 +367,11 @@ export async function lintRendered(options: RenderedLintOptions): Promise<Render
     const log = options.logger ?? createLogger({ level: "warn" });
     warnGaps(log, tokens, [...new Set(passes.flatMap((pass) => pass.unreadable))]);
     const judgedErrors = warnJudged(log, passes);
+    const judgedStats = mergeStats(passes);
     const seen = dedupe(passes);
     return {
       judgedErrors,
+      ...(judgedStats === undefined ? {} : { judgedStats }),
       findings: seen.map((one) => one.finding),
       contexts: seen.map((one) => one.context),
       context: widest(passes),

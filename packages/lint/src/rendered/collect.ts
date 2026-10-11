@@ -11,6 +11,8 @@
 import { describeElement } from "@maple-kit/core/anchor";
 import { captureContext } from "@maple-kit/core/overlay";
 
+import { choose, groupBySignature, signatureOf } from "./select.js";
+
 import type { Anchor } from "@maple-kit/core/anchor";
 import type { Rule, RuleTarget } from "@maple-kit/core/connectors";
 import type { PageContext } from "@maple-kit/core/overlay";
@@ -56,6 +58,8 @@ export interface TargetLimits {
   readonly maxHtml?: number;
 }
 
+/** A rule with more groups than this many times its cap is called broad. */
+export const BROAD_RULE_FACTOR = 3;
 /** Sized for a judge with about 32k tokens of state: 40 x 2000 characters is ~20k. */
 export const MAX_TARGETS_PER_RULE = 10;
 /** Most elements one page sends to the judge across every rule. */
@@ -67,18 +71,42 @@ export const TRUNCATED = "<!-- truncated -->";
 /** Elements that carry no design a judge should read, and a good deal of noise. */
 const NOISE = "script, style, noscript, template";
 
+/** What was matched, what was sent and what was not, for one page. */
+export interface JudgedStats {
+  /** Elements matched by every rule's `appliesTo`. */
+  readonly matched: number;
+  /** Distinct components among them: repeats collapsed to one. */
+  readonly groups: number;
+  /** Elements actually sent to the judge. */
+  readonly sent: number;
+  /** Groups left out by the per-rule or page-wide cap. */
+  readonly droppedByCap: number;
+  /** Groups left out because their file is not among `sources`. */
+  readonly notChanged: number;
+  /** Rules that had groups cut by a cap. */
+  readonly rulesAtCap: readonly string[];
+  /** Rules with over `BROAD_RULE_FACTOR` times the per-rule cap in groups: narrow `appliesTo`. */
+  readonly broadRules: readonly string[];
+  /** Rules whose `appliesTo` is not a valid selector. */
+  readonly invalidSelectors: readonly string[];
+}
+
 /** The elements the rules chose on one page, and what could not be sent. */
 export interface Targets {
   readonly targets: readonly RuleTarget[];
-  /** Ids of rules whose `appliesTo` is not a valid selector. */
-  readonly invalid: readonly string[];
-  /** Matches left out by the per-rule or page-wide cap. */
-  readonly dropped: number;
+  /**
+   * Aligned with `targets`: how many other identical instances each stands
+   * for, so a finding on it can say so.
+   */
+  readonly repeats: readonly number[];
+  readonly stats: JudgedStats;
 }
 
 /** What a pass is asked to read for the judge. */
 export interface JudgedRead extends TargetLimits {
   readonly rules: readonly Rule[];
+  /** Repo-relative files whose elements go first; see `JudgedOptions.sources`. */
+  readonly sources?: readonly string[];
 }
 
 /** One pass over the page: what was on it, and what it was being shown in. */
@@ -197,35 +225,116 @@ function matches(selector: string): Element[] | undefined {
   }
 }
 
+/** Attributes whose value differs per instance of one component. */
+const VOLATILE = ["id", "data-testid", "href", "src"];
+
+/** Replaces what varies per instance: ink in text nodes and volatile values. */
+function neutralise(root: Element): void {
+  for (const element of [root, ...root.querySelectorAll("*")]) {
+    for (const name of VOLATILE) {
+      if (element.hasAttribute(name)) element.setAttribute(name, "");
+    }
+  }
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+    if ((node.textContent ?? "").trim() !== "") node.textContent = "#";
+  }
+}
+
+/** A matched element, with what it is told apart from its repeats by. */
+interface Candidate {
+  readonly element: Element;
+  readonly source: string | undefined;
+  readonly signature: string;
+}
+
+function candidateOf(element: Element): Candidate {
+  const source = element.closest("[data-maple-src]")?.getAttribute("data-maple-src") ?? undefined;
+  const copy = element.cloneNode(true) as Element;
+  for (const noise of [...copy.querySelectorAll(NOISE)]) noise.remove();
+  neutralise(copy);
+  return { element, source, signature: signatureOf(source, copy.outerHTML) };
+}
+
+interface Limits {
+  readonly perRule: number;
+  readonly total: number;
+  readonly html: number;
+  readonly sources: readonly string[] | undefined;
+  /** What the page-wide cap leaves for the rule being read. */
+  readonly room: number;
+}
+
+/** Counts that accumulate over the rules of one page. */
+interface Tally {
+  matched: number;
+  groups: number;
+  droppedByCap: number;
+  notChanged: number;
+  readonly rulesAtCap: string[];
+  readonly broadRules: string[];
+  readonly invalidSelectors: string[];
+}
+
+function takeRule(rule: Rule, found: Element[], limits: Limits, tally: Tally) {
+  const groups = groupBySignature(found.map(candidateOf));
+  const chosen = choose(groups, Math.max(0, Math.min(limits.perRule, limits.room)), limits.sources);
+  tally.matched += found.length;
+  tally.groups += groups.length;
+  tally.droppedByCap += chosen.capped;
+  tally.notChanged += chosen.notChanged;
+  if (chosen.capped > 0) tally.rulesAtCap.push(rule.id);
+  if (groups.length > limits.perRule * BROAD_RULE_FACTOR) tally.broadRules.push(rule.id);
+  return chosen.kept;
+}
+
 /**
- * The elements each rule applies to, in rule order, capped per rule and in
- * all. Rules run first to last, so the ones a host lists first are kept when
- * the page-wide cap is reached.
+ * The elements each rule applies to, in rule order. Repeats of one component
+ * are one target; the caps count those groups, not raw matches. Rules run first
+ * to last, so the ones a host lists first are kept when the page-wide cap is
+ * reached.
  */
 export function readTargets(read: JudgedRead): Targets {
-  const perRule = read.maxPerRule ?? MAX_TARGETS_PER_RULE;
-  const total = read.maxTargets ?? MAX_TARGETS;
-  const cap = read.maxHtml ?? MAX_TARGET_HTML;
+  const limits: Limits = {
+    perRule: read.maxPerRule ?? MAX_TARGETS_PER_RULE,
+    total: read.maxTargets ?? MAX_TARGETS,
+    html: read.maxHtml ?? MAX_TARGET_HTML,
+    sources: read.sources,
+    room: 0,
+  };
+  const tally: Tally = {
+    matched: 0,
+    groups: 0,
+    droppedByCap: 0,
+    notChanged: 0,
+    rulesAtCap: [],
+    broadRules: [],
+    invalidSelectors: [],
+  };
   const targets: RuleTarget[] = [];
-  const invalid: string[] = [];
-  let dropped = 0;
+  const repeats: number[] = [];
   for (const rule of read.rules) {
     const found = matches(rule.appliesTo);
     if (found === undefined) {
-      invalid.push(rule.id);
+      tally.invalidSelectors.push(rule.id);
       continue;
     }
-    const room = Math.max(0, Math.min(perRule, total - targets.length));
-    for (const element of found.slice(0, room)) {
+    for (const group of takeRule(
+      rule,
+      found,
+      { ...limits, room: limits.total - targets.length },
+      tally,
+    )) {
+      const { element } = group.first;
       targets.push({
         rule: rule.id,
-        html: subtreeHtml(element, cap),
+        html: subtreeHtml(element, limits.html),
         anchor: describeElement(element),
       });
+      repeats.push(group.size - 1);
     }
-    dropped += Math.max(0, found.length - room);
   }
-  return { targets, invalid, dropped };
+  return { targets, repeats, stats: { ...tally, sent: targets.length } };
 }
 
 /**

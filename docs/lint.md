@@ -196,12 +196,27 @@ way a rendered finding is, and sent to `connector.evaluate` in one call. It
 reuses the page the rendered tier opens; no second browser starts. No
 screenshot is sent: the judge reads markup.
 
-Size is bounded because a judge has a fixed budget. The defaults are 10
-elements per rule (`maxPerRule`), 40 per page (`maxTargets`) and 2000
+Repeated components are one question, not forty. Matches of a rule are
+grouped by a signature: the element's `data-maple-src` tag plus its HTML with
+text, ids, `data-testid`, `href` and `src` values removed. The first
+of each group is sent. A finding on it is returned once, with the count in the
+message ("... (and 12 identical instances)").
+
+Size is bounded because a judge has a fixed budget, and the caps count groups.
+The defaults are 10 per rule (`maxPerRule`), 40 per page (`maxTargets`) and 2000
 characters per element (`maxHtml`); a longer subtree ends in
 `<!-- truncated -->`. Rules are served in the order listed, so list the ones
-that matter first. Matches over a cap, and a rule whose selector is invalid, are
-named in a warning rather than skipped silently.
+that matter first. Lint owns these limits; a connector should not add its own.
+
+`judged.sources` is a list of repo-relative files, normally the PR's changed
+ones. When set, groups from those files go first, untagged groups follow only
+if the caps leave room, and groups from any other file are skipped.
+
+Nothing is dropped silently. `RenderedRun.judgedStats` reports `matched`,
+`groups`, `sent`, `droppedByCap`, `notChanged`, `rulesAtCap`, `invalidSelectors`
+and `broadRules` (a rule with more than 3 times `maxPerRule` groups: narrow its
+`appliesTo`), and the logger warns for each. Across viewports the counts are the
+largest any viewport saw and the lists are unions.
 
 What comes back is normalised:
 

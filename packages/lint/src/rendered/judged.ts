@@ -8,6 +8,7 @@
 
 import type { Viewport } from "./audit.js";
 import type { Targets } from "./collect.js";
+import type { Anchor } from "@maple-kit/core/anchor";
 import type { Finding, RuleConnector } from "@maple-kit/core/connectors";
 
 /** What one evaluation gave: findings, or why there are none to trust. */
@@ -22,6 +23,26 @@ export interface JudgedPage {
   readonly url: string;
   readonly viewport: Viewport;
   readonly judged: Targets;
+}
+
+/** Whether a finding's anchor points at the element a target was read from. */
+function sameAnchor(a: Anchor, b: Anchor): boolean {
+  if (a.selector !== undefined && b.selector !== undefined) return a.selector === b.selector;
+  return a.source === b.source && a.key === b.key && a.component === b.component;
+}
+
+/**
+ * Says how many identical instances share a finding on a representative, so
+ * the reader knows it is not one element's problem. One finding, not N.
+ */
+function withRepeats(one: Finding, page: Targets): Finding {
+  const at = page.targets.findIndex(
+    (target) => target.rule === one.rule && sameAnchor(target.anchor, one.anchor),
+  );
+  const extra = page.repeats[at] ?? 0;
+  if (extra === 0) return one;
+  const noun = extra === 1 ? "instance" : "instances";
+  return { ...one, message: `${one.message} (and ${extra} identical ${noun})` };
 }
 
 function describe(cause: unknown): string {
@@ -55,7 +76,8 @@ export async function lintJudged(
       findings: found.flatMap((one) => {
         const rule = rules.get(one.rule);
         if (rule === undefined) return [];
-        return [{ ...one, tier: "judged" as const, severity: rule.severity ?? "advice" }];
+        const judged = { ...one, tier: "judged" as const, severity: rule.severity ?? "advice" };
+        return [withRepeats(judged, page.judged)];
       }),
     };
   } catch (cause) {

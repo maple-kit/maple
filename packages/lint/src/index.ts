@@ -34,6 +34,7 @@ export type {
   Viewport,
 } from "./rendered/audit.js";
 export {
+  BROAD_RULE_FACTOR,
   MAX_TARGET_HTML,
   MAX_TARGETS,
   MAX_TARGETS_PER_RULE,
@@ -43,6 +44,7 @@ export {
 } from "./rendered/collect.js";
 export type {
   JudgedRead,
+  JudgedStats,
   Reading,
   StyleRecord,
   TargetLimits,
