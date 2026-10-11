@@ -34,14 +34,17 @@ export function tableMedia(env: MediaEnv, origin: string): MediaConnector {
 }
 
 /** A refusal for an upload with no reviewer behind it, or undefined to go on. */
-export async function refuseAnonymousUpload(request: Request): Promise<Response | undefined> {
+export async function refuseAnonymousUpload(
+  request: Request,
+  secret: string,
+): Promise<Response | undefined> {
   const { pathname } = new URL(request.url);
   if (request.method !== "POST" || pathname !== "/api/maple/media") return undefined;
 
-  const session = await readGitHubSession({
-    headers: Object.fromEntries(request.headers),
-    url: request.url,
-  });
+  const session = await readGitHubSession(
+    { headers: Object.fromEntries(request.headers), url: request.url },
+    { secret },
+  );
   if (session !== null) return undefined;
   return Response.json({ error: "Sign in to attach a screenshot" }, { status: 401 });
 }

@@ -177,11 +177,12 @@ publishes no mapping between the two.
 
 ## 4. Configure the SDK route
 
-Set `MAPLE_GITHUB_CLIENT_ID` in the preview environment, and set
-`MAPLE_COOKIE_KEY` to a random 32-byte value if you want the reviewer's cookie
-encrypted at rest. Both go in your host's preview environment variables, not in
-a file in the repository. The client id is public and the cookie key is a
-secret; `docs/configuration.md` names every variable Maple's halves need and
+Set `MAPLE_GITHUB_CLIENT_ID` and `MAPLE_SESSION_SECRET` in the preview
+environment. The secret is required: at least 32 random bytes
+(`openssl rand -base64 48`), and it seals the reviewer's cookie so nobody can
+read or forge a session. Both go in your host's preview environment variables,
+not in a file in the repository. The client id is public and the session secret
+is a secret; `docs/configuration.md` names every variable Maple's halves need and
 which side of that line each falls on.
 
 Mount the route behind your preview flag so it never exists in production:
@@ -193,7 +194,7 @@ import { createPullCache, githubStore } from "@maple-kit/core/connectors";
 import { consoleSink, createLogger } from "@maple-kit/core/logger";
 import { createMapleHandler } from "@maple-kit/core/route";
 
-const key = process.env.MAPLE_COOKIE_KEY;
+const secret = process.env.MAPLE_SESSION_SECRET!;
 const logger = createLogger({ sinks: [consoleSink()] });
 const pulls = createPullCache();
 
@@ -202,7 +203,7 @@ const mounted =
     ? createMapleHandler({
         logger,
         store: async (request) => {
-          const session = await readGitHubSession(request, key ? { key } : {});
+          const session = await readGitHubSession(request, { secret });
           if (!session) return null;
           return createCommentStore(
             githubStore({
@@ -215,7 +216,7 @@ const mounted =
         },
         githubAuth: {
           clientId: process.env.MAPLE_GITHUB_CLIENT_ID!,
-          ...(key ? { key } : {}),
+          secret,
         },
       })
     : () => new Response("Not found", { status: 404 });

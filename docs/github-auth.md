@@ -231,23 +231,30 @@ follow `basePath`: a route mounted somewhere else must set `githubAuth.path` to
 the same value, or the browser never sends the cookie to it and every reviewer
 reads as unlinked.
 
-### Encryption at rest is optional, and narrow
+### The cookie is sealed, and the secret is required
 
-`githubAuth.key` is optional, and when set the route encrypts the cookie value
-with AES-GCM. A store resolver reading the cookie passes the same key to
-`readGitHubSession(request, { key })`. Be clear about what that buys.
+`githubAuth.secret` is required, at least 32 bytes (`openssl rand -base64 48`).
+A store resolver and `githubIdentity` take the same secret:
+`readGitHubSession(request, { secret })`. A weak or missing one throws when the
+route is built.
 
-It protects the token from something that can read the cookie jar but not the
-server's configuration: a backup of a request log, a proxy that stores response
-headers, an operator reading a browser profile. That is a real class of
-exposure, and it is a narrow one.
+The value is AES-GCM under a key HKDF derives from the secret, with the issue
+and expiry times and the cookie's purpose inside the seal. That makes it two
+things at once. It is **confidential**: the token and the login are not in the
+value. And it is **unforgeable**: a cookie written by hand, edited by a byte,
+sealed under another secret, past its expiry or copied from the pending cookie
+does not open, and a value that does not open is a signed-out reviewer, never an
+error. Every reader goes through one opener.
 
-It does **not** defend against a compromised server. An attacker who can read
-the cookie on the server can read the key next to it. Encryption at rest here is
-defence in depth, not the load-bearing control; `HttpOnly` is.
+Earlier versions stored the token and login as plain base64 unless a key was
+set, and trusted what they read. Anyone could write a session for any login,
+and the token was readable by whoever held the cookie.
 
-Turn it on. It costs one environment variable and it closes the narrow case.
-Treat the day it is missing as a hardening gap, not an incident.
+It does **not** defend against a compromised server: whoever can read the secret
+can seal a session. `HttpOnly` still carries the weight against injected script.
+
+`secret` may be a list, `[current, ...previous]`: the first seals, every one
+opens, so rotation signs nobody out.
 
 ## Worst case
 
@@ -300,11 +307,11 @@ build, so the gate is enforced rather than remembered.
 
 ## Configuration
 
-| Name                     | Where it is read | What it is                                        |
-| ------------------------ | ---------------- | ------------------------------------------------- |
-| `MAPLE_GITHUB_CLIENT_ID` | SDK route        | The App's client id. Public; it is not a secret.  |
-| `MAPLE_COOKIE_KEY`       | SDK route        | Optional AES-GCM key for the cookie. Recommended. |
-| `MAPLE_PREVIEW`          | Build and route  | `1` in a preview, unset everywhere else.          |
+| Name                     | Where it is read | What it is                                       |
+| ------------------------ | ---------------- | ------------------------------------------------ |
+| `MAPLE_GITHUB_CLIENT_ID` | SDK route        | The App's client id. Public; it is not a secret. |
+| `MAPLE_SESSION_SECRET`   | SDK route        | Required. Seals the cookie with AES-GCM.         |
+| `MAPLE_PREVIEW`          | Build and route  | `1` in a preview, unset everywhere else.         |
 
 There is deliberately no `MAPLE_GITHUB_CLIENT_SECRET` and no
 `MAPLE_GITHUB_TOKEN` in a preview environment. If a deployment has either, the

@@ -7,6 +7,8 @@ import { memoryStore } from "../src/testing/memory-store.js";
 import { createDeviceFlowFake } from "./msw/github.js";
 import { createTestServer, useTestServer } from "./msw/server.js";
 
+/** A test value; nothing protects anything here. */
+const SECRET = "s".repeat(40);
 const BASE = "https://preview.example.com";
 const github = createDeviceFlowFake();
 const server = createTestServer(...github.handlers);
@@ -16,8 +18,8 @@ useTestServer(server, { beforeAll, afterEach, afterAll });
 function handler() {
   return createMapleHandler({
     store: createCommentStore(memoryStore()),
-    identity: githubIdentity(),
-    githubAuth: { clientId: "Iv1.test", insecure: true },
+    identity: githubIdentity({ secret: SECRET }),
+    githubAuth: { clientId: "Iv1.test", secret: SECRET, insecure: true },
   });
 }
 

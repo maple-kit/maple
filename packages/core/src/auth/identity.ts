@@ -1,4 +1,4 @@
-import { readGitHubSession } from "./cookie.js";
+import { assertSecret, readGitHubSession } from "./cookie.js";
 
 import type { IdentityConnector } from "../connectors/types.js";
 import type { SessionCookieOptions } from "./cookie.js";
@@ -9,7 +9,8 @@ import type { SessionCookieOptions } from "./cookie.js";
  * and makes no call. A session without a login stays a guest: the token still
  * writes, but there is nobody to name.
  */
-export function githubIdentity(options: SessionCookieOptions = {}): IdentityConnector {
+export function githubIdentity(options: SessionCookieOptions): IdentityConnector {
+  assertSecret(options.secret);
   return {
     name: "github-session",
     async resolveUser(request) {

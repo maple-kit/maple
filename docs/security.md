@@ -53,8 +53,8 @@ Install each App only on the repositories that should be reviewable.
 
 [`configuration.md`](configuration.md) is the table. In short:
 
-- The comment App's client id is public. `MAPLE_COOKIE_KEY` is a secret and
-  belongs on the route.
+- The comment App's client id is public. `MAPLE_SESSION_SECRET` is a secret
+  and belongs on the route.
 - `MAPLE_GATE_PRIVATE_KEY` is a secret, and only on the route. A workflow that
   publishes the check uses its own `GITHUB_TOKEN` with `checks: write`, and needs
   no App.
@@ -75,9 +75,9 @@ against a production build should answer `404`
 ## The cookie
 
 `HttpOnly; Secure; SameSite=Lax; Path=/api/maple`, seven days. `HttpOnly` is the
-control that matters against script injected into the previewed application. Set
-`MAPLE_COOKIE_KEY` (32 random bytes) to encrypt it at rest; that guards against a
-leaked log or proxy capture, not a compromised server. If the route is mounted
+control that matters against script injected into the previewed application. The
+value is sealed with AES-GCM under `MAPLE_SESSION_SECRET` (required, 32 bytes or
+more), so it cannot be read or forged, and it expires inside the seal. If the route is mounted
 elsewhere, set `githubAuth.path` to match. Shorten `maxAgeSeconds` if seven days
 is too long for a repository ([`github-auth.md`](github-auth.md#the-cookie)).
 
@@ -150,8 +150,9 @@ its port to a network ([`review.md`](review.md#the-content-security-policy)).
   link again.
 - **Every reviewer's tokens:** an organisation owner uninstalls the comment App
   from the repository or the organisation.
-- **`MAPLE_COOKIE_KEY`:** rotate it. Cookies encrypted with the old key stop
-  working and reviewers link again.
+- **`MAPLE_SESSION_SECRET`:** rotate it. Pass `[new, old]` to keep sessions
+  alive while it rolls, or just the new one and reviewers link again. A leaked
+  secret lets its holder forge a session: rotate to the new one alone.
 - **The gate App's key:** generate a new private key in the App's settings, delete
   the old one, and update `MAPLE_GATE_PRIVATE_KEY`.
 - **An agent's `GITHUB_TOKEN`:** revoke it on GitHub and issue a new one.
@@ -171,7 +172,7 @@ used.
 - [ ] `MAPLE_PREVIEW=1` in previews only; a production build answers `404` on
       `/api/maple/comments`, asserted in CI.
 - [ ] No client secret, shared token or gate key in any preview environment.
-- [ ] `MAPLE_COOKIE_KEY` set, and `githubAuth.path` matches the mount.
+- [ ] `MAPLE_SESSION_SECRET` set (32+ random bytes), and `githubAuth.path` matches the mount.
 - [ ] The `maple/visual-review` check is required by a ruleset and pinned to the
       App that publishes it.
 - [ ] `requireApproval`, the action's `require-approval` and an identity connector

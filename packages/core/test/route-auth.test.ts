@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { readGitHubSession, SESSION_COOKIE } from "../src/auth/index.js";
 import { createMapleHandler } from "../src/route/index.js";
@@ -20,13 +20,15 @@ beforeEach(() => {
   github.whoami("octocat");
 });
 
-/** 32 bytes, so AES-GCM has a key. A test value; nothing protects anything here. */
-const KEY = btoa("0123456789abcdef0123456789abcdef");
+/** A test value; nothing protects anything here. */
+const SECRET = "s".repeat(40);
+const OTHER = "o".repeat(40);
+const OPTIONS = { secret: SECRET, insecure: true };
 
 function handler(auth: Partial<GitHubAuthOptions> = {}) {
   return createMapleHandler({
     store: createCommentStore(memoryStore()),
-    githubAuth: { clientId: "Iv1.test", insecure: true, ...auth },
+    githubAuth: { clientId: "Iv1.test", ...OPTIONS, ...auth },
   });
 }
 
@@ -165,7 +167,7 @@ describe("the session cookie", () => {
   it("carries every flag the design leans on", async () => {
     const handle = createMapleHandler({
       store: createCommentStore(memoryStore()),
-      githubAuth: { clientId: "Iv1.test" },
+      githubAuth: { clientId: "Iv1.test", secret: SECRET },
     });
     const started = await handle(request("POST", "/api/maple/auth/github"));
 
@@ -185,20 +187,92 @@ describe("the session cookie", () => {
     const response = await link();
     const cookie = cookieFrom(response, SESSION_COOKIE)!;
 
-    const session = await readGitHubSession({ headers: { cookie }, url: BASE });
+    const session = await readGitHubSession({ headers: { cookie }, url: BASE }, OPTIONS);
     expect(session?.token).toBe("ghu_reviewer");
     expect(session?.login).toBe("octocat");
   });
 
-  it("is unreadable without the key it was sealed with", async () => {
-    const response = await link({ key: KEY });
-    const cookie = cookieFrom(response, SESSION_COOKIE)!;
+  it("is sealed: the token is not in the value, and the wrong secret opens nothing", async () => {
+    const cookie = cookieFrom(await link(), SESSION_COOKIE)!;
+    const request = { headers: { cookie }, url: BASE };
 
     expect(cookie).not.toContain("ghu_reviewer");
-    expect(await readGitHubSession({ headers: { cookie }, url: BASE })).toBeNull();
-    expect((await readGitHubSession({ headers: { cookie }, url: BASE }, { key: KEY }))?.token).toBe(
+    expect(await readGitHubSession(request, { secret: OTHER })).toBeNull();
+    expect((await readGitHubSession(request, OPTIONS))?.token).toBe("ghu_reviewer");
+  });
+
+  it("still opens under a retired secret listed after the current one", async () => {
+    const cookie = cookieFrom(await link(), SESSION_COOKIE)!;
+    const rotated = { secret: [OTHER, SECRET] };
+
+    expect((await readGitHubSession({ headers: { cookie }, url: BASE }, rotated))?.token).toBe(
       "ghu_reviewer",
     );
+  });
+
+  it("is signed out when the cookie is the old plain format, written by hand", async () => {
+    const plain = btoa(JSON.stringify({ token: "ghu_forged", login: "someone" }));
+    const cookie = `${SESSION_COOKIE}=p.${plain.replaceAll("=", "")}`;
+
+    expect(await readGitHubSession({ headers: { cookie }, url: BASE }, OPTIONS)).toBeNull();
+  });
+
+  it("is signed out for a tampered value, which never throws", async () => {
+    const sealed = cookieFrom(await link(), SESSION_COOKIE)!;
+    const flipped = sealed.slice(0, -2) + (sealed.endsWith("AA") ? "BB" : "AA");
+
+    const rows = [
+      flipped,
+      `${SESSION_COOKIE}=s1.aaaa.bbbb`,
+      `${SESSION_COOKIE}=s1`,
+      `${SESSION_COOKIE}=%E0%A4%A`,
+    ];
+    for (const cookie of rows) {
+      expect(await readGitHubSession({ headers: { cookie }, url: BASE }, OPTIONS)).toBeNull();
+    }
+  });
+
+  it("is signed out once its sealed expiry has passed, whatever the browser does", async () => {
+    vi.useFakeTimers();
+    try {
+      const cookie = cookieFrom(await link({ maxAgeSeconds: 60 }), SESSION_COOKIE)!;
+      const request = { headers: { cookie }, url: BASE };
+
+      vi.advanceTimersByTime(59_000);
+      expect(await readGitHubSession(request, OPTIONS)).not.toBeNull();
+      vi.advanceTimersByTime(2000);
+      expect(await readGitHubSession(request, OPTIONS)).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("cannot be swapped for the pending cookie, which is sealed for another purpose", async () => {
+    const started = await handler()(request("POST", "/api/maple/auth/github"));
+    const pending = cookieFrom(started, "maple_gh_pending")!.replace(
+      "maple_gh_pending",
+      SESSION_COOKIE,
+    );
+
+    expect(
+      await readGitHubSession({ headers: { cookie: pending }, url: BASE }, OPTIONS),
+    ).toBeNull();
+  });
+
+  it.each([
+    ["missing", undefined],
+    ["empty", ""],
+    ["short", "too-short"],
+    ["a short one in a list", [SECRET, "short"]],
+    ["an empty list", []],
+  ])("refuses a %s secret when the route is built", (_, secret) => {
+    const build = () =>
+      createMapleHandler({
+        store: createCommentStore(memoryStore()),
+        githubAuth: { clientId: "Iv1.test", secret: secret as string },
+      });
+
+    expect(build).toThrow(/session secret/);
   });
 
   it.each([
@@ -209,14 +283,9 @@ describe("the session cookie", () => {
     const response = await link();
     const cookie = join(cookieFrom(response, SESSION_COOKIE)!);
 
-    expect((await readGitHubSession({ headers: { cookie }, url: BASE }))?.token).toBe(
+    expect((await readGitHubSession({ headers: { cookie }, url: BASE }, OPTIONS))?.token).toBe(
       "ghu_reviewer",
     );
-  });
-
-  it("reads a tampered value as not linked rather than throwing", async () => {
-    const cookie = `${SESSION_COOKIE}=e.aaaa.bbbb`;
-    expect(await readGitHubSession({ headers: { cookie }, url: BASE }, { key: KEY })).toBeNull();
   });
 });
 

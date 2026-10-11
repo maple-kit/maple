@@ -7,6 +7,7 @@
  * identity is a five-line function rather than a second login.
  */
 
+import { assertSecret } from "../auth/cookie.js";
 import { MapleStoreError } from "../errors.js";
 import { isAdvisoryId } from "../gate/decide.js";
 import { publishGate } from "../gate/publish.js";
@@ -146,6 +147,7 @@ interface Mount {
 }
 
 export function createMapleHandler(options: RouteOptions): (request: Request) => Promise<Response> {
+  if (options.githubAuth) assertSecret(options.githubAuth.secret);
   const base = options.basePath ?? DEFAULT_BASE_PATH;
   const mock = options.mock === undefined ? undefined : createMockSchemas(options.mock);
   const plan = options.mock?.plan;

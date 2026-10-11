@@ -9,14 +9,14 @@
 
 import {
   clearCookie,
-  parse,
+  openSealed,
+  openSession,
   PENDING_COOKIE,
   readCookie,
-  seal,
+  sealSession,
+  sealValue,
   SESSION_COOKIE,
-  sessionText,
   setCookie,
-  unseal,
 } from "../auth/cookie.js";
 import { createDeviceFlow, DeviceFlowError } from "../auth/device-flow.js";
 import { USER_AGENT } from "../internal/user-agent.js";
@@ -56,8 +56,8 @@ const LINK_FAILURE: Record<DeviceFlowFailure, number> = {
 /** Asks GitHub for a code, and keeps the device code out of the browser. */
 export async function startLink(options: GitHubAuthOptions): Promise<Response> {
   const code = await flowFor(options).start();
-  const pending = await seal(JSON.stringify(code), options.key);
   const lifetime = Math.max(1, Math.ceil((code.expiresAt - Date.now()) / SECOND));
+  const pending = await sealValue(JSON.stringify(code), "pending", options.secret, lifetime);
 
   return json(
     {
@@ -86,7 +86,7 @@ export async function finishLink(
   if (result.status === "pending") return json(result, 200);
 
   const session = await sessionFor(options, result.token.accessToken);
-  const stored = await seal(sessionText(session), options.key);
+  const stored = await sealSession(session, options);
   return json({ status: "linked", ...stateOf(session) }, 200, [
     setCookie(SESSION_COOKIE, stored, options),
     clearCookie(PENDING_COOKIE, options),
@@ -106,8 +106,7 @@ export async function githubState(
   options: GitHubAuthOptions,
   headers: Readonly<Record<string, string>>,
 ): Promise<GitHubState> {
-  const raw = readCookie(headers, options.name ?? SESSION_COOKIE);
-  const session = raw === undefined ? undefined : parse(await unseal(raw, options.key));
+  const session = await openSession(headers, options);
   return session ? stateOf(session) : { linked: false };
 }
 
@@ -137,7 +136,7 @@ async function pendingCode(
   const raw = readCookie(headers, PENDING_COOKIE);
   if (raw === undefined) return undefined;
 
-  const plain = await unseal(raw, options.key);
+  const plain = await openSealed(raw, "pending", options.secret);
   const read: unknown = plain === undefined ? undefined : safeJson(plain);
   if (typeof read !== "object" || read === null) return undefined;
 

@@ -90,6 +90,19 @@ jobs:
           fi
           printf '%s' "$MAPLE_GATE_PRIVATE_KEY" |
             sfw pnpm dlx "$WRANGLER" secret put MAPLE_GATE_PRIVATE_KEY --name "$WORKER"
+      - name: Give the Worker its session secret
+        # Seals the sign-in cookie. It reaches wrangler on stdin like the key
+        # above, and without it the Worker would accept no session at all.
+        working-directory: examples/vite-app
+        env:
+          MAPLE_SESSION_SECRET: ${{ secrets.MAPLE_SESSION_SECRET }}
+        run: |
+          if [ -z "$MAPLE_SESSION_SECRET" ]; then
+            echo "::error::MAPLE_SESSION_SECRET is not set; the preview cannot sign anyone in."
+            exit 1
+          fi
+          printf '%s' "$MAPLE_SESSION_SECRET" |
+            sfw pnpm dlx "$WRANGLER" secret put MAPLE_SESSION_SECRET --name "$WORKER"
       - name: Say where it is
         run: |
           body="$MARKER

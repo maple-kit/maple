@@ -16,11 +16,11 @@ key is called everywhere else the provider is used.
 Signs a reviewer in, and writes their comment as them.
 `docs/github-auth.md` is the design; `setup-maple-org` is the runbook.
 
-| Name                     | Secret | What it is                                                                      |
-| ------------------------ | ------ | ------------------------------------------------------------------------------- |
-| `MAPLE_GITHUB_CLIENT_ID` | No     | The App's **Client ID**, starting `Iv`. Public: every reviewer sees it.         |
-| `MAPLE_COOKIE_KEY`       | Yes    | 32 random bytes. Encrypts the reviewer's cookie at rest. Optional, and take it. |
-| `MAPLE_PREVIEW`          | No     | `1` in a preview, unset everywhere else. Gates the tagger and the mount.        |
+| Name                     | Secret | What it is                                                                        |
+| ------------------------ | ------ | --------------------------------------------------------------------------------- |
+| `MAPLE_GITHUB_CLIENT_ID` | No     | The App's **Client ID**, starting `Iv`. Public: every reviewer sees it.           |
+| `MAPLE_SESSION_SECRET`   | Yes    | Required. 32+ random bytes. Seals the reviewer's cookie: unreadable, unforgeable. |
+| `MAPLE_PREVIEW`          | No     | `1` in a preview, unset everywhere else. Gates the tagger and the mount.          |
 
 There is deliberately **no client secret and no private key here**. Device
 Flow's token exchange needs neither, and a deployment holding either has worked
@@ -163,6 +163,10 @@ else, install it on this repository, and set:
 | `MAPLE_GATE_APP_ID`          | No     | Variable | The gate App's **App ID**, passed to the Worker as the variable of the same name.             |
 | `MAPLE_GATE_INSTALLATION_ID` | No     | Variable | The installation on this repository, passed the same way.                                     |
 | `MAPLE_GATE_PRIVATE_KEY`     | Yes    | Secret   | The App's `.pem` as GitHub gave it (PKCS#1 is fine), put on the Worker as a secret, on stdin. |
+
+`MAPLE_SESSION_SECRET` is a repository secret too, put on the Worker the same
+way; the deploy fails without it, because a preview that cannot sign anyone in
+is not a preview.
 
 Without all three the Worker runs with no gate, exactly as before. The key
 reaches only the deploy step of a same-repository pull request; the trigger is

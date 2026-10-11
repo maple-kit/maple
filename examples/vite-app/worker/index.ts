@@ -4,7 +4,7 @@
  *
  * The store is the pull request this build came from, written as the reviewer
  * with the token their cookie carries, so the example reviews the change that
- * deployed it. Nothing here is a secret: the client id is public.
+ * deployed it. The client id is public; the session secret is a Worker secret.
  */
 
 import { createCommentStore } from "@maple-kit/core";
@@ -26,6 +26,8 @@ import type { GateResolver, StoreResolver } from "@maple-kit/core/route";
 interface Env extends GateEnv, MediaEnv {
   readonly ASSETS: { fetch(request: Request): Promise<Response> };
   readonly MAPLE_GITHUB_CLIENT_ID: string;
+  /** Seals the session cookie. A Worker secret, at least 32 bytes. */
+  readonly MAPLE_SESSION_SECRET: string;
   /** The commit the preview was built from, which names its pull request. */
   readonly MAPLE_COMMIT: string;
 }
@@ -36,7 +38,7 @@ const pulls = createPullCache();
 function storeFor(env: Env): StoreResolver {
   const [owner = "", repo = ""] = env.MAPLE_REPO.split("/");
   return async (request) => {
-    const session = await readGitHubSession(request);
+    const session = await readGitHubSession(request, { secret: env.MAPLE_SESSION_SECRET });
     if (session === null) return null;
     const connector = githubStore({
       owner,
@@ -68,9 +70,9 @@ function handlerFor(env: Env): Handler {
     logger,
     store: storeFor(env),
     // Names the reviewer by their GitHub login; without it comments say "Guest".
-    identity: githubIdentity(),
+    identity: githubIdentity({ secret: env.MAPLE_SESSION_SECRET }),
     media: routeMedia(env),
-    githubAuth: { clientId: env.MAPLE_GITHUB_CLIENT_ID },
+    githubAuth: { clientId: env.MAPLE_GITHUB_CLIENT_ID, secret: env.MAPLE_SESSION_SECRET },
     // Only with the gate App's three bindings; without them the action's run stands.
     ...gateOption(env),
     mock: {
@@ -85,7 +87,7 @@ function handlerFor(env: Env): Handler {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const { pathname } = new URL(request.url);
-    const refused = await refuseAnonymousUpload(request);
+    const refused = await refuseAnonymousUpload(request, env.MAPLE_SESSION_SECRET);
     if (refused) return refused;
     if (pathname.startsWith("/api/maple/")) return handlerFor(env)(request);
 
