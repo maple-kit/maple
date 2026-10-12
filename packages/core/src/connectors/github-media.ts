@@ -2,9 +2,10 @@
  * A media connector that keeps screenshots on GitHub, as the user attachments
  * a pull-request comment holds when someone pastes an image into it.
  *
- * Only a user token may upload: an installation token is refused. The
- * attachment is readable by whoever can read the repository, and by nobody
- * else, so it needs no public bucket. docs/screenshots.md has the spike.
+ * Only a personal access token may upload: a GitHub App's user token (the
+ * reviewer's sign-in) and an installation token are both answered with a 404.
+ * The attachment is readable by whoever can read the repository, and by nobody
+ * else, so it needs no public bucket. docs/screenshots.md has the spikes.
  */
 
 import { UpstreamError } from "../errors.js";
@@ -19,8 +20,8 @@ export interface GitHubMediaOptions {
   readonly owner: string;
   readonly repo: string;
   /**
-   * A user-to-server token. An installation token is answered with a 404.
-   * Read it from the environment or the session, never from a file.
+   * A personal access token: a bot's, scoped to this repository. A GitHub App
+   * user token (`ghu_`) or an installation token is answered with a 404.
    */
   readonly token: string;
   /** Defaults to `https://api.github.com`. Set this for Enterprise Server. */

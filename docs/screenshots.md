@@ -110,8 +110,14 @@ losing a reviewer's comment over a screenshot is the worse of the two failures.
 reviewer's paste into a pull-request comment creates. There is no bucket to
 run, and no public URL.
 
-The token is the reviewer's, so the route builds the connector per request
-from their session, the way it builds the store:
+The upload needs a token from a real GitHub account, and **the reviewer's
+sign-in token is not one**. Device Flow gives a GitHub App user token (`ghu_`),
+and the upload endpoint answers that with `404` — however the App is
+installed, whatever it may do on the repository, and whichever authorization
+scheme is sent. So the route uploads with a token the deployment holds: a
+fine-grained personal access token of a bot account, scoped to the one
+repository. The comment is still posted with the reviewer's token, and still
+reads as theirs; only the attachment belongs to the bot.
 
 ```ts
 import { readGitHubSession } from "@maple-kit/core/auth";
@@ -121,18 +127,17 @@ import { createMapleHandler } from "@maple-kit/core/route";
 
 const secret = process.env.MAPLE_SESSION_SECRET!;
 const repo = { owner: "acme", repo: "app" };
+// A bot's fine-grained PAT on this repository only. Never the reviewer's.
+const uploads = githubMedia({ ...repo, token: process.env.MAPLE_GITHUB_UPLOAD_TOKEN! });
 
 export const handle = createMapleHandler({
   githubAuth: { clientId: process.env.MAPLE_GITHUB_CLIENT_ID!, secret },
-  media: async (request) => {
-    const session = await readGitHubSession(request, { secret });
-    return session && githubMedia({ ...repo, token: session.token });
-  },
+  // Signed-in reviewers only, although the upload is the bot's.
+  media: async (request) => ((await readGitHubSession(request, { secret })) ? uploads : null),
   store: async (request) => {
     const session = await readGitHubSession(request, { secret });
     if (!session) return null;
-    const media = githubMedia({ ...repo, token: session.token });
-    return createCommentStore(githubStore({ ...repo, token: session.token, media }));
+    return createCommentStore(githubStore({ ...repo, token: session.token, media: uploads }));
   },
 });
 ```
@@ -151,15 +156,26 @@ is the `MediaRef.key`. `getUrl` builds the same permanent link without a
 request. The repository id comes from one `GET /repos/{owner}/{repo}`, made
 once per connector.
 
-What a spike against a private repository found:
+What spikes against private repositories found:
 
-- **A user token uploads.** The one the reviewer signs in with via Device Flow
-  is a user-to-server token, so it is the right credential, and it is the
-  reviewer's own: the attachment is theirs.
-- **An installation token does not.** The same call with a GitHub Actions
-  installation token answered `404`, and the REST documentation lists no such
-  endpoint. A route that holds only an installation token cannot use this
-  connector; it needs the reviewer's token, through a `media` resolver.
+- **A personal access token uploads.** Classic or fine-grained, the call answers
+  `201`. The first spike used one, which is why the first version of this page
+  said the reviewer's token would do.
+- **A GitHub App user token does not.** A reviewer's Device Flow token
+  (`ghu_`) that could read the repository (`GET /repos/{owner}/{repo}` answered
+  `200`) was answered `404` by the upload, with `Authorization: Bearer` and
+  with `Authorization: token` alike. GitHub accepts these tokens here only from
+  a few Apps of its own. Adding a permission to the App is not the way round
+  it: another App's user token with push access was refused the same way, and
+  `Contents: write` would let every reviewer's cookie push code.
+- **An installation token does not either.** The same call with a GitHub
+  Actions installation token answered `404`, and the REST documentation lists
+  no such endpoint.
+- **An OAuth App token would**, since that is what the GitHub CLI's
+  `--attach` uses. Signing reviewers in through an OAuth App rather than a
+  GitHub App would make the upload theirs, at the price of the `repo` scope:
+  every private repository the reviewer can read or write. That is a worse
+  trade than one bot token on one repository.
 - **The link is private to the repository.** An anonymous request gets `404`.
   A signed-in viewer who can read the repository is redirected to a short-lived
   signed copy, and a comment that embeds the link renders it for them. That is
