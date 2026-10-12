@@ -1,5 +1,14 @@
 # @maple-kit/react
 
+## 0.21.0
+
+### Patch Changes
+
+- Updated dependencies [957e8e7]
+- Updated dependencies [bcc9ceb]
+  - @maple-kit/core@0.21.0
+  - @maple-kit/mock@0.21.0
+
 ## 0.20.0
 
 ### Patch Changes

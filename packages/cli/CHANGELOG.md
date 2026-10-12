@@ -1,5 +1,16 @@
 # @maple-kit/cli
 
+## 0.21.0
+
+### Patch Changes
+
+- 24bb434: `maple setup app` no longer tells you to turn "Expire user authorization tokens" off. Leaving it on is the recommended setup with `@maple-kit/core` 0.20.0 or later.
+- Updated dependencies [957e8e7]
+- Updated dependencies [bcc9ceb]
+  - @maple-kit/core@0.21.0
+  - @maple-kit/lint@0.3.2
+  - @maple-kit/ui@0.21.0
+
 ## 0.20.0
 
 ### Patch Changes
