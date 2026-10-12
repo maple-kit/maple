@@ -8,7 +8,7 @@
  */
 
 import { assertSecret, clearCookie, SESSION_COOKIE } from "../auth/cookie.js";
-import { MapleStoreError } from "../errors.js";
+import { MapleStoreError, UpstreamError } from "../errors.js";
 import { isAdvisoryId } from "../gate/decide.js";
 import { publishGate } from "../gate/publish.js";
 import { fnv1a32 } from "../lib/fnv1a.js";
@@ -27,7 +27,6 @@ import type {
   ListQuery,
   MediaConnector,
 } from "../connectors/types.js";
-import type { UpstreamError } from "../errors.js";
 import type { Logger } from "../logger/types.js";
 import type { CommentStore } from "../store.js";
 import type {
@@ -283,16 +282,47 @@ async function media(
   url: URL,
 ): Promise<Response> {
   const connector = await mediaFor(options, request);
-  if (!connector) return json({ error: "This deployment keeps no screenshots" }, 404);
+  if (!connector) return noMedia(options, request);
 
   const key = route === "/media" ? undefined : decodeURIComponent(route.slice("/media/".length));
   if (key === undefined) {
     if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
-    return putBlob(connector, request);
+    return uploaded(options, connector, request);
   }
 
   if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
   return readBlob(connector, key, url);
+}
+
+/** No connector for this request: a 401 the reviewer can act on when they
+ * could sign in, rather than a 404 that reads as "no screenshots". */
+function noMedia(options: RouteOptions, request: Request): Response {
+  if (options.githubAuth && request.method === "POST") {
+    return json({ error: "Sign in to attach a screenshot" }, 401);
+  }
+  return json({ error: "This deployment keeps no screenshots" }, 404);
+}
+
+/** A backend's refusal of an upload is answered as one, not as a crash. */
+async function uploaded(
+  options: RouteOptions,
+  connector: MediaConnector,
+  request: Request,
+): Promise<Response> {
+  try {
+    return await putBlob(connector, request);
+  } catch (error) {
+    if (!(error instanceof UpstreamError)) throw error;
+    options.logger?.error("The screenshot upload was refused.", error);
+    if (error.status === 401 && options.githubAuth) {
+      return json({ error: "Your GitHub sign-in has expired. Sign in again." }, 401, [
+        clearCookie(SESSION_COOKIE, options.githubAuth),
+      ]);
+    }
+    const note = error.detail.slice(0, 200);
+    const message = `${error.service} refused the screenshot (${String(error.status)}): ${note}`;
+    return json({ error: message }, 502);
+  }
 }
 
 /** The content type is the request's, so nothing has to be parsed out of bytes. */

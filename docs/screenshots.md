@@ -110,13 +110,38 @@ losing a reviewer's comment over a screenshot is the worse of the two failures.
 reviewer's paste into a pull-request comment creates. There is no bucket to
 run, and no public URL.
 
+The token is the reviewer's, so the route builds the connector per request
+from their session, the way it builds the store:
+
 ```ts
-const media = githubMedia({ owner: "acme", repo: "app", token: reviewerToken });
-createMapleHandler({
-  store: githubStore({ owner: "acme", repo: "app", token: reviewerToken, media }),
-  media,
+import { readGitHubSession } from "@maple-kit/core/auth";
+import { githubMedia, githubStore } from "@maple-kit/core/connectors";
+import { createCommentStore } from "@maple-kit/core";
+import { createMapleHandler } from "@maple-kit/core/route";
+
+const secret = process.env.MAPLE_SESSION_SECRET!;
+const repo = { owner: "acme", repo: "app" };
+
+export const handle = createMapleHandler({
+  githubAuth: { clientId: process.env.MAPLE_GITHUB_CLIENT_ID!, secret },
+  media: async (request) => {
+    const session = await readGitHubSession(request, { secret });
+    return session && githubMedia({ ...repo, token: session.token });
+  },
+  store: async (request) => {
+    const session = await readGitHubSession(request, { secret });
+    if (!session) return null;
+    const media = githubMedia({ ...repo, token: session.token });
+    return createCommentStore(githubStore({ ...repo, token: session.token, media }));
+  },
 });
 ```
+
+With `githubAuth` set, an upload from a reviewer who is not signed in answers
+`401` ("Sign in to attach a screenshot"), and `/me` reports `media: false` so
+the strip does not offer one. If GitHub refuses the upload, the route answers
+`502` with GitHub's status and message, and `401` with a cleared session when
+the token has expired.
 
 An upload is one `POST` to
 `https://uploads.github.com/user-attachments/assets?content_type=…&name=…&repository_id=…`
