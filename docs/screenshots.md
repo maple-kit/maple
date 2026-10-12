@@ -104,6 +104,48 @@ A media connector that cannot answer costs the table its link and nothing more.
 The comment still posts and the fence still carries the `MediaRef`, because
 losing a reviewer's comment over a screenshot is the worse of the two failures.
 
+## Keeping them on GitHub
+
+`githubMedia` stores a screenshot as a GitHub user attachment: the same thing a
+reviewer's paste into a pull-request comment creates. There is no bucket to
+run, and no public URL.
+
+```ts
+const media = githubMedia({ owner: "acme", repo: "app", token: reviewerToken });
+createMapleHandler({
+  store: githubStore({ owner: "acme", repo: "app", token: reviewerToken, media }),
+  media,
+});
+```
+
+An upload is one `POST` to
+`https://uploads.github.com/user-attachments/assets?content_type=…&name=…&repository_id=…`
+with the bytes as `application/octet-stream`. It answers `201` with
+`{ "url": "https://github.com/user-attachments/assets/<uuid>" }`, and that UUID
+is the `MediaRef.key`. `getUrl` builds the same permanent link without a
+request. The repository id comes from one `GET /repos/{owner}/{repo}`, made
+once per connector.
+
+What a spike against a private repository found:
+
+- **A user token uploads.** The one the reviewer signs in with via Device Flow
+  is a user-to-server token, so it is the right credential, and it is the
+  reviewer's own: the attachment is theirs.
+- **An installation token does not.** The same call with a GitHub Actions
+  installation token answered `404`, and the REST documentation lists no such
+  endpoint. A route that holds only an installation token cannot use this
+  connector; it needs the reviewer's token, through a `media` resolver.
+- **The link is private to the repository.** An anonymous request gets `404`.
+  A signed-in viewer who can read the repository is redirected to a short-lived
+  signed copy, and a comment that embeds the link renders it for them. That is
+  what the pull request's Shot column needs, and it is why this connector is
+  safe to give `githubStore`: unlike a presigned URL, the link does not expire.
+- **There is no `remove`.** GitHub offers no call to delete an attachment, and
+  the contract says to omit a method a backend cannot honour. A discarded draft
+  uploads nothing, so only a published comment leaves an attachment behind.
+- **Limits are GitHub's.** Its size and type limits for images apply, and a
+  refusal reaches the reviewer as a failed upload.
+
 ## When there is no screenshot
 
 There are three ways not to have one, they are not the same thing, and all

@@ -150,8 +150,14 @@ below the table.
 | `file` (store)       | ✓    | ✓      | ✓         | —    | —     | ✓         | ✓       | ✓         | —       | —      | —             | —           | —           | —       | —    | —     | —        | —    |
 | `file` (media)       | —    | —      | —         | —    | —     | —         | —       | —         | ✓       | ✓      | —             | —           | —           | —       | —    | —     | —        | —    |
 | `r2` (media)         | —    | —      | —         | —    | —     | —         | —       | —         | ✓       | ✓      | —             | —           | —           | —       | —    | —     | —        | —    |
+| `github` (media)     | —    | —      | —         | —    | —     | —         | —       | —         | ✓       | ✓      | —             | —           | —           | —       | —    | —     | —        | —    |
 | `memory` (reference) | ✓    | ✓      | ✓         | ✓    | —     | ✓         | ✓       | ✓         | —       | —      | —             | —           | —           | ✓       | ✓    | ✓     | ✓        | ✓    |
 | `keyword` (baseline) | —    | —      | —         | —    | —     | —         | —       | —         | —       | —      | —             | —           | —           | —       | —    | ✓     | ✓        | ✓    |
+
+`github` (media) keeps screenshots as GitHub user attachments, in the repository
+the pull request is on, so no bucket is needed. It has no `remove`: GitHub has
+no call that deletes an attachment. It needs a user-to-server token, which an
+installation token is not: see [Screenshots](screenshots.md#keeping-them-on-github).
 
 `file` ships from `@maple-kit/core/local` and is the local store: see
 [A local store, for a laptop](#a-local-store-for-a-laptop).
