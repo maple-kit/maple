@@ -7,6 +7,8 @@
  * or blank. That is why the paste path exists.
  */
 
+import { OVERLAY_MARKER } from "../anchor/text-position.js";
+
 /** How much around the element to include. */
 export interface CaptureOptions {
   /**
@@ -57,6 +59,8 @@ export async function captureElement(
   const blob = await snapdom.toBlob(target, {
     scale: options.scale ?? window.devicePixelRatio,
     type: options.format ?? "png",
+    exclude: [`[${OVERLAY_MARKER}]`],
+    excludeMode: "remove",
   });
 
   if (blob.size === 0) throw new CaptureUnavailableError("The capture came out empty.");

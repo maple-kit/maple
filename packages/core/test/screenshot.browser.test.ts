@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { OVERLAY_MARKER } from "../src/anchor/text-position.js";
 import {
   captureElement,
   CaptureUnavailableError,
@@ -104,6 +105,32 @@ describe("capturing the page", () => {
       const wide = await captureElement(page.querySelector("b")!, { ancestors: 1, scale: 1 });
       expect(wide.size).toBeGreaterThan(tight.size);
     } finally {
+      page.remove();
+    }
+  });
+
+  it("leaves Maple's own interface out of a page capture", async () => {
+    const page = mount(`<div style="width:200px;height:80px;background:rgb(0,0,255)"></div>`);
+    const overlay = document.createElement("div");
+    overlay.setAttribute(OVERLAY_MARKER, "");
+    overlay.setAttribute(
+      "style",
+      "position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgb(255,0,0)",
+    );
+    document.body.append(overlay);
+
+    try {
+      const blob = await captureElement(page, { page: true, scale: 1 });
+      const bitmap = await createImageBitmap(blob);
+      const canvas = document.createElement("canvas");
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      const context = canvas.getContext("2d")!;
+      context.drawImage(bitmap, 0, 0);
+      const [red, green, blue] = context.getImageData(20, 20, 1, 1).data;
+      expect([red, green, blue]).toEqual([0, 0, 255]);
+    } finally {
+      overlay.remove();
       page.remove();
     }
   });
