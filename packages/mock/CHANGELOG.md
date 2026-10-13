@@ -1,5 +1,13 @@
 # @maple-kit/mock
 
+## 0.21.1
+
+### Patch Changes
+
+- Updated dependencies [cb5257e]
+- Updated dependencies [7f19ff2]
+  - @maple-kit/core@0.21.1
+
 ## 0.21.0
 
 ### Patch Changes

@@ -1,5 +1,12 @@
 # @maple-kit/core
 
+## 0.21.1
+
+### Patch Changes
+
+- cb5257e: Correct `githubMedia`'s documentation: a reviewer's GitHub App user token (`ghu_`) cannot upload an attachment, so `token` must be a personal access token, such as a bot's fine-grained one scoped to the repository. `docs/screenshots.md` now wires the upload with a deployment-held token while comments are still posted with the reviewer's own.
+- 7f19ff2: Page screenshots attached to a comment no longer include Maple's own panel, composer and pins covering the page; the capture now leaves out everything the overlay owns.
+
 ## 0.21.0
 
 ### Minor Changes

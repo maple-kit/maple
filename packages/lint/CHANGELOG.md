@@ -1,5 +1,13 @@
 # @maple-kit/lint
 
+## 0.3.3
+
+### Patch Changes
+
+- Updated dependencies [cb5257e]
+- Updated dependencies [7f19ff2]
+  - @maple-kit/core@0.21.1
+
 ## 0.3.2
 
 ### Patch Changes
