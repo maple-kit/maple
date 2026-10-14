@@ -42,6 +42,8 @@ export interface MockClientOptions {
   readonly view?: MockView;
   /** The key that opens the box, or false for none. Defaults to `m`. */
   readonly shortcut?: string | false;
+  /** Asked on each press: false leaves the key to the page. Defaults to always. */
+  readonly shortcutWhen?: () => boolean;
   /** Start with the box open. */
   readonly defaultOpen?: boolean;
   /** False keeps the field a filter even where the route plans. */
@@ -350,6 +352,7 @@ function lookUp(runtime: Runtime): void {
 
 function onKeydown(runtime: Runtime, event: KeyboardEvent): void {
   const key = runtime.options.shortcut;
+  if (runtime.options.shortcutWhen?.() === false) return;
   if (!opensMock(event, typeof key === "string" ? key : undefined)) return;
   event.preventDefault();
   patch(runtime, { open: !runtime.state.open });

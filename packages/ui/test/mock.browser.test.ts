@@ -1,3 +1,4 @@
+import { commentModifier } from "@maple-kit/core/client";
 import { decodeRecipe } from "@maple-kit/core/mock";
 import {
   createInventory,
@@ -436,6 +437,14 @@ describe("the banner", () => {
   });
 });
 
+/** A tap of this platform's modifier: down and up with nothing between. */
+function tapModifier(): void {
+  const key = commentModifier();
+  const flag = key === "Meta" ? { metaKey: true } : { altKey: true };
+  document.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, ...flag }));
+  document.dispatchEvent(new KeyboardEvent("keyup", { key, bubbles: true }));
+}
+
 describe("Maple.Mock inside <Maple />", () => {
   let installed: MockHandle | undefined;
 
@@ -458,22 +467,67 @@ describe("Maple.Mock inside <Maple />", () => {
     await userEvent.keyboard("m");
 
     expect(find(".mk-mock")).toBeNull();
+    expect(find('[aria-label="Mock data"]')).toBeNull();
   });
 
   it("shares the overlay's shadow root where a transport is installed", async () => {
-    installed = installMock({ ignore: () => true });
-    await render(maple());
-    await vi.waitFor(() => expect(find(".mk-pill")).not.toBeNull());
+    installed = await openedMaple();
 
     await userEvent.keyboard("m");
     await vi.waitFor(() => expect(find(".mk-mock")).not.toBeNull());
     expect(roots()).toHaveLength(1);
   });
 
-  it("does not start a comment pick when c is typed into the box", async () => {
+  it("leaves m to the page while the island is collapsed", async () => {
     installed = installMock({ ignore: () => true });
     await render(maple());
     await vi.waitFor(() => expect(find(".mk-pill")).not.toBeNull());
+    const event = new KeyboardEvent("keydown", { key: "m", bubbles: true, cancelable: true });
+
+    document.body.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(false);
+    expect(find(".mk-mock")).toBeNull();
+  });
+
+  it("opens and closes the box from the island's button", async () => {
+    installed = await openedMaple();
+    const toggle = () => find<HTMLButtonElement>('[aria-label="Mock data"]')!;
+    expect(toggle().getAttribute("aria-expanded")).toBe("false");
+
+    toggle().click();
+    await vi.waitFor(() => expect(find(".mk-mock")).not.toBeNull());
+    expect(toggle().getAttribute("aria-expanded")).toBe("true");
+
+    toggle().click();
+    await vi.waitFor(() => expect(find(".mk-mock")).toBeNull());
+    expect(toggle().getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("answers m while a pick is armed, and ends the pick", async () => {
+    installed = installMock({ ignore: () => true });
+    await render(maple());
+    await vi.waitFor(() => expect(find(".mk-pill")).not.toBeNull());
+    tapModifier();
+    await vi.waitFor(() => expect(find(".mk-shield")).not.toBeNull());
+
+    await userEvent.keyboard("m");
+
+    await vi.waitFor(() => expect(find(".mk-mock")).not.toBeNull());
+    await vi.waitFor(() => expect(find(".mk-shield")).toBeNull());
+  });
+
+  async function openedMaple(): Promise<MockHandle> {
+    const handle = installMock({ ignore: () => true });
+    await render(maple());
+    await vi.waitFor(() => expect(find(".mk-pill")).not.toBeNull());
+    find<HTMLElement>(".mk-pill")!.click();
+    await vi.waitFor(() => expect(find('[aria-label="Mock data"]')).not.toBeNull());
+    return handle;
+  }
+
+  it("does not start a comment pick when c is typed into the box", async () => {
+    installed = await openedMaple();
     await userEvent.keyboard("m");
     await vi.waitFor(() => expect(roots()[0]?.activeElement).toBe(find(".mk-mock-field")));
 

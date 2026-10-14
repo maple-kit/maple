@@ -41,7 +41,7 @@ import {
   Settings,
 } from "./island/index.js";
 import { MapleMarkLayer } from "./marks/index.js";
-import { MapleMock } from "./mock/index.js";
+import { MapleMockScope, MapleMockToggle } from "./mock/scope.js";
 import { MapleNotice } from "./notice/index.js";
 import { MaplePicker } from "./picker/index.js";
 import { MapleRoot } from "./root.js";
@@ -86,9 +86,12 @@ export const Maple = /** @__PURE__ */ forwardRef<HTMLDivElement, MapleProps>(
       { ...root, ref },
       createElement(MapleMarkLayer, { key: "marks" }),
       createElement(MaplePicker, { key: "picker", ...(hint === undefined ? {} : { hint }) }),
-      inventory(defaultOpen === true),
-      composer(leave, attachments),
-      createElement(MapleMock, { key: "mock" }),
+      createElement(
+        MapleMockScope,
+        { key: "mock" },
+        inventory(defaultOpen === true),
+        composer(leave, attachments),
+      ),
       createElement(SignIn, { key: "signin" }),
       children,
     );
@@ -110,6 +113,7 @@ function inventory(defaultOpen: boolean): ReactElement {
         null,
         createElement(Logo),
         createElement(Branch),
+        createElement(MapleMockToggle),
         createElement(Settings),
       ),
       createElement(MapleNotice, { during: LOAD_CALLS }),

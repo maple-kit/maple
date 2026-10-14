@@ -110,8 +110,9 @@ cd examples/vite-app && pnpm dlx wrangler@4.147.0 deploy --dry-run --outdir wout
    `SettingsForm` — and two carry `data-maple-label`, so a comment reads "on
    the gate notice" rather than naming a selector.
 
-7. **Maple Mock, with and without the overlay.** Press `m` on either page to
-   open the box, pick a state beside a call, and Apply: the page reloads into
+7. **Maple Mock, with and without the overlay.** Press `m` on `/mock.html`, or on the main page
+   with the island open (or tap the modifier first), or use the island's Mock
+   button, to open the box, pick a state beside a call, and Apply: the page reloads into
    it under a banner that only Turn off removes. `/mock.html` is the same page
    with `<MapleMock />` and no `<Maple />`, and `verify` checks it carries none
    of the island, the composer or the marks, and that a production build
