@@ -166,6 +166,29 @@ describe("installMock, in a real browser", () => {
   });
 });
 
+describe("the flags a server says it read", () => {
+  afterEach(() => {
+    delete (globalThis as Record<symbol, unknown>)[Symbol.for("@maple-kit/mock.flags")];
+  });
+
+  it("records each key of x-maple-flags as used on the route, from the server", async () => {
+    install();
+    await fetch(`${API}/flagged`);
+
+    const route = pathPattern(location.pathname);
+    await expect
+      .poll(() =>
+        seenFlags()
+          .used(route)
+          .map((flag) => [flag.key, flag.source]),
+      )
+      .toEqual([
+        ["new-roaster", "server"],
+        ["a b,c", "server"],
+      ]);
+  });
+});
+
 describe("the cookie a server reads the recipe from", () => {
   const layered: Recipe = {
     ...recipe(["rest:GET /api/projects", "empty"]),

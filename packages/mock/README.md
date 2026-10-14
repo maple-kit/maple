@@ -152,6 +152,9 @@ lists only the flags the page reads:
 `options: { inspectors: [launchDarklyUsage()] }`, from the same entrypoint
 (`hooks: [launchDarklyUsageHook()]` for an SDK that prefers hooks).
 
+Flags the server read are listed too, tagged "server", when the host wraps its
+handlers with `withFlagUse` from `@maple-kit/core/flags` (docs/configuration.md).
+
 **The role** comes from the host's own session call, named in the route's
 `mock.identity`. Maple never guesses which field carries authorisation, and a
 call the role may not make answers the page's own 403:

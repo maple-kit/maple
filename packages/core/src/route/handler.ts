@@ -9,6 +9,7 @@
 
 import { assertSecret, clearCookie, SESSION_COOKIE } from "../auth/cookie.js";
 import { AmbiguousPullError, MapleStoreError, UpstreamError } from "../errors.js";
+import { allowFlagUse } from "../flags/collector.js";
 import { isAdvisoryId } from "../gate/decide.js";
 import { publishGate } from "../gate/publish.js";
 import { fnv1a32 } from "../lib/fnv1a.js";
@@ -169,6 +170,7 @@ export function createMapleHandler(given: RouteOptions): (request: Request) => P
   const base = given.basePath ?? DEFAULT_BASE_PATH;
   const [options, preview] = withPreview(given, base);
   const mock = options.mock === undefined ? undefined : createMockSchemas(options.mock);
+  if (mock?.preview === true) allowFlagUse();
   const plan = options.mock?.plan;
   const mount: Mount = {
     options,

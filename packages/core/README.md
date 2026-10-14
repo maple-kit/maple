@@ -110,26 +110,28 @@ a check run.
 
 ## Entrypoints
 
-| Import                       | What it is                                                      |
-| ---------------------------- | --------------------------------------------------------------- |
-| `@maple-kit/core`            | Comment types, the connector contracts, `createCommentStore`    |
-| `@maple-kit/core/route`      | The SDK route a host application mounts at `/api/maple/*`       |
-| `@maple-kit/core/vite`       | The Vite plugin: tagger transform plus the mounted route        |
-| `@maple-kit/core/next`       | `withMaple`, both halves of the Next case                       |
-| `@maple-kit/core/loader`     | The Turbopack loader the Next path uses                         |
-| `@maple-kit/core/client`     | The framework-free reviewer controller the bindings wrap        |
-| `@maple-kit/core/overlay`    | The shadow-root host, the pickers and the anchor cascade        |
-| `@maple-kit/core/anchor`     | Anchoring and re-anchoring, five rungs with four orphan reasons |
-| `@maple-kit/core/connectors` | The bundled connectors and the classifier's default pillars     |
-| `@maple-kit/core/gate`       | The merge gate's decision, independent of any forge             |
-| `@maple-kit/core/mock`       | Maple Mock's recipe: parse, encode, link, and read a plan       |
-| `@maple-kit/core/auth`       | GitHub Device Flow, including the `slow_down` back-off          |
-| `@maple-kit/core/export`     | Markdown with a visible ` ```maple ` fence                      |
-| `@maple-kit/core/screenshot` | Paste, drop and file capture, with snapdom as an optional peer  |
-| `@maple-kit/core/tagger`     | The JSX tagger that turns a comment into `file:line`            |
-| `@maple-kit/core/logger`     | `createLogger({ sinks })`                                       |
-| `@maple-kit/core/config`     | Standard Schema validation of Maple's own options               |
-| `@maple-kit/core/testing`    | The shared connector contract suite. Needs `vitest`             |
+| Import                         | What it is                                                       |
+| ------------------------------ | ---------------------------------------------------------------- |
+| `@maple-kit/core`              | Comment types, the connector contracts, `createCommentStore`     |
+| `@maple-kit/core/route`        | The SDK route a host application mounts at `/api/maple/*`        |
+| `@maple-kit/core/vite`         | The Vite plugin: tagger transform plus the mounted route         |
+| `@maple-kit/core/next`         | `withMaple`, both halves of the Next case                        |
+| `@maple-kit/core/loader`       | The Turbopack loader the Next path uses                          |
+| `@maple-kit/core/client`       | The framework-free reviewer controller the bindings wrap         |
+| `@maple-kit/core/overlay`      | The shadow-root host, the pickers and the anchor cascade         |
+| `@maple-kit/core/anchor`       | Anchoring and re-anchoring, five rungs with four orphan reasons  |
+| `@maple-kit/core/connectors`   | The bundled connectors and the classifier's default pillars      |
+| `@maple-kit/core/gate`         | The merge gate's decision, independent of any forge              |
+| `@maple-kit/core/mock`         | Maple Mock's recipe: parse, encode, link, and read a plan        |
+| `@maple-kit/core/flags`        | `withFlagUse`, `recordFlagUse`: flags a server read, in a header |
+| `@maple-kit/core/launchdarkly` | A Node server SDK hook that feeds `recordFlagUse`                |
+| `@maple-kit/core/auth`         | GitHub Device Flow, including the `slow_down` back-off           |
+| `@maple-kit/core/export`       | Markdown with a visible ` ```maple ` fence                       |
+| `@maple-kit/core/screenshot`   | Paste, drop and file capture, with snapdom as an optional peer   |
+| `@maple-kit/core/tagger`       | The JSX tagger that turns a comment into `file:line`             |
+| `@maple-kit/core/logger`       | `createLogger({ sinks })`                                        |
+| `@maple-kit/core/config`       | Standard Schema validation of Maple's own options                |
+| `@maple-kit/core/testing`      | The shared connector contract suite. Needs `vitest`              |
 
 ## Documentation
 

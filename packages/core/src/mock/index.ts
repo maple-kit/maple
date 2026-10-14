@@ -8,6 +8,12 @@
 
 export { activeRecipe, MOCK_HANDLE_KEY } from "./active.js";
 export {
+  FLAGS_HEADER,
+  FLAGS_HEADER_LIMIT,
+  formatFlagsHeader,
+  parseFlagsHeader,
+} from "./flags-header.js";
+export {
   identityRules,
   isIdentityRules,
   isServerIdentity,

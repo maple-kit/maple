@@ -113,3 +113,56 @@ describe("the box, with no flag reader installed", () => {
     expect(state.flags.map((row) => row.key)).toEqual(["b", "a"]);
   });
 });
+
+describe("flags the server read", () => {
+  it("lists a flag only the server read with the server source, and a browser read without", () => {
+    seenFlags().recordUsed({
+      key: "s",
+      route: "/a",
+      type: "boolean",
+      value: null,
+      source: "server",
+    });
+    seenFlags().recordUsed({ key: "b", route: "/a", type: "boolean", value: true });
+    seenFlags().recordUsed({
+      key: "b",
+      route: "/a",
+      type: "boolean",
+      value: null,
+      source: "server",
+    });
+
+    expect(seenFlags().used("/a")).toEqual([
+      { key: "s", type: "boolean", value: null, source: "server" },
+      { key: "b", type: "boolean", value: true },
+    ]);
+  });
+
+  it("does not count a server read as an inspector, so the fallback to every known flag holds", () => {
+    seenFlags().recordUsed({
+      key: "s",
+      route: "/a",
+      type: "boolean",
+      value: null,
+      source: "server",
+    });
+    expect(seenFlags().hasUsed()).toBe(false);
+  });
+
+  it("with no inspector, the box lists the known flags and the server's", () => {
+    offered("known-one");
+    seenFlags().recordUsed({
+      key: "s",
+      route: "/a",
+      type: "boolean",
+      value: null,
+      source: "server",
+    });
+    const client = createMockClient({ view: viewAt("/a"), handle: handle() });
+    const rows = client.getState().flags;
+    expect(rows.map((row) => [row.key, row.source])).toEqual([
+      ["s", "server"],
+      ["known-one", undefined],
+    ]);
+  });
+});

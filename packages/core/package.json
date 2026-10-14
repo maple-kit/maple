@@ -30,6 +30,8 @@
     "./gate": "./dist/gate/index.js",
     "./logger": "./dist/logger/index.js",
     "./mock": "./dist/mock/index.js",
+    "./flags": "./dist/flags/index.js",
+    "./launchdarkly": "./dist/launchdarkly/index.js",
     "./loader": "./dist/loader/index.js",
     "./local": "./dist/local/index.js",
     "./next": "./dist/next/index.js",

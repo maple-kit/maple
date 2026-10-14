@@ -214,6 +214,46 @@ A blocked plan shows in
 the mock box as "The server refused that", and in the host's logger as a
 warning with the status.
 
+## Flags the server read
+
+A server-rendered page and its API calls read flags on the server, where the
+browser cannot see which. Report them in a response header and the mock box
+lists them, tagged "server", beside the flags the page read itself. A mocked
+value reaches the server through the `maple-mock` cookie, so it applies after a
+reload.
+
+Wrap the handlers, or have the one flag helper call `recordFlagUse`:
+
+```ts
+import { recordFlagUse, withFlagUse } from "@maple-kit/core/flags";
+
+export const GET = withFlagUse(async (request: Request) => {
+  if (await isEnabled("new-roaster")) recordFlagUse("new-roaster");
+  return Response.json(await roasters());
+});
+```
+
+`withFlagUse` sets `x-maple-flags: <key>,<key>` on the response: comma-separated,
+URL-encoded keys, in the order read, capped at 4 KB with keys that do not fit
+dropped. A request has its own collector (`AsyncLocalStorage`), so concurrent
+requests never share keys. Collection is on only when the Maple route was
+created with `mock: { preview: true }`; otherwise `recordFlagUse` does nothing
+and no header is written. A flag read after the handler returns, such as while
+a body streams, is not seen. The mock interceptor reads the header on each
+intercepted response and records the keys as used on the page's route. The
+document request is invisible to it, so emit the header on the data requests
+that follow (route handlers, RSC and `fetch` calls), which `withFlagUse` does.
+
+`@maple-kit/core/flags` is Node only. For LaunchDarkly's Node server SDK,
+`@maple-kit/core/launchdarkly` has a structural `afterEvaluation` hook, so no
+helper changes:
+
+```ts
+import { launchDarklyFlagUse } from "@maple-kit/core/launchdarkly";
+
+init(sdkKey, { hooks: [launchDarklyFlagUse()] });
+```
+
 ## Where each one goes
 
 A secret goes wherever that deployment keeps secrets, and the rest can sit in

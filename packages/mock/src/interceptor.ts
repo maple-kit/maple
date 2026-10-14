@@ -6,6 +6,7 @@
  * the recipe once: applying a mock reloads the page. See `docs/mock.md`.
  */
 
+import { FLAGS_HEADER, parseFlagsHeader } from "@maple-kit/core/mock";
 import { BatchInterceptor } from "@mswjs/interceptors";
 import { FetchInterceptor } from "@mswjs/interceptors/fetch";
 import { XMLHttpRequestInterceptor } from "@mswjs/interceptors/XMLHttpRequest";
@@ -146,6 +147,7 @@ export function installMock(options: InstallOptions = {}): MockHandle {
   // Not awaited: the interceptor holds the page's response until a listener
   // settles, and reading a streamed batch to its end would hold it that long.
   interceptor.on("response", ({ isMockedResponse, request, response }) => {
+    if (!ignored(request.url)) recordServerFlags(response, route());
     const copy = isMockedResponse || ignored(request.url) ? undefined : buffered(response);
     if (copy === undefined) return release(response);
     const source = sourceOf(request);
@@ -203,6 +205,13 @@ async function answerFlags(
   recordFlags(source, body);
   const headers = keptHeaders(real, "application/json");
   return new Response(JSON.stringify(source.write(body, flags)), { status: real.status, headers });
+}
+
+/** The flags the server says it read to answer, as used on the page's route. */
+function recordServerFlags(response: Response, route: string): void {
+  for (const key of parseFlagsHeader(response.headers.get(FLAGS_HEADER))) {
+    seenFlags().recordUsed({ key, route, type: "boolean", value: null, source: "server" });
+  }
 }
 
 async function readFlags(source: FlagSource, copy: Promise<Response>): Promise<void> {

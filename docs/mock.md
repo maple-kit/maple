@@ -730,6 +730,13 @@ real client against a fake poll.
   (nothing ever read), as before. Mocking is unchanged; a mocked flag the
   page reads gets the mocked value.
 
+- **Flags the server read** arrive in the `x-maple-flags` response header. The
+  interceptor records each key as used on the current route, with source
+  `"server"`, and the box tags it "server": a mocked value reaches the server
+  by the recipe cookie, so it applies after a reload. A server-only flag has no
+  known real value, so it offers an on/off choice. `docs/configuration.md`
+  (Flags the server read) has `withFlagUse` and `recordFlagUse`.
+
 `@maple-kit/mock/testing` has `runFlagProviderContract`, the suite every
 wrapped provider runs, and `memoryFlagProvider`. The package's own tests run
 it against the memory provider and wrap OpenFeature's own in-memory providers

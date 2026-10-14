@@ -61,6 +61,9 @@ export function createApiFake(): ApiFake {
       `${API}/me`,
       ({ request }) => seen(request) ?? HttpResponse.json(ME, { headers: { "x-trace": "t1" } }),
     ),
+    http.get(`${API}/flagged`, () =>
+      HttpResponse.json({}, { headers: { "x-maple-flags": "new-roaster,a%20b%2Cc" } }),
+    ),
     http.get(`${API}/session`, ({ request }) => seen(request) ?? HttpResponse.json(SESSION)),
     http.get(`${API}/audit`, ({ request }) => seen(request) ?? HttpResponse.json({ items: [] })),
     http.delete(

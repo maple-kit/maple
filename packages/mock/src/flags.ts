@@ -16,6 +16,8 @@ export interface SeenFlag {
   readonly value: FlagValue;
   /** The values it can take, when its source says. */
   readonly variants?: readonly FlagValue[];
+  /** Set to "server" by `used` when only the server read it: a mocked value needs a reload. */
+  readonly source?: "browser" | "server";
 }
 
 /** A flag some code read while rendering a route, as opposed to one merely offered. */
@@ -40,7 +42,7 @@ export interface FlagRegistry {
   known(): readonly SeenFlag[];
   /** The flags read on `route`, most recent last, with their real values where known. */
   used(route: string): readonly SeenFlag[];
-  /** Whether anything was ever recorded as used, on any route. */
+  /** Whether the browser ever recorded a flag as used, on any route. Server reads do not count. */
   hasUsed(): boolean;
   /** Called after a flag is recorded for the first time or changes. Returns the unsubscribe. */
   subscribe(listener: () => void): () => void;
@@ -80,15 +82,20 @@ function createFlagRegistry(): FlagRegistry {
     },
     used(route) {
       const found = new Map<string, SeenFlag>();
+      const browser = new Set<string>();
       for (const flag of used.values()) {
         if (flag.route !== route) continue;
         const { key, type, value } = flag;
+        if (flag.source === "server" && browser.has(key)) continue;
+        if (flag.source !== "server") browser.add(key);
         found.delete(key);
         found.set(key, { key, type, value, ...flags.get(key) });
       }
-      return [...found.values()];
+      return [...found.values()].map((flag) =>
+        browser.has(flag.key) ? flag : { ...flag, source: "server" },
+      );
     },
-    hasUsed: () => used.size > 0,
+    hasUsed: () => [...used.values()].some((flag) => flag.source !== "server"),
     record(flag) {
       const known = flags.get(flag.key);
       if (known !== undefined && JSON.stringify(known) === JSON.stringify(flag)) return;

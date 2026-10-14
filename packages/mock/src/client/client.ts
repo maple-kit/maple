@@ -69,6 +69,8 @@ export interface MockFlagRow {
   /** Its real value, when the page evaluated it. */
   readonly value?: FlagValue;
   readonly variants?: readonly FlagValue[];
+  /** "server" when only the server read it: a mocked value applies after a reload. */
+  readonly source?: "browser" | "server";
   /** What the draft answers it with; absent, it keeps its real value. */
   readonly set?: FlagValue;
   /** False for a flag the draft names that this page has not evaluated. */
@@ -548,10 +550,13 @@ function chosen(draft: readonly MockCall[], key: string, state: MockState | unde
   return draft.map((call, at) => (at === index ? { key, state } : call));
 }
 
-/** The flags the route read; with no reader installed anywhere, every flag offered. */
+/** The flags the route read; with no browser reader installed, every flag offered and the server's. */
 function pageFlags(route: string): readonly SeenFlag[] {
   const registry = seenFlags();
-  return registry.hasUsed() ? registry.used(route) : registry.known();
+  if (registry.hasUsed()) return registry.used(route);
+  const server = registry.used(route);
+  const known = registry.known().filter((flag) => !server.some((read) => read.key === flag.key));
+  return [...known, ...server];
 }
 
 /** The flags evaluated, most recent first, then those only the draft names. */

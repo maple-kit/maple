@@ -44,11 +44,12 @@ const BUDGETS = [
   { name: "notice, on top", entries: ["notice/index.js"], max: 1024 },
   { name: "the mock box, on top", entries: ["mock/index.js"], max: MOCK_MAX },
   // Loaded by the box only on a page with evaluated flags or identity rules;
-  // 2.5 KB once it read real values and folded long lists.
+  // 2.5 KB once it read real values and folded long lists; 2.75 KB for the
+  // "server" tag on a flag the server read.
   {
     name: "the box's flags and identity, loaded later",
     entries: ["mock/layers.js"],
-    max: 2.5 * 1024,
+    max: 2.75 * 1024,
   },
   // 1 KB until the sign-in steps and the linked branch chip joined it.
   { name: "the default composition, on top", entries: ["maple.js"], max: 1.5 * 1024 },

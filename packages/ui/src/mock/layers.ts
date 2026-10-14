@@ -24,6 +24,7 @@ export const LAYER_COPY = {
   on: "On",
   off: "Off",
   realValue: "Real value",
+  server: "server",
   notEvaluated: "Named by the mock, not evaluated on this page",
   serverActs: "The server still acts as you.",
   reloads: "reloads the page",
@@ -163,19 +164,24 @@ function flagRow(flag: MockFlagRow, client: MockClient): ReactNode {
   const pick = (next: FlagValueType | undefined) => client.setFlag(flag.key, next);
   const values: readonly FlagValueType[] =
     flag.type === "boolean" ? [true, false] : (flag.variants ?? []);
-  const title = flag.seen
-    ? `${LAYER_COPY.realValue}: ${JSON.stringify(flag.value)}`
+  const server = flag.source === "server";
+  const value = flag.seen ? flag.value : undefined;
+  const known = value !== undefined && value !== null;
+  const said = known
+    ? `${LAYER_COPY.realValue}: ${JSON.stringify(value)}`
     : `${flag.key}: ${LAYER_COPY.notEvaluated}`;
+  const title = server ? `${said} (server: reload to apply)` : said;
   const labels = values.map(valueLabel);
   const current = flag.set === undefined ? undefined : valueLabel(flag.set);
-  const real = flag.seen && flag.value !== undefined ? valueLabel(flag.value) : undefined;
+  const real = known ? valueLabel(value) : undefined;
   const control =
     values.length === 0
       ? createElement(FlagValue, { value: flag.set ?? flag.value ?? null })
       : choices(flag.key, labels, { set: current, real }, (label) =>
           pick(values[labels.indexOf(label ?? "")] ?? undefined),
         );
-  return row({ key: `f:${flag.key}`, name: flag.key, set: current !== undefined, title }, control);
+  const label = { key: `f:${flag.key}`, name: flag.key, set: current !== undefined, title };
+  return row(server ? { ...label, tag: LAYER_COPY.server } : label, control);
 }
 
 const LONG_VALUE = 32;
@@ -239,14 +245,21 @@ interface RowLabel {
   /** A word rather than a code name, so it stays out of the monospace. */
   readonly prose?: boolean;
   readonly title?: string;
+  /** A small muted tag after the name, such as where a flag was read. */
+  readonly tag?: string;
 }
 
 function row(label: RowLabel, control: ReactNode): ReactElement {
-  const { key, name, prose, set, title } = label;
+  const { key, name, prose, set, tag, title } = label;
   return createElement(
     "li",
     { key, className: "mk-mock-call", "data-mk-mocked": String(set), title: title ?? name },
-    createElement("span", { className: prose ? "mk-mock-name" : "mk-mock-name mk-mono" }, name),
+    createElement(
+      "span",
+      { className: prose ? "mk-mock-name" : "mk-mock-name mk-mono" },
+      name,
+      tag === undefined ? null : createElement("span", { className: "mk-mock-codec" }, tag),
+    ),
     control,
   );
 }

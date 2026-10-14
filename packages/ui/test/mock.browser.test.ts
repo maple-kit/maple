@@ -4,6 +4,7 @@ import {
   createInventory,
   createMockClient,
   installMock,
+  pathPattern,
   PlanFailedError,
   seenFlags,
 } from "@maple-kit/mock";
@@ -733,6 +734,25 @@ describe("flags and who the page is told the reviewer is", () => {
     await render(createElement(MapleMock, { client }));
     await vi.waitFor(() => expect(find(".mk-mock")).not.toBeNull());
     expect(find(".mk-mock-layers")).toBeNull();
+  });
+
+  it("tags a flag only the server read, and leaves a browser-read one plain", async () => {
+    const route = pathPattern(HERE);
+    seenFlags().recordUsed({ key: "tier", route, type: "boolean", value: null, source: "server" });
+    seenFlags().recordUsed({ key: "new-roaster", route, type: "boolean", value: true });
+    const client = track(
+      createMockClient({ handle: layered(), view: fakePage().view, defaultOpen: true }),
+    );
+    client.start();
+    await render(createElement(MapleMock, { client }));
+    await unfold();
+
+    await vi.waitFor(() => expect(find('[aria-label="tier"]')).not.toBeNull());
+    const tag = (key: string) =>
+      find(`[aria-label="${key}"]`)?.closest("li")?.querySelector(".mk-mock-codec");
+    expect(tag("tier")?.textContent).toBe("server");
+    expect(tag("new-roaster")).toBeNull();
+    delete (globalThis as Record<symbol, unknown>)[Symbol.for("@maple-kit/mock.flags")];
   });
 
   it("offers the host's roles, permissions and the page's flags, and applies them", async () => {
