@@ -24,9 +24,9 @@ function mount(html: string): HTMLElement {
   return page;
 }
 
-function pointer(type: string, x: number, y: number): void {
+function pointer(type: string, x: number, y: number, buttons = 1): void {
   document.dispatchEvent(
-    new PointerEvent(type, { clientX: x, clientY: y, bubbles: true, cancelable: true }),
+    new PointerEvent(type, { clientX: x, clientY: y, buttons, bubbles: true, cancelable: true }),
   );
 }
 
@@ -165,7 +165,7 @@ describe("dragging a rectangle", () => {
   it("reports the rectangle as it is drawn", () => {
     mount(`<p>x</p>`);
     stop = new AbortController();
-    const drawn: { width: number }[] = [];
+    const drawn: ({ width: number } | undefined)[] = [];
 
     startRegionPicking({
       onDraw: (rect) => drawn.push(rect),
@@ -209,6 +209,29 @@ describe("dragging a rectangle", () => {
     pointer("pointerup", 270, 80);
 
     expect(picked[0]?.kind === "region" && picked[0].element.id).toBe("row");
+  });
+
+  it.each([
+    ["pointercancel", () => document.dispatchEvent(new PointerEvent("pointercancel"))],
+    ["lostpointercapture", () => document.dispatchEvent(new PointerEvent("lostpointercapture"))],
+    ["a move with no button down", () => pointer("pointermove", 90, 90, 0)],
+  ])("abandons the band on %s, so no phantom follows the next move", (_name, interrupt) => {
+    mount(`<p>x</p>`);
+    stop = new AbortController();
+    const drawn: ({ width: number } | undefined)[] = [];
+
+    startRegionPicking({
+      onDraw: (rect) => drawn.push(rect),
+      onPick: () => undefined,
+      signal: stop.signal,
+    });
+    pointer("pointerdown", 10, 10);
+    pointer("pointermove", 60, 40);
+    interrupt();
+    pointer("pointermove", 90, 90);
+
+    expect(drawn).toHaveLength(2);
+    expect(drawn[1]).toBeUndefined();
   });
 
   it("ignores a pointerup that no pointerdown started", () => {

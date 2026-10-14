@@ -35,6 +35,7 @@ function shield(): string {
 
 .mk-shield-drag {
   cursor: cell;
+  touch-action: none;
 }
 `.trim();
 }

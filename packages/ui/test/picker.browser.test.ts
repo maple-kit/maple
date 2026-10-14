@@ -87,6 +87,7 @@ function pointer(type: string, x: number, y: number): void {
       clientX: x,
       clientY: y,
       pointerId: 1,
+      buttons: type === "pointerup" ? 0 : 1,
       bubbles: true,
       composed: true,
       cancelable: true,

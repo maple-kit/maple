@@ -123,7 +123,8 @@ export function startElementPicking(options: ElementPickingOptions): void {
 
 /** How region picking reports what it finds. */
 export interface RegionPickingOptions {
-  onDraw?(rect: Rect): void;
+  /** A rectangle as it grows, or `undefined` when the drag was abandoned. */
+  onDraw?(rect: Rect | undefined): void;
   onPick(pick: Pick): void;
   /** Events over the caller's own controls, which never start a rectangle. */
   readonly ignore?: IgnoreEvent;
@@ -138,6 +139,11 @@ export function startRegionPicking(options: RegionPickingOptions): void {
   const listen = listener(options.signal);
   const ignored = options.ignore ?? (() => false);
   let origin: { x: number; y: number } | undefined;
+  const abandon = (): void => {
+    if (!origin) return;
+    origin = undefined;
+    options.onDraw?.(undefined);
+  };
 
   listen("pointerdown", (event) => {
     if (ignored(event)) return;
@@ -145,8 +151,13 @@ export function startRegionPicking(options: RegionPickingOptions): void {
   });
 
   listen("pointermove", (event) => {
-    if (origin) options.onDraw?.(between(origin, event));
+    if (!origin) return;
+    // A touch the browser took over for scrolling never sends pointerup.
+    if (event.buttons === 0) return abandon();
+    options.onDraw?.(between(origin, event));
   });
+  listen("pointercancel", abandon);
+  listen("lostpointercapture", abandon);
 
   listen("pointerup", (event) => {
     if (!origin) return;
@@ -198,7 +209,8 @@ export function startTextPicking(options: TextPickingOptions): void {
   }, 0);
 }
 
-type PointerName = "pointerdown" | "pointermove" | "pointerup";
+type PointerName =
+  "pointerdown" | "pointermove" | "pointerup" | "pointercancel" | "lostpointercapture";
 
 function listener(signal: AbortSignal | undefined) {
   return (name: "click" | PointerName, handler: (event: PointerEvent | MouseEvent) => void) => {
