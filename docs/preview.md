@@ -35,3 +35,50 @@ discards the preview's responses.
 
 `matches(head, identity)` compares mirrord's own slug of the branch with the
 slug of the key, so a key derived from a branch finds that branch.
+
+## The route
+
+```ts
+createMapleHandler({
+  preview: mirrord({ env: process.env }),
+  github: { owner, repo },
+  githubAuth,
+});
+```
+
+A request the preview does not recognise is answered 404 on every route,
+including `/context`. `GET {basePath}/context` answers:
+
+```json
+{
+  "preview": "mirrord",
+  "key": "…",
+  "branch": "head ref, or the key",
+  "label": "…",
+  "commit": null,
+  "pullRequest": 123,
+  "resolved": true,
+  "reason": null
+}
+```
+
+Without a linked reviewer it returns what is knowable (`resolved: false`,
+`reason: "sign-in"`). Other reasons: `none`, `ambiguous`, `no-access`,
+`unconfigured`; a GitHub outage is a 502.
+
+The pull request is found in order: `MAPLE_PULL_REQUEST` (only while open), the
+commit, the head branch named exactly the key, then the preview's `matches`.
+Several matches never resolve: reads and writes both answer 409 (`GET /comments`
+included) and nothing is written. A commit counts only through its open pull
+requests. In a stack a commit sits in several: the one whose head is the stated
+branch or the key wins, then the later rungs choose, and it is ambiguous only
+if they cannot. A closed pull request is never resolved. A sha GitHub does not
+know is no hit, and the lookup goes on to the head branch. "None", ambiguous
+and 401, 403 and 404 answers are kept for 15 seconds and a resolved pull request
+for five minutes, per reviewer, so one page load asks GitHub once.
+
+Per-request `store`, `media`, `gate` and `identity` callbacks receive the
+resolved session as `request.preview` (`key`, `label`, `branch`, `commit`,
+`pullRequest`), so a host does not re-read headers. `/me` and `/auth/*` never
+ask GitHub, so there `request.preview` is unresolved: `branch` is the key and
+there is no `pullRequest` unless the deploy stated one.

@@ -8,13 +8,14 @@
  */
 
 import { assertSecret, clearCookie, SESSION_COOKIE } from "../auth/cookie.js";
-import { MapleStoreError, UpstreamError } from "../errors.js";
+import { AmbiguousPullError, MapleStoreError, UpstreamError } from "../errors.js";
 import { isAdvisoryId } from "../gate/decide.js";
 import { publishGate } from "../gate/publish.js";
 import { fnv1a32 } from "../lib/fnv1a.js";
 import { handleApprovals } from "./approvals.js";
 import { createAssist } from "./assist.js";
 import { endLink, finishLink, githubState, linkFailure, startLink } from "./auth.js";
+import { contextAnswer, createPreviewRoute, previewStore, readPreview } from "./context.js";
 import { gateFor } from "./gate.js";
 import { createMockSchemas, MOCK_SCHEMA_KEYS, shapesFor } from "./mock.js";
 import { createMockPlanner } from "./plan.js";
@@ -26,8 +27,10 @@ import type {
   IdentityRequest,
   ListQuery,
   MediaConnector,
+  PreviewInfo,
 } from "../connectors/types.js";
 import type { Logger } from "../logger/types.js";
+import type { PreviewEnvironment } from "../preview/types.js";
 import type { CommentStore } from "../store.js";
 import type {
   Comment,
@@ -39,6 +42,7 @@ import type {
 } from "../types.js";
 import type { Assist, AssistOptions } from "./assist.js";
 import type { GitHubAuthOptions } from "./auth.js";
+import type { PreviewGitHub, PreviewReading, PreviewRoute } from "./context.js";
 import type { GateResolver } from "./gate.js";
 import type { MockRouteOptions, MockSchemas } from "./mock.js";
 import type { MockPlanner } from "./plan.js";
@@ -111,6 +115,16 @@ export interface RouteOptions {
    * preview that asked. Absent, or with `preview` false, each answers 404.
    */
   readonly mock?: MockRouteOptions;
+  /**
+   * Serve only as a preview: a request it does not recognise is 404 everywhere.
+   * `GET /context` names the session; callbacks get it as `request.preview`.
+   */
+  readonly preview?: PreviewEnvironment;
+  /**
+   * Where a preview's pull requests live. With `preview`, `githubAuth` and no
+   * `store`, comments go to the pull request under the reviewer's own token.
+   */
+  readonly github?: PreviewGitHub;
   /** Defaults to `/api/maple`. */
   readonly basePath?: string;
   /** Where failures are reported. Silent when absent. */
@@ -143,11 +157,17 @@ interface Mount {
   readonly planner: MockPlanner | undefined;
   /** Undefined when `gateRefresh` is not configured. */
   readonly refresh: PushAccess | undefined;
+  /** Undefined unless `preview` is set. */
+  readonly preview: PreviewRoute | undefined;
 }
 
-export function createMapleHandler(options: RouteOptions): (request: Request) => Promise<Response> {
-  if (options.githubAuth) assertSecret(options.githubAuth.secret);
-  const base = options.basePath ?? DEFAULT_BASE_PATH;
+/** What the route resolved for a request, for the callbacks it hands the request to. */
+const PREVIEWS = new WeakMap<Request, PreviewReading>();
+
+export function createMapleHandler(given: RouteOptions): (request: Request) => Promise<Response> {
+  if (given.githubAuth) assertSecret(given.githubAuth.secret);
+  const base = given.basePath ?? DEFAULT_BASE_PATH;
+  const [options, preview] = withPreview(given, base);
   const mock = options.mock === undefined ? undefined : createMockSchemas(options.mock);
   const plan = options.mock?.plan;
   const mount: Mount = {
@@ -157,6 +177,7 @@ export function createMapleHandler(options: RouteOptions): (request: Request) =>
     planner: mock && plan ? createMockPlanner(plan, mock) : undefined,
     refresh:
       options.gateRefresh === undefined ? undefined : createRefreshAccess(options.gateRefresh),
+    preview,
   };
 
   return async function handle(request: Request): Promise<Response> {
@@ -165,11 +186,63 @@ export function createMapleHandler(options: RouteOptions): (request: Request) =>
     if (route === undefined) return json({ error: "Not found" }, 404);
 
     try {
+      if (preview && !(await identified(preview, request, route))) {
+        return json({ error: "Not found" }, 404);
+      }
       return await dispatch(mount, request, route, url);
     } catch (error) {
       return failure(options.logger, error, options.githubAuth);
     }
   };
+}
+
+/**
+ * The cookie's path follows the mount, which is what a custom `basePath` needs
+ * and what the default never noticed. A host's own `store` always wins.
+ */
+function withPreview(
+  options: RouteOptions,
+  base: string,
+): readonly [RouteOptions, PreviewRoute | undefined] {
+  const auth = options.githubAuth === undefined ? undefined : { path: base, ...options.githubAuth };
+  const route = createPreviewRoute(options.preview, options.github, auth, options.logger);
+  const store = options.store ?? (route === undefined ? undefined : previewStore(route));
+
+  const next: RouteOptions = {
+    ...options,
+    ...(auth === undefined ? {} : { githubAuth: auth }),
+    ...(store === undefined ? {} : { store }),
+  };
+  return [next, route];
+}
+
+/**
+ * False when this request is not served by a preview. Otherwise the session is
+ * kept for it, with its pull request except on routes that only read a cookie.
+ */
+async function identified(
+  preview: PreviewRoute,
+  request: Request,
+  route: string,
+): Promise<boolean> {
+  const resolve = route !== "/me" && !route.startsWith("/auth/");
+  const reading = await readPreview(preview, rawRequest(request), resolve);
+  if (reading === null) return false;
+
+  PREVIEWS.set(request, reading);
+  return true;
+}
+
+/** `GET /context`: which session this is, and the pull request when it is known. */
+function context(mount: Mount, request: Request): Response {
+  const reading = PREVIEWS.get(request);
+  if (mount.preview === undefined || reading === undefined) {
+    return json({ error: "Not found" }, 404);
+  }
+  if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
+
+  const { status, body } = contextAnswer(mount.preview, reading);
+  return json(body, status);
 }
 
 /** The endpoints at one exact path, each with an arm of its own. */
@@ -180,6 +253,7 @@ const FIXED: ReadonlyMap<string, (mount: Mount, request: Request, url: URL) => P
     ["/mock/plan", (mount, request) => mockPlan(mount, request)],
     ["/mock/identity", (mount, request) => mockIdentity(mount, request)],
     ["/auth/github", (mount, request) => link(mount.options, request)],
+    ["/context", (mount, request) => Promise.resolve(context(mount, request))],
     ["/gate/refresh", (mount, request) => refresh(mount, request)],
   ]);
 
@@ -646,7 +720,12 @@ async function mockPlan(mount: Mount, request: Request): Promise<Response> {
 }
 
 /** The identity connector sees headers and a URL, and nothing else. */
-function identityRequest(request: Request): { headers: Record<string, string>; url: string } {
+function identityRequest(request: Request): IdentityRequest {
+  const preview: PreviewInfo | undefined = PREVIEWS.get(request)?.info;
+  return { ...rawRequest(request), ...(preview === undefined ? {} : { preview }) };
+}
+
+function rawRequest(request: Request): { headers: Record<string, string>; url: string } {
   return { headers: Object.fromEntries(request.headers), url: request.url };
 }
 
@@ -693,6 +772,14 @@ function failure(
     "The Maple route failed.",
     error instanceof Error ? error : new Error(String(error)),
   );
+
+  const cause = error instanceof MapleStoreError ? error.cause : error;
+  if (cause instanceof AmbiguousPullError) {
+    return json(
+      { error: "Several open pull requests match this preview", reason: "ambiguous" },
+      409,
+    );
+  }
 
   if (error instanceof MapleStoreError && error.reason === "unavailable") {
     return json({ error: "The store could not be reached" }, 503);

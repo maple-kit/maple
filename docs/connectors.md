@@ -301,12 +301,16 @@ or nothing — while the build knows its commit for certain. `pull` says how the
 identifier the overlay sends becomes a pull request, and it is tried in this
 order:
 
-1. **`pull.commit`** — `GET /commits/{sha}/pulls`, which names the pull request
-   outright rather than inferring it. Stamp it from whatever your CI sets.
-2. **The identifier as the head branch's own name**, which is the plain case.
-3. **`pull.matches(head, identifier)`** — asked per open pull request, most
+1. **`pull.pullRequest`**: the number the deploy states, used only while that
+   pull request is open. A closed or missing one falls through.
+2. **`pull.commit`**: `GET /commits/{sha}/pulls`, which names the pull request
+   outright rather than inferring it. Stamp it from whatever your CI sets. A
+   commit in several open pull requests (a stack) goes on to the next steps.
+3. **The identifier as the head branch's own name**, which is the plain case.
+4. **`pull.matches(head, identifier)`**: asked of each open pull request, most
    recently updated first, so an application supplies its own rule and not a
-   GitHub client.
+   GitHub client. Exactly one match resolves; several throw
+   `AmbiguousPullError` and nothing is guessed.
 
 ```ts
 githubStore({
@@ -321,8 +325,9 @@ githubStore({
 `cache` is a `createPullCache()`, and it is a parameter rather than a closure on
 purpose: a per-reviewer credential means a store built **per request**, so a
 cache inside one would be thrown away with it. Create one per process and pass
-it to every store. Only a hit is kept — a branch is pushed, the preview builds,
-and the pull request is opened after that, so a miss has to be re-asked.
+it to every store. A hit is kept for five minutes per token. A miss, an ambiguous match and a 401, 403 or
+404 are kept for 15 seconds per token — a branch is pushed, the preview builds,
+and the pull request is opened after that, so a miss has to be re-asked soon.
 
 ### Configuration
 

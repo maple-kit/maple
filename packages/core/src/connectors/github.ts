@@ -163,11 +163,17 @@ function pullFor(api: Client, identifier: string): Promise<number | undefined> {
   return findPull(reader(api), identifier, api.options.pull, api.options.cache);
 }
 
+/** A read-only client for resolving pull requests outside a store. */
+export function pullReader(options: GitHubStoreOptions): PullReader {
+  return reader(createClient(options));
+}
+
 /** The lookup reads; it never writes, so it is given a narrower client. */
 function reader(api: Client): PullReader {
   return {
     owner: api.options.owner,
     repo: api.options.repo,
+    scope: api.options.token,
     get: async <T>(path: string) => (await api.request<T>(path)).body,
   };
 }

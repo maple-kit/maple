@@ -75,11 +75,12 @@ against a production build should answer `404`
 
 ## The cookie
 
-`HttpOnly; Secure; SameSite=Lax; Path=/api/maple`, seven days. `HttpOnly` is the
+`HttpOnly; Secure; SameSite=Lax; Path=/api/maple` by default, seven days. `HttpOnly` is the
 control that matters against script injected into the previewed application. The
 value is sealed with AES-GCM under `MAPLE_SESSION_SECRET` (required, 32 bytes or
-more), so it cannot be read or forged, and it expires inside the seal. If the route is mounted
-elsewhere, set `githubAuth.path` to match. Shorten `maxAgeSeconds` if seven days
+more), so it cannot be read or forged, and it expires inside the seal. The path follows the route's `basePath` (`/api/maple`
+by default), so a route mounted elsewhere needs no setting; `githubAuth.path`
+overrides it. Shorten `maxAgeSeconds` if seven days
 is too long for a repository ([`github-auth.md`](github-auth.md#the-cookie)).
 
 ## Who can resolve and who can approve
@@ -174,7 +175,7 @@ used.
 - [ ] `MAPLE_PREVIEW=1` in previews only; a production build answers `404` on
       `/api/maple/comments`, asserted in CI.
 - [ ] No client secret, shared token or gate key in any preview environment.
-- [ ] `MAPLE_SESSION_SECRET` set (32+ random bytes), and `githubAuth.path` matches the mount.
+- [ ] `MAPLE_SESSION_SECRET` set (32+ random bytes).
 - [ ] The `maple/visual-review` check is required by a ruleset and pinned to the
       App that publishes it.
 - [ ] `requireApproval`, the action's `require-approval` and an identity connector

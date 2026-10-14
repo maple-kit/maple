@@ -152,6 +152,23 @@ export interface IdentityConnector extends ConnectorMeta {
 export interface IdentityRequest {
   readonly headers: Readonly<Record<string, string>>;
   readonly url: string;
+  /**
+   * Set by the route when the handler has a `preview` and this request reached
+   * one, so a per-request callback never re-reads headers for the key.
+   */
+  readonly preview?: PreviewInfo;
+}
+
+/** The preview a request was served by, as the route resolved it. */
+export interface PreviewInfo {
+  readonly key: string;
+  /** The key, shown on the surface. */
+  readonly label: string;
+  /** The head branch once the pull request is known, the key until then. */
+  readonly branch: string;
+  readonly commit?: string;
+  /** Set once resolved: stated by the deploy or found on GitHub. */
+  readonly pullRequest?: number;
 }
 
 /**

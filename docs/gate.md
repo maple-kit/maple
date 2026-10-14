@@ -261,9 +261,10 @@ too, but every host then reimplements the same pull-request lookup Maple already
 does, each getting the caching subtly wrong in its own way.
 
 The sha is read at publish time and never cached. A pull request's **number**
-lasts its whole life, which is why `findPull` caches that; its **head** lasts
-until the next push, and a cached one is how a check run lands on the commit
-before last.
+lasts its whole life, which is why `findPull` caches that, for five minutes per
+token so a merge followed by a new pull request on the same branch is picked up;
+its **head** lasts until the next push, and a cached one is how a check run
+lands on the commit before last.
 
 A store with no `head` publishes nothing, and says so through the logger. So
 does a branch with no open pull request. A verdict on a guessed commit reads as

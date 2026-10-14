@@ -52,6 +52,7 @@ export type {
   GateTarget,
   IdentityConnector,
   IdentityRequest,
+  PreviewInfo,
   KindGuess,
   ListQuery,
   MediaConnector,

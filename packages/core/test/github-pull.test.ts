@@ -1,6 +1,8 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
+import { NEGATIVE_TTL_MS } from "../src/connectors/github-pull.js";
 import { createPullCache, githubStore } from "../src/connectors/index.js";
+import { AmbiguousPullError } from "../src/errors.js";
 import { sampleComment } from "../src/testing/fixtures.js";
 import { createGitHubFake, pullFor } from "./msw/github.js";
 import { createTestServer, useTestServer } from "./msw/server.js";
@@ -114,11 +116,14 @@ describe("finding it by what the application calls the branch", () => {
     expect(github.commentsOn(pullFor("pla-1903-grouped-cases-chip-link"))).toHaveLength(1);
   });
 
-  it("takes the most recently updated where several would match", async () => {
+  it("refuses to guess where several would match, and writes nothing", async () => {
     github.open("pla-1903-second", "pla-1903-first");
-    await store({ pull: { matches: ticket } }).append(sampleComment({ branch: "pla-1903" }));
+    const append = store({ pull: { matches: ticket } }).append(
+      sampleComment({ branch: "pla-1903" }),
+    );
 
-    expect(github.commentsOn(pullFor("pla-1903-second"))).toHaveLength(1);
+    await expect(append).rejects.toBeInstanceOf(AmbiguousPullError);
+    expect(github.writes()).toEqual([]);
   });
 
   it("is not asked at all when the identifier is the branch's own name", async () => {
@@ -174,12 +179,32 @@ describe("remembering what was resolved", () => {
   });
 
   /** Push the branch, the preview builds, the pull request is opened after. */
-  it("asks again after a miss, because one can be opened later", async () => {
-    const cache = createPullCache();
-    await store({ cache }).list({ branch: "no-pull/x" });
-    const first = github.lookups();
+  describe("a miss", () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
 
-    await store({ cache }).list({ branch: "no-pull/x" });
-    expect(github.lookups()).toBeGreaterThan(first);
+    it("is believed for the negative TTL and asked again after it", async () => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      const cache = createPullCache();
+      await store({ cache }).list({ branch: "no-pull/x" });
+      const first = github.lookups();
+
+      await store({ cache }).list({ branch: "no-pull/x" });
+      expect(github.lookups()).toBe(first);
+
+      vi.advanceTimersByTime(NEGATIVE_TTL_MS + 1);
+      await store({ cache }).list({ branch: "no-pull/x" });
+      expect(github.lookups()).toBeGreaterThan(first);
+    });
+
+    it("is not shared with a different token", async () => {
+      const cache = createPullCache();
+      await store({ cache }).list({ branch: "no-pull/x" });
+      const first = github.lookups();
+
+      await store({ cache, token: "someone-else" }).list({ branch: "no-pull/x" });
+      expect(github.lookups()).toBeGreaterThan(first);
+    });
   });
 });

@@ -78,7 +78,7 @@ export function createGitHubFake(owner = "maple-kit", repo = "app"): GitHubFake 
       lookups += 1;
       const branch = commits.get(String(params["sha"]));
       if (branch === undefined) return HttpResponse.json([]);
-      return HttpResponse.json([{ number: pullFor(branch), head: { ref: branch } }]);
+      return HttpResponse.json([{ number: pullFor(branch), state: "open", head: { ref: branch } }]);
     }),
 
     http.get(`${API}/repos/${owner}/${repo}/pulls`, ({ request }) => {

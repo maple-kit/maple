@@ -15,6 +15,7 @@ export type {
   GitHubGateOptions,
   IdentityConnector,
   IdentityRequest,
+  PreviewInfo,
   KindGuess,
   ListQuery,
   MediaConnector,
@@ -56,7 +57,7 @@ export {
   supports,
   UnknownPillarError,
 } from "./connectors/index.js";
-export { MapleStoreError, UpstreamError } from "./errors.js";
+export { AmbiguousPullError, MapleStoreError, UpstreamError } from "./errors.js";
 export {
   ADVISORY_AUTHORS,
   BLOCKING_STATUSES,

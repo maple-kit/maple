@@ -233,10 +233,10 @@ or to any third party. The token leaves the server only in requests the route
 itself makes to `api.github.com`. The overlay never sees it; there is no code
 path that returns it to the browser.
 
-The cookie path is `githubAuth.path`, defaulting to `/api/maple`. It does not
-follow `basePath`: a route mounted somewhere else must set `githubAuth.path` to
-the same value, or the browser never sends the cookie to it and every reviewer
-reads as unlinked.
+The cookie path is `githubAuth.path`, and when that is unset it follows
+`basePath` (`/api/maple` by default). A route mounted somewhere else needs no
+extra setting; set `githubAuth.path` only to scope the cookie differently from
+the mount.
 
 ### The cookie is sealed, and the secret is required
 

@@ -37,3 +37,18 @@ export class MapleStoreError extends Error {
     this.upstream = cause instanceof UpstreamError ? cause : undefined;
   }
 }
+
+/**
+ * Several open pull requests claim one preview. Maple does not guess: a comment
+ * written to the wrong pull request is worse than one that is not written.
+ */
+export class AmbiguousPullError extends Error {
+  override readonly name = "AmbiguousPullError";
+
+  constructor(
+    /** The pull requests that matched, newest first. */
+    readonly pulls: readonly number[],
+  ) {
+    super(`${String(pulls.length)} open pull requests match this preview.`);
+  }
+}
