@@ -50,7 +50,7 @@ exported on their own, for a host that wants to compose them differently:
 | `@maple-kit/ui/picker`   | Element, text and region picks.                                     |
 | `@maple-kit/ui/notice`   | Failures the overlay reports in its own voice.                      |
 | `@maple-kit/ui/mock`     | `<MapleMock />`, Maple Mock's box, for a page that mocks alone.     |
-| `@maple-kit/ui/icons`    | The thirteen icons, one module each.                                |
+| `@maple-kit/ui/icons`    | The icons, one module each.                                         |
 
 Inside `<Maple />` the mock box is already mounted. [`@maple-kit/mock`](../mock)
 shows what it does.
