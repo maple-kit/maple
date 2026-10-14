@@ -9,7 +9,7 @@ import { RULES } from "./msw/identity.js";
 import { createTestServer, useTestServer } from "./msw/server.js";
 
 import type { MockState, Recipe } from "@maple-kit/core/mock";
-import type { Inventory } from "@maple-kit/mock";
+import type { Codec, Inventory, Unmocked } from "@maple-kit/mock";
 
 const api = createApiFake();
 const server = createTestServer(...api.handlers);
@@ -252,6 +252,39 @@ describe("resolve", () => {
     await expect(response?.text()).resolves.toBe("<p>hi</p>");
   });
 
+  it.each<[string, string, () => void, Pick<Unmocked, "reason" | "status">]>([
+    ["a response it cannot read", "/page", () => undefined, { reason: "unreadable", status: 200 }],
+    [
+      "a failure it has nothing to reshape",
+      "/projects",
+      () => api.fail("/api/projects"),
+      { reason: "nothing to reshape", status: 500 },
+    ],
+  ])("says why a named call kept the server's answer: %s", async (_, path, before, told) => {
+    before();
+    const unmocked: Unmocked[] = [];
+    const key = `rest:GET /api${path}`;
+    await resolve(new Request(`${API}${path}`), recipe(key, "empty"), createInventory(), {
+      ...options,
+      onUnmocked: (note) => unmocked.push(note),
+    });
+    expect(unmocked).toEqual([{ codec: "rest", key, ...told }]);
+  });
+
+  it.each([
+    ["a reshape", recipe("rest:GET /api/projects", "empty")],
+    ["a failure it writes", recipe("rest:GET /api/projects", "error")],
+    ["a call the recipe does not name", recipe("rest:GET /api/me", "empty")],
+    ["no recipe", undefined],
+  ])("says nothing of %s", async (_, active) => {
+    const unmocked: Unmocked[] = [];
+    await resolve(new Request(`${API}/projects`), active, createInventory(), {
+      ...options,
+      onUnmocked: (note) => unmocked.push(note),
+    });
+    expect(unmocked).toEqual([]);
+  });
+
   it("reshapes a bare count", async () => {
     const response = await run("/count", recipe("rest:GET /api/count", "empty"));
     await expect(response?.json()).resolves.toBe(0);
@@ -340,6 +373,30 @@ describe("resolve, under `as`", () => {
     expect(response).toBeUndefined();
     expect(writes).toEqual(["rest:POST /api/projects"]);
   });
+
+  it.each([
+    ["reads", "POST", false, []],
+    ["writes", "GET", true, ["rest:GET /api/projects"]],
+  ] as const)(
+    "believes a call that says it %s over the method",
+    async (_, method, mutates, expected) => {
+      const said: Codec = {
+        ...restCodec,
+        split: async (request) =>
+          (await restCodec.split(request))?.map((call) => ({ ...call, mutates })),
+      };
+      const writes: string[] = [];
+      const init = method === "POST" ? { method, body: "{}" } : { method };
+      const response = await resolve(
+        new Request(`${API}/projects`, init),
+        shownAs({ role: "barista" }),
+        createInventory(),
+        { ...options, codecs: [said], identity: RULES, onWrite: (key) => writes.push(key) },
+      );
+      expect(response).toBeUndefined();
+      expect(writes).toEqual(expected);
+    },
+  );
 
   it("changes nothing without identity rules", async () => {
     const response = await resolve(

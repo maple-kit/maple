@@ -12,6 +12,11 @@ import type { TypeMeta } from "./superjson.js";
 export interface Call {
   /** The stable key a recipe names it by, prefixed with the codec's name. */
   readonly key: string;
+  /**
+   * Whether the call writes, when the protocol says so: a GraphQL mutation
+   * is one over any method. Absent, the HTTP method decides.
+   */
+  readonly mutates?: boolean;
 }
 
 /**
@@ -24,6 +29,8 @@ export type Answer =
       readonly status: number;
       readonly body: unknown;
       readonly meta?: TypeMeta;
+      /** The server answered in part, with errors beside it: reshaped, never recorded. */
+      readonly partial?: boolean;
     }
   | {
       readonly kind: "failure";
@@ -36,7 +43,10 @@ export interface Codec {
   readonly name: string;
   /** The request as it is sent on when its response will be rewritten. */
   prepare?(request: Request): Request;
-  /** The calls `request` carries, or undefined when this codec does not own it. */
+  /**
+   * The calls `request` carries, or undefined when this codec does not own it.
+   * A request it owns with no call it can name is `[]`, and passes through.
+   */
   split(request: Request): Promise<readonly Call[] | undefined>;
   /** A real response as one answer per call, or undefined when it cannot be read. */
   read(response: Response, calls: readonly Call[]): Promise<readonly Answer[] | undefined>;
