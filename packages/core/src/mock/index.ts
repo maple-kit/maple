@@ -9,6 +9,7 @@
 export { activeRecipe, MOCK_HANDLE_KEY } from "./active.js";
 export {
   FLAGS_HEADER,
+  FLAG_KEY_LIMIT,
   FLAGS_HEADER_LIMIT,
   formatFlagsHeader,
   parseFlagsHeader,

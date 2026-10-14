@@ -2,7 +2,13 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { recordFlagUse, withFlagUse } from "../src/flags/index.js";
 import { launchDarklyFlagUse } from "../src/launchdarkly/index.js";
-import { FLAGS_HEADER, formatFlagsHeader, parseFlagsHeader } from "../src/mock/index.js";
+import {
+  FLAG_KEY_LIMIT,
+  FLAGS_HEADER,
+  FLAGS_HEADER_LIMIT,
+  formatFlagsHeader,
+  parseFlagsHeader,
+} from "../src/mock/index.js";
 import { createMapleHandler } from "../src/route/index.js";
 
 const SWITCH = Symbol.for("@maple-kit/core.flag-use");
@@ -101,6 +107,24 @@ describe("the header value", () => {
   it("skips what cannot be decoded", () => {
     expect(parseFlagsHeader("ok,%E0%A4%A,,fine")).toEqual(["ok", "fine"]);
     expect(parseFlagsHeader(null)).toEqual([]);
+  });
+});
+
+describe("parseFlagsHeader limits", () => {
+  it("ignores a header past the cap, keeping only whole keys inside it", () => {
+    const value = Array.from({ length: 3000 }, (_, i) => `flag-${i}`).join(",");
+    const keys = parseFlagsHeader(value);
+    expect(keys.length).toBeLessThan(700);
+    expect(keys.length).toBeGreaterThan(0);
+    expect(keys.at(-1)).toBe(`flag-${keys.length - 1}`);
+    expect(keys.join(",").length).toBeLessThanOrEqual(FLAGS_HEADER_LIMIT);
+  });
+
+  it("drops a key longer than the key limit, on read and on write", () => {
+    const long = "k".repeat(FLAG_KEY_LIMIT + 1);
+    expect(parseFlagsHeader(`a,${long},b`)).toEqual(["a", "b"]);
+    expect(parseFlagsHeader("x".repeat(200_000))).toEqual([]);
+    expect(formatFlagsHeader(["a", long, "b"])).toBe("a,b");
   });
 });
 
