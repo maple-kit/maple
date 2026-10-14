@@ -26,14 +26,14 @@ const BUDGETS = [
   // only mocks adopts MOCK_CSS, weighed below); 16 KB once its menu joined;
   // 17 KB for the popup and sign-in; 17.5 KB for the resize handles.
   { name: "the adopted stylesheet", entries: ["stylesheet.js"], max: 17.5 * 1024 },
-  // 22 KB until the wordmark; 24 KB for the sign-off and unsent list; 26 KB
-  // for the pixel leaf (docs/branding.md); 28, 29 KB for drafts; 30 KB import
-  // and export; 31 KB solo; 32 KB the shared popup; 35 KB for the resizable
-  // card and the edge indicators; 36 KB for pins that follow the DOM.
+  // 22 KB until the wordmark; 24 sign-off, unsent list; 26 the pixel leaf
+  // (docs/branding.md); 28, 29 drafts; 30 import, export; 31 solo; 32 shared
+  // popup; 35 resizable card, edge indicators; 36 pins that follow the DOM;
+  // 37 KB for the route's context read.
   {
     name: "root + marks + island + icons",
     entries: ["index.js", "marks/index.js", "island/index.js", "icons/index.js"],
-    max: 36 * 1024,
+    max: 37 * 1024,
   },
   // 9 KB until the score card. The extra 1 KB is the card, the kind control
   // and the context card's disclosure. Every byte of it is inert on a

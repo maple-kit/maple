@@ -7,6 +7,7 @@
  * and `Error` subclasses, never Effect.
  */
 
+export type { ContextBody, ContextReason } from "../route/context.js";
 export {
   ASSIST_DEBOUNCE_MS,
   ASSIST_IDLE,
@@ -14,6 +15,8 @@ export {
   createAssistRunner,
 } from "./assist.js";
 export type { AssistRunner, AssistRunnerOptions } from "./assist.js";
+export { readContext } from "./context.js";
+export type { ReadContextOptions } from "./context.js";
 export { createMapleClient } from "./controller.js";
 export type { ClientView, MapleClient, MapleClientOptions } from "./controller.js";
 export { createDraftKeeper, DRAFT_DEBOUNCE_MS, DRAFT_LIFETIME_MS, draftIdFor } from "./drafts.js";

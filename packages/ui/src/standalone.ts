@@ -5,7 +5,8 @@
  * HTML, so React is bundled in (the app may have another version, or none) and
  * the script reads what it needs from the tag's own `data-` attributes. It is
  * the same `<Maple>` an application would mount; nothing here is a second
- * implementation. It stands down when the page already mounted one.
+ * implementation. It stands down when the page already mounted one. Without
+ * a `data-branch` the route's context says which preview this is.
  */
 
 import { installSourceLocator, OVERLAY_MARKER } from "@maple-kit/core/anchor";
@@ -35,6 +36,7 @@ function mount(): void {
   const root = attribute("root");
   const basePath = attribute("base-path");
   const appDir = attribute("app-dir");
+  const branch = attribute("branch");
   const pullRequest = attribute("pull-request");
   installSourceLocator({
     ...(root === undefined ? {} : { root }),
@@ -43,7 +45,7 @@ function mount(): void {
 
   createRoot(document.createElement("div")).render(
     createElement(Maple, {
-      branch: attribute("branch") ?? "local",
+      ...(branch === undefined ? {} : { branch }),
       ...(pullRequest === undefined ? {} : { pullRequest }),
       ...(basePath === undefined ? {} : { options: { basePath } }),
     }),

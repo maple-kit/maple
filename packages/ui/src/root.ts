@@ -5,8 +5,8 @@
  * controller through `MapleProvider` and puts the shadow root in scope for
  * every part below it. Parts read the controller rather than props, and
  * nothing here reaches `document` while React is rendering. The props are
- * resolved once against the query string and the viewer's stored preference
- * by `readMapleConfig`: `enabled: false`, or a link, mounts nothing at all.
+ * resolved once by `readMapleConfig`: `enabled: false`, a link, or a 404 from
+ * the route (asked when no `branch` is given) mounts nothing at all.
  */
 
 import { readMapleConfig } from "@maple-kit/core/client";
@@ -18,8 +18,10 @@ import { createPortal } from "react-dom";
 import { MapleUiContext } from "./context.js";
 import { createShotStore, ShotContext } from "./shots.js";
 import { OVERLAY_CSS, SCHEME_ATTRIBUTE } from "./stylesheet.js";
+import { RefreshOnLink, useSurface } from "./surface.js";
 import { useOverlayScheme } from "./theme.js";
 
+import type { Surface } from "./surface.js";
 import type {
   MapleClient,
   MapleClientOptions,
@@ -39,8 +41,11 @@ export type ThemePreference = Preference;
 
 /** How the overlay is mounted, and what it is pointed at. */
 export interface MapleRootProps extends MapleProps {
-  /** The branch the comments belong to. */
-  readonly branch: string;
+  /**
+   * The branch the comments belong to. Without it the route is asked once
+   * which preview this is; a 404 there mounts nothing.
+   */
+  readonly branch?: string;
   /**
    * What a reviewer calls this surface — a ticket, or the branch shortened to
    * a hostname label. Read wherever the branch would be; the branch stays.
@@ -73,27 +78,41 @@ export const MapleRoot = /** @__PURE__ */ forwardRef<HTMLDivElement, MapleRootPr
   function MapleRoot(props, ref) {
     const [config] = useState(() => readMapleConfig(props));
     const [shots] = useState(createShotStore);
-    const host = useOverlayHost(config.enabled, props.nonce, props.parent);
+    const { state, refresh } = useSurface(props, {
+      enabled: config.enabled,
+      owned: props.client !== undefined,
+      options: props.options,
+    });
+
+    const host = useOverlayHost(
+      config.enabled && state.status === "ready",
+      props.nonce,
+      props.parent,
+    );
+    const surface = state.status === "ready" ? state.surface : undefined;
     const options = useMemo(
-      () => ({
-        ...props.options,
-        branch: props.branch,
-        ...(props.label === undefined ? {} : { label: props.label }),
-        ...(props.commit === undefined ? {} : { commit: props.commit }),
-        config,
-      }),
-      [props.options, props.branch, props.label, props.commit, config],
+      () =>
+        surface && {
+          ...props.options,
+          ...surface,
+          config,
+        },
+      [props.options, surface, config],
     );
 
-    if (!host || !config.enabled) return null;
+    if (!host || !config.enabled || !surface || !options || state.status !== "ready") return null;
 
     const className = props.className ? `mk-layer ${props.className}` : "mk-layer";
     const layer = createElement("div", { className, ref }, props.children);
-    const scoped = createElement(OverlayLayer, { host }, layer);
+    const scoped = createElement(OverlayLayer, { host, surface, reason: state.reason }, layer);
+    const refresher = state.resolved
+      ? null
+      : createElement(RefreshOnLink, { key: "refresh", refresh });
 
     return createElement(
       MapleProvider,
-      props.client ? { client: props.client } : { options },
+      { key: surface.branch, ...(props.client ? { client: props.client } : { options }) },
+      refresher,
       createElement(ShotContext.Provider, { value: shots }, createPortal(scoped, host.root)),
     );
   },
@@ -123,6 +142,9 @@ function useOverlayHost(enabled: boolean, nonce: string | undefined, parent: Ele
 
 interface OverlayLayerProps {
   readonly host: OverlayHost;
+  readonly surface: Surface;
+  /** Why the pull request is not known, as an attribute a host's CSS or a test can read. */
+  readonly reason: string | null;
   readonly children?: ReactNode;
 }
 
@@ -133,14 +155,20 @@ interface OverlayLayerProps {
 function OverlayLayer(props: OverlayLayerProps): ReactElement {
   const theme = useOverlayScheme();
   const { container, root } = props.host;
+  const { surface } = props;
 
   useLayoutEffect(() => {
     container.setAttribute(SCHEME_ATTRIBUTE, theme.scheme);
   }, [container, theme.scheme]);
 
+  useLayoutEffect(() => {
+    if (props.reason === null) container.removeAttribute("data-maple-reason");
+    else container.setAttribute("data-maple-reason", props.reason);
+  }, [container, props.reason]);
+
   const value = useMemo(
-    () => ({ root, container, scheme: theme.scheme, hostScheme: theme.hostScheme }),
-    [root, container, theme.scheme, theme.hostScheme],
+    () => ({ root, container, scheme: theme.scheme, hostScheme: theme.hostScheme, surface }),
+    [root, container, theme.scheme, theme.hostScheme, surface],
   );
 
   return createElement(MapleUiContext.Provider, { value }, props.children);

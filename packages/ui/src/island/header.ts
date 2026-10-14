@@ -7,8 +7,9 @@
  */
 
 import { useMaple } from "@maple-kit/react";
-import { createElement, forwardRef } from "react";
+import { createElement, forwardRef, useContext } from "react";
 
+import { MapleUiContext } from "../context.js";
 import { cx } from "../cx.js";
 import { renderPart } from "../part.js";
 import { Spinner } from "../spinner.js";
@@ -96,24 +97,27 @@ function Working(): ReactNode {
 }
 
 /**
- * The branch chip. It takes the branch rather than reading it, because the
- * controller keeps what it was pointed at and does not publish it back. A
+ * The branch chip. It reads the root's surface unless given a branch, because
+ * the controller keeps what it was pointed at and does not publish it back. A
  * label reads in its place when there is one; the branch stays as the title,
  * because a label is lossy and the exact name is what a person copies.
  */
 export const Branch = /** @__PURE__ */ forwardRef<HTMLSpanElement, BranchProps>(
   function Branch(props, ref) {
-    const { asChild, branch, children, className, label, pullRequest, ...rest } = props;
-    const shown = children ?? label ?? branch;
+    const { asChild, children, className, ...rest } = props;
+    const { branch, label, pullRequest, ...attributes } = rest;
+    const surface = useContext(MapleUiContext)?.surface;
+    const named = branch ?? surface?.branch;
+    const shown = children ?? label ?? surface?.label ?? named;
     if (shown === undefined) return null;
 
-    const linked = webUrl(pullRequest);
+    const linked = webUrl(pullRequest ?? surface?.pullRequest);
     const link = linked === undefined ? {} : { href: linked, target: "_blank", rel: "noopener" };
 
     return renderPart(
       linked === undefined ? "span" : "a",
       asChild,
-      { ...rest, ...link, className: cx("mk-branch", className), title: branch, ref },
+      { ...attributes, ...link, className: cx("mk-branch", className), title: named, ref },
       shown,
     );
   },

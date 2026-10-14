@@ -9,6 +9,7 @@
 
 import { createContext, useContext } from "react";
 
+import type { Surface } from "./surface.js";
 import type { Scheme } from "@maple-kit/core/client";
 
 /** The shadow root, and the two schemes, for the parts inside it. */
@@ -21,6 +22,8 @@ export interface MapleUiContextValue {
   readonly scheme: Scheme;
   /** The host page's scheme. This is the one a comment records. */
   readonly hostScheme: Scheme;
+  /** The branch, label and pull request this root is pointed at, props over route. */
+  readonly surface: Surface;
 }
 
 /** Internal: `Maple.Root` is the only supported way to fill this. */

@@ -21,7 +21,14 @@ async function runScript(): Promise<string | null> {
 
 beforeEach(() => {
   localStorage.clear();
-  vi.stubGlobal("fetch", offlineFetch());
+  const offline = offlineFetch();
+  vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = input instanceof Request ? input.url : String(input);
+    if (!url.endsWith("/context")) return offline(input, init);
+    return Promise.resolve(
+      Response.json({ preview: "test", key: "pr-1", branch: "feat/x", resolved: true }),
+    );
+  });
 });
 
 afterEach(() => {

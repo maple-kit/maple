@@ -29,6 +29,10 @@ import { Maple } from "@maple-kit/ui/maple";
 <Maple branch={import.meta.env.VITE_MAPLE_BRANCH} />;
 ```
 
+`branch` is optional. Without it the overlay asks the route's `GET /context`
+which preview this is, once, and mounts nothing on a 404, or when that first read keeps failing after retries at 1 s, 3 s and 10 s (there is no key to review under); a failed read after linking keeps what is showing; a prop you do pass wins
+over the answer.
+
 It talks to the route [`@maple-kit/core`](../core) mounts at `/api/maple`.
 Render it on preview builds only; `?maple=off` turns it off without a rebuild.
 
