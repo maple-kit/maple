@@ -14,8 +14,6 @@ import {
   Item,
   List,
   Logo,
-  NewComment,
-  PickButton,
   Settings,
 } from "../src/island/index.js";
 import { MarkLayer } from "../src/marks/index.js";
@@ -49,12 +47,6 @@ function mount(props: Partial<MapleRootProps> = {}): ReactElement {
         createElement(List, {
           children: (comment: Comment) => createElement(Item, { comment }),
         }),
-        createElement(
-          NewComment,
-          null,
-          createElement(PickButton, { kind: "element" }),
-          createElement(PickButton, { kind: "text" }),
-        ),
       ),
     ),
     createElement(MapleComposer, null, createElement(MapleTarget), createElement(MapleDetail)),

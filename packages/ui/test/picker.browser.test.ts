@@ -7,11 +7,11 @@ import { page } from "vitest/browser";
 
 import { MapleRoot } from "../src/index.js";
 import {
+  CommentButton,
+  Header,
   Island,
   IslandContent,
   IslandTrigger,
-  NewComment,
-  PickButton,
 } from "../src/island/index.js";
 import { MaplePicker } from "../src/picker/index.js";
 import { offlineFetch } from "./offline.js";
@@ -50,20 +50,12 @@ function tree(): ReactElement {
       Island,
       null,
       createElement(IslandTrigger),
-      createElement(
-        IslandContent,
-        null,
-        createElement(
-          NewComment,
-          null,
-          createElement(PickButton, { kind: "element" }),
-          createElement(PickButton, { kind: "text" }),
-          createElement(PickButton, { kind: "region" }),
-        ),
-      ),
+      createElement(IslandContent, null, createElement(Header, null, createElement(CommentButton))),
     ),
   );
 }
+
+const COMMENT = 'button[aria-label="New comment"]';
 
 function root(): ShadowRoot {
   const host = document.querySelector<HTMLElement>("[data-maple-overlay]");
@@ -320,7 +312,7 @@ describe("the island while a pick is armed", () => {
     find<HTMLButtonElement>(".mk-pill").click();
     await vi.waitFor(() => expect(root().querySelector(".mk-card")).not.toBeNull());
 
-    find<HTMLButtonElement>(".mk-pick").click();
+    find<HTMLButtonElement>(COMMENT).click();
 
     await vi.waitFor(() => expect(root().querySelector(".mk-card")).toBeNull());
     expect(client.getState().pick.armed).toBe(true);
@@ -330,7 +322,7 @@ describe("the island while a pick is armed", () => {
   it("can be opened again while the pick is still armed", async () => {
     find<HTMLButtonElement>(".mk-pill").click();
     await vi.waitFor(() => expect(root().querySelector(".mk-card")).not.toBeNull());
-    find<HTMLButtonElement>(".mk-pick").click();
+    find<HTMLButtonElement>(COMMENT).click();
     await vi.waitFor(() => expect(root().querySelector(".mk-card")).toBeNull());
 
     find<HTMLButtonElement>(".mk-pill").click();
@@ -404,5 +396,49 @@ describe("a region", () => {
 
     expect(target?.label).toBe("Yield card");
     expect(target?.label).not.toContain("an area of");
+  });
+});
+
+describe("the island's comment button", () => {
+  const click = () => find<HTMLButtonElement>(COMMENT).click();
+  const reopen = async () => {
+    find<HTMLButtonElement>(".mk-pill").click();
+    await vi.waitFor(() => expect(root().querySelector(".mk-card")).not.toBeNull());
+  };
+
+  it("arms the kind armed last, as a tap of the modifier does", async () => {
+    client.arm("region");
+    client.disarm();
+    await reopen();
+
+    click();
+
+    await vi.waitFor(() => expect(client.getState().pick).toEqual({ armed: true, kind: "region" }));
+  });
+
+  it("cycles the kind on the next press and follows the armed state in aria-pressed", async () => {
+    await reopen();
+    expect(find(COMMENT).getAttribute("aria-pressed")).toBe("false");
+    click();
+    await vi.waitFor(() => expect(client.getState().pick.kind).toBe("element"));
+    await vi.waitFor(() => expect(root().querySelector(".mk-card")).toBeNull());
+
+    await reopen();
+    expect(find(COMMENT).getAttribute("aria-pressed")).toBe("true");
+    click();
+    await vi.waitFor(() => expect(client.getState().pick.kind).toBe("text"));
+    expect(root().querySelector(".mk-card")).not.toBeNull();
+
+    client.disarm();
+    await vi.waitFor(() => expect(find(COMMENT).getAttribute("aria-pressed")).toBe("false"));
+  });
+
+  it("stays above the shield, so a pointer reaches it while a pick is armed", async () => {
+    client.arm("element");
+    await vi.waitFor(() => expect(root().querySelector(".mk-shield")).not.toBeNull());
+
+    const [x, y] = middle(find(".mk-pill"));
+
+    expect(topAt(x, y)).toBe(find(".mk-pill"));
   });
 });

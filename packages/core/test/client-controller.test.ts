@@ -209,6 +209,19 @@ describe("arming a pick", () => {
     expect(maple.getState().pick).toEqual({ armed: false });
   });
 
+  it("armNext arms the kind armed last, then walks the order and wraps", () => {
+    const maple = client();
+    maple.arm("region");
+    maple.disarm();
+
+    const seen = [0, 1, 2].map(() => {
+      maple.armNext();
+      return maple.getState().pick.kind;
+    });
+
+    expect(seen).toEqual(["region", "element", "text"]);
+  });
+
   it("disarms when a composer opens, so nothing stays armed behind it", () => {
     const maple = client();
     maple.arm("element");

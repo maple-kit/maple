@@ -1,5 +1,5 @@
 /**
- * The seventeen icons, one module each.
+ * The eighteen icons, one module each.
  *
  * This entry names them rather than collecting them: every export below is a
  * distinct module, so importing one drags in one. There is deliberately no
@@ -12,6 +12,7 @@ export { CheckIcon } from "./check.js";
 export { ChevronIcon } from "./chevron.js";
 export { CodeIcon } from "./code.js";
 export { CogIcon } from "./cog.js";
+export { CommentIcon } from "./comment.js";
 export { CommitIcon } from "./commit.js";
 export { IconCrossfade } from "./crossfade.js";
 export type { IconCrossfadeProps } from "./crossfade.js";

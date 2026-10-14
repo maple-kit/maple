@@ -7,7 +7,6 @@
  * decision to take every part.
  */
 
-import { PICK_ORDER } from "@maple-kit/core/client";
 import { createElement, forwardRef } from "react";
 
 import {
@@ -23,6 +22,7 @@ import {
 import {
   Approve,
   Branch,
+  CommentButton,
   FilterPick,
   Filters,
   FilterTally,
@@ -35,9 +35,7 @@ import {
   Item,
   List,
   Logo,
-  NewComment,
   OtherDrafts,
-  PickButton,
   Settings,
 } from "./island/index.js";
 import { MapleMarkLayer } from "./marks/index.js";
@@ -113,6 +111,7 @@ function inventory(defaultOpen: boolean): ReactElement {
         null,
         createElement(Logo),
         createElement(Branch),
+        createElement(CommentButton),
         createElement(MapleMockToggle),
         createElement(Settings),
       ),
@@ -127,11 +126,6 @@ function inventory(defaultOpen: boolean): ReactElement {
       ),
       createElement(List, { children: (comment: Comment) => createElement(Item, { comment }) }),
       createElement(OtherDrafts),
-      createElement(
-        NewComment,
-        null,
-        ...PICK_ORDER.map((kind) => createElement(PickButton, { key: kind, kind })),
-      ),
     ),
   );
 }

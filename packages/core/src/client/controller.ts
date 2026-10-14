@@ -187,6 +187,8 @@ export interface MapleClient {
   peek(id: string | null): void;
 
   arm(kind: PickKind): void;
+  /** Arms the kind armed last, or the next kind while one is armed: a tap, as a call. */
+  armNext(): void;
   disarm(): void;
 
   /** Opens on a target, resuming the draft already left on it if there is one. */
@@ -351,6 +353,7 @@ export function createMapleClient(options: MapleClientOptions): MapleClient {
     peek: (id) => patch(runtime, { peeked: id }),
 
     arm: (kind) => arm(runtime, kind),
+    armNext: () => armNext(runtime),
     disarm: () => patch(runtime, { pick: UNARMED }),
 
     openComposer: (target) => openComposer(runtime, target),
@@ -668,12 +671,16 @@ function onTap(runtime: Runtime): void {
     const { tap } = runtime.state;
     return patch(runtime, { tap: { ...tap, focus: tap.focus + 1 } });
   }
-  const { pick } = runtime.state;
-  if (pick.armed && pick.kind) return arm(runtime, nextPick(pick.kind));
-
   const view = runtime.options.view ?? (globalThis as { window?: ClientView }).window;
-  if (view && selectedText(view.document)) return arm(runtime, "text", { remember: false });
-  arm(runtime, runtime.lastPick);
+  const armed = runtime.state.pick.armed;
+  if (!armed && view && selectedText(view.document))
+    return arm(runtime, "text", { remember: false });
+  armNext(runtime);
+}
+
+function armNext(runtime: Runtime): void {
+  const { pick } = runtime.state;
+  arm(runtime, pick.armed && pick.kind ? nextPick(pick.kind) : runtime.lastPick);
 }
 
 /** Shift and the modifier tapped together: surfaces close when `tap.close` changes. */

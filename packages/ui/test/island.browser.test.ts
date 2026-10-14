@@ -7,6 +7,7 @@ import { page } from "vitest/browser";
 import { MapleRoot } from "../src/index.js";
 import {
   Branch,
+  CommentButton,
   Filters,
   Header,
   Island,
@@ -15,8 +16,6 @@ import {
   Item,
   List,
   Logo,
-  NewComment,
-  PickButton,
   Settings,
 } from "../src/island/index.js";
 import { BRANCH, COMMENTS, fixtureFetch, PAGE_HTML } from "./fixtures.js";
@@ -45,19 +44,13 @@ function mount(label?: string, pullRequest?: string): ReactElement {
             ...(label === undefined ? {} : { label }),
             ...(pullRequest === undefined ? {} : { pullRequest }),
           }),
+          createElement(CommentButton),
           createElement(Settings),
         ),
         createElement(Filters),
         createElement(List, {
           children: (comment: Comment) => createElement(Item, { comment }),
         }),
-        createElement(
-          NewComment,
-          null,
-          createElement(PickButton, { kind: "element" }),
-          createElement(PickButton, { kind: "text" }),
-          createElement(PickButton, { kind: "region" }),
-        ),
       ),
     ),
   );
@@ -224,40 +217,24 @@ describe("the unpinned tab", () => {
   });
 });
 
-describe("arming a pick", () => {
-  /**
-   * Two syllables introducing three pills do not need a line of their own:
-   * the label and the picks are one row, at half the height of two.
-   */
-  it("sets the label beside the picks rather than over them", async () => {
-    await open();
-    const label = find<HTMLElement>(".mk-new-label");
-    const picks = find<HTMLElement>(".mk-picks");
+describe("the comment button", () => {
+  const button = () => find<HTMLButtonElement>('button[aria-label="New comment"]');
 
-    expect(label.textContent).toBe("New:");
-    expect(label.getBoundingClientRect().right).toBeLessThanOrEqual(
-      picks.getBoundingClientRect().left,
+  it("sits between the branch chip and settings, and is the same kind of button", async () => {
+    await open();
+    const head = find<HTMLElement>(".mk-head");
+    const order = [...head.querySelectorAll(".mk-branch, button")].map(
+      (one) => one.getAttribute("aria-label") ?? one.className,
     );
-    expect(label.getBoundingClientRect().top).toBeLessThan(picks.getBoundingClientRect().bottom);
-  });
 
-  it("collapses the island, so the chrome is out of the way of the picking", async () => {
-    await open();
-    const pick = all(".mk-pick")[0] as HTMLButtonElement;
-    pick.click();
+    const at = order.indexOf("New comment");
 
-    await vi.waitFor(() => expect(root().querySelector(".mk-card")).toBeNull());
-    expect(find(".mk-pill").getAttribute("data-armed")).toBe("true");
-  });
-
-  it("says which one is armed when the island is opened again", async () => {
-    await open();
-    (all(".mk-pick")[1] as HTMLButtonElement).click();
-    await vi.waitFor(() => expect(root().querySelector(".mk-card")).toBeNull());
-
-    find<HTMLButtonElement>(".mk-pill").click();
-    await vi.waitFor(() => expect(root().querySelector(".mk-card")).not.toBeNull());
-    expect(all(".mk-pick")[1]?.getAttribute("aria-pressed")).toBe("true");
+    expect(at).toBeGreaterThan(order.findIndex((one) => one.includes("mk-branch")));
+    expect(at).toBeLessThan(order.indexOf("Settings"));
+    expect(order.at(-1)).toBe("Close the inventory");
+    expect(button().classList.contains("mk-iconbtn")).toBe(true);
+    expect(button().title).toMatch(/^New comment \(Tap /);
+    expect(root().querySelector(".mk-new, .mk-pick")).toBeNull();
   });
 });
 

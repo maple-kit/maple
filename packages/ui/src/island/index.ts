@@ -13,6 +13,7 @@ export { Account } from "./account.js";
 export type { AccountProps } from "./account.js";
 export { Approve } from "./approve.js";
 export type { ApproveProps } from "./approve.js";
+export { CommentButton } from "./comment-button.js";
 export { countsFor, numbersFor, orphanReason, resolutionsFor } from "./comments.js";
 export type { FilterCounts } from "./comments.js";
 export { IslandContent } from "./content.js";
@@ -42,8 +43,6 @@ export {
 } from "./language.js";
 export { List } from "./list.js";
 export type { ListProps } from "./list.js";
-export { NewComment, PickButton } from "./new-comment.js";
-export type { NewCommentProps, PickButtonProps } from "./new-comment.js";
 export { useSavedDrafts, useSignedOut } from "./saved.js";
 export { Settings } from "./settings.js";
 export type { SettingsProps } from "./settings.js";

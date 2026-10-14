@@ -44,13 +44,6 @@ export function tallyLabel(filter: CommentFilter, count: number): string {
   return `${String(count)} ${FILTER_LABELS[filter].toLowerCase()} ${many}`;
 }
 
-/** The word on each pick button. */
-export const PICK_LABELS: Readonly<Record<PickKind, string>> = {
-  element: "Element",
-  region: "Region",
-  text: "Text",
-};
-
 /** The three themes, in the words the switch shows. */
 export const THEME_LABELS: Readonly<Record<ThemePreference, string>> = {
   auto: "Auto",
@@ -180,7 +173,7 @@ export const ISLAND_COPY = {
   working: "Working",
   close: "Close the inventory",
   closeGlyph: "✕",
-  newComment: "New:",
+  newComment: "New comment",
   empty: "Nothing here under this filter.",
   loading: "Loading…",
   resolve: "Resolve",

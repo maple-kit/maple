@@ -15,8 +15,9 @@ store the first time it starts, by `src/app/seed.ts`, because an empty store is
 both the least interesting state the overlay has and the one a first run
 always lands in.
 
-From there the loop runs end to end. Pick **Element**, **Text** or **Region**
-from the island's bottom edge and click, select or drag on the page; the
+From there the loop runs end to end. Press the comment button in the island's header
+(or tap the comment key) to pick, then click, select or drag on the page; the picker's bar
+switches between element, text and region. The
 composer opens on what you chose, with a screenshot of the page taken at the
 moment you picked. Click a row to read a comment with its context badge.
 Everything is answered by the SDK route the Vite plugin mounts on the dev

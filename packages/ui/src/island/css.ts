@@ -28,7 +28,6 @@ export function islandCss(): string {
     approve(),
     link(),
     transfer(),
-    newComment(),
     keyframes(),
     sheet(),
   ].join("\n\n");
@@ -53,8 +52,11 @@ function sheet(): string {
 
 function shell(): string {
   return `
+/* Over the picker's shield (3), so the pill and the comment button still take
+   a click while a pick is armed. */
 .mk-island {
   position: absolute;
+  z-index: 4;
   right: 12px;
   bottom: 12px;
   display: flex;
@@ -383,7 +385,8 @@ a.mk-branch:focus-visible {
 }
 
 .mk-iconbtn:hover,
-.mk-iconbtn[aria-expanded="true"] {
+.mk-iconbtn[aria-expanded="true"],
+.mk-iconbtn[aria-pressed="true"] {
   background: var(--mk-sunk);
   color: var(--mk-fg);
 }
@@ -1289,86 +1292,6 @@ function approve(): string {
    neutral pressed button. Signed out it is disabled. */
 .mk-approve:disabled {
   cursor: not-allowed;
-}
-`.trim();
-}
-
-function newComment(): string {
-  return `
-/* One row, not a label over a row: the label is two syllables and the three
-   picks it introduces are beside it, which is half the height for the same
-   sentence. */
-.mk-new {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 6px 8px;
-  border-top: 1px solid var(--mk-line);
-  background: var(--mk-sunk);
-}
-
-.mk-new-label {
-  flex: none;
-  color: var(--mk-faint);
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-}
-
-.mk-picks {
-  display: flex;
-  flex: 1 1 auto;
-  gap: 4px;
-}
-
-.mk-pick {
-  flex: 1 1 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  padding: 3px 8px;
-  border: 1px solid var(--mk-line);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--mk-muted);
-  font: inherit;
-  font-size: 11.5px;
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    background-color var(--mk-dur-swap) var(--mk-ease-swap),
-    color var(--mk-dur-swap) var(--mk-ease-swap),
-    border-color var(--mk-dur-swap) var(--mk-ease-swap),
-    transform var(--mk-dur-fade) var(--mk-ease-surface);
-}
-
-.mk-pick svg {
-  opacity: 0.75;
-  transition: opacity var(--mk-dur-swap) var(--mk-ease-swap);
-}
-
-.mk-pick:hover {
-  background: var(--mk-bg);
-  color: var(--mk-fg);
-  transform: translateY(-1px);
-}
-
-.mk-pick:hover svg,
-.mk-pick[aria-pressed="true"] svg {
-  opacity: 1;
-}
-
-.mk-pick:active {
-  transform: scale(var(--mk-press));
-}
-
-.mk-pick[aria-pressed="true"] {
-  border-color: transparent;
-  background: var(--mk-accent);
-  color: var(--mk-accent-ink);
 }
 `.trim();
 }

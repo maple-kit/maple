@@ -64,7 +64,7 @@ describe("the default composition", () => {
     expect(root().querySelector(".mk-marks")).not.toBeNull();
     expect(root().querySelector(".mk-composer")).not.toBeNull();
     expect(root().querySelector(".mk-filters")).not.toBeNull();
-    expect(root().querySelectorAll(".mk-pick")).toHaveLength(3);
+    expect(root().querySelector('button[aria-label="New comment"]')).not.toBeNull();
   });
 
   it("starts collapsed to its pill, because a page at rest carries one object", async () => {
@@ -78,10 +78,7 @@ describe("the default composition", () => {
     await render(tree({ defaultOpen: true }));
     await vi.waitFor(() => expect(root().querySelector(".mk-card")).not.toBeNull());
 
-    const element = [...root().querySelectorAll<HTMLButtonElement>("button")].find(
-      (one) => one.textContent === "Element",
-    );
-    element?.click();
+    root().querySelector<HTMLButtonElement>('button[aria-label="New comment"]')?.click();
 
     await vi.waitFor(() => expect(root().querySelector(".mk-shield")).not.toBeNull());
     expect(find(".mk-pick-say").textContent).toBe("Click anything on the page");
@@ -97,7 +94,7 @@ describe("the default composition", () => {
     await render(tree({ defaultOpen: true }));
     await vi.waitFor(() => expect(root().querySelector(".mk-card")).not.toBeNull());
 
-    find<HTMLButtonElement>(".mk-iconbtn").click();
+    find<HTMLButtonElement>('button[aria-label="Settings"]').click();
 
     await vi.waitFor(() => expect(root().querySelectorAll(".mk-seg-one")).toHaveLength(3));
     expect(root().querySelectorAll(".mk-corner")).toHaveLength(4);
