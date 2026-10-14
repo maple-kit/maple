@@ -123,6 +123,29 @@ describe("Escape with the host's dialog open", () => {
     expect(hostKeys).not.toContain("Escape");
   });
 
+  it("closes the composer alone inside a modal Maple moved into", async () => {
+    dialog.showModal();
+    await vi.waitFor(() => expect(dialog.contains(root().host)).toBe(true));
+    await openComposer();
+
+    await userEvent.keyboard("{Escape}");
+
+    await vi.waitFor(() => expect(client.getState().composer.open).toBe(false));
+    expect(dialog.open).toBe(true);
+    expect(cardOpen()).toBe(true);
+  });
+
+  it("closes the island alone inside a modal Maple moved into", async () => {
+    dialog.showModal();
+    await vi.waitFor(() => expect(dialog.contains(root().host)).toBe(true));
+    root().querySelector<HTMLElement>(".mk-island")?.focus();
+
+    await userEvent.keyboard("{Escape}");
+
+    await vi.waitFor(() => expect(cardOpen()).toBe(false));
+    expect(dialog.open).toBe(true);
+  });
+
   it("closes one layer per press: the composer, then the island", async () => {
     await openComposer();
 

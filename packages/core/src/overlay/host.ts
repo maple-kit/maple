@@ -9,6 +9,7 @@
  */
 
 import { OVERLAY_MARKER } from "../anchor/text-position.js";
+import { followModal } from "./modal.js";
 
 /** A mounted overlay root. */
 export interface OverlayHost {
@@ -51,6 +52,7 @@ export function createOverlayHost(options: OverlayHostOptions = {}): OverlayHost
 
   const root = container.attachShadow({ mode: "open" });
   parent.append(container);
+  const unfollow = followModal(container, parent);
 
   return {
     root,
@@ -59,6 +61,7 @@ export function createOverlayHost(options: OverlayHostOptions = {}): OverlayHost
       root.adoptedStyleSheets = [...root.adoptedStyleSheets, createOverlayStyleSheet(css)];
     },
     destroy() {
+      unfollow();
       container.remove();
     },
   };
