@@ -24,6 +24,8 @@ const client = createClient(
   },
 );
 const started = client.start();
+// Evaluated once so the mock's flag list has a JSON value to show.
+void started.then(() => client.jsonVariation("review-routing", {}));
 
 /** A boolean flag's value, `fallback` until the SDK has answered. */
 export function useFlag(key: string, fallback: boolean): boolean {

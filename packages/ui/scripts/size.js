@@ -69,7 +69,8 @@ const FORBIDDEN = [
     entry: "mock/index.js",
     modules: /^(island|composer|marks|picker)\//,
     packages: /^$/,
-    max: 8.5 * 1024,
+    // 8.5 KB until a long flag value wrapped and clamped (a few rules).
+    max: 8.75 * 1024,
   },
   {
     entry: "maple.js",

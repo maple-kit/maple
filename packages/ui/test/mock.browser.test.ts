@@ -792,6 +792,43 @@ describe("flags and who the page is told the reviewer is", () => {
     expect(find('[aria-label="roasts.delete"]')).toBeNull();
   });
 
+  it("clamps a 2 KB JSON flag value, opens it on click, and never scrolls the body sideways", async () => {
+    const big = {
+      rules: Array.from({ length: 70 }, (_, i) => ({ match: `path-${String(i)}/**`, to: "team" })),
+    };
+    expect(JSON.stringify(big).length).toBeGreaterThan(1500);
+    seenFlags().record({ key: "review-routing", type: "object", value: big });
+    const size = { width: window.innerWidth, height: window.innerHeight };
+    await page.viewport(360, 700);
+    try {
+      const client = track(
+        createMockClient({ handle: layered(), view: fakePage().view, defaultOpen: true }),
+      );
+      client.start();
+      await render(createElement(MapleMock, { client }));
+      await unfold();
+      await vi.waitFor(() => expect(find(".mk-mock-rung")).not.toBeNull());
+
+      const body = find<HTMLElement>(".mk-mock-body")!;
+      const value = find<HTMLElement>('[role="button"].mk-mock-rung')!;
+      expect(value.getAttribute("aria-expanded")).toBe("false");
+      expect(value.scrollHeight).toBeGreaterThan(value.clientHeight);
+      expect(body.scrollWidth).toBeLessThanOrEqual(body.clientWidth);
+      expect(value.textContent).toBe(JSON.stringify(big));
+
+      value.click();
+      await vi.waitFor(() => expect(value.getAttribute("aria-expanded")).toBe("true"));
+      expect(value.textContent).toBe(JSON.stringify(big, null, 2));
+      expect(value.scrollHeight).toBeLessThanOrEqual(value.clientHeight);
+      expect(body.scrollWidth).toBeLessThanOrEqual(body.clientWidth);
+
+      value.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      await vi.waitFor(() => expect(value.getAttribute("aria-expanded")).toBe("false"));
+    } finally {
+      await page.viewport(size.width, size.height);
+    }
+  });
+
   it("selects the reviewer's real role, permissions and flags, each marked as real", async () => {
     seenFlags().record({ key: "new-roaster", type: "boolean", value: false });
     const real = layered();

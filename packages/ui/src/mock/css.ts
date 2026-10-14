@@ -74,6 +74,7 @@ function box(): string {
 .mk-mock-body {
   flex: 1 1 auto;
   min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
 }
 
@@ -192,13 +193,17 @@ function calls(): string {
 }
 
 .mk-mock-rung {
-  flex: none;
+  display: -webkit-box;
   padding: 0 6px;
+  overflow: hidden;
   border: 1px solid var(--mk-line);
-  border-radius: 999px;
+  border-radius: 10px;
   color: var(--mk-faint);
   font-size: 10px;
-  white-space: nowrap;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .mk-mock-call[data-mk-mocked="true"] .mk-mock-name {

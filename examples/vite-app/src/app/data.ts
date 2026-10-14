@@ -109,7 +109,23 @@ export const AUDIT: readonly AuditEvent[] = [
   { id: "a1", who: "Ada", what: "changed the digest to daily", when: "2026-09-22T12:05:00Z" },
 ];
 
+/** A JSON-valued flag, about 2 KB on one line: the case a long value has to survive. */
+const ROUTING = {
+  default: { team: "design-review", sla: "2d", notify: ["#reviews", "#design"] },
+  rules: Array.from({ length: 8 }, (_, index) => ({
+    match: { path: `packages/area-${String(index)}/**`, labels: ["ui", "needs-review"] },
+    assign: { team: `team-${String(index)}`, reviewers: 2, escalateAfterHours: 24 + index },
+  })),
+};
+
 /** What the preview's fake LaunchDarkly answers, in its FDv1 poll format. */
 export const LD_FLAGS = {
   "merge-forecast": { value: false, variation: 1, version: 3, flagVersion: 2, trackEvents: false },
+  "review-routing": {
+    value: ROUTING,
+    variation: 0,
+    version: 1,
+    flagVersion: 1,
+    trackEvents: false,
+  },
 };

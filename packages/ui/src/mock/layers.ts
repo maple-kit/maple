@@ -9,9 +9,9 @@ import { createElement, useEffect, useRef, useState } from "react";
 
 import { ChevronIcon } from "../icons/chevron.js";
 
-import type { FlagValue } from "@maple-kit/core/mock";
+import type { FlagValue as FlagValueType } from "@maple-kit/core/mock";
 import type { MockClient, MockClientState, MockFlagRow } from "@maple-kit/mock/client";
-import type { ReactElement, ReactNode, RefObject } from "react";
+import type { KeyboardEvent, ReactElement, ReactNode, RefObject } from "react";
 
 /** The words this chunk says. They load with it. */
 export const LAYER_COPY = {
@@ -160,8 +160,8 @@ export function LayerBanner(props: { readonly state: MockClientState }): ReactNo
 }
 
 function flagRow(flag: MockFlagRow, client: MockClient): ReactNode {
-  const pick = (next: FlagValue | undefined) => client.setFlag(flag.key, next);
-  const values: readonly FlagValue[] =
+  const pick = (next: FlagValueType | undefined) => client.setFlag(flag.key, next);
+  const values: readonly FlagValueType[] =
     flag.type === "boolean" ? [true, false] : (flag.variants ?? []);
   const title = flag.seen
     ? `${LAYER_COPY.realValue}: ${JSON.stringify(flag.value)}`
@@ -171,18 +171,44 @@ function flagRow(flag: MockFlagRow, client: MockClient): ReactNode {
   const real = flag.seen && flag.value !== undefined ? valueLabel(flag.value) : undefined;
   const control =
     values.length === 0
-      ? createElement(
-          "span",
-          { className: "mk-mock-rung" },
-          current ?? valueLabel(flag.value ?? null),
-        )
+      ? createElement(FlagValue, { value: flag.set ?? flag.value ?? null })
       : choices(flag.key, labels, { set: current, real }, (label) =>
           pick(values[labels.indexOf(label ?? "")] ?? undefined),
         );
   return row({ key: `f:${flag.key}`, name: flag.key, set: current !== undefined, title }, control);
 }
 
-function valueLabel(value: FlagValue): string {
+const LONG_VALUE = 32;
+
+/** A flag's value as a pill, clamped to two lines; a long one opens on click to the whole of it. */
+function FlagValue(props: { readonly value: FlagValueType }): ReactElement {
+  const [open, setOpen] = useState(false);
+  const { value } = props;
+  const flat = valueLabel(value);
+  const full = typeof value === "object" && value !== null ? JSON.stringify(value, null, 2) : flat;
+  if (flat.length <= LONG_VALUE && !flat.includes("\n")) {
+    return createElement("span", { className: "mk-mock-rung" }, flat);
+  }
+  return createElement(
+    "span",
+    {
+      role: "button",
+      tabIndex: 0,
+      style: { cursor: "pointer", flexBasis: "100%", ...(open ? { display: "block" } : {}) },
+      className: "mk-mock-rung mk-mono",
+      "aria-expanded": open,
+      onClick: () => setOpen(!open),
+      onKeyDown: (event: KeyboardEvent) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        setOpen(!open);
+      },
+    },
+    open ? full : flat,
+  );
+}
+
+function valueLabel(value: FlagValueType): string {
   if (value === true) return LAYER_COPY.on;
   if (value === false) return LAYER_COPY.off;
   return typeof value === "string" ? value : JSON.stringify(value);
