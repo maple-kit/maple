@@ -169,6 +169,16 @@ contract suite has something to run against. It is not for production.
 needs no network, no model and no configuration, and is what the assist tier
 does with the model tier switched off. See `docs/assist.md`.
 
+### Preview environments
+
+A preview environment is not a connector kind: it reads the request that
+reached a deployment and names the session, and it never talks to a backend.
+Its interface is in [Preview environments](preview.md).
+
+| Preview   | identify | matches | Identity signals, strongest first                        |
+| --------- | -------- | ------- | -------------------------------------------------------- |
+| `mirrord` | ✓        | ✓       | env `MAPLE_PREVIEW_KEY`, `mirrord-key` header, `baggage` |
+
 ## A local store, for a laptop
 
 `fileStore()` and `fileMedia()` keep comments and screenshots as plain files:
@@ -303,11 +313,14 @@ order:
 
 1. **`pull.pullRequest`**: the number the deploy states, used only while that
    pull request is open. A closed or missing one falls through.
-2. **`pull.commit`**: `GET /commits/{sha}/pulls`, which names the pull request
+2. **`pull.branch`**: the exact head branch the deploy states, used only
+   while a pull request on it is open.
+3. **`pull.commit`**: `GET /commits/{sha}/pulls`, which names the pull request
    outright rather than inferring it. Stamp it from whatever your CI sets. A
    commit in several open pull requests (a stack) goes on to the next steps.
-3. **The identifier as the head branch's own name**, which is the plain case.
-4. **`pull.matches(head, identifier)`**: asked of each open pull request, most
+4. **The identifier as the head branch's own name**, which is the plain case. With
+   `openOnly`, as a preview sets it, a closed pull request is never the answer.
+5. **`pull.matches(head, identifier)`**: asked of each open pull request, most
    recently updated first, so an application supplies its own rule and not a
    GitHub client. Exactly one match resolves; several throw
    `AmbiguousPullError` and nothing is guessed.

@@ -227,6 +227,7 @@ Run `maple connectors` to print the matrix from the code, or see
 
 - [`maple review`](docs/review.md): the overlay on a running app, nothing wired in
 - [Configuration](docs/configuration.md): every environment variable, and which are secrets
+- [Preview environments](docs/preview.md): tell Maple which session a deployment serves, starting with mirrord
 - [Examples: Vite](examples/vite-app/README.md) and [Next](examples/next-app/README.md): real applications Maple mounts into
 - [The CLI](packages/cli/README.md): `review`, `solo`, `setup`, `connectors`, `mock plan`
 
