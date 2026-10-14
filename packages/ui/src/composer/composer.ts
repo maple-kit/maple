@@ -14,6 +14,7 @@ import { createElement, forwardRef, Fragment, useEffect, useMemo, useState } fro
 import { useMapleUi } from "../context.js";
 import { dataAttributes } from "../data.js";
 import { Slot } from "../slot.js";
+import { useRestoreFocus } from "./focus.js";
 import { createPreviews, createUploadSeam } from "./held.js";
 import { useInset } from "./inset.js";
 import { useHoldToPeek } from "./peek.js";
@@ -78,6 +79,7 @@ export const MapleComposer = /** @__PURE__ */ forwardRef<HTMLElement, MapleCompo
 
     if (motion.open !== composer.open) setMotion({ open: composer.open, moving: true });
     useInset(props.inset, composer.open ? panel : null, view);
+    useRestoreFocus(composer.open, container);
 
     const Element = (props.asChild ? Slot : "section") as "section";
     const grabber = createElement(Grabber, { detent: scope.detent, toggle: scope.toggleDetent });
