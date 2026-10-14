@@ -206,6 +206,12 @@ function calls(): string {
   -webkit-box-orient: vertical;
 }
 
+.mk-mock-sum {
+  flex-basis: 100%;
+  color: var(--mk-faint);
+  font-size: 11px;
+}
+
 .mk-mock-call[data-mk-mocked="true"] .mk-mock-name {
   color: var(--mk-fg);
 }

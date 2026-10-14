@@ -59,4 +59,11 @@ export {
   readSchemaDocument,
   SHAPE_SOURCES,
 } from "./shape.js";
-export type { JsonSchema, SchemaDocument, Shape, ShapeIndex, ShapeSource } from "./shape.js";
+export type {
+  CallEntry,
+  JsonSchema,
+  SchemaDocument,
+  Shape,
+  ShapeIndex,
+  ShapeSource,
+} from "./shape.js";

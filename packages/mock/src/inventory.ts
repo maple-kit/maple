@@ -26,6 +26,8 @@ export interface Inventory {
   sample(key: string, route: string): Sample | undefined;
   /** Every call seen on `route`, most recent first. */
   calls(route: string): readonly Sample[];
+  /** Every call seen on any route, newest route and newest call first, each key once. */
+  all(): readonly Sample[];
   /** Called after every record. Returns the unsubscribe. */
   subscribe(listener: () => void): () => void;
 }
@@ -76,6 +78,15 @@ export function createInventory(options: InventoryOptions = {}): Inventory {
     },
     calls(route) {
       return [...(routes.get(route)?.values() ?? [])].reverse();
+    },
+    all() {
+      const found = new Map<string, Sample>();
+      for (const calls of [...routes.values()].reverse()) {
+        for (const sample of [...calls.values()].reverse()) {
+          if (!found.has(sample.key)) found.set(sample.key, sample);
+        }
+      }
+      return [...found.values()];
     },
     subscribe(listener) {
       listeners.add(listener);

@@ -18,9 +18,11 @@ import { forgetRecipe, keepRecipeCookie, saveRecipe } from "../link.js";
 import { pathPattern } from "../rest.js";
 import { PlanFailedError, PlanUnavailableError } from "../schema/plan.js";
 import { PLAN_DEBOUNCE_MS, PLAN_MIN_LENGTH, planCall } from "./plan.js";
+import { searchCalls } from "./search.js";
 
 import type { SeenFlag } from "../flags.js";
 import type { MockHandle } from "../interceptor.js";
+import type { CallResults } from "./search.js";
 import type { Scheme, ThemeView } from "@maple-kit/core/client";
 import type { MockSuggestion, PlanReading } from "@maple-kit/core/mock";
 import type { FlagValue, IdentityRules, MockIdentity } from "@maple-kit/core/mock";
@@ -77,6 +79,9 @@ export interface MockFlagRow {
   readonly seen: boolean;
 }
 
+/** Which "Search all" the box has open: the page's calls, or its flags. */
+export type MockSearch = "calls" | "flags";
+
 /** The reviewer's real role and permissions, which a surface draws as the defaults. */
 export interface RealAs {
   readonly role?: string;
@@ -116,6 +121,10 @@ export interface MockClientState {
   readonly changed: boolean;
   /** The flags the page evaluated, then any the draft names that it did not. */
   readonly flags: readonly MockFlagRow[];
+  /** Which search is open. Always undefined while the box is shut. */
+  readonly search: MockSearch | undefined;
+  /** True when some flag source offered flags, so "Search all flags" has something to search. */
+  readonly canSearchFlags: boolean;
   /** What Apply would answer flags with. Starts as the active recipe's. */
   readonly draftFlags: Readonly<Record<string, FlagValue>>;
   /** The host's rules for who the page is told the reviewer is, once read. */
@@ -150,6 +159,15 @@ export interface MockClient {
   setQuery(query: string): void;
   /** Puts a call in a state, or takes it out of the draft when undefined. */
   choose(key: string, state: MockState | undefined): void;
+  /** Opens a search, or closes it when undefined. Nothing is read until the search asks. */
+  setSearch(search: MockSearch | undefined): void;
+  /**
+   * One page of the calls matching `query`: the tab's own, then the route's.
+   * The first page has no cursor. Throws when the route fails.
+   */
+  searchCalls(query: string, cursor?: string, signal?: AbortSignal): Promise<CallResults>;
+  /** Every flag the page was offered whose key holds `query`, case aside. Reads memory only. */
+  searchFlags(query: string): readonly MockFlagRow[];
   /** Answers a flag with `value`, or lets it keep its real value when undefined. */
   setFlag(key: string, value: FlagValue | undefined): void;
   /** Shows the page this role, or its real one when undefined. Reloads when the server renders identity. */
@@ -231,6 +249,12 @@ export function createMockClient(options: MockClientOptions = {}): MockClient {
     },
     setOpen: (open) => patch(runtime, { open }),
     toggle: () => patch(runtime, { open: !runtime.state.open }),
+    setSearch: (search) => patch(runtime, { search }),
+    searchCalls: (query, cursor, signal) => {
+      if (runtime.handle === undefined) return Promise.resolve({ hits: [], schemas: false });
+      return searchCalls(runtime.handle, query, cursor, signal);
+    },
+    searchFlags: (query) => searchFlags(query, runtime.state.draftFlags),
     setQuery(query) {
       patch(runtime, { query });
       if (query.trim() === "") restore(runtime);
@@ -271,6 +295,8 @@ function initial(open: boolean): MockClientState {
     active: undefined,
     changed: false,
     flags: [],
+    search: undefined,
+    canSearchFlags: false,
     draftFlags: {},
     identity: undefined,
     draftAs: undefined,
@@ -292,6 +318,8 @@ function derive(runtime: Runtime, next: Partial<MockClientState>): MockClientSta
     active,
     calls: rows(runtime, route, merged),
     flags: flagRows(route, merged.draftFlags),
+    search: merged.open ? merged.search : undefined,
+    canSearchFlags: runtime.handle !== undefined && seenFlags().known().length > 0,
     realAs: realAsOn(runtime, route, merged.identity),
     writes: runtime.handle?.writes?.list().length ?? 0,
     changed: changed(merged, active),
@@ -333,10 +361,10 @@ function start(runtime: Runtime): void {
   patch(runtime, { scheme: theme.current().overlay });
 }
 
-/** Escape shuts the box if it is open, and says whether it was. */
+/** Escape shuts an open search first, then the box, and says whether it shut anything. */
 function closeBox(runtime: Runtime): boolean {
   if (!runtime.state.open) return false;
-  patch(runtime, { open: false });
+  patch(runtime, runtime.state.search === undefined ? { open: false } : { search: undefined });
   return true;
 }
 
@@ -559,16 +587,33 @@ function pageFlags(route: string): readonly SeenFlag[] {
   return [...known, ...server];
 }
 
+/** Every flag offered to the page, most recent first, whose key holds `query`. */
+function searchFlags(query: string, draft: Readonly<Record<string, FlagValue>>): MockFlagRow[] {
+  const text = query.trim().toLowerCase();
+  return seenFlags()
+    .known()
+    .toReversed()
+    .filter((flag) => flag.key.toLowerCase().includes(text))
+    .map((flag): MockFlagRow => {
+      const set = draft[flag.key];
+      return { ...flag, seen: true, ...(set === undefined ? {} : { set }) };
+    });
+}
+
 /** The flags evaluated, most recent first, then those only the draft names. */
 function flagRows(route: string, draft: Readonly<Record<string, FlagValue>>): MockFlagRow[] {
   const seen = pageFlags(route).toReversed();
+  const offered = seenFlags().known();
   const named = Object.entries(draft).filter(([key]) => !seen.some((flag) => flag.key === key));
   return [
     ...seen.map((flag): MockFlagRow => {
       const set = draft[flag.key];
       return { ...flag, seen: true, ...(set === undefined ? {} : { set }) };
     }),
-    ...named.map(([key, set]): MockFlagRow => ({ key, type: flagType(set), set, seen: false })),
+    ...named.map(([key, set]): MockFlagRow => {
+      const known = offered.find((flag) => flag.key === key);
+      return { ...(known ?? { key, type: flagType(set) }), set, seen: false };
+    }),
   ];
 }
 

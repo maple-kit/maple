@@ -16,9 +16,16 @@ import { fnv1a32 } from "../lib/fnv1a.js";
 import { handleApprovals } from "./approvals.js";
 import { createAssist } from "./assist.js";
 import { endLink, finishLink, githubState, linkFailure, startLink } from "./auth.js";
+import { createLimiter } from "./budget.js";
 import { contextAnswer, createPreviewRoute, previewStore, readPreview } from "./context.js";
 import { gateFor } from "./gate.js";
-import { createMockSchemas, MOCK_SCHEMA_KEYS, shapesFor } from "./mock.js";
+import {
+  callsFor,
+  createMockSchemas,
+  MOCK_CALLS_QUERY,
+  MOCK_SCHEMA_KEYS,
+  shapesFor,
+} from "./mock.js";
 import { createMockPlanner } from "./plan.js";
 import { createRefreshAccess, handleRefresh } from "./refresh.js";
 
@@ -43,6 +50,7 @@ import type {
 } from "../types.js";
 import type { Assist, AssistOptions } from "./assist.js";
 import type { GitHubAuthOptions } from "./auth.js";
+import type { Limiter, RateLimit } from "./budget.js";
 import type { PreviewGitHub, PreviewReading, PreviewRoute } from "./context.js";
 import type { GateResolver } from "./gate.js";
 import type { MockRouteOptions, MockSchemas } from "./mock.js";
@@ -112,7 +120,7 @@ export interface RouteOptions {
    */
   readonly advisoryAuthors?: readonly string[];
   /**
-   * Maple Mock's `/mock/schema`, `/mock/plan` and `/mock/identity`, for a
+   * Maple Mock's `/mock/schema`, `/mock/calls`, `/mock/plan` and `/mock/identity`, for a
    * preview that asked. Absent, or with `preview` false, each answers 404.
    */
   readonly mock?: MockRouteOptions;
@@ -147,6 +155,9 @@ const COMMIT = /^[0-9a-f]{7,40}$/;
 const COLOR_SLOTS = 10;
 
 /** Creates the request handler. Web-standard in, web-standard out. */
+/** A search runs as the reviewer types; this is the plan's own default rate. */
+const CALLS_RATE: RateLimit = { limit: 40, windowMs: 60_000 };
+
 /** Everything built once, when the handler is, rather than per request. */
 interface Mount {
   readonly options: RouteOptions;
@@ -154,6 +165,8 @@ interface Mount {
   readonly assist: Assist | undefined;
   /** Undefined when the route serves no shapes. */
   readonly mock: MockSchemas | undefined;
+  /** Counts `/mock/calls` searches; shares the plan's rate when it has one. */
+  readonly callsLimiter: Limiter;
   /** Undefined when nothing plans: no `mock.plan`, or a classifier without `plan`. */
   readonly planner: MockPlanner | undefined;
   /** Undefined when `gateRefresh` is not configured. */
@@ -176,6 +189,7 @@ export function createMapleHandler(given: RouteOptions): (request: Request) => P
     options,
     assist: options.assist === undefined ? undefined : createAssist(options.assist),
     mock,
+    callsLimiter: createLimiter(plan?.rate ?? CALLS_RATE),
     planner: mock && plan ? createMockPlanner(plan, mock) : undefined,
     refresh:
       options.gateRefresh === undefined ? undefined : createRefreshAccess(options.gateRefresh),
@@ -252,6 +266,7 @@ const FIXED: ReadonlyMap<string, (mount: Mount, request: Request, url: URL) => P
   new Map([
     ["/assist", (mount, request) => judge(mount, request)],
     ["/mock/schema", (mount, request, url) => mockSchema(mount, request, url)],
+    ["/mock/calls", (mount, request, url) => mockCalls(mount, request, url)],
     ["/mock/plan", (mount, request) => mockPlan(mount, request)],
     ["/mock/identity", (mount, request) => mockIdentity(mount, request)],
     ["/auth/github", (mount, request) => link(mount.options, request)],
@@ -686,6 +701,28 @@ async function mockSchema(mount: Mount, request: Request, url: URL): Promise<Res
     return json({ error: `Ask for between 1 and ${MOCK_SCHEMA_KEYS} keys` }, 400);
   }
   return json({ shapes: await shapesFor(mock, keys) }, 200);
+}
+
+/**
+ * The calls the documents describe, for a search the box opens on demand.
+ * Gated as the shapes are, and counted per reviewer on the plan's rate.
+ */
+async function mockCalls(mount: Mount, request: Request, url: URL): Promise<Response> {
+  const { callsLimiter, mock, options } = mount;
+  if (mock === undefined || !mock.preview) return json({ error: "Not found" }, 404);
+  if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
+
+  const user = await options.identity?.resolveUser(identityRequest(request));
+  if (options.identity !== undefined && user === null) {
+    return json({ error: "Sign in to search calls" }, 401);
+  }
+  const query = url.searchParams.get("q") ?? "";
+  const cursor = url.searchParams.get("cursor") ?? "0";
+  if (query.length > MOCK_CALLS_QUERY || !/^\d{1,9}$/.test(cursor)) {
+    return json({ error: "Search for up to 200 characters, from a cursor the route gave" }, 400);
+  }
+  if (!callsLimiter.take(user?.id ?? "anonymous")) return json({ error: "Too many searches" }, 429);
+  return json(await callsFor(mock, query, Number(cursor)), 200);
 }
 
 /**

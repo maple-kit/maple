@@ -16,8 +16,11 @@ import { gzipSync } from "node:zlib";
 
 const DIST = resolve(dirname(fileURLToPath(import.meta.url)), "..", "dist");
 
-/** The mock box alone, which is also what a page with no `<Maple />` carries. */
-const MOCK_MAX = 4.1 * 1024;
+/**
+ * The mock box alone, which is also what a page with no `<Maple />` carries.
+ * 4.25 KB for the two quiet "Search all" buttons; the search itself loads later.
+ */
+const MOCK_MAX = 4.25 * 1024;
 
 /** Each budget is the gzipped size of the modules only that column reaches. */
 const BUDGETS = [
@@ -51,6 +54,8 @@ const BUDGETS = [
     entries: ["mock/layers.js"],
     max: 2.75 * 1024,
   },
+  // Loaded only when a reviewer opens "Search all APIs" or "Search all flags".
+  { name: "the box's search, loaded on demand", entries: ["mock/search.js"], max: 2 * 1024 },
   // 1 KB until the sign-in steps and the linked branch chip joined it.
   { name: "the default composition, on top", entries: ["maple.js"], max: 1.5 * 1024 },
 ];

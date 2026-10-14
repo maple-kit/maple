@@ -62,7 +62,8 @@ if (__MAPLE_PREVIEW__) {
 ```
 
 `route` is where Maple's route is mounted. Nothing under it is mocked, its
-`/mock/schema` answers each call's shape, and its `/mock/plan` reads a
+`/mock/schema` answers each call's shape, its `/mock/calls` lists the calls
+its documents describe (for the box's search), and its `/mock/plan` reads a
 sentence. Behind a build-time constant, a production build drops the import
 entirely.
 

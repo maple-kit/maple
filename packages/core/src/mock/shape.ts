@@ -43,10 +43,22 @@ export interface SchemaDocument {
   readonly prefix?: string;
 }
 
+/** One call a document describes, as `/mock/calls` lists it. */
+export interface CallEntry {
+  readonly key: string;
+  /** The operation's HTTP method, upper case. */
+  readonly method: string;
+  /** A REST path, or a tRPC procedure's name. */
+  readonly path: string;
+  readonly summary?: string;
+}
+
 /** Shapes by call key, with REST path templates matched. */
 export interface ShapeIndex {
   find(key: string): Shape | undefined;
   readonly size: number;
+  /** Every call the documents describe, in document order, without repeats. */
+  readonly calls: readonly CallEntry[];
 }
 
 /** The extension `maple mock schema` stamps on a document it writes. */
@@ -92,11 +104,13 @@ export function readSchemaDocument(
 export function createShapeIndex(documents: readonly SchemaDocument[]): ShapeIndex {
   const exact = new Map<string, Shape>();
   const templates: { method: string; segments: string[]; shape: Shape }[] = [];
+  const calls: CallEntry[] = [];
 
   for (const source of documents) {
-    for (const [key, shape] of shapesOf(source)) {
+    for (const [key, shape, entry] of shapesOf(source)) {
       if (exact.has(key)) continue;
       exact.set(key, shape);
+      calls.push(entry);
       const rest = /^rest:([A-Z]+) (.*)$/.exec(key);
       if (rest?.[2]?.includes("{")) {
         templates.push({ method: rest[1]!, segments: rest[2].split("/"), shape });
@@ -106,6 +120,7 @@ export function createShapeIndex(documents: readonly SchemaDocument[]): ShapeInd
 
   return {
     size: exact.size,
+    calls,
     find(key) {
       const found = exact.get(key);
       if (found !== undefined) return found;
@@ -120,11 +135,11 @@ export function createShapeIndex(documents: readonly SchemaDocument[]): ShapeInd
 }
 
 /** One document's shapes by key. An operation with no JSON 2xx response has none. */
-function shapesOf(source: SchemaDocument): [string, Shape][] {
+function shapesOf(source: SchemaDocument): [string, Shape, CallEntry][] {
   const doc = isRecord(source.document) ? source.document : {};
   const paths = isRecord(doc["paths"]) ? doc["paths"] : {};
   const components = doc["components"];
-  const found: [string, Shape][] = [];
+  const found: [string, Shape, CallEntry][] = [];
 
   for (const [path, item] of Object.entries(paths)) {
     if (!isRecord(item)) continue;
@@ -133,7 +148,7 @@ function shapesOf(source: SchemaDocument): [string, Shape][] {
       if (schema === undefined) continue;
       const key = keyOf(source, path, method);
       const root = components === undefined ? schema : withComponents(schema, components);
-      found.push([key, shapeFor(root, source)]);
+      found.push([key, shapeFor(root, source), entryOf(key, method, item[method])]);
     }
   }
   return found;
@@ -144,6 +159,17 @@ function shapeFor(schema: JsonSchema, source: SchemaDocument): Shape {
     schema,
     source: source.source ?? "supplied",
     ...(source.superjson === true ? { superjson: true } : {}),
+  };
+}
+
+function entryOf(key: string, method: string, operation: unknown): CallEntry {
+  const summary = isRecord(operation) ? operation["summary"] : undefined;
+  const rest = key.startsWith("rest:");
+  return {
+    key,
+    method: method.toUpperCase(),
+    path: key.slice(key.indexOf(rest ? " " : ":") + 1),
+    ...(typeof summary === "string" && summary !== "" ? { summary } : {}),
   };
 }
 

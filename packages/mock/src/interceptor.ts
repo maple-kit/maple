@@ -20,6 +20,7 @@ import { createInventory } from "./inventory.js";
 import { forgetRecipe, keepRecipeCookie, readRecipe, saveRecipe } from "./link.js";
 import { record, resolve, splitRequest } from "./resolve.js";
 import { isJson, pathPattern, restCodec } from "./rest.js";
+import { routeCalls } from "./schema/calls.js";
 import { routeIdentity } from "./schema/identity.js";
 import { routePlan } from "./schema/plan.js";
 import { routeShapes } from "./schema/route.js";
@@ -29,6 +30,7 @@ import { createWriteLog } from "./writes.js";
 import type { Codec } from "./codec.js";
 import type { Flags, FlagSource } from "./flag-source.js";
 import type { Inventory } from "./inventory.js";
+import type { CallsLookup } from "./schema/calls.js";
 import type { PlanLookup } from "./schema/plan.js";
 import type { ShapeLookup } from "./schema/shape.js";
 import type { WriteLog } from "./writes.js";
@@ -49,7 +51,7 @@ export interface InstallOptions {
   readonly fetch?: typeof fetch;
   /**
    * Where Maple's route is mounted, such as `/api/maple`. Nothing under it is
-   * recorded or mocked; `/mock/schema` answers shapes and `/mock/plan` plans.
+   * recorded or mocked; `/mock/schema` answers shapes, `/mock/calls` searches calls and `/mock/plan` plans.
    */
   readonly route?: string;
   /** Each call's shape, in place of the route's. */
@@ -67,6 +69,8 @@ export interface MockHandle {
   readonly inventory: Inventory;
   /** Each call's shape, when the page has a source for them. */
   readonly shape?: ShapeLookup;
+  /** Lists every call the route's documents describe, when the page names a route. */
+  readonly calls?: CallsLookup;
   /** Plans a sentence through Maple's route, when the page names one. */
   readonly plan?: PlanLookup;
   /** Where the box reports what it cannot do, such as a plan the route refused. */
@@ -175,6 +179,7 @@ export function installMock(options: InstallOptions = {}): MockHandle {
     inventory,
     ...(shape === undefined ? {} : { shape }),
     ...(plan === undefined ? {} : { plan }),
+    ...callsOf(options, forward),
     ...(options.logger === undefined ? {} : { logger: options.logger }),
     current: () => (recipe?.route === undefined || recipe.route === route() ? recipe : undefined),
     writes,
@@ -270,6 +275,11 @@ async function checkedRules(
     options.logger?.warn("The mock names a role the identity rules do not list.", { role });
   }
   return rules;
+}
+
+function callsOf(options: InstallOptions, forward: typeof fetch): { calls?: CallsLookup } {
+  if (options.route === undefined) return {};
+  return { calls: routeCalls({ basePath: options.route, fetch: forward }) };
 }
 
 function shapeLookup(options: InstallOptions, forward: typeof fetch): ShapeLookup | undefined {

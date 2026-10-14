@@ -10,7 +10,7 @@ import { identityRules, isServerIdentity, serverIdentityRules } from "../mock/id
 import { createShapeIndex } from "../mock/shape.js";
 
 import type { IdentityRules, IdentitySource } from "../mock/identity.js";
-import type { SchemaDocument, Shape, ShapeIndex } from "../mock/shape.js";
+import type { CallEntry, SchemaDocument, Shape, ShapeIndex } from "../mock/shape.js";
 import type { MockPlanOptions } from "./plan.js";
 
 /** How the route serves shapes. */
@@ -36,6 +36,12 @@ export interface MockRouteOptions {
 
 /** The most keys one request may ask about: the box asks for a route's calls at once. */
 export const MOCK_SCHEMA_KEYS = 100;
+
+/** How many calls one `/mock/calls` page lists. */
+export const MOCK_CALLS_PAGE = 20;
+
+/** The longest search a request may carry. */
+export const MOCK_CALLS_QUERY = 200;
 
 /** What the handler holds: the index, built on first use. */
 export interface MockSchemas {
@@ -82,6 +88,34 @@ export async function shapesFor(
     if (shape !== undefined) found[key] = shape;
   }
   return found;
+}
+
+/** One page of the calls the documents describe. */
+export interface CallsPage {
+  readonly calls: readonly CallEntry[];
+  /** Where the next page starts; absent on the last. */
+  readonly next?: string;
+}
+
+/**
+ * The calls whose method, path or summary hold every word of `query`, case
+ * aside, a page at a time. The cursor is an offset into the matches.
+ */
+export async function callsFor(
+  schemas: MockSchemas,
+  query: string,
+  offset: number,
+): Promise<CallsPage> {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  const matches = (await schemas.index()).calls.filter((call) => {
+    const text = `${call.method} ${call.path} ${call.summary ?? ""}`.toLowerCase();
+    return words.every((word) => text.includes(word));
+  });
+  const end = offset + MOCK_CALLS_PAGE;
+  return {
+    calls: matches.slice(offset, end),
+    ...(end < matches.length ? { next: String(end) } : {}),
+  };
 }
 
 async function documents(source: MockRouteOptions["schemas"]): Promise<readonly SchemaDocument[]> {

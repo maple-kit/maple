@@ -152,3 +152,104 @@ describe("GET /mock/identity", () => {
     expect((await gated(read({ headers: { cookie: "session=ok" } }))).status).toBe(200);
   });
 });
+
+describe("GET /mock/calls", () => {
+  const operation = (summary?: string) => ({
+    get: {
+      ...(summary === undefined ? {} : { summary }),
+      responses: { "200": { content: { "application/json": { schema: { type: "object" } } } } },
+    },
+  });
+  const many: SchemaDocument = {
+    codec: "rest",
+    prefix: "/api",
+    document: {
+      paths: {
+        "/orders": operation("List orders"),
+        "/orders/{id}": operation("One order"),
+        "/beans": operation(),
+        ...Object.fromEntries(Array.from({ length: 24 }, (_, n) => [`/bulk/${n}`, operation()])),
+      },
+    },
+  };
+  const list = (query: string, init?: RequestInit) =>
+    new Request(`${BASE}/mock/calls?${query}`, init);
+
+  it("lists 20 calls a page, and the cursor reaches the rest", async () => {
+    const handle = createMapleHandler({ mock: { preview: true, schemas: [many] } });
+    const first = (await (await handle(list(""))).json()) as { calls: unknown[]; next?: string };
+    expect(first.calls).toHaveLength(20);
+    expect(first.next).toBe("20");
+
+    const second = (await (await handle(list("cursor=20"))).json()) as {
+      calls: unknown[];
+      next?: string;
+    };
+    expect(second.calls).toHaveLength(7);
+    expect(second.next).toBeUndefined();
+  });
+
+  it("matches the query on path and summary, whatever the case", async () => {
+    const handle = createMapleHandler({ mock: { preview: true, schemas: [many] } });
+    const byPath = await handle(list("q=BEANS"));
+    await expect(byPath.json()).resolves.toEqual({
+      calls: [{ key: "rest:GET /api/beans", method: "GET", path: "/api/beans" }],
+    });
+    const bySummary = await handle(list("q=one+order"));
+    await expect(bySummary.json()).resolves.toEqual({
+      calls: [
+        {
+          key: "rest:GET /api/orders/{id}",
+          method: "GET",
+          path: "/api/orders/{id}",
+          summary: "One order",
+        },
+      ],
+    });
+  });
+
+  it("answers an empty list when no schemas are configured", async () => {
+    const handle = createMapleHandler({ mock: { preview: true } });
+    await expect((await handle(list(""))).json()).resolves.toEqual({ calls: [] });
+  });
+
+  it.each([
+    ["no mock options at all", {}],
+    ["a build that is not a preview", { mock: { preview: false, schemas: [many] } }],
+  ])("answers 404 with %s", async (_name, options) => {
+    expect((await createMapleHandler(options)(list(""))).status).toBe(404);
+  });
+
+  it("answers 405 to anything but GET, and 400 to a bad cursor or a long query", async () => {
+    const handle = createMapleHandler({ mock: { preview: true, schemas: [many] } });
+    expect((await handle(list("", { method: "POST" }))).status).toBe(405);
+    expect((await handle(list("cursor=-1"))).status).toBe(400);
+    expect((await handle(list("cursor=abc"))).status).toBe(400);
+    expect((await handle(list(`q=${"a".repeat(201)}`))).status).toBe(400);
+  });
+
+  it("serves only a resolved reviewer when an identity connector is set", async () => {
+    const handle = createMapleHandler({
+      identity: signedIn,
+      mock: { preview: true, schemas: [many] },
+    });
+    expect((await handle(list(""))).status).toBe(401);
+    expect((await handle(list("", { headers: { cookie: "session=ok" } }))).status).toBe(200);
+  });
+
+  it("counts searches against the reviewer, on the plan's rate", async () => {
+    const classifier = { name: "c", classify: () => Promise.resolve({}) };
+    const handle = createMapleHandler({
+      identity: signedIn,
+      mock: {
+        preview: true,
+        schemas: [many],
+        plan: { classifier: classifier as never, rate: { limit: 2, windowMs: 60_000 } },
+      },
+    });
+    const ok = { headers: { cookie: "session=ok" } };
+    expect((await handle(list("", ok))).status).toBe(200);
+    expect((await handle(list("", ok))).status).toBe(200);
+    expect((await handle(list("", ok))).status).toBe(429);
+  });
+});

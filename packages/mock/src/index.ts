@@ -40,6 +40,8 @@ export type { RecipeSources } from "./link.js";
 export { resolve } from "./resolve.js";
 export type { ResolveOptions } from "./resolve.js";
 export { isJson, pathPattern, restCodec, restKey } from "./rest.js";
+export { CallsFailedError, CallsUnavailableError, routeCalls } from "./schema/calls.js";
+export type { CallsLookup, CallsPage, RouteCallsOptions } from "./schema/calls.js";
 export { routeIdentity } from "./schema/identity.js";
 export type { RouteIdentityOptions } from "./schema/identity.js";
 export {

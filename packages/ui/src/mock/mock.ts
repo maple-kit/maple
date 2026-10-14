@@ -26,6 +26,7 @@ import { cx } from "../cx.js";
 import { CodeIcon } from "../icons/code.js";
 import { LinkIcon } from "../icons/link.js";
 import { SCHEME_ATTRIBUTE } from "../sheet-base.js";
+import { button } from "./button.js";
 import {
   bannerSentence,
   callName,
@@ -37,7 +38,6 @@ import {
 import { Menu } from "./menu.js";
 import { MOCK_CSS } from "./sheet.js";
 
-import type { IconComponent } from "../icons/icon.js";
 import type { MenuOption } from "./menu.js";
 import type { MockState } from "@maple-kit/core/mock";
 import type { OverlayHost } from "@maple-kit/core/overlay";
@@ -114,26 +114,30 @@ interface SurfaceProps {
 }
 
 type LayerChunk = typeof import("./layers.js");
+type SearchChunk = typeof import("./search.js");
 
 function MockSurface(props: SurfaceProps): ReactElement {
   const { client, state } = props;
-  const layers = useLayers(state);
+  const { active } = state;
+  const flagged = !!(state.identity ?? state.flags[0] ?? active?.as ?? active?.flags);
+  const layers = useChunk(() => import("./layers.js"), flagged || state.canSearchFlags);
+  const search = useChunk(() => import("./search.js"), state.search !== undefined);
   return createElement(
     "div",
     { className: "mk-mock-surface" },
     state.active === undefined ? null : createElement(Banner, { client, state, layers }),
-    state.open ? createElement(Box, { ...props, layers }) : null,
+    state.open ? createElement(Box, { ...props, layers, search }) : null,
   );
 }
 
-/** The flags and identity chunk, loaded once something on the page needs it. */
-function useLayers(state: MockClientState): LayerChunk | undefined {
-  const [chunk, setChunk] = useState<LayerChunk>();
-  const { active } = state;
-  const needed = !!(state.identity ?? state.flags[0] ?? active?.as ?? active?.flags);
+/** A chunk, loaded once, the first time something on the page wants it. */
+function useChunk<T>(load: () => Promise<T>, wanted: boolean): T | undefined {
+  const [chunk, setChunk] = useState<T>();
   useEffect(() => {
-    if (needed) import("./layers.js").then(setChunk, () => undefined);
-  }, [needed]);
+    if (wanted) load().then(setChunk, () => undefined);
+    // `load` only names a chunk; `wanted` is what changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wanted]);
   return chunk;
 }
 
@@ -158,8 +162,10 @@ function Banner(props: {
   );
 }
 
-function Box(props: SurfaceProps & { layers: LayerChunk | undefined }): ReactElement {
-  const { className, client, forwarded, layers, state } = props;
+function Box(
+  props: SurfaceProps & { layers: LayerChunk | undefined; search: SearchChunk | undefined },
+): ReactElement {
+  const { className, client, forwarded, layers, search, state } = props;
   const field = useRef<HTMLInputElement>(null);
   useEffect(() => field.current?.focus(), []);
 
@@ -201,10 +207,26 @@ function Box(props: SurfaceProps & { layers: LayerChunk | undefined }): ReactEle
         createElement("span", { className: "mk-mono" }, state.route),
       ),
       calls(state, client),
-      layers && createElement(layers.Layers, { state, client }),
+      searchAll(state, client, search),
+      layers && createElement(layers.Layers, { state, client, search }),
     ),
     createElement(Foot, { client, state }),
   );
+}
+
+/** Under the calls: a quiet button, which opens the search in its place. */
+function searchAll(
+  state: MockClientState,
+  client: MockClient,
+  search: SearchChunk | undefined,
+): ReactNode {
+  if (state.search === "calls" && search) {
+    return createElement(search.Search, { kind: "calls", state, client });
+  }
+  return button(MOCK_COPY.searchApis, () => client.setSearch("calls"), {
+    quiet: true,
+    search: "calls",
+  });
 }
 
 /** The line under the field, when the sentence was not turned into a chip. */
@@ -316,28 +338,4 @@ function Foot(props: { state: MockClientState; client: MockClient }): ReactEleme
 function label(copied: Copied | undefined, what: Copy, idle: string): string {
   if (copied?.what !== what) return idle;
   return copied.ok ? MOCK_COPY.copied : MOCK_COPY.copyFailed;
-}
-
-interface ButtonFlags {
-  readonly disabled?: boolean;
-  readonly primary?: boolean;
-  /** A secondary action: no border, so it reads apart from the one beside it. */
-  readonly quiet?: boolean;
-  readonly icon?: IconComponent;
-}
-
-function button(text: string, onClick: () => void, flags: ButtonFlags = {}): ReactElement {
-  return createElement(
-    "button",
-    {
-      type: "button",
-      className: "mk-mock-button mk-press",
-      disabled: flags.disabled === true,
-      "data-mk-primary": flags.primary === true ? "true" : undefined,
-      "data-mk-quiet": flags.quiet === true ? "true" : undefined,
-      onClick,
-    },
-    flags.icon && createElement(flags.icon),
-    text,
-  );
 }

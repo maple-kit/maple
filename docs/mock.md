@@ -310,6 +310,15 @@ and leaves out any it has none for. It answers 404 unless `preview` is true,
 and 401 to a reviewer the identity connector does not resolve, when there is
 one. The documents are normalised on the first request, not at startup.
 
+**The route lists its calls, on demand.** `GET {base}/mock/calls?q=&cursor=`
+answers `{ calls: [{ key, method, path, summary? }], next? }`, twenty to a page,
+from the same documents. `q` matches each of its words in the method, the path or
+the summary, case aside; `cursor` is the `next` the last page gave. It is gated
+as `/mock/schema` is (404 unless `preview`, 401 to an unresolved reviewer) and
+counted per reviewer on the plan's `rate`, 40 a minute by default, since a
+search runs as the reviewer types (429 past it). With no `schemas` it answers an
+empty list. Only the box's "Search all APIs" asks, and only once it is opened.
+
 **The schema never reaches the page's bundle.** `installMock({ route })` reads
 shapes from the route as calls need them, through the real `fetch`, one request
 for every key asked in the same tick, and keeps every answer, a miss included,
@@ -770,6 +779,27 @@ Inside an open menu, Escape closes only the menu, which keeps its own Escape as
 an open `popover="auto"`.
 Inside `<Maple />` it is `Maple.Mock`, the same part, in the overlay's own
 shadow root.
+
+**Search reaches what capture missed.** Under the calls, a quiet "Search all
+APIs"; under the flags, "Search all flags". Clicking one opens a focused field
+in place, and only then loads: its code is a chunk of its own, and the box has
+asked the route nothing before. Twenty results show at a time, with "Show more".
+A result carries the state pick a listed row has; choosing a state joins the
+draft, and the result is marked "added". Escape closes the search and keeps what
+was added; the box stays open until the next Escape (`closeBox` in
+`@maple-kit/mock/client` closes the search first).
+
+- **APIs.** The tab's own calls across every route come first
+  (`Inventory.all()`, newest first), since they carry a real body, then the
+  calls `/mock/calls` lists. A call the page recorded is not listed twice: a
+  document's `/orders/{id}` is the `/orders/:id` a recorded call carries, and a
+  recipe names the second. A call only a document describes is drafted from its
+  schema, which `/mock/schema?key=` serves like any other. With no schemas (an
+  empty list, or a 404) only the tab's calls are searched, and the box says so
+  in one muted line.
+- **Flags.** The known set, the flags the page was offered: a substring of the
+  key, case aside, in memory, with no request. A host with no flag source has
+  no button.
 
 It is three layers, split as the overlay is:
 

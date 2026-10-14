@@ -8,6 +8,8 @@ import { describeIdentity } from "@maple-kit/core/mock";
 import { createElement, useEffect, useRef, useState } from "react";
 
 import { ChevronIcon } from "../icons/chevron.js";
+import { button } from "./button.js";
+import { MOCK_COPY } from "./language.js";
 
 import type { FlagValue as FlagValueType } from "@maple-kit/core/mock";
 import type { MockClient, MockClientState, MockFlagRow } from "@maple-kit/mock/client";
@@ -25,6 +27,7 @@ export const LAYER_COPY = {
   off: "Off",
   realValue: "Real value",
   server: "server",
+  added: "added",
   notEvaluated: "Named by the mock, not evaluated on this page",
   serverActs: "The server still acts as you.",
   reloads: "reloads the page",
@@ -33,11 +36,13 @@ export const LAYER_COPY = {
 interface LayerProps {
   readonly state: MockClientState;
   readonly client: MockClient;
+  /** The search chunk, once a search has been opened and it has loaded. */
+  readonly search?: typeof import("./search.js") | undefined;
 }
 
 /** The role, the permissions and the flags, under the calls. */
 export function Layers(props: LayerProps): ReactElement {
-  const { client, state } = props;
+  const { client, search, state } = props;
   const { identity } = state;
   const panel = useRef<HTMLDivElement>(null);
   useShowTaken(panel, state.request);
@@ -89,7 +94,19 @@ export function Layers(props: LayerProps): ReactElement {
       ? null
       : createElement(Fold, { title: titled(LAYER_COPY.permissions), rows: grants }),
     flags.length === 0 ? null : createElement(Fold, { title: LAYER_COPY.flags, rows: flags }),
+    state.canSearchFlags ? flagSearch(state, client, search) : null,
   );
+}
+
+/** Under the flags: a quiet button, which opens the search in its place. */
+function flagSearch(state: MockClientState, client: MockClient, search: LayerProps["search"]) {
+  if (state.search === "flags" && search) {
+    return createElement(search.Search, { kind: "flags", state, client });
+  }
+  return button(MOCK_COPY.searchFlags, () => client.setSearch("flags"), {
+    quiet: true,
+    search: "flags",
+  });
 }
 
 interface Folded {
@@ -160,7 +177,8 @@ export function LayerBanner(props: { readonly state: MockClientState }): ReactNo
     : createElement("span", { className: "mk-mock-banner-as" }, said.join(" "));
 }
 
-function flagRow(flag: MockFlagRow, client: MockClient): ReactNode {
+/** A flag as a row. `added` marks one a search put in the draft, in place of its "server" tag. */
+export function flagRow(flag: MockFlagRow, client: MockClient, added = false): ReactNode {
   const pick = (next: FlagValueType | undefined) => client.setFlag(flag.key, next);
   const values: readonly FlagValueType[] =
     flag.type === "boolean" ? [true, false] : (flag.variants ?? []);
@@ -181,7 +199,14 @@ function flagRow(flag: MockFlagRow, client: MockClient): ReactNode {
           pick(values[labels.indexOf(label ?? "")] ?? undefined),
         );
   const label = { key: `f:${flag.key}`, name: flag.key, set: current !== undefined, title };
-  return row(server ? { ...label, tag: LAYER_COPY.server } : label, control);
+  const tag = tagOf(added, server);
+  return row(tag === undefined ? label : { ...label, tag }, control);
+}
+
+/** What a flag row is marked with: that a search added it, else that only the server read it. */
+function tagOf(added: boolean, server: boolean): string | undefined {
+  if (added) return LAYER_COPY.added;
+  return server ? LAYER_COPY.server : undefined;
 }
 
 const LONG_VALUE = 32;

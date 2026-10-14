@@ -13,8 +13,11 @@ export type {
   MockClientOptions,
   MockClientState,
   MockFlagRow,
+  MockSearch,
   MockView,
   PlanFailure,
   RealAs,
 } from "./client.js";
 export { PLAN_DEBOUNCE_MS, PLAN_MIN_LENGTH, planCall } from "./plan.js";
+export { SEARCH_PAGE } from "./search.js";
+export type { CallHit, CallResults } from "./search.js";
