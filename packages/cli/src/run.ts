@@ -7,6 +7,11 @@ import { MOCK_SCHEMA_FLAGS, MOCK_SCHEMA_USAGE, mockSchema } from "./commands/moc
 import { review, REVIEW_FLAGS } from "./commands/review.js";
 import { SETUP_APP_FLAGS, SETUP_APP_USAGE, setupApp } from "./commands/setup-app.js";
 import { SETUP_CI_FLAGS, SETUP_CI_USAGE, setupCi } from "./commands/setup-ci.js";
+import {
+  SETUP_PREVIEW_FLAGS,
+  SETUP_PREVIEW_USAGE,
+  setupPreviewMirrord,
+} from "./commands/setup-preview.js";
 import { SETUP_VERIFY_FLAGS, SETUP_VERIFY_USAGE, setupVerify } from "./commands/setup-verify.js";
 import { solo, SOLO_FLAGS } from "./commands/solo.js";
 import { HELP } from "./help.js";
@@ -88,6 +93,10 @@ export const COMMANDS: Readonly<Record<string, Command>> = {
     flags: SETUP_VERIFY_FLAGS,
     run: ({ flags }, options) => setupVerify(flags, options.fetch),
   },
+  "setup preview": {
+    flags: SETUP_PREVIEW_FLAGS,
+    run: (args, options) => setupPreview(args, options.cwd),
+  },
   solo: { flags: SOLO_FLAGS, run: (args, options) => solo(args, soloOptions(options)) },
   "setup ci": { flags: SETUP_CI_FLAGS, run: ({ flags }, options) => setupCi(flags, pick(options)) },
 };
@@ -96,7 +105,7 @@ export const COMMANDS: Readonly<Record<string, Command>> = {
 const GROUP_USAGE: Readonly<Record<string, string>> = {
   ci: CI_LINT_USAGE,
   mock: `${MOCK_SCHEMA_USAGE}\n\n${MOCK_PLAN_USAGE}`,
-  setup: `${SETUP_APP_USAGE}\n\n${SETUP_VERIFY_USAGE}\n\n${SETUP_CI_USAGE}`,
+  setup: `${SETUP_APP_USAGE}\n\n${SETUP_VERIFY_USAGE}\n\n${SETUP_CI_USAGE}\n\n${SETUP_PREVIEW_USAGE}`,
 };
 
 /** Every flag any command declares, so the first pass finds positionals wherever flags sit. */
@@ -143,6 +152,11 @@ export async function run(argv: readonly string[], options: RunOptions): Promise
     };
   }
   return found.run(args, options);
+}
+
+function setupPreview({ flags, positionals }: ParsedArgs, cwd: string | undefined): RunResult {
+  if (positionals[1] !== "mirrord") return { output: SETUP_PREVIEW_USAGE, exitCode: 1 };
+  return setupPreviewMirrord(flags, cwd === undefined ? {} : { cwd });
 }
 
 function soloOptions({ cwd, start }: RunOptions): SoloOptions {

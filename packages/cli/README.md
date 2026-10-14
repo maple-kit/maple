@@ -24,18 +24,19 @@ npm install -g @maple-kit/cli
 
 <!-- generated:cli-commands -->
 
-| Command              | What it does                                                                |
-| -------------------- | --------------------------------------------------------------------------- |
-| `maple review`       | Put the overlay on your running app through a proxy, with nothing wired in  |
-| `maple connectors`   | Show the connector kinds and the methods each one may implement             |
-| `maple mock schema`  | Write an OpenAPI document of a tRPC router's response types                 |
-| `maple mock plan`    | Print the recipe a preview's route plans for a sentence                     |
-| `maple setup app`    | Print the prefilled GitHub App registration URL and the steps after it      |
-| `maple setup verify` | Check that a comment App's Device Flow is on                                |
-| `maple setup ci`     | Print or write the gate workflow, and the ruleset that requires it          |
-| `maple lint`         | Run the design-system lint against a preview, locally                       |
-| `maple ci lint`      | Run the design lint as CI does: SARIF and the maple/design-lint check       |
-| `maple solo`         | Keep a preview's comments on this machine: start the bridge, print the link |
+| Command                       | What it does                                                                |
+| ----------------------------- | --------------------------------------------------------------------------- |
+| `maple review`                | Put the overlay on your running app through a proxy, with nothing wired in  |
+| `maple connectors`            | Show the connector kinds and the methods each one may implement             |
+| `maple mock schema`           | Write an OpenAPI document of a tRPC router's response types                 |
+| `maple mock plan`             | Print the recipe a preview's route plans for a sentence                     |
+| `maple setup app`             | Print the prefilled GitHub App registration URL and the steps after it      |
+| `maple setup verify`          | Check that a comment App's Device Flow is on                                |
+| `maple setup ci`              | Print or write the gate workflow, and the ruleset that requires it          |
+| `maple setup preview mirrord` | Add the env override and steal mode to a mirrord config                     |
+| `maple lint`                  | Run the design-system lint against a preview, locally                       |
+| `maple ci lint`               | Run the design lint as CI does: SARIF and the maple/design-lint check       |
+| `maple solo`                  | Keep a preview's comments on this machine: start the bridge, print the link |
 
 <!-- /generated:cli-commands -->
 
@@ -65,6 +66,20 @@ will, and prints neither code it receives.
 `setup ci` writes `.github/workflows/maple.yml` on `maple-kit/maple-action@v0`,
 refusing to overwrite one that is there, and prints the `gh api` command that
 makes `maple/visual-review` a required check pinned to GitHub Actions.
+
+`setup preview mirrord` adds `feature.env.override` to each preview config in
+`.mirrord/*.json` (a file name containing `preview`, a top-level `key` or a
+`feature.preview` section; the others are listed and left alone, and `--config <file>` names one explicitly) so a
+mirrord preview pod knows its key, pull request, branch and commit. The values
+are Tera templates over `-k` and GitHub Actions' own variables, so on GitHub
+Actions no workflow step is needed; on other CI, export `MAPLE_PULL_REQUEST` or
+`MAPLE_BRANCH` before `mirrord preview start`. It sets
+`feature.network.incoming.mode` to `steal` when no mode is set. Without
+`--write` it prints the change; it never overwrites a value that is set, warns
+on `mirrord`'s `mirror`, and refuses a file with comments. After `--write` it
+runs `mirrord verify-config --resolved` when `mirrord` is installed, on a temp
+copy with a literal `key` when the file's own is missing or a template, which
+mirrord cannot render.
 
 ### `maple mock plan`
 
