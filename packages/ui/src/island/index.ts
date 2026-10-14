@@ -25,6 +25,7 @@ export { Filters, FilterPick, FilterTally } from "./filters.js";
 export type { FiltersProps } from "./filters.js";
 export { Branch, Header, Logo } from "./header.js";
 export type { BranchProps, HeaderProps, LogoProps } from "./header.js";
+export { IslandHint } from "./hint.js";
 export { Island } from "./island.js";
 export type { IslandProps } from "./island.js";
 export { Item } from "./item.js";
@@ -35,6 +36,7 @@ export {
   ISLAND_COPY,
   kindPhrase,
   openLabel,
+  tapHint,
   SETTINGS_COPY,
   UNSENT_COPY,
 } from "./language.js";

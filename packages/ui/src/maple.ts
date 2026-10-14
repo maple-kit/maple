@@ -30,6 +30,7 @@ import {
   ImportDrafts,
   Island,
   IslandContent,
+  IslandHint,
   IslandTrigger,
   Item,
   List,
@@ -103,6 +104,7 @@ function inventory(
   return createElement(
     Island,
     { defaultOpen, key: "island" },
+    createElement(IslandHint),
     createElement(IslandTrigger),
     createElement(
       IslandContent,

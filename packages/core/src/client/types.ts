@@ -172,6 +172,16 @@ export interface PickState {
   readonly kind?: PickKind;
 }
 
+/**
+ * What a Cmd tap leaves for a surface. `hint` is up while a tap that a text
+ * field swallowed is explained; `focus` counts taps that asked an open
+ * composer for focus, and a surface focuses its field when it changes.
+ */
+export interface TapNotice {
+  readonly hint: boolean;
+  readonly focus: number;
+}
+
 /** Everything a binding renders from. One object, replaced whole on a change. */
 export interface ClientState {
   readonly phase: "error" | "idle" | "loading" | "ready";
@@ -207,6 +217,7 @@ export interface ClientState {
   readonly pending: number;
   readonly composer: ComposerState;
   readonly pick: PickState;
+  readonly tap: TapNotice;
   readonly theme: ThemeState;
   /** What the viewer asked the overlay to be drawn in. Remembered per origin. */
   readonly themePreference: ThemePreference;

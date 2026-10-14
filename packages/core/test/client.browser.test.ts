@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { OVERLAY_MARKER } from "../src/anchor/text-position.js";
 import {
   commentModifier,
   createDraftKeeper,
@@ -236,6 +237,60 @@ describe("the modifier tap over a real page", () => {
 
     expect(maple.getState().pick.armed).toBe(false);
     field.remove();
+  });
+
+  it("still arms while a checkbox has focus", () => {
+    const maple = client();
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    document.body.append(box);
+    box.focus();
+    tap(box);
+
+    expect(maple.getState().pick.armed).toBe(true);
+    box.remove();
+  });
+
+  it("raises the hint for a tap a text field swallowed, then drops it", () => {
+    vi.useFakeTimers();
+    try {
+      const maple = client();
+      const field = document.createElement("input");
+      document.body.append(field);
+      field.focus();
+      tap(field);
+
+      expect(maple.getState().tap.hint).toBe(true);
+      vi.advanceTimersByTime(3100);
+      expect(maple.getState().tap.hint).toBe(false);
+      field.remove();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("raises no hint for a tap in Maple's own field", () => {
+    const maple = client();
+    const overlay = document.createElement("div");
+    overlay.setAttribute(OVERLAY_MARKER, "");
+    const field = document.createElement("textarea");
+    overlay.append(field);
+    document.body.append(overlay);
+    field.focus();
+    tap(field);
+
+    expect(maple.getState().tap.hint).toBe(false);
+    overlay.remove();
+  });
+
+  it("asks an open composer for focus instead of ignoring the tap", () => {
+    const maple = client();
+    maple.openComposer(TARGET);
+    const before = maple.getState().tap.focus;
+    tap();
+
+    expect(maple.getState().tap.focus).toBe(before + 1);
+    expect(maple.getState().pick.armed).toBe(false);
   });
 
   it("does nothing while the reviewer is typing in a field inside a shadow root", () => {

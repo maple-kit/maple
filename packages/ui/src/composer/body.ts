@@ -32,7 +32,7 @@ export const COMPOSER_PLACEHOLDER = "What is wrong with this?";
 /** The comment itself. Focused on open; never cleared by a close. */
 export const MapleBody = /** @__PURE__ */ forwardRef<HTMLTextAreaElement, MapleBodyProps>(
   function MapleBody(props, ref) {
-    const { composer, publishing } = useMaple();
+    const { composer, publishing, tap } = useMaple();
     const client = useMapleClient();
     const publish = usePublish();
     const field = useRef<HTMLTextAreaElement>(null);
@@ -46,7 +46,7 @@ export const MapleBody = /** @__PURE__ */ forwardRef<HTMLTextAreaElement, MapleB
 
     useEffect(() => {
       if (composer.open && !reading) field.current?.focus();
-    }, [composer.open, reading]);
+    }, [composer.open, reading, tap.focus]);
 
     if (reading) {
       return createElement(

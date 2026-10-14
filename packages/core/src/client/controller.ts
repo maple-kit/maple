@@ -277,6 +277,9 @@ const CLOSED: ComposerState = {
   contextOpen: true,
 };
 
+/** How long the hint for an ignored tap stays up. */
+const TAP_HINT_MS = 3000;
+
 const UNARMED: PickState = { armed: false };
 
 /** Said to the log when nothing on the page carries a tagger attribute. */
@@ -305,6 +308,7 @@ interface Runtime {
   theme: ThemeWatch | undefined;
   link: LinkRun | undefined;
   release: (() => void) | undefined;
+  hintTimer: ReturnType<typeof setTimeout> | undefined;
   state: ClientState;
 }
 
@@ -408,6 +412,7 @@ function runtimeFor(options: MapleClientOptions): Runtime {
     theme: undefined,
     link: undefined,
     release: undefined,
+    hintTimer: undefined,
     state: derive({
       phase: "idle",
       comments: [],
@@ -425,6 +430,7 @@ function runtimeFor(options: MapleClientOptions): Runtime {
       publishing: false,
       pending: 0,
       composer: CLOSED,
+      tap: { hint: false, focus: 0 },
       pick: config.pick === undefined ? UNARMED : { armed: true, kind: config.pick },
       theme: themeFrom({}),
       themePreference: config.theme,
@@ -554,7 +560,12 @@ function start(runtime: Runtime): void {
 
   const abort = new AbortController();
   const { signal } = abort;
-  watchCommentTap({ view, signal, onTap: () => onTap(runtime) });
+  watchCommentTap({
+    view,
+    signal,
+    onTap: () => onTap(runtime),
+    onIgnored: () => showTapHint(runtime, signal),
+  });
   view.addEventListener("storage", (event) => onStorage(runtime, event), { signal });
   startPolling({
     intervalMs: runtime.options.pollMs ?? POLL_MS,
@@ -640,13 +651,28 @@ function destroy(runtime: Runtime): void {
  * the next. Over a selection it picks that passage, not remembered as a choice.
  */
 function onTap(runtime: Runtime): void {
-  if (runtime.state.composer.open) return;
+  if (runtime.state.composer.open) {
+    const { tap } = runtime.state;
+    return patch(runtime, { tap: { ...tap, focus: tap.focus + 1 } });
+  }
   const { pick } = runtime.state;
   if (pick.armed && pick.kind) return arm(runtime, nextPick(pick.kind));
 
   const view = runtime.options.view ?? (globalThis as { window?: ClientView }).window;
   if (view && selectedText(view.document)) return arm(runtime, "text", { remember: false });
   arm(runtime, runtime.lastPick);
+}
+
+/** Says why the tap did nothing, for a moment. */
+function showTapHint(runtime: Runtime, signal: AbortSignal): void {
+  const { tap } = runtime.state;
+  patch(runtime, { tap: { ...tap, hint: true } });
+  clearTimeout(runtime.hintTimer);
+  const hide = (): void => {
+    patch(runtime, { tap: { ...runtime.state.tap, hint: false } });
+  };
+  runtime.hintTimer = setTimeout(hide, TAP_HINT_MS);
+  signal.addEventListener("abort", () => clearTimeout(runtime.hintTimer), { once: true });
 }
 
 /** The kind after this one in {@link PICK_ORDER}, wrapping at the end. */

@@ -71,6 +71,7 @@ export type {
   ShortcutEvent,
   TapInput,
   TapModifier,
+  TapIgnored,
   TapOptions,
   TapState,
   TapStep,

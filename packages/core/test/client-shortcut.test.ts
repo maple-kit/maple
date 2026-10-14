@@ -64,6 +64,38 @@ describe("where a person could be typing", () => {
     expect(isEditable(plain)).toBe(false);
   });
 
+  it.each([
+    ["text", true],
+    ["search", true],
+    ["email", true],
+    ["number", true],
+    ["date", true],
+    ["PASSWORD", true],
+    ["unknown", true],
+    ["checkbox", false],
+    ["radio", false],
+    ["button", false],
+    ["submit", false],
+    ["reset", false],
+    ["range", false],
+    ["color", false],
+    ["file", false],
+    ["image", false],
+    ["hidden", false],
+  ])("an input of type %s is typing = %s", (type, typing) => {
+    expect(isEditable({ tagName: "INPUT", type })).toBe(typing);
+  });
+
+  it("reads an input's type from its attribute and defaults to text", () => {
+    expect(isEditable({ tagName: "INPUT", getAttribute: () => "checkbox" })).toBe(false);
+    expect(isEditable({ tagName: "INPUT" })).toBe(true);
+  });
+
+  it("counts a select and a textarea as typing", () => {
+    expect(isEditable({ tagName: "SELECT" })).toBe(true);
+    expect(isEditable({ tagName: "TEXTAREA" })).toBe(true);
+  });
+
   it("survives a target that is not an element at all", () => {
     expect(isEditable(null)).toBe(false);
     expect(isEditable(globalThis)).toBe(false);
@@ -104,7 +136,32 @@ describe("a tap of the comment modifier", () => {
     ["Cmd+C is copy", "Meta", [down(0), other(20, "c"), up(80)], 0],
     ["Cmd+Tab is the app switcher", "Meta", [down(0), other(20, "Tab"), up(80)], 0],
     ["Cmd+click is a link opener", "Meta", [down(0), { type: "pointerdown", at: 20 }, up(80)], 0],
-    ["Cmd+scroll is a zoom", "Meta", [down(0), { type: "wheel", at: 20 }, up(80)], 0],
+    [
+      "Cmd+scroll is a zoom",
+      "Meta",
+      [down(0), { type: "wheel", at: 20, metaKey: true }, up(80)],
+      0,
+    ],
+    [
+      "Ctrl+scroll is a zoom",
+      "Control",
+      [
+        down(0, { key: "Control", ctrlKey: true, metaKey: false }),
+        { type: "wheel", at: 20, ctrlKey: true },
+        up(80, { key: "Control" }),
+      ],
+      0,
+    ],
+    ["momentum scrolling is not a chord", "Meta", [down(0), { type: "wheel", at: 20 }, up(80)], 1],
+    ["a checkbox is not typing", "Meta", [down(0, { editable: false }), up(80)], 1],
+    ["a lost keyup is healed by the next keydown", "Meta", [down(0), down(10000), up(10080)], 1],
+    [
+      "a repeat does not restart the hold",
+      "Meta",
+      [down(0), down(400, { repeat: true }), up(600)],
+      0,
+    ],
+    ["a hidden page forgets the hold", "Meta", [down(0), { type: "hidden", at: 20 }, up(80)], 0],
     ["a long hold is not a tap", "Meta", [down(0), up(500)], 0],
     ["just under the limit is", "Meta", [down(0), up(499)], 1],
     ["Shift already down", "Meta", [down(0, { shiftKey: true }), up(80)], 0],
@@ -146,6 +203,27 @@ describe("a tap of the comment modifier", () => {
 
   it.each(cases)("%s", (_name, modifier, script, fired) => {
     expect(run(modifier, script)).toBe(fired);
+  });
+});
+
+describe("why a quick tap was ignored", () => {
+  const reasons = (script: readonly TapInput[]): Array<string | undefined> => {
+    let state = TAP_IDLE;
+    return script.map((input) => {
+      const step = tapStep(state, input, "Meta");
+      state = step.state;
+      return step.ignored;
+    });
+  };
+
+  it.each([
+    ["typing when it goes down", [down(0, { editable: true }), up(80)], "editable"],
+    ["typing when it comes up", [down(0), up(80, { editable: true })], "editable"],
+    ["a long hold in a field", [down(0, { editable: true }), up(600)], undefined],
+    ["a chord in a field", [down(0, { editable: true }), other(10, "c"), up(80)], undefined],
+    ["a clean tap", [down(0), up(80)], undefined],
+  ] as const)("%s: %s", (_name, script, expected) => {
+    expect(reasons(script).at(-1)).toBe(expected);
   });
 });
 

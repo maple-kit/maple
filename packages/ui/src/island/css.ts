@@ -98,6 +98,21 @@ function shell(): string {
   transform: scale(var(--mk-press));
 }
 
+.mk-tap-hint {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  padding: 6px 10px;
+  border: 1px solid var(--mk-line-firm);
+  border-radius: 8px;
+  background: var(--mk-bg);
+  box-shadow: var(--mk-sh2);
+  color: var(--mk-fg);
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
 .mk-pill[data-armed="true"] {
   border-color: var(--mk-accent);
   color: var(--mk-accent);

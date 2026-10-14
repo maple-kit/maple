@@ -7,6 +7,8 @@
  * tooltip, because a list of comments is scanned rather than read.
  */
 
+import { commentTapLabel } from "@maple-kit/core/client";
+
 import type { CommentFilter, Corner, PickKind, ThemePreference } from "@maple-kit/core/client";
 
 /** The five filters, in the words the pills show. `unpinned` is `orphaned`. */
@@ -214,4 +216,9 @@ export function kindPhrase(kind: PickKind, human: string | undefined): string {
   if (human === undefined) return "somewhere on this page";
   if (kind === "text") return `a passage in ${human}`;
   return kind === "region" ? `an area of ${human}` : human;
+}
+
+/** Said above the pill when a tap met a text field: where to click, then what to press. */
+export function tapHint(): string {
+  return `Typing \u2014 click the page, then ${commentTapLabel().toLowerCase()}`;
 }
