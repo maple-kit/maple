@@ -29,11 +29,11 @@ const BUDGETS = [
   // 22 KB until the wordmark; 24 KB for the sign-off and unsent list; 26 KB
   // for the pixel leaf (docs/branding.md); 28, 29 KB for drafts; 30 KB import
   // and export; 31 KB solo; 32 KB the shared popup; 35 KB for the resizable
-  // card and the edge indicators.
+  // card and the edge indicators; 36 KB for pins that follow the DOM.
   {
     name: "root + marks + island + icons",
     entries: ["index.js", "marks/index.js", "island/index.js", "icons/index.js"],
-    max: 35 * 1024,
+    max: 36 * 1024,
   },
   // 9 KB until the score card. The extra 1 KB is the card, the kind control
   // and the context card's disclosure. Every byte of it is inert on a

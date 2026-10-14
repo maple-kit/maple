@@ -100,15 +100,56 @@ export interface Scroll {
  * hidden mark is counted once.
  */
 export function edgeOf(box: Box, viewport: Viewport): Edge | undefined {
-  const above = -(box.y + box.height);
-  const below = box.y - viewport.height;
-  const before = -(box.x + box.width);
-  const after = box.x - viewport.width;
+  return edgeWithin(box, { x: 0, y: 0, ...viewport });
+}
+
+/** The same test against any rectangle: a scroll area is a viewport of its own. */
+export function edgeWithin(box: Box, bounds: Box): Edge | undefined {
+  const above = bounds.y - (box.y + box.height);
+  const below = box.y - (bounds.y + bounds.height);
+  const before = bounds.x - (box.x + box.width);
+  const after = box.x - (bounds.x + bounds.width);
   const far = Math.max(above, below, before, after);
   if (far < 0) return undefined;
   if (far === above) return "up";
   if (far === below) return "down";
   return far === before ? "left" : "right";
+}
+
+const CLIPPING = new Set(["auto", "scroll", "hidden", "clip"]);
+const clippers = new WeakMap<Element, readonly Element[]>();
+
+/**
+ * The ancestors that clip what is inside them; a fixed element answers to the
+ * viewport alone. Kept per element, because it is read every frame.
+ */
+function clippersOf(element: Element): readonly Element[] {
+  const known = clippers.get(element);
+  if (known) return known;
+
+  const found: Element[] = [];
+  const page = element.ownerDocument;
+  const view = page.defaultView;
+  for (let node = element.parentElement; node && view; node = node.parentElement) {
+    if (node === page.body || node === page.documentElement) break;
+    const style = view.getComputedStyle(node);
+    if (style.position === "fixed") break;
+    if (CLIPPING.has(style.overflowX) || CLIPPING.has(style.overflowY)) found.push(node);
+  }
+  clippers.set(element, found);
+  return found;
+}
+
+/**
+ * Which edge of a scroll area an element's box has left, when a dialog body or
+ * panel scrolls its content out from under a pin the viewport still shows.
+ */
+export function clipEdge(box: Box, element: Element): Edge | undefined {
+  for (const clipper of clippersOf(element)) {
+    const edge = edgeWithin(box, clipper.getBoundingClientRect());
+    if (edge) return edge;
+  }
+  return undefined;
 }
 
 /**

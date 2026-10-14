@@ -15,9 +15,10 @@ import { useMapleUi } from "../context.js";
 import { hoverHandlers } from "../hover.js";
 import { EDGES, MapleEdge, paintEdges, summarise } from "./edges.js";
 import { pageView, useFrameLoop } from "./frame.js";
-import { edgeOf, markSpot, placeMark } from "./geometry.js";
+import { clipEdge, edgeOf, markSpot, placeMark } from "./geometry.js";
 import { ringLabel } from "./label.js";
 import { MapleMark } from "./mark.js";
+import { useDomVersion, useSteady } from "./mutations.js";
 import { useNudges } from "./nudge.js";
 import { flag, OFF_ATTRIBUTE, place } from "./paint.js";
 import { addresses, draftPlacements, placements, rectangleOf } from "./placement.js";
@@ -69,16 +70,24 @@ export const MapleMarkLayer = /** @__PURE__ */ forwardRef<HTMLDivElement, MarkLa
     const selectedId = props.selectedId ?? state.selected ?? undefined;
     const peeked = state.peeked ?? undefined;
     const address = useMemo(() => addresses(comments), [comments]);
-    const placed = useMemo(
-      () => placements(visible, address, container.ownerDocument),
-      [visible, address, container],
+    const version = useDomVersion(container.ownerDocument);
+    const placed = useSteady(
+      useMemo(
+        () => placements(visible, address, container.ownerDocument),
+        // `version` is the page changing under the anchors, which nothing else says.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [visible, address, container, version],
+      ),
     );
 
     const drafts = useWaiting(state);
     const pathname = usePathname(container.ownerDocument.defaultView);
-    const drafted = useMemo(
-      () => draftPlacements(drafts, container.ownerDocument, pathname),
-      [drafts, container, pathname],
+    const drafted = useSteady(
+      useMemo(
+        () => draftPlacements(drafts, container.ownerDocument, pathname),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [drafts, container, pathname, version],
+      ),
     );
 
     const nudges = useNudges();
@@ -94,7 +103,7 @@ export const MapleMarkLayer = /** @__PURE__ */ forwardRef<HTMLDivElement, MarkLa
         const moved = nudges.of(id);
         if (!node) continue;
         const one = step(node, located, { view, taken, ...(moved ? { moved } : {}) });
-        taken.push(one.spot);
+        if (!one.gone) taken.push(one.spot);
         if (one.edge) hidden.push({ id, edge: one.edge, box: one.spot });
       }
       const summary = summarise(hidden, view);
@@ -238,6 +247,13 @@ interface Frame {
 interface Stepped {
   readonly spot: Box;
   readonly edge?: Edge;
+  /** Nothing of the anchor is on the page to point at, so there is no spot to hold. */
+  readonly gone?: true;
+}
+
+/** An anchor that left the document, or that a hidden ancestor collapsed to nothing. */
+function vanished(placement: Located, box: Box): boolean {
+  return !placement.element.isConnected || (box.width === 0 && box.height === 0);
 }
 
 /**
@@ -245,12 +261,18 @@ interface Stepped {
  * hidden once none of it shows. A dragged one holds where it was put.
  */
 function step(node: HTMLButtonElement, placement: Located, frame: Frame): Stepped {
-  const wanted = markSpot(boxOf(placement), frame.view.scroll);
+  const anchor = boxOf(placement);
+  if (vanished(placement, anchor)) {
+    flag(node, OFF_ATTRIBUTE, true);
+    return { spot: anchor, gone: true };
+  }
+
+  const wanted = markSpot(anchor, frame.view.scroll);
   const spot = frame.moved
     ? { ...wanted, x: wanted.x + frame.moved.dx, y: wanted.y + frame.moved.dy }
     : placeMark(wanted, frame.taken);
 
-  const edge = edgeOf(spot, frame.view);
+  const edge = clipEdge(anchor, placement.element) ?? edgeOf(spot, frame.view);
   flag(node, OFF_ATTRIBUTE, edge !== undefined);
   if (edge === undefined) place(node, spot);
   return edge === undefined ? { spot } : { spot, edge };

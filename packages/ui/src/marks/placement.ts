@@ -85,7 +85,7 @@ export function draftPlacements(
 function locate(anchor: Anchor, root: ParentNode): Located | undefined {
   const passage = kindOf(anchor) === "text";
   const found = resolveAnchor(anchor, { root, passage });
-  if (found.status !== "resolved") return undefined;
+  if (found.status !== "resolved" || !found.element.isConnected) return undefined;
 
   return {
     element: found.element,
