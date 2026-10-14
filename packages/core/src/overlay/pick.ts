@@ -111,6 +111,7 @@ export function startElementPicking(options: ElementPickingOptions): void {
   listen("pointermove", (event) => {
     options.onHover?.(ignored(event) ? undefined : elementPick(event));
   });
+  scrollPanes(options.signal, ignored);
   listen("click", (event) => {
     if (ignored(event)) return;
     const pick = elementPick(event);
@@ -145,6 +146,7 @@ export function startRegionPicking(options: RegionPickingOptions): void {
     options.onDraw?.(undefined);
   };
 
+  scrollPanes(options.signal, ignored);
   listen("pointerdown", (event) => {
     if (ignored(event)) return;
     origin = { x: event.clientX, y: event.clientY };
@@ -226,6 +228,50 @@ function elementPick(event: MouseEvent): Pick | undefined {
   return element
     ? { kind: "element", element, rect: rectOf(element.getBoundingClientRect()) }
     : undefined;
+}
+
+const LINE_PIXELS = 16;
+const SCROLLING = new Set(["auto", "scroll", "overlay"]);
+
+/**
+ * Keeps inner scroll panes scrollable under the shield, which is the wheel
+ * target. The page itself still scrolls natively, so only a pane is handled.
+ */
+function scrollPanes(signal: AbortSignal | undefined, ignored: IgnoreEvent): void {
+  document.addEventListener(
+    "wheel",
+    (event) => {
+      if (ignored(event) || event.ctrlKey) return;
+      const start = elementAt(event.clientX, event.clientY);
+      const pane = start && paneFor(start, event);
+      if (!pane) return;
+      const unit = [1, LINE_PIXELS, pane.clientHeight][event.deltaMode] ?? 1;
+      pane.scrollBy(event.deltaX * unit, event.deltaY * unit);
+      event.preventDefault();
+    },
+    { capture: true, passive: false, ...(signal === undefined ? {} : { signal }) },
+  );
+}
+
+/** The nearest ancestor, below the page itself, that can scroll the way the wheel turned. */
+function paneFor(start: Element, event: WheelEvent): Element | undefined {
+  for (let node: Element | null = start; node; node = node.parentElement) {
+    if (node === document.body || node === document.documentElement) return undefined;
+    if (canScroll(node, event.deltaX, event.deltaY)) return node;
+  }
+  return undefined;
+}
+
+function canScroll(node: Element, dx: number, dy: number): boolean {
+  const style = getComputedStyle(node);
+  const room = (delta: number, at: number, size: number, extent: number): boolean =>
+    delta > 0 ? at + size < extent - 1 : delta < 0 && at > 0;
+  return (
+    (SCROLLING.has(style.overflowY) &&
+      room(dy, node.scrollTop, node.clientHeight, node.scrollHeight)) ||
+    (SCROLLING.has(style.overflowX) &&
+      room(dx, node.scrollLeft, node.clientWidth, node.scrollWidth))
+  );
 }
 
 function between(origin: { x: number; y: number }, event: MouseEvent): Rect {

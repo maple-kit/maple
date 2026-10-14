@@ -246,6 +246,58 @@ describe("dragging a rectangle", () => {
   });
 });
 
+describe("scrolling a pane while picking", () => {
+  const pane =
+    `<div id="pane" style="position:absolute;left:0;top:0;width:200px;height:100px;overflow:auto">` +
+    `<div style="height:1000px"></div></div>`;
+
+  function wheel(deltaY: number, deltaMode = 0): WheelEvent {
+    const event = new WheelEvent("wheel", {
+      clientX: 50,
+      clientY: 50,
+      deltaY,
+      deltaMode,
+      bubbles: true,
+      cancelable: true,
+    });
+    document.dispatchEvent(event);
+    return event;
+  }
+
+  it("scrolls the pane under the pointer by the wheel delta", () => {
+    const root = mount(pane);
+    stop = new AbortController();
+    startElementPicking({ onPick: () => undefined, signal: stop.signal });
+
+    const event = wheel(40);
+
+    expect(root.querySelector("#pane")!.scrollTop).toBe(40);
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it("reads a line delta as lines, and a page delta as the pane's height", () => {
+    const root = mount(pane);
+    stop = new AbortController();
+    startRegionPicking({ onPick: () => undefined, signal: stop.signal });
+
+    wheel(2, 1);
+    expect(root.querySelector("#pane")!.scrollTop).toBe(32);
+    wheel(1, 2);
+    expect(root.querySelector("#pane")!.scrollTop).toBe(32 + 100);
+  });
+
+  it("leaves the wheel to the page when nothing under it can scroll that way", () => {
+    const root = mount(pane);
+    stop = new AbortController();
+    startElementPicking({ onPick: () => undefined, signal: stop.signal });
+
+    const event = wheel(-40);
+
+    expect(root.querySelector("#pane")!.scrollTop).toBe(0);
+    expect(event.defaultPrevented).toBe(false);
+  });
+});
+
 describe("selecting text", () => {
   it("reports the passage and where it is on screen", () => {
     const root = mount(`<p>The board approved the plan</p>`);
