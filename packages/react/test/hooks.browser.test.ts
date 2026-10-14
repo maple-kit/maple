@@ -277,7 +277,7 @@ describe("a question the controller cannot word", () => {
     client.setBody("The spacing under the heading is off.");
 
     const link = document.createElement("a");
-    link.href = "#elsewhere";
+    link.href = "/elsewhere";
     link.dataset["test"] = "";
     document.body.append(link);
     link.click();

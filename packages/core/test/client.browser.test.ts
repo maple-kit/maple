@@ -79,10 +79,10 @@ describe("a click on a link in the page", () => {
     document.body.append(link);
 
     const swallow = (event: Event): void => event.preventDefault();
-    document.addEventListener("click", swallow);
+    window.addEventListener("click", swallow);
     const event = new MouseEvent("click", { bubbles: true, cancelable: true, composed: true });
     link.dispatchEvent(event);
-    document.removeEventListener("click", swallow);
+    window.removeEventListener("click", swallow);
 
     expect(localStorage.getItem(`maple:drafts:${BRANCH}`)).toContain("The spacing is off.");
   });

@@ -82,8 +82,8 @@ function anchor(attributes: Record<string, string> = {}): HTMLAnchorElement {
 }
 
 /**
- * A real capture-phase click on a real anchor. The bubble listener stops the
- * browser actually leaving, and reports what the guard had already decided.
+ * A real click on a real anchor. A window listener added after the guard's
+ * stops the browser actually leaving, and reports what the guard decided.
  */
 function click(link: HTMLAnchorElement, init: MouseEventInit = {}): boolean {
   let prevented = false;
@@ -92,11 +92,11 @@ function click(link: HTMLAnchorElement, init: MouseEventInit = {}): boolean {
     event.preventDefault();
   };
 
-  document.addEventListener("click", swallow);
+  window.addEventListener("click", swallow);
   link.dispatchEvent(
     new MouseEvent("click", { bubbles: true, cancelable: true, composed: true, ...init }),
   );
-  document.removeEventListener("click", swallow);
+  window.removeEventListener("click", swallow);
   return prevented;
 }
 
@@ -208,6 +208,8 @@ describe("a link that is not this page's to intercept", () => {
     { name: "a link opened in a new tab", attributes: {}, init: { metaKey: true } },
     { name: "a link the reviewer control-clicked", attributes: {}, init: { ctrlKey: true } },
     { name: "a download", attributes: { download: "" }, init: {} },
+    { name: "a hash-only link", attributes: { href: "#" }, init: {} },
+    { name: "a link to a hash on this page", attributes: { href: "#section" }, init: {} },
     { name: "a link targeting another frame", attributes: { target: "_blank" }, init: {} },
   ];
 
@@ -217,5 +219,33 @@ describe("a link that is not this page's to intercept", () => {
     expect(click(anchor(attributes), init)).toBe(false);
     await new Promise((resolve) => setTimeout(resolve, 10));
     expect(ask).not.toHaveBeenCalled();
+  });
+});
+
+/** The host's own handler runs before the guard decides, so it wins. */
+describe("a link the host already handled", () => {
+  it("is not asked about when an onClick prevented the default", async () => {
+    const { ask } = dirtyClient("keep");
+    const link = anchor();
+    link.addEventListener("click", (event) => event.preventDefault());
+
+    expect(click(link)).toBe(true);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(ask).not.toHaveBeenCalled();
+  });
+
+  it("is not asked about when a root-level router prevents a page link", async () => {
+    const { ask, assign } = dirtyClient("discard");
+    const router = (event: Event): void => event.preventDefault();
+    document.body.addEventListener("click", router);
+    try {
+      expect(click(anchor())).toBe(true);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    } finally {
+      document.body.removeEventListener("click", router);
+    }
+
+    expect(ask).not.toHaveBeenCalled();
+    expect(assign).not.toHaveBeenCalled();
   });
 });

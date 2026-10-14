@@ -150,14 +150,16 @@ export function createNavigationGuard(options: NavigationGuardOptions): Navigati
       abort = new AbortController();
       const { signal } = abort;
 
-      view.document.addEventListener(
+      // Bubble phase on the window, after every host handler: a link the host
+      // already handled (router Link, onClick + preventDefault) is not ours.
+      view.addEventListener(
         "click",
         (event) => {
           const click = event as MouseEvent;
           const link = navigable(view, click);
           if (link) onAnchor(click, link);
         },
-        { capture: true, signal },
+        { signal },
       );
       view.addEventListener("popstate", () => leave("popstate"), { signal });
       restoreHistory = patchHistory(view.history, () => leave("history"));
@@ -201,7 +203,7 @@ function answer(prompt: LeavePrompt, question: LeaveQuestion, view: NavigationVi
   );
 }
 
-/** A plain left click on a same-origin link, and nothing else, counts. */
+/** A plain, unhandled left click on a same-origin page link counts. */
 function navigable(view: NavigationView, click: MouseEvent): HTMLAnchorElement | undefined {
   if (click.defaultPrevented || click.button !== 0) return undefined;
   if (click.metaKey || click.ctrlKey || click.shiftKey || click.altKey) return undefined;
@@ -209,9 +211,18 @@ function navigable(view: NavigationView, click: MouseEvent): HTMLAnchorElement |
   const link = linkIn(click);
   if (!link || link.hasAttribute("download")) return undefined;
   if (link.target !== "" && link.target !== "_self") return undefined;
-  if (new URL(link.href, view.location.href).origin !== view.location.origin) return undefined;
+  const target = new URL(link.href, view.location.href);
+  if (target.origin !== view.location.origin) return undefined;
+  if (staysOnPage(target, view.location.href)) return undefined;
 
   return link;
+}
+
+/** A hash-only link unloads nothing; the page or its router scrolls or routes. */
+function staysOnPage(target: URL, current: string): boolean {
+  const here = new URL(current);
+  if (target.hash === "" && !target.href.endsWith("#")) return false;
+  return target.pathname === here.pathname && target.search === here.search;
 }
 
 /** The composed path, so a link inside a shadow root is still a link. */
