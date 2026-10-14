@@ -200,7 +200,7 @@ describe("a tap of Shift and the comment modifier", () => {
   it("closes Maple with the focus on the page", async () => {
     document.body.focus();
     const key = commentModifier();
-    const flag = key === "Meta" ? { metaKey: true } : { ctrlKey: true };
+    const flag = key === "Meta" ? { metaKey: true } : { altKey: true };
     const send = (type: string, init: KeyboardEventInit) =>
       window.dispatchEvent(new KeyboardEvent(type, { bubbles: true, ...init }));
 

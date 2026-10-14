@@ -123,7 +123,7 @@ function topAt(x: number, y: number): Element {
 /** A tap of this platform's modifier: down and up with nothing between. */
 function tap(): void {
   const key = commentModifier();
-  const flag = key === "Meta" ? { metaKey: true } : { ctrlKey: true };
+  const flag = key === "Meta" ? { metaKey: true } : { altKey: true };
   document.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, ...flag }));
   document.dispatchEvent(new KeyboardEvent("keyup", { key, bubbles: true }));
 }

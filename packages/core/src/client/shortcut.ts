@@ -18,7 +18,7 @@ export const MOCK_SHORTCUT = "m";
 export const TAP_MS = 500;
 
 /** The modifier whose tap starts a comment. */
-export type TapModifier = "Meta" | "Control";
+export type TapModifier = "Meta" | "Alt";
 
 /** Where `navigator` says the platform is. Injectable so a test picks one. */
 export interface PlatformSource {
@@ -26,16 +26,19 @@ export interface PlatformSource {
   readonly platform?: string;
 }
 
-/** `Meta` on macOS and iOS, `Control` everywhere else. */
+/**
+ * `Meta` on macOS and iOS, `Alt` everywhere else. Not `Control`: screen reader
+ * users tap it to silence speech, and each tap would start a comment.
+ */
 export function commentModifier(source?: PlatformSource): TapModifier {
   const nav = source ?? (globalThis as { navigator?: PlatformSource }).navigator;
   const platform = nav?.userAgentData?.platform ?? nav?.platform ?? "";
-  return /mac|iphone|ipad/i.test(platform) ? "Meta" : "Control";
+  return /mac|iphone|ipad/i.test(platform) ? "Meta" : "Alt";
 }
 
-/** What a tooltip says: "Tap ⌘" on a Mac, "Tap Ctrl" elsewhere. */
+/** What a tooltip says: "Tap ⌘" on a Mac, "Tap Alt" elsewhere. */
 export function commentTapLabel(modifier: TapModifier = commentModifier()): string {
-  return modifier === "Meta" ? "Tap \u2318" : "Tap Ctrl";
+  return modifier === "Meta" ? "Tap \u2318" : "Tap Alt";
 }
 
 /** What the tap state machine is fed. `at` is a millisecond clock. */
@@ -110,8 +113,8 @@ interface PlainStep {
 
 /** True when a modifier other than `modifier` or Shift is held on this event. */
 function strayHeld(input: TapInput, modifier: TapModifier): boolean {
-  const other = modifier === "Meta" ? input.ctrlKey : input.metaKey;
-  return Boolean(input.altKey || other);
+  const other = modifier === "Meta" ? input.altKey : input.metaKey;
+  return Boolean(input.ctrlKey || other);
 }
 
 /** True when a modifier other than `modifier` is held on this event. */
@@ -277,6 +280,8 @@ export function watchCommentTap(options: TapOptions): void {
     state = step.state;
     if (step.fire) options.onTap();
     if (step.close) options.onClose?.();
+    // An Alt keyup the page leaves alone focuses the browser's menu bar on Windows.
+    if (type === "keyup" && modifier === "Alt" && (step.fire || step.close)) event.preventDefault();
     // Maple's own field is not the host's: no hint to click the page.
     if (step.ignored && !inMaple(event)) options.onIgnored?.(step.ignored);
   };

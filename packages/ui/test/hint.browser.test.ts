@@ -14,7 +14,7 @@ function hint(): HTMLElement | null {
 
 function tap(target: EventTarget): void {
   const key = commentModifier();
-  const flag = key === "Meta" ? { metaKey: true } : { ctrlKey: true };
+  const flag = key === "Meta" ? { metaKey: true } : { altKey: true };
   const init = { key, bubbles: true, composed: true };
   target.dispatchEvent(new KeyboardEvent("keydown", { ...init, ...flag }));
   target.dispatchEvent(new KeyboardEvent("keyup", init));

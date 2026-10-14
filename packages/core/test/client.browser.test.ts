@@ -5,6 +5,7 @@ import {
   commentModifier,
   createDraftKeeper,
   createMapleClient,
+  watchCommentTap,
   watchTheme,
 } from "../src/client/index.js";
 import { storedComment } from "../src/testing/fixtures.js";
@@ -139,7 +140,7 @@ function selectParagraph(): HTMLElement {
 /** A tap of this platform's modifier: down and up with nothing between. */
 function tap(target: EventTarget = document, extra: KeyboardEventInit = {}): void {
   const key = commentModifier();
-  const flag = key === "Meta" ? { metaKey: true } : { ctrlKey: true };
+  const flag = key === "Meta" ? { metaKey: true } : { altKey: true };
   const init = { key, bubbles: true, composed: true, ...extra };
   target.dispatchEvent(new KeyboardEvent("keydown", { ...init, ...flag }));
   target.dispatchEvent(new KeyboardEvent("keyup", init));
@@ -204,7 +205,7 @@ describe("the modifier tap over a real page", () => {
   it("does nothing for the copy shortcut or a click while it is down", () => {
     const maple = client();
     const key = commentModifier();
-    const flag = key === "Meta" ? { metaKey: true } : { ctrlKey: true };
+    const flag = key === "Meta" ? { metaKey: true } : { altKey: true };
     const send = (type: string, init: KeyboardEventInit) =>
       document.dispatchEvent(new KeyboardEvent(type, { bubbles: true, ...init }));
 
@@ -220,8 +221,8 @@ describe("the modifier tap over a real page", () => {
 
   it("does nothing for the other platform's modifier", () => {
     const maple = client();
-    const key = commentModifier() === "Meta" ? "Control" : "Meta";
-    const flag = key === "Meta" ? { metaKey: true } : { ctrlKey: true };
+    const key = commentModifier() === "Meta" ? "Alt" : "Meta";
+    const flag = key === "Meta" ? { metaKey: true } : { altKey: true };
     document.dispatchEvent(new KeyboardEvent("keydown", { key, ...flag, bubbles: true }));
     document.dispatchEvent(new KeyboardEvent("keyup", { key, bubbles: true }));
 
@@ -344,5 +345,31 @@ describe("polling once started", () => {
     status = "open";
     await new Promise((resolve) => setTimeout(resolve, 80));
     expect(stopped.getState().comments[0]?.status).toBe("resolved");
+  });
+});
+
+describe("an Alt tap Maple consumes", () => {
+  const send = (type: string, init: KeyboardEventInit): KeyboardEvent => {
+    const event = new KeyboardEvent(type, { bubbles: true, cancelable: true, ...init });
+    document.dispatchEvent(event);
+    return event;
+  };
+
+  it("cancels the keyup so a menu bar stays shut, and only then", () => {
+    const stop = new AbortController();
+    let taps = 0;
+    watchCommentTap({ modifier: "Alt", signal: stop.signal, onTap: () => (taps += 1) });
+
+    send("keydown", { key: "Alt", altKey: true });
+    expect(send("keyup", { key: "Alt" }).defaultPrevented).toBe(true);
+
+    send("keydown", { key: "Alt", altKey: true });
+    send("keydown", { key: "f", altKey: true });
+    expect(send("keyup", { key: "Alt" }).defaultPrevented).toBe(false);
+
+    send("keydown", { key: "AltGraph", altKey: true, ctrlKey: true });
+    expect(send("keyup", { key: "AltGraph" }).defaultPrevented).toBe(false);
+    expect(taps).toBe(1);
+    stop.abort();
   });
 });

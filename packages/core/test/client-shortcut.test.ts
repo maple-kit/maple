@@ -161,6 +161,29 @@ const up = (at: number, extra: Partial<TapInput> = {}): TapInput => ({
   ...extra,
 });
 const other = (at: number, key: string): TapInput => ({ type: "keydown", key, metaKey: true, at });
+const altDown = (at: number, extra: Partial<TapInput> = {}): TapInput => ({
+  type: "keydown",
+  key: "Alt",
+  altKey: true,
+  at,
+  ...extra,
+});
+const altUp = (at: number, extra: Partial<TapInput> = {}): TapInput => ({
+  type: "keyup",
+  key: "Alt",
+  at,
+  ...extra,
+});
+const altOther = (at: number, key: string): TapInput => ({
+  type: "keydown",
+  key,
+  altKey: true,
+  at,
+});
+
+function altKeyless(key: string, at: number, release = false): TapInput {
+  return release ? { type: "keyup", key, at } : { type: "keydown", key, ctrlKey: true, at };
+}
 
 describe("a tap of the comment modifier", () => {
   const cases: Array<[string, TapModifier, readonly TapInput[], number]> = [
@@ -177,12 +200,8 @@ describe("a tap of the comment modifier", () => {
     ],
     [
       "Ctrl+scroll is a zoom",
-      "Control",
-      [
-        down(0, { key: "Control", ctrlKey: true, metaKey: false }),
-        { type: "wheel", at: 20, ctrlKey: true },
-        up(80, { key: "Control" }),
-      ],
+      "Alt",
+      [altDown(0), { type: "wheel", at: 20, ctrlKey: true, altKey: true }, altUp(80)],
       0,
     ],
     ["momentum scrolling is not a chord", "Meta", [down(0), { type: "wheel", at: 20 }, up(80)], 1],
@@ -219,19 +238,54 @@ describe("a tap of the comment modifier", () => {
       [down(0), other(10, "c"), up(50), down(100), up(150)],
       1,
     ],
+    ["Alt on a non-Mac", "Alt", [altDown(0), altUp(80)], 1],
+    ["Alt+F is a browser menu, not a tap", "Alt", [altDown(0), altOther(20, "f"), altUp(80)], 0],
+    ["Alt+Tab is the app switcher", "Alt", [altDown(0), altOther(20, "Tab"), altUp(80)], 0],
+    ["Alt+click is a download", "Alt", [altDown(0), { type: "pointerdown", at: 20 }, altUp(80)], 0],
+    ["Ctrl already down spoils an Alt tap", "Alt", [altDown(0, { ctrlKey: true }), altUp(80)], 0],
+    ["Shift already down spoils an Alt tap", "Alt", [altDown(0, { shiftKey: true }), altUp(80)], 0],
+    ["Meta already down spoils an Alt tap", "Alt", [altDown(0, { metaKey: true }), altUp(80)], 0],
     [
-      "Ctrl on a non-Mac",
-      "Control",
-      [down(0, { key: "Control", ctrlKey: true, metaKey: false }), up(80, { key: "Control" })],
-      1,
+      "AltGraph is not Alt, even with Ctrl as Windows reports it",
+      "Alt",
+      [
+        { type: "keydown", key: "Control", ctrlKey: true, at: 0 },
+        { type: "keydown", key: "AltGraph", ctrlKey: true, altKey: true, at: 1 },
+        { type: "keyup", key: "AltGraph", ctrlKey: true, at: 80 },
+        { type: "keyup", key: "Control", at: 81 },
+      ],
+      0,
     ],
-    ["Meta is ignored on a non-Mac", "Control", [down(0), up(80)], 0],
+    [
+      "Alt pressed while AltGraph is down is not a tap",
+      "Alt",
+      [
+        { type: "keydown", key: "AltGraph", ctrlKey: true, altKey: true, at: 0 },
+        altDown(10, { ctrlKey: true }),
+        altUp(80, { ctrlKey: true }),
+      ],
+      0,
+    ],
+    [
+      "typing in a field swallows an Alt tap",
+      "Alt",
+      [altDown(0, { editable: true }), altUp(80)],
+      0,
+    ],
+    ["Meta is ignored off a Mac", "Alt", [down(0), up(80)], 0],
+    [
+      "Ctrl is ignored off a Mac",
+      "Alt",
+      [altKeyless("Control", 0), altKeyless("Control", 80, true)],
+      0,
+    ],
     [
       "Ctrl is ignored on a Mac",
       "Meta",
       [down(0, { key: "Control", ctrlKey: true }), up(80, { key: "Control" })],
       0,
     ],
+    ["Alt is ignored on a Mac", "Meta", [altDown(0), altUp(80)], 0],
   ];
 
   it.each(cases)("%s", (_name, modifier, script, fired) => {
@@ -265,10 +319,10 @@ describe("which modifier a platform taps", () => {
     ["MacIntel", undefined, "Meta"],
     ["iPhone", undefined, "Meta"],
     ["iPad", undefined, "Meta"],
-    ["Win32", undefined, "Control"],
-    ["Linux x86_64", undefined, "Control"],
+    ["Win32", undefined, "Alt"],
+    ["Linux x86_64", undefined, "Alt"],
     ["Win32", "macOS", "Meta"],
-    ["MacIntel", "Windows", "Control"],
+    ["MacIntel", "Windows", "Alt"],
   ])("%s with userAgentData %s taps %s", (platform, data, expected) => {
     const source = {
       platform,
@@ -277,8 +331,8 @@ describe("which modifier a platform taps", () => {
     expect(commentModifier(source)).toBe(expected);
   });
 
-  it("says Tap Ctrl or Tap Cmd for the tooltip", () => {
-    expect(commentTapLabel("Control")).toBe("Tap Ctrl");
+  it("says Tap Alt or Tap Cmd for the tooltip", () => {
+    expect(commentTapLabel("Alt")).toBe("Tap Alt");
     expect(commentTapLabel("Meta")).toBe("Tap \u2318");
   });
 });

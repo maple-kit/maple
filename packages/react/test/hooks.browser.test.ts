@@ -170,7 +170,7 @@ describe("the controller the provider built", () => {
     await expect.element(screen.getByTestId("picker")).toHaveTextContent("idle");
 
     const key = commentModifier();
-    const flag = key === "Meta" ? { metaKey: true } : { ctrlKey: true };
+    const flag = key === "Meta" ? { metaKey: true } : { altKey: true };
     document.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, ...flag }));
     document.dispatchEvent(new KeyboardEvent("keyup", { key, bubbles: true }));
     await expect.element(screen.getByTestId("picker")).toHaveTextContent("element");

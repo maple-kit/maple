@@ -26,8 +26,9 @@ const cmdUp = (at: number, extra: Partial<TapInput> = {}) => key("keyup", "Meta"
 const shiftDown = (at: number, extra: Partial<TapInput> = {}) =>
   key("keydown", "Shift", at, { shiftKey: true, ...extra });
 const shiftUp = (at: number) => key("keyup", "Shift", at);
-const ctrlDown = (at: number) => key("keydown", "Control", at, { ctrlKey: true });
-const ctrlUp = (at: number) => key("keyup", "Control", at);
+const altDown = (at: number, extra: Partial<TapInput> = {}) =>
+  key("keydown", "Alt", at, { altKey: true, ...extra });
+const altUp = (at: number) => key("keyup", "Alt", at);
 const other = (at: number, name: string) => key("keydown", name, at, { metaKey: true });
 
 describe("a tap of Shift and the comment modifier", () => {
@@ -51,10 +52,32 @@ describe("a tap of Shift and the comment modifier", () => {
       1,
     ],
     [
-      "Shift+Ctrl fires off a Mac",
-      "Control",
-      [shiftDown(0), ctrlDown(20), ctrlUp(80), shiftUp(90)],
+      "Shift+Alt fires off a Mac",
+      "Alt",
+      [shiftDown(0), altDown(20, { shiftKey: true }), altUp(80), shiftUp(90)],
       1,
+    ],
+    [
+      "Shift+AltGraph is not a close",
+      "Alt",
+      [
+        shiftDown(0),
+        key("keydown", "AltGraph", 20, { ctrlKey: true, altKey: true, shiftKey: true }),
+        key("keyup", "AltGraph", 80),
+        shiftUp(90),
+      ],
+      0,
+    ],
+    [
+      "Shift+Ctrl is not a close off a Mac",
+      "Alt",
+      [
+        shiftDown(0),
+        key("keydown", "Control", 20, { ctrlKey: true, shiftKey: true }),
+        key("keyup", "Control", 80),
+        shiftUp(90),
+      ],
+      0,
     ],
     [
       "Cmd+Shift+4 is a screenshot",
@@ -89,12 +112,7 @@ describe("a tap of Shift and the comment modifier", () => {
       [shiftDown(0), cmdDown(10), { type: "blur", at: 20 }, cmdUp(80), shiftUp(90)],
       0,
     ],
-    [
-      "Cmd is ignored on a non-Mac",
-      "Control",
-      [shiftDown(0), cmdDown(20), cmdUp(80), shiftUp(90)],
-      0,
-    ],
+    ["Cmd is ignored on a non-Mac", "Alt", [shiftDown(0), cmdDown(20), cmdUp(80), shiftUp(90)], 0],
     [
       "works from a text field",
       "Meta",

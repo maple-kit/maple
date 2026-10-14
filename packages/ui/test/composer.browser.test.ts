@@ -200,7 +200,7 @@ describe("the modifier tap, with a real selection on the page", () => {
 
   function tap(target: EventTarget = document): void {
     const key = commentModifier();
-    const flag = key === "Meta" ? { metaKey: true } : { ctrlKey: true };
+    const flag = key === "Meta" ? { metaKey: true } : { altKey: true };
     const init = { key, bubbles: true, composed: true };
     target.dispatchEvent(new KeyboardEvent("keydown", { ...init, ...flag }));
     target.dispatchEvent(new KeyboardEvent("keyup", init));

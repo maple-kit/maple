@@ -182,7 +182,7 @@ export interface PickState {
 }
 
 /**
- * What a Cmd tap leaves for a surface. `hint` is up while a tap that a text
+ * What a comment tap leaves for a surface. `hint` is up while a tap that a text
  * field swallowed is explained; `focus` counts taps that asked an open
  * composer for focus, and a surface focuses its field when it changes.
  */
