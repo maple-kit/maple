@@ -72,11 +72,15 @@ export function followModal(container: HTMLElement, home: Element): () => void {
   const doc = container.ownerDocument;
 
   const settle = (): void => {
-    const target = topmostModal(doc) ?? home;
+    const target = topmostModal(doc) ?? (home.isConnected ? home : doc.documentElement);
     if (!Object.is(container.parentElement, target)) relocate(container, target);
   };
+  // Re-appended only when its home left too: a container removed on purpose stays out.
+  const orphaned = (): boolean => !container.isConnected && !home.isConnected;
   const observer = new MutationObserver((records) => {
-    if (records.some((record) => mattersToModals(record, container))) settle();
+    if (orphaned() || records.some((record) => mattersToModals(record, container))) {
+      settle();
+    }
   });
 
   observer.observe(doc.documentElement, {

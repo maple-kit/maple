@@ -3,12 +3,15 @@
 A modal `<dialog>` opened with `showModal()` sits in the top layer above any
 `z-index` and makes the rest of the document inert. A script-built modal
 (`role="dialog" aria-modal="true"`) typically adds a focus trap and closes on
-any `pointerdown` outside it. Left in `<body>`, the overlay would be hidden,
+any `pointerdown` outside it. Left outside it, the overlay would be hidden,
 unfocusable, and counted as an outside click.
 
 While a modal is open the overlay's host element is moved inside the topmost
 one, and moved back to where it was mounted when none is left
-(`packages/core/src/overlay/modal.ts`). Inside the modal the host is not inert,
+(`packages/core/src/overlay/modal.ts`). That home is `<html>`, after `<body>`,
+so a `transform` or `filter` on the body cannot re-anchor the fixed host and a
+framework that swaps the body (Turbo, htmx boost) leaves it in place. If the
+host is ever detached, the same observer appends it again. Inside the modal the host is not inert,
 is in the top layer with it, and is contained by it, so a click on Maple is not
 an outside click. The shadow root, state and the focused control survive the
 move; an open Maple popup is re-opened as modal.

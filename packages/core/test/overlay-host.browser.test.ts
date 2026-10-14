@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createOverlayHost, createOverlayStyleSheet } from "../src/overlay/index.js";
 
@@ -57,6 +57,40 @@ describe("the overlay host", () => {
     created.destroy();
 
     expect(document.querySelector("[data-maple-overlay]")).toBeNull();
+  });
+
+  it("mounts after <body>, so a transform on the body cannot re-anchor it", () => {
+    document.body.style.setProperty("transform", "translateY(200px)");
+    try {
+      host = createOverlayHost();
+      expect(host.container.parentNode).toBe(document.documentElement);
+      expect(host.container.getBoundingClientRect().top).toBe(0);
+    } finally {
+      document.body.style.removeProperty("transform");
+    }
+  });
+
+  it("is back in the document after the page swaps its body", async () => {
+    host = createOverlayHost();
+    const old = document.body;
+    const next = document.createElement("body");
+    old.replaceWith(next);
+    try {
+      await vi.waitFor(() => expect(host?.container.isConnected).toBe(true));
+      expect(host.container.parentNode).toBe(document.documentElement);
+    } finally {
+      next.replaceWith(old);
+    }
+  });
+
+  it("re-appends a host whose parent left the document", async () => {
+    const parent = document.createElement("section");
+    document.body.append(parent);
+    host = createOverlayHost({ parent });
+    parent.remove();
+
+    await vi.waitFor(() => expect(host?.container.isConnected).toBe(true));
+    expect(host.container.parentNode).toBe(document.documentElement);
   });
 
   it("builds a stylesheet the CSSOM accepts", () => {

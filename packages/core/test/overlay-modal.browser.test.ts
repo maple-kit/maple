@@ -61,7 +61,7 @@ describe("the overlay under a native modal dialog", () => {
     await vi.waitFor(() => expect(host?.container.parentNode).toBe(dialog));
 
     dialog.close();
-    await vi.waitFor(() => expect(host?.container.parentNode).toBe(document.body));
+    await vi.waitFor(() => expect(host?.container.parentNode).toBe(document.documentElement));
   });
 
   it("goes back when the modal is removed with the overlay inside it", async () => {
@@ -71,7 +71,7 @@ describe("the overlay under a native modal dialog", () => {
     await vi.waitFor(() => expect(host?.container.parentNode).toBe(dialog));
 
     dialog.remove();
-    await vi.waitFor(() => expect(host?.container.parentNode).toBe(document.body));
+    await vi.waitFor(() => expect(host?.container.parentNode).toBe(document.documentElement));
   });
 
   it("follows the topmost of two modals", async () => {
@@ -92,7 +92,7 @@ describe("the overlay under a native modal dialog", () => {
     dialog.show();
     await new Promise((resolve) => setTimeout(resolve, 50));
 
-    expect(host?.container.parentNode).toBe(document.body);
+    expect(host?.container.parentNode).toBe(document.documentElement);
   });
 
   it("does not take its own modal popup for the page's", async () => {
@@ -102,7 +102,7 @@ describe("the overlay under a native modal dialog", () => {
     own.showModal();
     await new Promise((resolve) => setTimeout(resolve, 50));
 
-    expect(host?.container.parentNode).toBe(document.body);
+    expect(host?.container.parentNode).toBe(document.documentElement);
     expect(own.matches(":modal")).toBe(true);
   });
 
@@ -175,6 +175,6 @@ describe("the overlay under a scripted modal", () => {
     document.body.append(modal);
     await new Promise((resolve) => setTimeout(resolve, 50));
 
-    expect(host?.container.parentNode).toBe(document.body);
+    expect(host?.container.parentNode).toBe(document.documentElement);
   });
 });

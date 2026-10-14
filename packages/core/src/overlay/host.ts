@@ -25,7 +25,7 @@ export interface OverlayHost {
 
 /** How the host is mounted. */
 export interface OverlayHostOptions {
-  /** Where to mount. Defaults to `document.body`. */
+  /** Where to mount. Defaults to `document.documentElement`, after `<body>`. */
   readonly parent?: Element;
   /**
    * Nonce for a host that mounts Maple with a script tag. A bundled component
@@ -43,7 +43,9 @@ export function createOverlayStyleSheet(css: string): CSSStyleSheet {
 
 /** Mounts the overlay's root into the page. */
 export function createOverlayHost(options: OverlayHostOptions = {}): OverlayHost {
-  const parent = options.parent ?? document.body;
+  // Not in <body>: a transform, filter or contain there re-anchors `fixed`, and
+  // a framework that swaps the body (Turbo, htmx boost) would take the host along.
+  const parent = options.parent ?? document.documentElement;
   const container = document.createElement("div");
 
   container.setAttribute(OVERLAY_MARKER, "");
