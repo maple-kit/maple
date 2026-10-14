@@ -45,6 +45,15 @@ function handle(options: { calls?: boolean } = {}): MockHandle {
   return { recipe: undefined, inventory, ...calls, dispose: () => undefined };
 }
 
+describe("a long query", () => {
+  it("is cut to what the route accepts before it is sent", async () => {
+    const client = createMockClient({ handle: handle(), view: view() });
+    await client.searchCalls("x".repeat(500));
+
+    expect(fake.asked.at(-1)?.q).toHaveLength(200);
+  });
+});
+
 describe("Inventory.all", () => {
   it("lists every route's calls, the newest first, each key once", () => {
     const inventory = createInventory();

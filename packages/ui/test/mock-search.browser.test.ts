@@ -8,6 +8,19 @@ import { MapleMock } from "../src/mock/index.js";
 
 import type { MockClient, MockHandle, MockView } from "@maple-kit/mock";
 
+const chunk = vi.hoisted(() => {
+  let release = () => undefined as void;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  return { held, release: () => release() };
+});
+
+vi.mock("../src/mock/search.js", async (original) => {
+  await chunk.held;
+  return original();
+});
+
 const SEEN = "rest:GET /api/reviews";
 const HERE = "/";
 
@@ -26,6 +39,9 @@ function route(calls: readonly unknown[] = DESCRIBED) {
   const answer = vi.fn((input: URL) => {
     const url = new URL(input);
     asked.push(url.search);
+    if ((url.searchParams.get("q") ?? "").length > 200) {
+      return Promise.resolve(Response.json({ error: "bad" }, { status: 400 }));
+    }
     const found = calls.filter((call) =>
       JSON.stringify(call)
         .toLowerCase()
@@ -95,6 +111,23 @@ beforeEach(async () => {
 afterEach(() => {
   for (const client of clients.splice(0)) client.destroy();
   for (const overlay of document.querySelectorAll("[data-maple-overlay]")) overlay.remove();
+});
+
+describe("the first search", () => {
+  // Runs before anything else loads the search chunk, which is held until the test has typed.
+  it("keeps every character typed straight after the click, while the search is still loading", async () => {
+    const { fetch } = route();
+    await open(fetch);
+
+    await userEvent.click(buttonNamed("Search all APIs")!);
+    await userEvent.keyboard("rev");
+    expect(find<HTMLInputElement>('input[aria-label="Search APIs"]')?.value).toBe("rev");
+    expect(find("section[aria-label='Search all APIs']")).toBeNull();
+
+    chunk.release();
+    await vi.waitFor(() => expect(find("section[aria-label='Search all APIs']")).not.toBeNull());
+    expect(find<HTMLInputElement>('input[aria-label="Search APIs"]')!.value).toBe("rev");
+  });
 });
 
 describe("Search all flags", () => {
@@ -181,6 +214,39 @@ describe("Search all APIs", () => {
 
     await userEvent.keyboard("{Escape}");
     await vi.waitFor(() => expect(find(".mk-mock")).toBeNull());
+  });
+
+  it("still closes on Escape once Show more has run out and its button is gone", async () => {
+    const { fetch } = route();
+    await open(fetch);
+    buttonNamed("Search all APIs")!.click();
+    await vi.waitFor(() => expect(buttonNamed("Show more")).toBeDefined());
+
+    await userEvent.click(buttonNamed("Show more")!);
+    await vi.waitFor(() => expect(buttonNamed("Show more")).toBeUndefined());
+    await userEvent.keyboard("{Escape}");
+
+    await vi.waitFor(() => expect(find("section[aria-label='Search all APIs']")).toBeNull());
+    expect(find(".mk-mock")).not.toBeNull();
+  });
+
+  it("does not search past what the route accepts, however long the query", async () => {
+    const { asked, fetch } = route();
+    await open(fetch);
+    buttonNamed("Search all APIs")!.click();
+    await vi.waitFor(() => expect(find('input[aria-label="Search APIs"]')).not.toBeNull());
+
+    await userEvent.type(
+      find<HTMLInputElement>('input[aria-label="Search APIs"]')!,
+      "a".repeat(230),
+    );
+
+    await vi.waitFor(() =>
+      expect(find<HTMLInputElement>('input[aria-label="Search APIs"]')!.value).toHaveLength(200),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    expect(find("section[aria-label='Search all APIs']")!.textContent).not.toContain("Couldn't");
+    expect(asked.every((search) => search.length <= "?q=".length + 200)).toBe(true);
   });
 
   it("says so, once, when the route describes no calls, and still searches the page's own", async () => {

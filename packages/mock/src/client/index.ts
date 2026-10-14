@@ -6,6 +6,7 @@
 
 export { installedMock } from "../handle.js";
 export type { MockHandle } from "../interceptor.js";
+export { CALLS_QUERY_MAX } from "../schema/calls.js";
 export { createMockClient, MockClipboardError } from "./client.js";
 export type {
   MockCallRow,

@@ -18,9 +18,9 @@ const DIST = resolve(dirname(fileURLToPath(import.meta.url)), "..", "dist");
 
 /**
  * The mock box alone, which is also what a page with no `<Maple />` carries.
- * 4.25 KB for the two quiet "Search all" buttons; the search itself loads later.
+ * 4.25 KB for the two "Search all" buttons; 4.5 for the stand-in search field.
  */
-const MOCK_MAX = 4.25 * 1024;
+const MOCK_MAX = 4.5 * 1024;
 
 /** Each budget is the gzipped size of the modules only that column reaches. */
 const BUDGETS = [
@@ -75,8 +75,9 @@ const FORBIDDEN = [
     entry: "mock/index.js",
     modules: /^(island|composer|marks|picker)\//,
     packages: /^$/,
-    // 8.5 KB until a long flag value wrapped and clamped (a few rules).
-    max: 8.75 * 1024,
+    // 8.5 KB until a long flag value wrapped and clamped (a few rules);
+    // 8.75 KB until the stand-in search field.
+    max: 9 * 1024,
   },
   {
     entry: "maple.js",

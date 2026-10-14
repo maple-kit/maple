@@ -26,7 +26,7 @@ import { cx } from "../cx.js";
 import { CodeIcon } from "../icons/code.js";
 import { LinkIcon } from "../icons/link.js";
 import { SCHEME_ATTRIBUTE } from "../sheet-base.js";
-import { button } from "./button.js";
+import { button, searchHold } from "./button.js";
 import {
   bannerSentence,
   callName,
@@ -220,8 +220,10 @@ function searchAll(
   client: MockClient,
   search: SearchChunk | undefined,
 ): ReactNode {
-  if (state.search === "calls" && search) {
-    return createElement(search.Search, { kind: "calls", state, client });
+  if (state.search === "calls") {
+    return search
+      ? createElement(search.Search, { kind: "calls", state, client })
+      : searchHold(MOCK_COPY.apisField, MOCK_COPY.escape);
   }
   return button(MOCK_COPY.searchApis, () => client.setSearch("calls"), {
     quiet: true,

@@ -4,9 +4,10 @@
  * carries none of it and nothing is asked of the route before then.
  */
 
+import { CALLS_QUERY_MAX } from "@maple-kit/mock/client";
 import { createElement, useEffect, useRef, useState } from "react";
 
-import { button } from "./button.js";
+import { button, takeHeld } from "./button.js";
 import { callName, codecOf, MOCK_COPY, STATE_LABELS } from "./language.js";
 import { flagRow } from "./layers.js";
 import { Menu } from "./menu.js";
@@ -18,8 +19,6 @@ import type { ReactElement, ReactNode, RefObject } from "react";
 
 /** The words this chunk says. They load with it. */
 const SEARCH_COPY = {
-  apis: "Search APIs",
-  flags: "Search flags",
   more: "Show more",
   none: "Nothing matches.",
   failed: "Couldn't search. Try again.",
@@ -45,14 +44,19 @@ interface SearchProps {
 /** The search field and what it found, in the place of the button that opened it. */
 export function Search(props: SearchProps): ReactElement {
   const { client, kind, state } = props;
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(takeHeld);
   const [busy, setBusy] = useState(false);
   const section = useRef<HTMLElement>(null);
+  const field = useRef<HTMLInputElement>(null);
   useReturnFocus(section, kind);
+  const toField = () => {
+    const active = (section.current?.getRootNode() as ShadowRoot | undefined)?.activeElement;
+    if (!active || active.textContent === SEARCH_COPY.more) field.current?.focus();
+  };
   const found =
     kind === "calls"
-      ? createElement(CallResults, { query, state, client, onBusy: setBusy })
-      : createElement(FlagResults, { key: query, client, query });
+      ? createElement(CallResults, { query, state, client, onBusy: setBusy, toField })
+      : createElement(FlagResults, { key: query, client, query, toField });
 
   return createElement(
     "section",
@@ -63,9 +67,11 @@ export function Search(props: SearchProps): ReactElement {
       createElement("input", {
         className: "mk-mock-field",
         type: "text",
-        placeholder: kind === "calls" ? SEARCH_COPY.apis : SEARCH_COPY.flags,
-        "aria-label": kind === "calls" ? SEARCH_COPY.apis : SEARCH_COPY.flags,
+        placeholder: kind === "calls" ? MOCK_COPY.apisField : MOCK_COPY.flagsField,
+        "aria-label": kind === "calls" ? MOCK_COPY.apisField : MOCK_COPY.flagsField,
         value: query,
+        ref: field,
+        maxLength: CALLS_QUERY_MAX,
         autoFocus: true,
         onChange: (event: { currentTarget: HTMLInputElement }) =>
           setQuery(event.currentTarget.value),
@@ -87,13 +93,22 @@ function useReturnFocus(section: RefObject<HTMLElement | null>, kind: string): v
 }
 
 /** What a flag search found, a page at a time. Reads memory, so there is nothing to wait for. */
-function FlagResults(props: { query: string; client: MockClient }): ReactElement {
-  const { client, query } = props;
+function FlagResults(props: {
+  query: string;
+  client: MockClient;
+  toField: () => void;
+}): ReactElement {
+  const { client, query, toField } = props;
   const [shown, setShown] = useState(PAGE);
   const all = client.searchFlags(query);
   return list(
     all.slice(0, shown).map((flag) => flagRow(flag, client, flag.set !== undefined)),
-    all.length > shown ? () => setShown(shown + PAGE) : undefined,
+    all.length > shown
+      ? () => {
+          setShown(shown + PAGE);
+          if (all.length <= shown + PAGE) toField();
+        }
+      : undefined,
     all.length === 0,
   );
 }
@@ -113,8 +128,9 @@ function CallResults(props: {
   state: MockClientState;
   client: MockClient;
   onBusy: (busy: boolean) => void;
+  toField: () => void;
 }): ReactElement {
-  const { client, onBusy, query, state } = props;
+  const { client, onBusy, query, state, toField } = props;
   const [loaded, setLoaded] = useState<Loaded>(NOTHING);
   const [asked, setAsked] = useState(false);
 
@@ -159,6 +175,8 @@ function CallResults(props: {
       (page) => {
         onBusy(false);
         setLoaded({ ...loaded, hits: [...loaded.hits, ...page.hits], next: page.next });
+        // The button that had focus is gone; Escape only works from inside the box.
+        if (page.next === undefined) toField();
       },
       () => {
         onBusy(false);

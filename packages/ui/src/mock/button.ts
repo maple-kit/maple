@@ -31,3 +31,34 @@ export function button(text: string, onClick: () => void, flags: ButtonFlags = {
     text,
   );
 }
+
+/** What was typed into a search field before its chunk loaded. */
+let held = "";
+
+/** Hands over, once, what the stand-in field was given. */
+export function takeHeld(): string {
+  const text = held;
+  held = "";
+  return text;
+}
+
+/**
+ * The search field before its chunk has loaded: it takes focus at once and
+ * keeps what is typed, so no keystroke lands on the button that was clicked.
+ */
+export function searchHold(label: string, escape: string): ReactElement {
+  return createElement(
+    "div",
+    { className: "mk-mock-head" },
+    createElement("input", {
+      className: "mk-mock-field",
+      placeholder: label,
+      "aria-label": label,
+      autoFocus: true,
+      onChange: (event: { currentTarget: HTMLInputElement }) => {
+        held = event.currentTarget.value;
+      },
+    }),
+    createElement("kbd", { className: "mk-mock-key-hint" }, escape),
+  );
+}

@@ -819,7 +819,7 @@ The Vite example's `verify` checks both halves: a production build with
 of the island, the composer or the marks.
 
 **On its own it has its own shadow host** and adopts `MOCK_CSS`: the tokens,
-the base rules and the box's, which `scripts/size.js` keeps under 8.75 KB with
+the base rules and the box's, which `scripts/size.js` keeps under 9 KB with
 everything it reaches. Its scheme is the opposite of the page's, as the
 overlay's is by default.
 
@@ -880,7 +880,7 @@ host's and the page's; the box has no role list.
 
 - **It is a lazy chunk.** `mock/layers.js` is loaded by a dynamic import only
   when the page has identity rules, has evaluated a flag, or has a recipe with
-  either layer, so the box alone stays under 8.75 KB. `scripts/size.js` weighs a
+  either layer, so the box alone stays under 9 KB. `scripts/size.js` weighs a
   dynamic import as its own entry (2.5 KB), and fails on one no budget names.
 - **The banner says what `as` cannot do**, exactly: "Showing as barista. The
   server still acts as you." It counts the flags set, and every write that

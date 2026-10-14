@@ -8,7 +8,7 @@ import { describeIdentity } from "@maple-kit/core/mock";
 import { createElement, useEffect, useRef, useState } from "react";
 
 import { ChevronIcon } from "../icons/chevron.js";
-import { button } from "./button.js";
+import { button, searchHold } from "./button.js";
 import { MOCK_COPY } from "./language.js";
 
 import type { FlagValue as FlagValueType } from "@maple-kit/core/mock";
@@ -100,8 +100,10 @@ export function Layers(props: LayerProps): ReactElement {
 
 /** Under the flags: a quiet button, which opens the search in its place. */
 function flagSearch(state: MockClientState, client: MockClient, search: LayerProps["search"]) {
-  if (state.search === "flags" && search) {
-    return createElement(search.Search, { kind: "flags", state, client });
+  if (state.search === "flags") {
+    return search
+      ? createElement(search.Search, { kind: "flags", state, client })
+      : searchHold(MOCK_COPY.flagsField, MOCK_COPY.escape);
   }
   return button(MOCK_COPY.searchFlags, () => client.setSearch("flags"), {
     quiet: true,

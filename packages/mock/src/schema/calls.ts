@@ -20,6 +20,9 @@ export type CallsLookup = (
   signal?: AbortSignal,
 ) => Promise<CallsPage>;
 
+/** The longest search the route accepts; it answers 400 past this, so nothing longer is sent. */
+export const CALLS_QUERY_MAX = 200;
+
 /** Raised when the route answers 404: no preview, so nothing to search. */
 export class CallsUnavailableError extends Error {
   override readonly name = "CallsUnavailableError";
@@ -53,7 +56,7 @@ export function routeCalls(options: RouteCallsOptions): CallsLookup {
 
   return async (query, cursor, signal) => {
     const url = new URL(`${base}/mock/calls`, where);
-    url.searchParams.set("q", query);
+    url.searchParams.set("q", query.slice(0, CALLS_QUERY_MAX));
     if (cursor !== undefined) url.searchParams.set("cursor", cursor);
     let response: Response;
     try {

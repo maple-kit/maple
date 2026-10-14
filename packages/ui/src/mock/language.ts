@@ -66,6 +66,8 @@ export const MOCK_COPY = {
   edit: "Edit",
   searchApis: "Search all APIs",
   searchFlags: "Search all flags",
+  apisField: "Search APIs",
+  flagsField: "Search flags",
 } as const;
 
 /** The banner's sentence, which names the first call and counts the rest. */
