@@ -17,7 +17,7 @@ import { gzipSync } from "node:zlib";
 const DIST = resolve(dirname(fileURLToPath(import.meta.url)), "..", "dist");
 
 /** The mock box alone, which is also what a page with no `<Maple />` carries. */
-const MOCK_MAX = 4 * 1024;
+const MOCK_MAX = 4.1 * 1024;
 
 /** Each budget is the gzipped size of the modules only that column reaches. */
 const BUDGETS = [

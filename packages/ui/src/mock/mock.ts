@@ -208,9 +208,9 @@ function Box(props: SurfaceProps & { layers: LayerChunk | undefined }): ReactEle
 }
 
 /** The line under the field, when the sentence was not turned into a chip. */
-function aside({ planFailure, unnamed }: MockClientState): string | undefined {
+function aside({ planFailure, planWarnings, unnamed }: MockClientState): string | undefined {
   if (planFailure !== undefined) return MOCK_COPY[planFailure];
-  return unnamed ? MOCK_COPY.unnamed : undefined;
+  return unnamed ? MOCK_COPY.unnamed : planWarnings.join(". ") || undefined;
 }
 
 function calls(state: MockClientState, client: MockClient): ReactNode {

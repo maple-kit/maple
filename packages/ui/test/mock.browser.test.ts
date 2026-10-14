@@ -628,6 +628,18 @@ describe("the box, reading a sentence", () => {
     expect(find(`.mk-mock-call[data-mk-mocked="true"]`)).toBeNull();
   });
 
+  it("says what the route left out as a muted line, beside the chip", async () => {
+    const warnings = ["flags: planned 100 of 187", "flags: 2 dropped (too many variants)"];
+    await typed("no reviews yet", { ...planned({ empty: 0.8 }), warnings });
+
+    await vi.waitFor(() =>
+      expect(find(".mk-mock-unnamed")?.textContent).toBe(
+        "flags: planned 100 of 187. flags: 2 dropped (too many variants)",
+      ),
+    );
+    expect(find(`.mk-mock-call[data-mk-mocked="true"]`)).not.toBeNull();
+  });
+
   it.each<[string, number | undefined, RegExp]>([
     ["a 403 does not suggest retrying", 403, /refused that\. Set calls below/],
     ["a 500 suggests trying again", 500, /Try again, or set calls below/],

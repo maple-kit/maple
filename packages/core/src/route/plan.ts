@@ -31,6 +31,8 @@ export interface MockPlanOptions {
   readonly cacheSize?: number;
   /** Per session, per window. Defaults to 40 calls a minute. */
   readonly rate?: RateLimit;
+  /** How many of a page's flags one plan weighs. The rest are left out, with a warning. */
+  readonly flags?: { readonly limit?: number };
 }
 
 /** What the endpoint answers with: null for a sentence with nothing in it yet. */
@@ -60,6 +62,7 @@ interface Asked {
   readonly route: string;
   readonly calls: readonly MockPlanCall[];
   readonly flags: readonly MockPlanFlag[];
+  readonly warnings: readonly string[];
 }
 
 /**
@@ -81,14 +84,15 @@ export function createMockPlanner(
       if (request.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
       if (unreadable(request)) return json({ error: "Send the body plain or gzipped" }, 415);
-      const { asked, error } = read(await readJson(request));
+      const { asked, error } = read(await readJson(request), options.flags?.limit);
       if (asked === undefined) return json({ error }, 400);
       if (asked.request.trim() === "") return json({ plan: null } satisfies MockPlanAnswer, 200);
 
       const planned = await layered(asked, schemas);
       const key = stableStringify(planned);
+      const warn = (answer: MockPlanAnswer) => withWarnings(answer, asked.warnings);
       const hit = cache.get(key);
-      if (hit) return json(hit, 200);
+      if (hit) return json(warn(hit), 200);
 
       if (!limiter.take(session)) return json({ error: "Too many plans" }, 429);
 
@@ -97,7 +101,7 @@ export function createMockPlanner(
           plan: confined(await plan({ ...planned, signal: request.signal }), planned),
         };
         cache.set(key, answer);
-        return json(answer, 200);
+        return json(warn(answer), 200);
       } catch (error) {
         logger?.warn("A mock request could not be planned.", { error: String(error) });
         return json({ error: "The request could not be planned" }, 502);
@@ -106,11 +110,17 @@ export function createMockPlanner(
   };
 }
 
+/** The answer, its plan carrying what was left out of the request. */
+function withWarnings(answer: MockPlanAnswer, warnings: readonly string[]): MockPlanAnswer {
+  if (answer.plan === null || warnings.length === 0) return answer;
+  return { plan: { ...answer.plan, warnings } };
+}
+
 /** The request, or the reason it is not one. */
-function read(posted: unknown): { asked?: Asked; error?: string } {
+function read(posted: unknown, limit?: number): { asked?: Asked; error?: string } {
   if (!isRecord(posted)) return { error: "A body is required" };
   const { request, route, calls } = posted;
-  const flags = readPlanFlags(posted["flags"]);
+  const flags = readPlanFlags(posted["flags"], typeof request === "string" ? request : "", limit);
   if (flags.flags === undefined) return { error: flags.error ?? "flags" };
   if (typeof request !== "string" || request.length > MAX_REQUEST) {
     return { error: `request: a string of at most ${MAX_REQUEST} characters` };
@@ -125,7 +135,15 @@ function read(posted: unknown): { asked?: Asked; error?: string } {
   if (read.some((call) => call === undefined)) {
     return { error: "calls: each a { key, summary } with a codec-prefixed key" };
   }
-  return { asked: { request, route, calls: read as MockPlanCall[], flags: flags.flags } };
+  return {
+    asked: {
+      request,
+      route,
+      calls: read as MockPlanCall[],
+      flags: flags.flags,
+      warnings: flags.warnings,
+    },
+  };
 }
 
 function readCall(call: unknown): MockPlanCall | undefined {
@@ -141,10 +159,11 @@ function readCall(call: unknown): MockPlanCall | undefined {
  * when the page listed some, and the roles only when the host's rules list some.
  */
 async function layered(asked: Asked, schemas: MockSchemas) {
-  const { flags, ...rest } = asked;
+  const { flags, request, route } = asked;
   const roles = planRoles(await schemas.identity());
   return {
-    ...rest,
+    request,
+    route,
     calls: await described(asked.calls, () => schemas.index()),
     ...(flags.length === 0 ? {} : { flags }),
     ...(roles.length === 0 ? {} : { roles }),

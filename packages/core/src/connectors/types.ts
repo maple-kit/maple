@@ -325,6 +325,8 @@ export interface MockPlan {
   readonly flags?: readonly PlannedFlag[];
   /** The role the sentence asks the page to be shown as, when it names a listed one. */
   readonly role?: PlannedRole;
+  /** What the route left out of the request, in plain sentences. Older routes never set it. */
+  readonly warnings?: readonly string[];
 }
 
 /** Whether the sentence sets one flag, to which of its values, and how likely that is. */

@@ -228,14 +228,72 @@ describe("POST /mock/plan", () => {
     expect(plan).not.toHaveProperty("role");
   });
 
-  it.each<[string, unknown]>([
-    ["not a list", { key: "x" }],
-    ["a flag with no key", [{ type: "boolean" }]],
-    ["an unknown type", [{ key: "x", type: "date" }]],
-    ["a variant that is an object", [{ key: "x", type: "object", variants: [{ a: 1 }] }]],
-  ])("refuses flags that are %s", async (_name, flags) => {
-    const response = await handler(memoryClassifier())(post({ ...ASKED, flags }));
+  it("refuses flags that are not a list", async () => {
+    const response = await handler(memoryClassifier())(post({ ...ASKED, flags: { key: "x" } }));
     expect(response.status).toBe(400);
+  });
+
+  it.each<[string, unknown, string]>([
+    ["a flag with no key", [{ type: "boolean" }], "flags: 1 dropped (an unusable key)"],
+    ["an unknown type", [{ key: "x", type: "date" }], "flags: 1 dropped (an unknown type)"],
+    [
+      "a variant that is an object",
+      [{ key: "x", type: "object", variants: [{ a: 1 }] }],
+      "flags: 1 dropped (a value that is too long)",
+    ],
+  ])("drops a flag with %s and says so", async (_name, flags, warning) => {
+    const response = await handler(memoryClassifier())(post({ ...ASKED, flags }));
+    const { plan } = (await response.json()) as { plan: { warnings: string[] } };
+    expect(response.status).toBe(200);
+    expect(plan.warnings).toEqual([warning]);
+  });
+
+  it("drops the one flag with too many variants and plans the rest", async () => {
+    const { classifier, asked } = recording();
+    const many = Array.from({ length: 21 }, (_, i) => `v${String(i)}`);
+    const flags = [
+      { key: "new-roaster", type: "boolean" },
+      { key: "wide", type: "string", variants: many },
+    ];
+    const response = await handler(classifier)(post({ ...ASKED, flags }));
+    const { plan } = (await response.json()) as { plan: { warnings: string[] } };
+    expect(asked[0]?.flags).toEqual([flags[0]]);
+    expect(plan.warnings).toEqual(["flags: 1 dropped (too many variants)"]);
+  });
+
+  it("plans 100 of 187 flags and warns", async () => {
+    const { classifier, asked } = recording();
+    const flags = Array.from({ length: 187 }, (_, i) => ({
+      key: `flag-${String(i)}`,
+      type: "boolean",
+    }));
+    const response = await handler(classifier)(post({ ...ASKED, flags }));
+    const { plan } = (await response.json()) as { plan: { warnings: string[] } };
+    expect(response.status).toBe(200);
+    expect(asked[0]?.flags).toHaveLength(100);
+    expect(asked[0]?.flags?.[99]).toEqual(flags[186]);
+    expect(plan.warnings).toEqual(["flags: planned 100 of 187"]);
+  });
+
+  it("keeps a flag sharing a word with the sentence even when it was sent first", async () => {
+    const { classifier, asked } = recording();
+    const flags = [
+      { key: "showVerdict", type: "boolean" },
+      ...Array.from({ length: 150 }, (_, i) => ({ key: `flag-${String(i)}`, type: "boolean" })),
+    ];
+    await handler(classifier)(post({ ...ASKED, request: "show new verdict", flags }));
+    expect(asked[0]?.flags).toHaveLength(100);
+    expect(asked[0]?.flags?.map((flag) => flag.key)).toContain("showVerdict");
+  });
+
+  it("takes the limit from the host's options", async () => {
+    const { classifier, asked } = recording();
+    const handle = createMapleHandler({
+      mock: { preview: true, schemas: [DOCUMENT], plan: { classifier, flags: { limit: 2 } } },
+    });
+    const flags = ["a-one", "b-two", "c-three"].map((key) => ({ key, type: "boolean" }));
+    await handle(post({ ...ASKED, flags }));
+    expect(asked[0]?.flags).toEqual(flags.slice(1));
   });
 
   it.each<[string, RouteOptions]>([

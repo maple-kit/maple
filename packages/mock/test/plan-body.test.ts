@@ -74,6 +74,12 @@ describe("merging the plans of many batches", () => {
     expect(merged.role).toEqual({ role: "guest", p: 0.6 });
   });
 
+  it("joins the batches' warnings once each", () => {
+    const warnings = ["flags: planned 100 of 187"];
+    const merged = mergePlans([plan(0.5, ["a"], { warnings }), plan(0.5, ["b"], { warnings })]);
+    expect(merged.warnings).toEqual(warnings);
+  });
+
   it("returns a single plan untouched", () => {
     const only = plan(0.7, ["a"]);
     expect(mergePlans([only])).toBe(only);

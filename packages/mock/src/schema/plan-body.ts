@@ -66,6 +66,7 @@ export function mergePlans(plans: readonly MockPlan[]): MockPlan {
   if (rest.length === 0) return first;
   const lead = plans.reduce((best, next) => (next.confidence > best.confidence ? next : best));
   const flags = strongest(plans);
+  const warnings = [...new Set(plans.flatMap((plan) => plan.warnings ?? []))];
   const role = plans
     .flatMap((plan) => (plan.role === undefined ? [] : [plan.role]))
     .sort((a, b) => b.p - a.p)[0];
@@ -76,6 +77,7 @@ export function mergePlans(plans: readonly MockPlan[]): MockPlan {
     calls: plans.flatMap((plan) => plan.calls),
     ...(flags.length === 0 ? {} : { flags }),
     ...(role === undefined ? {} : { role }),
+    ...(warnings.length === 0 ? {} : { warnings }),
   };
 }
 

@@ -98,6 +98,8 @@ export interface MockClientState {
   readonly thinking: boolean;
   /** Why the last sentence was not read: refused for good, or failed and worth another try. */
   readonly planFailure: PlanFailure | undefined;
+  /** What the route left out of the last plan, such as flags past its limit. Not an error. */
+  readonly planWarnings: readonly string[];
   /** The sentence behind the draft, once a chip put it there. */
   readonly request: string | undefined;
   /** The page's route pattern, which a recipe applied from here is scoped to. */
@@ -259,6 +261,7 @@ function initial(open: boolean): MockClientState {
     unnamed: false,
     thinking: false,
     planFailure: undefined,
+    planWarnings: [],
     request: undefined,
     route: "/",
     calls: [],
@@ -372,9 +375,14 @@ function cancelPlan(runtime: Runtime): void {
   patch(runtime, { thinking: false });
 }
 
-const QUIET: PlanReading & { thinking: false; planFailure: undefined } = {
+const QUIET: Omit<PlanReading, "warnings"> & {
+  planWarnings: readonly string[];
+  thinking: false;
+  planFailure: undefined;
+} = {
   suggestions: [],
   unnamed: false,
+  planWarnings: [],
   thinking: false,
   planFailure: undefined,
 };
@@ -435,7 +443,8 @@ type Draft = Pick<MockClientState, "draft" | "draftFlags" | "draftAs">;
 
 /** A reading lands: its best suggestion over the draft as it was before the sentence. */
 function read(runtime: Runtime, reading: PlanReading): void {
-  patch(runtime, { ...reading, thinking: false });
+  const { warnings = [], ...rest } = reading;
+  patch(runtime, { ...rest, planWarnings: warnings, thinking: false });
   const [best] = reading.suggestions;
   if (best === undefined) {
     if (reading.unnamed) restore(runtime);
@@ -460,7 +469,13 @@ function restore(runtime: Runtime): void {
   const { base } = runtime;
   if (base === undefined) return;
   delete runtime.base;
-  patch(runtime, { ...base, request: undefined, suggestions: [], unnamed: false });
+  patch(runtime, {
+    ...base,
+    request: undefined,
+    suggestions: [],
+    unnamed: false,
+    planWarnings: [],
+  });
 }
 
 /**

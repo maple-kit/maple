@@ -399,7 +399,7 @@ own. `runClassifierContract` checks a plan's shape for any connector that
 defines one.
 
 **The route plans, the page never reaches a model.**
-`RouteOptions.mock.plan` is `{ classifier, cacheSize?, rate? }`, and
+`RouteOptions.mock.plan` is `{ classifier, cacheSize?, rate?, flags?: { limit? } }`, and
 `POST {base}/mock/plan` takes `{ request, route, calls: [{ key, summary }] }`
 and answers `{ plan }`. It is gated as `/mock/schema` is: 404 unless `preview`
 is true, 404 when the classifier does not define `plan`, and 401 to a reviewer
@@ -516,6 +516,15 @@ dropped, whatever the planner said. A plan answers one `PlannedFlag` per
 listed flag, `{ key, value, concerned, p }` with `value` one of its values,
 and a `role` when the sentence names a listed one.
 
+- **A page's flags are never refused.** The route drops a flag a plan could
+  not set on its own (more than 20 variants, a value over 100 characters, an
+  unknown type, a bad key) and counts why. Past `MockPlanOptions.flags.limit`
+  (100 by default; each flag is its own model question, so the cap budgets
+  work per plan) it keeps the flags whose key shares a word with the sentence
+  first, keys split on `-_.:/` and camelCase, then the latest sent. The plan
+  answers `warnings?: string[]`, plain sentences such as `flags: planned 100
+of 187` or `flags: 2 dropped (too many variants)`, which the box shows as
+  one muted line under the field. Only a `flags` that is no list is a 400.
 - **The gate carries them.** Named flags and a role at even odds or better
   ride on each state's reading, or make a reading of their own when the
   sentence names no state: "as a barista" sets the role and the flag, not

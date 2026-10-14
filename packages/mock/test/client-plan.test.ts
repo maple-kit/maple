@@ -376,6 +376,23 @@ describe("the box, planning a sentence", () => {
     vi.useRealTimers();
   });
 
+  it("keeps the route's warnings in the state, and drops them when the field empties", async () => {
+    vi.useFakeTimers();
+    const warned = { ...planOf({ empty: 0.7 }), warnings: ["flags: planned 100 of 187"] };
+    const client = createMockClient({
+      view: view(),
+      handle: handle(() => Promise.resolve(warned)),
+    });
+    client.setQuery("no roasts");
+    await settle();
+    expect(client.getState().planWarnings).toEqual(["flags: planned 100 of 187"]);
+    expect(client.getState().planFailure).toBeUndefined();
+
+    client.setQuery("");
+    expect(client.getState().planWarnings).toEqual([]);
+    vi.useRealTimers();
+  });
+
   it("stays a filter when the host says so, or nothing plans", () => {
     const off = createMockClient({
       view: view(),

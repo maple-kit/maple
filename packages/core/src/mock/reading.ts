@@ -26,6 +26,8 @@ export interface PlanReading {
   readonly suggestions: readonly MockSuggestion[];
   /** True when the sentence was read, confidently, as naming nothing to set. */
   readonly unnamed: boolean;
+  /** What the route left out of the request, in plain sentences. Never an error. */
+  readonly warnings?: readonly string[];
 }
 
 /** Below this the plan is a shrug, and a shrug is said as nothing. */
@@ -47,6 +49,14 @@ type Layers = Pick<MockSuggestion, "as" | "flags">;
  */
 export function readPlan(plan: MockPlan | null): PlanReading {
   if (plan === null) return NOTHING;
+  const { warnings } = plan;
+  return {
+    ...readStates(plan),
+    ...(warnings === undefined || warnings.length === 0 ? {} : { warnings }),
+  };
+}
+
+function readStates(plan: MockPlan): Omit<PlanReading, "warnings"> {
   const layers = layersOf(plan);
   const states = statesOf(plan);
   if (states.length > 0) {
@@ -57,7 +67,7 @@ export function readPlan(plan: MockPlan | null): PlanReading {
     return { suggestions: [{ calls: [], ...layers }], unnamed: false };
   }
   const unnamed = plan.state === "none" && plan.confidence >= PLAN_FLOOR;
-  return unnamed ? { suggestions: [], unnamed } : NOTHING;
+  return { suggestions: [], unnamed };
 }
 
 /** The state, or the two it is torn between; none when unsure or when no call is in it. */
