@@ -64,10 +64,11 @@ export const MOCK_COPY = {
   apply: "Apply and reload",
   turnOff: "Turn off",
   edit: "Edit",
-  searchApis: "Search all APIs",
-  searchFlags: "Search all flags",
-  apisField: "Search APIs",
-  flagsField: "Search flags",
+  apisField: "Search all APIs",
+  flagsField: "Search all flags",
+  searchAll: "Search all",
+  cancel: "Cancel",
+  added: "added",
 } as const;
 
 /** The banner's sentence, which names the first call and counts the rest. */

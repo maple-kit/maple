@@ -1,4 +1,10 @@
-import { createInventory, createMockClient, routeCalls, seenFlags } from "@maple-kit/mock";
+import {
+  createInventory,
+  createMockClient,
+  pathPattern,
+  routeCalls,
+  seenFlags,
+} from "@maple-kit/mock";
 import { createElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
@@ -73,6 +79,7 @@ function view(): MockView {
 function handle(fetcher: typeof fetch): MockHandle {
   const inventory = createInventory();
   inventory.record(HERE, { key: SEEN, status: 200, body: {}, at: 1 });
+  inventory.record("/settings", { key: "rest:GET /api/team", status: 200, body: {}, at: 2 });
   const calls = routeCalls({ basePath: "/api/maple", fetch: fetcher });
   return { recipe: undefined, inventory, calls, dispose: () => undefined };
 }
@@ -83,6 +90,11 @@ function find<T extends Element>(selector: string): T | null {
     if (found) return found;
   }
   return null;
+}
+
+/** The title row's "Search all" for one section. */
+function searchButton(kind: "calls" | "flags"): HTMLButtonElement | null {
+  return find<HTMLButtonElement>(`[data-mk-search="${kind}"]`);
 }
 
 function buttonNamed(name: string): HTMLButtonElement | undefined {
@@ -119,14 +131,14 @@ describe("the first search", () => {
     const { fetch } = route();
     await open(fetch);
 
-    await userEvent.click(buttonNamed("Search all APIs")!);
+    await userEvent.click(searchButton("calls")!);
     await userEvent.keyboard("rev");
-    expect(find<HTMLInputElement>('input[aria-label="Search APIs"]')?.value).toBe("rev");
+    expect(find<HTMLInputElement>('input[aria-label="Search all APIs"]')?.value).toBe("rev");
     expect(find("section[aria-label='Search all APIs']")).toBeNull();
 
     chunk.release();
     await vi.waitFor(() => expect(find("section[aria-label='Search all APIs']")).not.toBeNull());
-    expect(find<HTMLInputElement>('input[aria-label="Search APIs"]')!.value).toBe("rev");
+    expect(find<HTMLInputElement>('input[aria-label="Search all APIs"]')!.value).toBe("rev");
   });
 });
 
@@ -136,8 +148,8 @@ describe("Search all flags", () => {
     const { fetch } = route();
     await open(fetch);
 
-    expect(buttonNamed("Search all APIs")).toBeDefined();
-    expect(buttonNamed("Search all flags")).toBeUndefined();
+    expect(searchButton("calls")).not.toBeNull();
+    expect(searchButton("flags")).toBeNull();
   });
 
   it("finds a flag the page never read, from memory, and puts it in the draft", async () => {
@@ -146,9 +158,9 @@ describe("Search all flags", () => {
     const { asked, fetch } = route();
     const client = await open(fetch);
 
-    await vi.waitFor(() => expect(buttonNamed("Search all flags")).toBeDefined());
-    buttonNamed("Search all flags")!.click();
-    await vi.waitFor(() => expect(find('input[aria-label="Search flags"]')).not.toBeNull());
+    await vi.waitFor(() => expect(searchButton("flags")).not.toBeNull());
+    searchButton("flags")!.click();
+    await vi.waitFor(() => expect(find('input[aria-label="Search all flags"]')).not.toBeNull());
     await userEvent.keyboard("BILLING");
 
     await vi.waitFor(() => {
@@ -174,24 +186,24 @@ describe("Search all APIs", () => {
     await open(fetch);
     expect(asked).toEqual([]);
 
-    buttonNamed("Search all APIs")!.click();
-    await vi.waitFor(() => expect(find('input[aria-label="Search APIs"]')).not.toBeNull());
+    searchButton("calls")!.click();
+    await vi.waitFor(() => expect(find('input[aria-label="Search all APIs"]')).not.toBeNull());
     await vi.waitFor(() => expect(asked).toEqual(["?q="]));
     expect(document.activeElement?.shadowRoot?.activeElement?.getAttribute("aria-label")).toBe(
-      "Search APIs",
+      "Search all APIs",
     );
   });
 
   it("lists 20 at a time, adds a pick as a draft row, and keeps it when Escape closes the search", async () => {
     const { fetch } = route();
     const client = await open(fetch);
-    buttonNamed("Search all APIs")!.click();
+    searchButton("calls")!.click();
     const section = () => find("section[aria-label='Search all APIs']")!;
-    await vi.waitFor(() => expect(section().querySelectorAll(".mk-mock-call")).toHaveLength(21));
+    await vi.waitFor(() => expect(section().querySelectorAll(".mk-mock-call")).toHaveLength(22));
 
     expect(section().textContent).toContain("List invoices");
     buttonNamed("Show more")!.click();
-    await vi.waitFor(() => expect(section().querySelectorAll(".mk-mock-call")).toHaveLength(26));
+    await vi.waitFor(() => expect(section().querySelectorAll(".mk-mock-call")).toHaveLength(27));
 
     const invoices = [...section().querySelectorAll<HTMLElement>(".mk-mock-call")].find((row) =>
       row.textContent.includes("/api/invoices"),
@@ -208,6 +220,7 @@ describe("Search all APIs", () => {
     expect(find(".mk-mock")).not.toBeNull();
     expect(client.getState().draft).toHaveLength(1);
     expect(find(".mk-mock-calls")!.textContent).toContain("/api/invoices");
+    expect(find(".mk-mock-calls")!.textContent).toContain("added");
     await vi.waitFor(() =>
       expect(find("[data-mk-search='calls']")!.matches(":focus, :focus-within")).toBe(true),
     );
@@ -219,7 +232,7 @@ describe("Search all APIs", () => {
   it("still closes on Escape once Show more has run out and its button is gone", async () => {
     const { fetch } = route();
     await open(fetch);
-    buttonNamed("Search all APIs")!.click();
+    searchButton("calls")!.click();
     await vi.waitFor(() => expect(buttonNamed("Show more")).toBeDefined());
 
     await userEvent.click(buttonNamed("Show more")!);
@@ -233,16 +246,18 @@ describe("Search all APIs", () => {
   it("does not search past what the route accepts, however long the query", async () => {
     const { asked, fetch } = route();
     await open(fetch);
-    buttonNamed("Search all APIs")!.click();
-    await vi.waitFor(() => expect(find('input[aria-label="Search APIs"]')).not.toBeNull());
+    searchButton("calls")!.click();
+    await vi.waitFor(() => expect(find('input[aria-label="Search all APIs"]')).not.toBeNull());
 
     await userEvent.type(
-      find<HTMLInputElement>('input[aria-label="Search APIs"]')!,
+      find<HTMLInputElement>('input[aria-label="Search all APIs"]')!,
       "a".repeat(230),
     );
 
     await vi.waitFor(() =>
-      expect(find<HTMLInputElement>('input[aria-label="Search APIs"]')!.value).toHaveLength(200),
+      expect(find<HTMLInputElement>('input[aria-label="Search all APIs"]')!.value).toHaveLength(
+        200,
+      ),
     );
     await new Promise((resolve) => setTimeout(resolve, 400));
     expect(find("section[aria-label='Search all APIs']")!.textContent).not.toContain("Couldn't");
@@ -252,7 +267,7 @@ describe("Search all APIs", () => {
   it("says so, once, when the route describes no calls, and still searches the page's own", async () => {
     const { fetch } = route([]);
     await open(fetch);
-    buttonNamed("Search all APIs")!.click();
+    searchButton("calls")!.click();
 
     await vi.waitFor(() =>
       expect(find(".mk-mock-unnamed")?.textContent).toContain("No API schemas"),
@@ -260,16 +275,110 @@ describe("Search all APIs", () => {
     expect(find("section[aria-label='Search all APIs']")!.textContent).toContain("/api/reviews");
   });
 
+  it("puts Search all in the title row, and swaps title and button for a field and Cancel", async () => {
+    const { fetch } = route();
+    await open(fetch);
+    const title = () => find("p.mk-mock-route")?.textContent;
+
+    expect(title()).toContain("Calls on");
+    expect(searchButton("calls")!.textContent).toBe("Search all");
+    expect(searchButton("calls")!.closest(".mk-mock-titlerow")).not.toBeNull();
+    expect(find("p.mk-mock-route")?.nextElementSibling?.textContent).toBe("Search all");
+
+    searchButton("calls")!.click();
+    await vi.waitFor(() => expect(find('input[aria-label="Search all APIs"]')).not.toBeNull());
+    expect(title()).toBeUndefined();
+    expect(searchButton("calls")).toBeNull();
+    expect(buttonNamed("Cancel")).toBeDefined();
+  });
+
+  it("says where a result comes from, and Cancel brings back the title, the list and what was added", async () => {
+    const { fetch } = route();
+    const client = await open(fetch);
+    searchButton("calls")!.click();
+    const section = () => find("section[aria-label='Search all APIs']")!;
+    await vi.waitFor(() => expect(section().querySelectorAll(".mk-mock-call")).toHaveLength(22));
+
+    const rows = [...section().querySelectorAll<HTMLElement>(".mk-mock-call")];
+    const invoices = rows.find((row) => row.textContent.includes("/api/invoices"))!;
+    expect(invoices.textContent).toContain("OpenAPI");
+    expect(rows.find((row) => row.textContent.includes("/api/team"))!.textContent).toContain(
+      "another route",
+    );
+    expect(rows.find((row) => row.textContent.includes("/api/reviews"))!.textContent).not.toMatch(
+      /OpenAPI|another route/,
+    );
+
+    invoices.querySelector<HTMLButtonElement>(".mk-mock-pick")!.click();
+    [...invoices.querySelectorAll<HTMLElement>('[role="menuitemradio"]')]
+      .find((item) => item.textContent === "Loading")!
+      .click();
+    await vi.waitFor(() => expect(invoices.textContent).toContain("added"));
+    expect(invoices.textContent).not.toContain("OpenAPI");
+
+    buttonNamed("Cancel")!.click();
+    await vi.waitFor(() => expect(find("section[aria-label='Search all APIs']")).toBeNull());
+    expect(find("p.mk-mock-route")?.textContent).toContain("Calls on");
+    expect(find(".mk-mock-calls")!.textContent).toContain("/api/reviews");
+    expect(find(".mk-mock-calls")!.textContent).toContain("/api/invoices");
+    expect(find(".mk-mock-calls")!.textContent).toContain("added");
+    expect(client.getState().draft).toHaveLength(1);
+    expect(find(".mk-mock")).not.toBeNull();
+    await vi.waitFor(() =>
+      expect(searchButton("calls")!.matches(":focus, :focus-within")).toBe(true),
+    );
+  });
+
   it("fits a 360 px screen", async () => {
     await page.viewport(360, 760);
     const { fetch } = route();
     await open(fetch);
-    buttonNamed("Search all APIs")!.click();
+    searchButton("calls")!.click();
     await vi.waitFor(() =>
       expect(find("section[aria-label='Search all APIs'] .mk-mock-call")).not.toBeNull(),
     );
 
     const body = find(".mk-mock-body")!;
     expect(body.scrollWidth).toBeLessThanOrEqual(body.clientWidth);
+  });
+});
+
+describe("Search all flags, from the Flags title row", () => {
+  it("opens over a folded list, shows every known flag, and Cancel folds it back with the pick marked added", async () => {
+    seenFlags().record({ key: "legacy-billing", type: "boolean", value: false });
+    seenFlags().record({ key: "tier-pricing", type: "boolean", value: true });
+    seenFlags().recordUsed({
+      key: "merge-forecast",
+      route: pathPattern(HERE),
+      type: "boolean",
+      value: true,
+    });
+    const { fetch } = route();
+    const client = await open(fetch);
+    await vi.waitFor(() => expect(searchButton("flags")).not.toBeNull());
+    expect(searchButton("flags")!.closest(".mk-mock-titlerow")?.textContent).toContain("Flags");
+
+    searchButton("flags")!.click();
+    const section = () => find("section[aria-label='Search all flags']")!;
+    await vi.waitFor(() => expect(section().textContent).toContain("tier-pricing"));
+    expect(section().textContent).toContain("not read here");
+
+    const row = [...section().querySelectorAll<HTMLElement>(".mk-mock-call")].find((item) =>
+      item.textContent.includes("tier-pricing"),
+    )!;
+    row.querySelector<HTMLButtonElement>('[role="radio"]:not([aria-checked="true"])')!.click();
+    await vi.waitFor(() => expect(row.textContent).toContain("added"));
+
+    await userEvent.keyboard("{Escape}");
+    await vi.waitFor(() => expect(find("section[aria-label='Search all flags']")).toBeNull());
+    expect(find(".mk-mock")).not.toBeNull();
+    const list = find("section[aria-label='Flags · 2']") ?? find("section[aria-label='Flags']")!;
+    expect(list.textContent).toContain("tier-pricing");
+    expect(list.textContent).toContain("added");
+    expect(list.textContent).not.toContain("legacy-billing");
+    expect(client.getState().draftFlags).toEqual({ "tier-pricing": false });
+    await vi.waitFor(() =>
+      expect(searchButton("flags")!.matches(":focus, :focus-within")).toBe(true),
+    );
   });
 });

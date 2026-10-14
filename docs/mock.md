@@ -317,7 +317,7 @@ the summary, case aside; `cursor` is the `next` the last page gave. It is gated
 as `/mock/schema` is (404 unless `preview`, 401 to an unresolved reviewer) and
 counted per reviewer on the plan's `rate`, 40 a minute by default, since a
 search runs as the reviewer types (429 past it). With no `schemas` it answers an
-empty list. Only the box's "Search all APIs" asks, and only once it is opened.
+empty list. Only the box's "Search all" on the calls asks, and only once it is opened.
 
 **The schema never reaches the page's bundle.** `installMock({ route })` reads
 shapes from the route as calls need them, through the real `fetch`, one request
@@ -780,14 +780,19 @@ an open `popover="auto"`.
 Inside `<Maple />` it is `Maple.Mock`, the same part, in the overlay's own
 shadow root.
 
-**Search reaches what capture missed.** Under the calls, a quiet "Search all
-APIs"; under the flags, "Search all flags". Clicking one opens a focused field
-in place, and only then loads: its code is a chunk of its own, and the box has
-asked the route nothing before. Twenty results show at a time, with "Show more".
-A result carries the state pick a listed row has; choosing a state joins the
-draft, and the result is marked "added". Escape closes the search and keeps what
-was added; the box stays open until the next Escape (`closeBox` in
-`@maple-kit/mock/client` closes the search first).
+**Search reaches what capture missed.** Each section's title row ("Calls on
+/route", "Flags · N") carries a quiet "Search all" with a magnifying glass.
+Clicking it turns the title into a focused field and the button into "Cancel",
+in the same row, and only then loads: its code is a chunk of its own, and the
+box has asked the route nothing before. While it is open, the section's body
+shows what the search found, over everything and not the page's list: first
+twenty, then "Show more". A result carries the state pick a listed row has, and
+a muted hint where it comes from ("another route", "OpenAPI", "not read here");
+choosing a state joins the draft and marks it "added". Cancel or Escape brings
+the title and the page's list back, with every added row in it, marked "added".
+Escape closes the search first and the box on the next press (`closeBox` in
+`@maple-kit/mock/client`); focus returns to "Search all". Opening the Flags
+search shows its results whether or not that section was folded.
 
 - **APIs.** The tab's own calls across every route come first
   (`Inventory.all()`, newest first), since they carry a real body, then the
@@ -799,7 +804,7 @@ was added; the box stays open until the next Escape (`closeBox` in
   in one muted line.
 - **Flags.** The known set, the flags the page was offered: a substring of the
   key, case aside, in memory, with no request. A host with no flag source has
-  no button.
+  no "Search all" on the Flags row.
 
 It is three layers, split as the overlay is:
 

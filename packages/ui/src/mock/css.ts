@@ -78,10 +78,33 @@ function box(): string {
   overflow-y: auto;
 }
 
-.mk-mock-route {
+.mk-mock-titlerow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 0 0;
+}
+
+.mk-mock-titlerow .mk-mock-field {
+  margin-left: 12px;
+  border-bottom: 1px solid var(--mk-line-firm);
+}
+
+.mk-mock-titlerow .mk-mock-button {
   flex: none;
+  padding: 2px 6px;
+  font-size: 11px;
+}
+
+.mk-mock-titlerow .mk-mock-button svg {
+  width: 1.2em;
+  height: 1.2em;
+}
+
+.mk-mock-route {
+  flex: 1 1 auto;
   margin: 0;
-  padding: 10px 12px 4px;
+  padding: 4px 12px;
   color: var(--mk-muted);
   font-size: 11px;
   font-weight: 600;
@@ -119,11 +142,13 @@ function box(): string {
 /** A sentence the route is reading draws a sweep along the field's edge. */
 function suggest(): string {
   return `
-.mk-mock-head {
+.mk-mock-head,
+.mk-mock-titlerow {
   position: relative;
 }
 
-.mk-mock-head[data-mk-thinking="true"]::after {
+.mk-mock-head[data-mk-thinking="true"]::after,
+.mk-mock-titlerow[data-mk-thinking="true"]::after {
   content: "";
   position: absolute;
   inset: auto 0 -1px;
@@ -176,13 +201,13 @@ function calls(): string {
   flex: 1 1 160px;
   min-width: 0;
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: 6px;
+  gap: 0 6px;
   overflow: hidden;
   color: var(--mk-muted);
   font-size: 12px;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 
 .mk-mock-codec {

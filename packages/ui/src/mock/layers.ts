@@ -8,7 +8,7 @@ import { describeIdentity } from "@maple-kit/core/mock";
 import { createElement, useEffect, useRef, useState } from "react";
 
 import { ChevronIcon } from "../icons/chevron.js";
-import { button, searchHold } from "./button.js";
+import { searchAll, SearchHold } from "./button.js";
 import { MOCK_COPY } from "./language.js";
 
 import type { FlagValue as FlagValueType } from "@maple-kit/core/mock";
@@ -27,7 +27,7 @@ export const LAYER_COPY = {
   off: "Off",
   realValue: "Real value",
   server: "server",
-  added: "added",
+  notHere: "not read here",
   notEvaluated: "Named by the mock, not evaluated on this page",
   serverActs: "The server still acts as you.",
   reloads: "reloads the page",
@@ -84,7 +84,7 @@ export function Layers(props: LayerProps): ReactElement {
   }
   const flags = state.flags.map((flag) => ({
     set: flag.set !== undefined,
-    node: flagRow(flag, client),
+    node: flagRow(flag, client, flag.set !== undefined && !flag.seen ? MOCK_COPY.added : undefined),
   }));
   return createElement(
     "div",
@@ -93,21 +93,17 @@ export function Layers(props: LayerProps): ReactElement {
     grants.length === 0
       ? null
       : createElement(Fold, { title: titled(LAYER_COPY.permissions), rows: grants }),
-    flags.length === 0 ? null : createElement(Fold, { title: LAYER_COPY.flags, rows: flags }),
-    state.canSearchFlags ? flagSearch(state, client, search) : null,
+    flagFold(flags, { state, client, search }),
   );
 }
 
-/** Under the flags: a quiet button, which opens the search in its place. */
-function flagSearch(state: MockClientState, client: MockClient, search: LayerProps["search"]) {
-  if (state.search === "flags") {
-    return search
-      ? createElement(search.Search, { kind: "flags", state, client })
-      : searchHold(MOCK_COPY.flagsField, MOCK_COPY.escape);
-  }
-  return button(MOCK_COPY.searchFlags, () => client.setSearch("flags"), {
-    quiet: true,
-    search: "flags",
+/** The flags, folded to their count; with a flag source, searchable from the title row. */
+function flagFold(flags: readonly Folded[], find: LayerProps): ReactNode {
+  if (flags.length === 0 && !find.state.canSearchFlags) return null;
+  return createElement(Fold, {
+    title: LAYER_COPY.flags,
+    rows: flags,
+    find: find.state.canSearchFlags ? find : undefined,
   });
 }
 
@@ -120,23 +116,39 @@ interface Folded {
  * A list that can run to hundreds, folded to its count. Folded, it still
  * shows every row the draft overrides, so nothing set is ever out of sight.
  */
-function Fold(props: { readonly title: string; readonly rows: readonly Folded[] }): ReactElement {
+function Fold(props: {
+  readonly title: string;
+  readonly rows: readonly Folded[];
+  /** Where to search all of it from: the title row gets a "Search all". */
+  readonly find?: LayerProps | undefined;
+}): ReactElement {
   const [open, setOpen] = useState(false);
-  const { rows, title } = props;
+  const { find, rows, title } = props;
   const shown = open ? rows : rows.filter((folded) => folded.set);
+  if (find?.state.search === "flags") {
+    const { client, search, state } = find;
+    return search
+      ? createElement(search.Search, { kind: "flags", state, client })
+      : createElement(SearchHold, { kind: "flags", client });
+  }
   return createElement(
     "section",
     { "aria-label": title },
     createElement(
-      "button",
-      {
-        type: "button",
-        className: "mk-mock-route mk-mock-fold",
-        "aria-expanded": open,
-        onClick: () => setOpen(!open),
-      },
-      `${title} · ${String(rows.length)}`,
-      createElement(ChevronIcon, { size: 11 }),
+      "div",
+      { className: "mk-mock-titlerow" },
+      createElement(
+        "button",
+        {
+          type: "button",
+          className: "mk-mock-route mk-mock-fold",
+          "aria-expanded": open,
+          onClick: () => setOpen(!open),
+        },
+        rows.length === 0 ? title : `${title} · ${String(rows.length)}`,
+        rows.length === 0 ? null : createElement(ChevronIcon, { size: 11 }),
+      ),
+      find === undefined ? null : searchAll("flags", find.client),
     ),
     shown.length === 0
       ? null
@@ -179,8 +191,8 @@ export function LayerBanner(props: { readonly state: MockClientState }): ReactNo
     : createElement("span", { className: "mk-mock-banner-as" }, said.join(" "));
 }
 
-/** A flag as a row. `added` marks one a search put in the draft, in place of its "server" tag. */
-export function flagRow(flag: MockFlagRow, client: MockClient, added = false): ReactNode {
+/** A flag as a row. `mark` is a tag from a search, in place of its "server" one. */
+export function flagRow(flag: MockFlagRow, client: MockClient, mark?: string): ReactNode {
   const pick = (next: FlagValueType | undefined) => client.setFlag(flag.key, next);
   const values: readonly FlagValueType[] =
     flag.type === "boolean" ? [true, false] : (flag.variants ?? []);
@@ -201,14 +213,8 @@ export function flagRow(flag: MockFlagRow, client: MockClient, added = false): R
           pick(values[labels.indexOf(label ?? "")] ?? undefined),
         );
   const label = { key: `f:${flag.key}`, name: flag.key, set: current !== undefined, title };
-  const tag = tagOf(added, server);
+  const tag = mark ?? (server ? LAYER_COPY.server : undefined);
   return row(tag === undefined ? label : { ...label, tag }, control);
-}
-
-/** What a flag row is marked with: that a search added it, else that only the server read it. */
-function tagOf(added: boolean, server: boolean): string | undefined {
-  if (added) return LAYER_COPY.added;
-  return server ? LAYER_COPY.server : undefined;
 }
 
 const LONG_VALUE = 32;

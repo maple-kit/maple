@@ -26,7 +26,7 @@ import { cx } from "../cx.js";
 import { CodeIcon } from "../icons/code.js";
 import { LinkIcon } from "../icons/link.js";
 import { SCHEME_ATTRIBUTE } from "../sheet-base.js";
-import { button, searchHold } from "./button.js";
+import { button, searchAll, SearchHold } from "./button.js";
 import {
   bannerSentence,
   callName,
@@ -42,7 +42,7 @@ import type { MenuOption } from "./menu.js";
 import type { MockState } from "@maple-kit/core/mock";
 import type { OverlayHost } from "@maple-kit/core/overlay";
 import type { MockCallRow, MockClient, MockClientState } from "@maple-kit/mock/client";
-import type { ForwardedRef, ReactElement, ReactNode } from "react";
+import type { ForwardedRef, ReactElement, ReactNode, RefObject } from "react";
 
 /** How the box is mounted. */
 export interface MapleMockProps {
@@ -162,12 +162,25 @@ function Banner(props: {
   );
 }
 
+/** Closing a search, by Cancel or Escape, hands focus back to the button that opened it. */
+function useReturnFocus(open: string | undefined, field: RefObject<HTMLElement | null>): void {
+  const was = useRef(open);
+  useEffect(() => {
+    const opened = was.current;
+    was.current = open;
+    if (open !== undefined || opened === undefined) return;
+    const root = field.current?.getRootNode() as ParentNode | undefined;
+    root?.querySelector<HTMLElement>(`[data-mk-search="${opened}"]`)?.focus();
+  }, [open, field]);
+}
+
 function Box(
   props: SurfaceProps & { layers: LayerChunk | undefined; search: SearchChunk | undefined },
 ): ReactElement {
   const { className, client, forwarded, layers, search, state } = props;
   const field = useRef<HTMLInputElement>(null);
   useEffect(() => field.current?.focus(), []);
+  useReturnFocus(state.search, field);
 
   return createElement(
     "div",
@@ -200,22 +213,15 @@ function Box(
     createElement(
       "div",
       { className: "mk-mock-body" },
-      createElement(
-        "p",
-        { className: "mk-mock-route" },
-        `${MOCK_COPY.routePrefix} `,
-        createElement("span", { className: "mk-mono" }, state.route),
-      ),
-      calls(state, client),
-      searchAll(state, client, search),
+      callsSection(state, client, search),
       layers && createElement(layers.Layers, { state, client, search }),
     ),
     createElement(Foot, { client, state }),
   );
 }
 
-/** Under the calls: a quiet button, which opens the search in its place. */
-function searchAll(
+/** The calls, titled with the route and a quiet "Search all" that turns the title into a field. */
+function callsSection(
   state: MockClientState,
   client: MockClient,
   search: SearchChunk | undefined,
@@ -223,12 +229,24 @@ function searchAll(
   if (state.search === "calls") {
     return search
       ? createElement(search.Search, { kind: "calls", state, client })
-      : searchHold(MOCK_COPY.apisField, MOCK_COPY.escape);
+      : createElement(SearchHold, { kind: "calls", client });
   }
-  return button(MOCK_COPY.searchApis, () => client.setSearch("calls"), {
-    quiet: true,
-    search: "calls",
-  });
+  return createElement(
+    "div",
+    null,
+    createElement(
+      "div",
+      { className: "mk-mock-titlerow" },
+      createElement(
+        "p",
+        { className: "mk-mock-route" },
+        `${MOCK_COPY.routePrefix} `,
+        createElement("span", { className: "mk-mono" }, state.route),
+      ),
+      searchAll("calls", client),
+    ),
+    calls(state, client),
+  );
 }
 
 /** The line under the field, when the sentence was not turned into a chip. */
@@ -264,6 +282,9 @@ function CallRow(props: { row: MockCallRow; client: MockClient }): ReactElement 
       { className: "mk-mock-name mk-mono" },
       createElement("span", { className: "mk-mock-codec" }, codecOf(row.key)),
       callName(row.key),
+      row.state !== undefined && !row.seen
+        ? createElement("span", { className: "mk-mock-codec" }, MOCK_COPY.added)
+        : null,
     ),
     row.source === undefined
       ? null

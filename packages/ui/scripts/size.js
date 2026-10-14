@@ -18,9 +18,9 @@ const DIST = resolve(dirname(fileURLToPath(import.meta.url)), "..", "dist");
 
 /**
  * The mock box alone, which is also what a page with no `<Maple />` carries.
- * 4.25 KB for the two "Search all" buttons; 4.5 for the stand-in search field.
+ * 4.25 KB for the search buttons; 4.5 the stand-in field; 4.6 the title row.
  */
-const MOCK_MAX = 4.5 * 1024;
+const MOCK_MAX = 4.6 * 1024;
 
 /** Each budget is the gzipped size of the modules only that column reaches. */
 const BUDGETS = [
@@ -48,11 +48,11 @@ const BUDGETS = [
   { name: "the mock box, on top", entries: ["mock/index.js"], max: MOCK_MAX },
   // Loaded by the box only on a page with evaluated flags or identity rules;
   // 2.5 KB once it read real values and folded long lists; 2.75 KB for the
-  // "server" tag on a flag the server read.
+  // "server" tag on a flag the server read; 2.8 KB for the Flags title row.
   {
     name: "the box's flags and identity, loaded later",
     entries: ["mock/layers.js"],
-    max: 2.75 * 1024,
+    max: 2.8 * 1024,
   },
   // Loaded only when a reviewer opens "Search all APIs" or "Search all flags".
   { name: "the box's search, loaded on demand", entries: ["mock/search.js"], max: 2 * 1024 },
@@ -76,8 +76,8 @@ const FORBIDDEN = [
     modules: /^(island|composer|marks|picker)\//,
     packages: /^$/,
     // 8.5 KB until a long flag value wrapped and clamped (a few rules);
-    // 8.75 KB until the stand-in search field.
-    max: 9 * 1024,
+    // 8.75 KB until the stand-in search field; 9.25 for the title-row search.
+    max: 9.25 * 1024,
   },
   {
     entry: "maple.js",

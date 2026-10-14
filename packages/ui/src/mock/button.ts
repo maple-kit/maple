@@ -2,7 +2,11 @@
 
 import { createElement } from "react";
 
+import { SearchIcon } from "../icons/search.js";
+import { MOCK_COPY } from "./language.js";
+
 import type { IconComponent } from "../icons/icon.js";
+import type { MockClient, MockSearch } from "@maple-kit/mock/client";
 import type { ReactElement } from "react";
 
 export interface ButtonFlags {
@@ -13,6 +17,7 @@ export interface ButtonFlags {
   readonly icon?: IconComponent;
   /** Marks a button that opens a search, so Escape can hand focus back to it. */
   readonly search?: string;
+  readonly label?: string;
 }
 
 export function button(text: string, onClick: () => void, flags: ButtonFlags = {}): ReactElement {
@@ -25,6 +30,7 @@ export function button(text: string, onClick: () => void, flags: ButtonFlags = {
       "data-mk-primary": flags.primary === true ? "true" : undefined,
       "data-mk-quiet": flags.quiet === true ? "true" : undefined,
       "data-mk-search": flags.search,
+      "aria-label": flags.label,
       onClick,
     },
     flags.icon && createElement(flags.icon),
@@ -32,8 +38,28 @@ export function button(text: string, onClick: () => void, flags: ButtonFlags = {
   );
 }
 
+/** The title row's quiet "Search all", which turns the title into a field. */
+export function searchAll(kind: MockSearch, client: MockClient): ReactElement {
+  const label = kind === "calls" ? MOCK_COPY.apisField : MOCK_COPY.flagsField;
+  return button(MOCK_COPY.searchAll, () => client.setSearch(kind), {
+    quiet: true,
+    icon: SearchIcon,
+    search: kind,
+    label,
+  });
+}
+
+/** Cancel, in the title row beside the field. */
+export function cancel(client: MockClient): ReactElement {
+  return button(MOCK_COPY.cancel, () => client.setSearch(undefined), { quiet: true });
+}
+
 /** What was typed into a search field before its chunk loaded. */
 let held = "";
+
+function hold(text: string): void {
+  held = text;
+}
 
 /** Hands over, once, what the stand-in field was given. */
 export function takeHeld(): string {
@@ -46,19 +72,19 @@ export function takeHeld(): string {
  * The search field before its chunk has loaded: it takes focus at once and
  * keeps what is typed, so no keystroke lands on the button that was clicked.
  */
-export function searchHold(label: string, escape: string): ReactElement {
+export function SearchHold(props: { kind: MockSearch; client: MockClient }): ReactElement {
+  const { client, kind } = props;
+  const label = kind === "calls" ? MOCK_COPY.apisField : MOCK_COPY.flagsField;
   return createElement(
     "div",
-    { className: "mk-mock-head" },
+    { className: "mk-mock-titlerow" },
     createElement("input", {
       className: "mk-mock-field",
       placeholder: label,
       "aria-label": label,
       autoFocus: true,
-      onChange: (event: { currentTarget: HTMLInputElement }) => {
-        held = event.currentTarget.value;
-      },
+      onChange: (event: { currentTarget: HTMLInputElement }) => hold(event.currentTarget.value),
     }),
-    createElement("kbd", { className: "mk-mock-key-hint" }, escape),
+    cancel(client),
   );
 }

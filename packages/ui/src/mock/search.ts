@@ -7,15 +7,21 @@
 import { CALLS_QUERY_MAX } from "@maple-kit/mock/client";
 import { createElement, useEffect, useRef, useState } from "react";
 
-import { button, takeHeld } from "./button.js";
+import { button, cancel, takeHeld } from "./button.js";
 import { callName, codecOf, MOCK_COPY, STATE_LABELS } from "./language.js";
-import { flagRow } from "./layers.js";
+import { flagRow, LAYER_COPY } from "./layers.js";
 import { Menu } from "./menu.js";
 
 import type { MenuOption } from "./menu.js";
 import type { MockState } from "@maple-kit/core/mock";
-import type { CallHit, CallResults, MockClient, MockClientState } from "@maple-kit/mock/client";
-import type { ReactElement, ReactNode, RefObject } from "react";
+import type {
+  CallHit,
+  CallResults,
+  MockClient,
+  MockClientState,
+  MockFlagRow,
+} from "@maple-kit/mock/client";
+import type { ReactElement, ReactNode } from "react";
 
 /** The words this chunk says. They load with it. */
 const SEARCH_COPY = {
@@ -25,8 +31,8 @@ const SEARCH_COPY = {
   onlyThisPage: "No API schemas here. Searching what this page fetched.",
   add: "Add",
   remove: "Remove",
-  added: "added",
-  esc: "Esc",
+  elsewhere: "another route",
+  described: "OpenAPI",
 } as const;
 
 /** How long typing pauses before a search is made. */
@@ -41,14 +47,14 @@ interface SearchProps {
   readonly client: MockClient;
 }
 
-/** The search field and what it found, in the place of the button that opened it. */
+/** The title row as a search field with Cancel, and what it found in place of the section's list. */
 export function Search(props: SearchProps): ReactElement {
   const { client, kind, state } = props;
   const [query, setQuery] = useState(takeHeld);
   const [busy, setBusy] = useState(false);
   const section = useRef<HTMLElement>(null);
   const field = useRef<HTMLInputElement>(null);
-  useReturnFocus(section, kind);
+  const label = kind === "calls" ? MOCK_COPY.apisField : MOCK_COPY.flagsField;
   const toField = () => {
     const active = (section.current?.getRootNode() as ShadowRoot | undefined)?.activeElement;
     if (!active || active.textContent === SEARCH_COPY.more) field.current?.focus();
@@ -56,19 +62,19 @@ export function Search(props: SearchProps): ReactElement {
   const found =
     kind === "calls"
       ? createElement(CallResults, { query, state, client, onBusy: setBusy, toField })
-      : createElement(FlagResults, { key: query, client, query, toField });
+      : createElement(FlagResults, { key: query, client, query, state, toField });
 
   return createElement(
     "section",
-    { ref: section, "aria-label": kind === "calls" ? MOCK_COPY.searchApis : MOCK_COPY.searchFlags },
+    { ref: section, "aria-label": label },
     createElement(
       "div",
-      { className: "mk-mock-head", "data-mk-thinking": String(busy), "aria-busy": busy },
+      { className: "mk-mock-titlerow", "data-mk-thinking": String(busy), "aria-busy": busy },
       createElement("input", {
         className: "mk-mock-field",
         type: "text",
-        placeholder: kind === "calls" ? MOCK_COPY.apisField : MOCK_COPY.flagsField,
-        "aria-label": kind === "calls" ? MOCK_COPY.apisField : MOCK_COPY.flagsField,
+        placeholder: label,
+        "aria-label": label,
         value: query,
         ref: field,
         maxLength: CALLS_QUERY_MAX,
@@ -76,33 +82,29 @@ export function Search(props: SearchProps): ReactElement {
         onChange: (event: { currentTarget: HTMLInputElement }) =>
           setQuery(event.currentTarget.value),
       }),
-      createElement("kbd", { className: "mk-mock-key-hint" }, SEARCH_COPY.esc),
+      cancel(client),
     ),
     found,
   );
 }
 
-/** Escape closes the search from its own field: focus goes back to the button that opened it. */
-function useReturnFocus(section: RefObject<HTMLElement | null>, kind: string): void {
-  useEffect(() => {
-    const box = section.current?.closest(".mk-mock");
-    return () => {
-      setTimeout(() => box?.querySelector<HTMLElement>(`[data-mk-search="${kind}"]`)?.focus());
-    };
-  }, [section, kind]);
-}
-
 /** What a flag search found, a page at a time. Reads memory, so there is nothing to wait for. */
 function FlagResults(props: {
   query: string;
+  state: MockClientState;
   client: MockClient;
   toField: () => void;
 }): ReactElement {
-  const { client, query, toField } = props;
+  const { client, query, state, toField } = props;
   const [shown, setShown] = useState(PAGE);
   const all = client.searchFlags(query);
+  const here = new Set(state.flags.filter((flag) => flag.seen).map((flag) => flag.key));
+  const mark = (flag: MockFlagRow) => {
+    if (flag.set !== undefined) return MOCK_COPY.added;
+    return here.has(flag.key) ? undefined : LAYER_COPY.notHere;
+  };
   return list(
-    all.slice(0, shown).map((flag) => flagRow(flag, client, flag.set !== undefined)),
+    all.slice(0, shown).map((flag) => flagRow(flag, client, mark(flag))),
     all.length > shown
       ? () => {
           setShown(shown + PAGE);
@@ -215,6 +217,8 @@ function list(rows: ReactNode[], more: (() => void) | undefined, empty: boolean)
 function callRow(hit: CallHit, state: MockClientState, client: MockClient): ReactElement {
   const chosen = state.draft.find((call) => call.key === hit.key)?.state;
   const added = chosen !== undefined;
+  const here = state.calls.some((call) => call.key === hit.key && call.seen);
+  const mark = added ? MOCK_COPY.added : hint(here, hit.seen);
   const options: readonly MenuOption[] = [
     { value: undefined, label: added ? SEARCH_COPY.remove : SEARCH_COPY.add },
     ...Object.entries(STATE_LABELS).map(([value, label]) => ({ value, label })),
@@ -233,7 +237,7 @@ function callRow(hit: CallHit, state: MockClientState, client: MockClient): Reac
       { className: "mk-mock-name mk-mono" },
       createElement("span", { className: "mk-mock-codec" }, codecOf(hit.key)),
       callName(hit.key),
-      added ? createElement("span", { className: "mk-mock-codec" }, SEARCH_COPY.added) : null,
+      mark === undefined ? null : createElement("span", { className: "mk-mock-codec" }, mark),
     ),
     createElement(Menu, {
       label: callName(hit.key),
@@ -245,4 +249,10 @@ function callRow(hit: CallHit, state: MockClientState, client: MockClient): Reac
       ? null
       : createElement("span", { className: "mk-mock-sum" }, hit.summary),
   );
+}
+
+/** Where a found call comes from, when it is not this page's. */
+function hint(here: boolean, seen: boolean): string | undefined {
+  if (here) return undefined;
+  return seen ? SEARCH_COPY.elsewhere : SEARCH_COPY.described;
 }
