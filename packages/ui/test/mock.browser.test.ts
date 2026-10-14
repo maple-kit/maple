@@ -213,6 +213,45 @@ describe("a call's state, in a menu", () => {
   });
 });
 
+/** A menu holds a scroll listener only while it is open. */
+describe("a menu's scroll listener", () => {
+  it("is dropped when the menu closes by any route, not only by a scroll", async () => {
+    const listeners: AbortSignal[] = [];
+    const add: EventTarget["addEventListener"] = Reflect.get(
+      EventTarget.prototype,
+      "addEventListener",
+    );
+    const spy = vi.spyOn(EventTarget.prototype, "addEventListener").mockImplementation(function (
+      this: EventTarget,
+      type,
+      listener,
+      options,
+    ) {
+      const signal = typeof options === "object" ? options.signal : undefined;
+      if (type === "scroll" && signal) listeners.push(signal);
+      add.call(this, type, listener, options);
+    });
+    try {
+      const client = track(
+        createMockClient({ handle: handle(), view: fakePage().view, defaultOpen: true }),
+      );
+      await render(createElement(MapleMock, { client }));
+      await vi.waitFor(() => expect(find(".mk-mock-pick")).not.toBeNull());
+
+      find<HTMLButtonElement>(".mk-mock-pick")!.click();
+      const menu = find<HTMLElement>(".mk-mock-menu")!;
+      await vi.waitFor(() => expect(menu.matches(":popover-open")).toBe(true));
+      expect(listeners).toHaveLength(1);
+      expect(listeners[0]!.aborted).toBe(false);
+
+      await userEvent.keyboard("{Escape}");
+      await vi.waitFor(() => expect(listeners[0]!.aborted).toBe(true));
+    } finally {
+      spy.mockRestore();
+    }
+  });
+});
+
 /** The DoD's shortcut case: a key typed inside the shadow root is typing. */
 describe("the m shortcut inside the shadow root", () => {
   async function mounted() {

@@ -40,9 +40,8 @@ export function Menu(props: MenuProps): ReactElement {
     node.togglePopover();
     if (!node.matches(":popover-open")) return;
     place(node, from.getBoundingClientRect());
-    node.querySelector<HTMLElement>('[aria-checked="true"]')?.focus();
-    // The trigger moves when the box scrolls and the menu would not.
-    from.getRootNode().addEventListener("scroll", () => close(node), { capture: true, once: true });
+    node.querySelector<HTMLElement>("[aria-checked=true]")?.focus();
+    closeOnScroll(node, from.getRootNode());
   };
   const pick = (next: string | undefined) => {
     close(menu.current);
@@ -65,7 +64,7 @@ export function Menu(props: MenuProps): ReactElement {
         onClick: toggle,
       },
       chosen && optionText(chosen),
-      createElement(ChevronIcon, { key: "chevron", className: "mk-mock-chevron", size: 11 }),
+      createElement(ChevronIcon, { className: "mk-mock-chevron", size: 11 }),
     ),
     createElement(
       "div",
@@ -95,13 +94,14 @@ export function Menu(props: MenuProps): ReactElement {
   );
 }
 
-function optionText(option: MenuOption): ReactElement[] {
-  return [
-    ...(option.real === true
-      ? [createElement("span", { key: "dot", className: "mk-mock-dot", "aria-hidden": true })]
-      : []),
-    createElement("span", { key: "text" }, option.label),
-  ];
+function optionText(option: MenuOption): ReactElement {
+  return createElement(
+    Fragment,
+    null,
+    option.real === true &&
+      createElement("span", { className: "mk-mock-dot", "aria-hidden": true }),
+    createElement("span", null, option.label),
+  );
 }
 
 /** Up and down between the items, as a menu's arrow keys go. */
@@ -112,6 +112,14 @@ function move(event: KeyboardEvent<HTMLDivElement>): void {
   const items = [...event.currentTarget.querySelectorAll<HTMLElement>('[role="menuitemradio"]')];
   const here = items.indexOf(event.target as HTMLElement);
   items[(here + step + items.length) % items.length]?.focus();
+}
+
+/** The trigger moves when the box scrolls and the menu would not. Any close drops the listener. */
+function closeOnScroll(node: HTMLElement, root: Node): void {
+  const off = new AbortController();
+  const signal = off.signal;
+  root.addEventListener("scroll", () => close(node), { capture: true, signal });
+  node.addEventListener("toggle", () => node.matches(":popover-open") || off.abort(), { signal });
 }
 
 function close(node: HTMLElement | null): void {
