@@ -79,9 +79,7 @@ export const MapleAttachments = /** @__PURE__ */ forwardRef<HTMLElement, MapleAt
       const note = ["mk-composer-row", "mk-note", props.className].filter(Boolean).join(" ");
       return createElement(Element, { ref, className: note }, ...nowhere());
     }
-    const children = scope.pending
-      ? filled(scope, captured)
-      : [said(resting(claimed), false, "said")];
+    const children = scope.pending ? filled(scope, captured) : [said(resting(claimed), false)];
 
     return createElement(
       Element,
@@ -98,7 +96,7 @@ function nowhere(): ReactNode[] {
     ATTACH_WORDS.nowhere,
     createElement(
       "a",
-      { key: "docs", href: SCREENSHOT_DOCS, target: "_blank", rel: "noopener noreferrer" },
+      { href: SCREENSHOT_DOCS, target: "_blank", rel: "noopener noreferrer" },
       ATTACH_WORDS.nowhereLink,
     ),
     ATTACH_WORDS.nowhereEnd,
@@ -124,13 +122,12 @@ function shot(one: MediaRef, resolve: Resolve): readonly ReactElement[] {
       ? []
       : [
           createElement("img", {
-            key: `${one.key}-img`,
             className: "mk-shot",
             src,
             alt: ATTACH_WORDS.alt,
           }),
         ]),
-    said(words, byMaple, one.key),
+    said(words, byMaple),
   ];
 }
 
@@ -157,20 +154,18 @@ function kept(props: KeptProps, ref: React.ForwardedRef<HTMLElement>): ReactElem
 function filled(scope: ComposerScopeValue, captured: boolean): ReactNode[] {
   return [
     createElement("img", {
-      key: "shot",
       className: "mk-shot",
       src: scope.pending?.preview.url,
       alt: ATTACH_WORDS.alt,
     }),
     createElement(
       "span",
-      { key: "body", className: "mk-shot-body" },
-      said(taking(captured), captured, "said", "mk-shot-said mk-shot-line"),
+      { className: "mk-shot-body" },
+      said(taking(captured), captured, "mk-shot-said mk-shot-line"),
     ),
     createElement(
       "button",
       {
-        key: "off",
         type: "button",
         className: "mk-btn mk-btn-quiet mk-press",
         onClick: scope.clear,
@@ -184,17 +179,12 @@ function filled(scope: ComposerScopeValue, captured: boolean): ReactNode[] {
  * The sparkle marks the one Maple took by itself, in the one warm colour: a
  * reviewer did everything else here, and this happened without them.
  */
-function said(
-  words: string,
-  byMaple: boolean,
-  key: string,
-  className = "mk-shot-said",
-): ReactElement {
+function said(words: string, byMaple: boolean, className = "mk-shot-said"): ReactElement {
   return createElement(
     "span",
-    { key, className, ...(byMaple ? { "data-mk-maple": "true" } : {}) },
-    byMaple ? createElement(SparkleIcon, { key: "spark", size: 12 }) : null,
-    createElement("span", { key: "words", className: "mk-shot-words" }, words),
+    { className, ...(byMaple ? { "data-mk-maple": "true" } : {}) },
+    byMaple ? createElement(SparkleIcon, { size: 12 }) : null,
+    createElement("span", { className: "mk-shot-words" }, words),
   );
 }
 

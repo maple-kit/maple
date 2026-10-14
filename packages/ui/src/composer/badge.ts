@@ -87,7 +87,7 @@ function head(open: boolean, toggle: () => void): ReactElement {
 function row(one: ContextRow): ReactNode {
   return createElement(
     Fragment,
-    { key: one.label },
+    null,
     createElement("dt", null, one.label),
     createElement(
       "dd",

@@ -171,7 +171,7 @@ function pathRow(label: string, value: string | undefined): readonly DetailRow[]
 function lineOf(row: DetailRow): ReactNode {
   return createElement(
     Fragment,
-    { key: row.label },
+    null,
     createElement("dt", null, row.label),
     createElement(
       "dd",

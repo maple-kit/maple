@@ -72,12 +72,12 @@ function pillarRow(pillar: Pillar, score: PillarScore | undefined): ReactNode {
 
   return createElement(
     Fragment,
-    { key: pillar.id },
+    null,
     createElement("span", { className: "mk-score-name" }, pillar.id),
     createElement(
       "span",
       { className: "mk-score-bar", role: "img", "aria-label": legend(pillar, score) },
-      ...pillar.levels.map((_, index) => segment(index, score?.distribution[index])),
+      ...pillar.levels.map((_, index) => segment(score?.distribution[index])),
     ),
     createElement(
       "span",
@@ -91,9 +91,9 @@ function pillarRow(pillar: Pillar, score: PillarScore | undefined): ReactNode {
  * One rung, filled by the probability it took. Equal widths keep *which* rung
  * readable; the fill says how sure, so three pale slots are visibly a shrug.
  */
-function segment(index: number, share: number | undefined): ReactNode {
+function segment(share: number | undefined): ReactNode {
   const fill = Math.round((share ?? 0) * 1000) / 1000;
-  return createElement("i", { key: index, style: { "--mk-p": fill } as CSSProperties });
+  return createElement("i", { style: { "--mk-p": fill } as CSSProperties });
 }
 
 /** The sentence a screen reader gets, since it cannot see the segments. */
@@ -131,8 +131,8 @@ function KindChip(): ReactElement {
             event.target.value === KIND_AUTO ? undefined : (event.target.value as CommentKind),
           ),
       },
-      createElement("option", { key: KIND_AUTO, value: KIND_AUTO }, guessed(kind)),
-      ...COMMENT_KINDS.map((one) => createElement("option", { key: one, value: one }, one)),
+      createElement("option", { value: KIND_AUTO }, guessed(kind)),
+      ...COMMENT_KINDS.map((one) => createElement("option", { value: one }, one)),
     ),
   );
 }

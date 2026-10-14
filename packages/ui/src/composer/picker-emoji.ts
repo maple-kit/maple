@@ -87,7 +87,6 @@ export function EmojiGrid(props: EmojiGridProps): ReactElement {
       createElement(
         "button",
         {
-          key: one.glyph,
           type: "button",
           role: "option",
           "aria-selected": index === props.active,

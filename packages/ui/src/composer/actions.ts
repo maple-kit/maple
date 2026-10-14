@@ -106,7 +106,7 @@ export const MapleActions = /** @__PURE__ */ forwardRef<HTMLElement, MapleAction
 function signInHint(client: ReturnType<typeof useMapleClient>): ReactNode {
   return createElement(
     "span",
-    { key: "hint", className: "mk-composer-hint" },
+    { className: "mk-composer-hint" },
     createElement(
       "button",
       { type: "button", className: "mk-link", onClick: () => void client.linkGitHub() },
@@ -141,7 +141,6 @@ function reading(id: string, client: ReturnType<typeof useMapleClient>): readonl
     createElement(
       "button",
       {
-        key: "close",
         type: "button",
         className: "mk-btn mk-btn-quiet mk-press",
         onClick: () => client.closeComposer(),
@@ -155,7 +154,6 @@ function reading(id: string, client: ReturnType<typeof useMapleClient>): readonl
 /** The one status change a reviewer makes by hand. Resolving is the primary one. */
 function moveOn(id: string, done: boolean): ReactNode {
   return createElement(StatusButton, {
-    key: "status",
     id,
     done,
     className: done ? undefined : "mk-btn-primary",

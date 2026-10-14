@@ -121,10 +121,8 @@ function MockSurface(props: SurfaceProps): ReactElement {
   return createElement(
     "div",
     { className: "mk-mock-surface" },
-    state.active === undefined
-      ? null
-      : createElement(Banner, { key: "banner", client, state, layers }),
-    state.open ? createElement(Box, { key: "box", ...props, layers }) : null,
+    state.active === undefined ? null : createElement(Banner, { client, state, layers }),
+    state.open ? createElement(Box, { ...props, layers }) : null,
   );
 }
 
@@ -299,19 +297,16 @@ function Foot(props: { state: MockClientState; client: MockClient }): ReactEleme
     "div",
     { className: "mk-mock-foot" },
     button(label(copied, "link", MOCK_COPY.copyLink), copy("link"), {
-      key: "link",
       disabled: empty,
       icon: LinkIcon,
     }),
     button(label(copied, "recipe", MOCK_COPY.copyRecipe), copy("recipe"), {
-      key: "recipe",
       disabled: empty,
       icon: CodeIcon,
       quiet: true,
     }),
-    createElement("span", { key: "spacer", className: "mk-mock-spacer" }),
+    createElement("span", { className: "mk-mock-spacer" }),
     button(MOCK_COPY.apply, () => client.apply(), {
-      key: "apply",
       disabled: !state.changed,
       primary: true,
     }),
@@ -324,7 +319,6 @@ function label(copied: Copied | undefined, what: Copy, idle: string): string {
 }
 
 interface ButtonFlags {
-  readonly key?: string;
   readonly disabled?: boolean;
   readonly primary?: boolean;
   /** A secondary action: no border, so it reads apart from the one beside it. */
@@ -336,7 +330,6 @@ function button(text: string, onClick: () => void, flags: ButtonFlags = {}): Rea
   return createElement(
     "button",
     {
-      key: flags.key ?? text,
       type: "button",
       className: "mk-mock-button mk-press",
       disabled: flags.disabled === true,
@@ -344,7 +337,7 @@ function button(text: string, onClick: () => void, flags: ButtonFlags = {}): Rea
       "data-mk-quiet": flags.quiet === true ? "true" : undefined,
       onClick,
     },
-    flags.icon && createElement(flags.icon, { key: "icon" }),
+    flags.icon && createElement(flags.icon),
     text,
   );
 }
