@@ -725,9 +725,10 @@ marked with a green dot as what the page does on its own, and the nine states.
 Nine buttons per call made the box a wall of options that a reviewer scanned
 past; the menu keeps each row to one line. It is a `popover="auto"` in the top
 layer, since the box's body scrolls, and it closes when the body does. `m`
-opens and closes the box and Escape closes it; inside an open menu, Escape
-closes only the menu (`watchEscape` in `@maple-kit/core/client` leaves an open
-`popover="auto"` its own Escape).
+opens and closes the box. Escape closes it only when focus is inside Maple;
+anywhere else the page keeps the key (`watchEscape` in `@maple-kit/core/client`).
+Inside an open menu, Escape closes only the menu, which keeps its own Escape as
+an open `popover="auto"`.
 Inside `<Maple />` it is `Maple.Mock`, the same part, in the overlay's own
 shadow root.
 

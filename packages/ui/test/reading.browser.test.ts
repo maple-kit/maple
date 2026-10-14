@@ -74,8 +74,11 @@ function find<T extends Element>(selector: string): T {
   return found;
 }
 
-function press(key: string): void {
-  document.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }));
+/** A key pressed with the focus inside the overlay, which is where Maple hears Escape. */
+function press(key: string): KeyboardEvent {
+  const event = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true });
+  root().host.dispatchEvent(event);
+  return event;
 }
 
 /** Opens the first row's own panel, the way a reviewer clicking it does. */
@@ -275,13 +278,21 @@ describe("Escape", () => {
     await vi.waitFor(() => expect(root().querySelector(".mk-card")).toBeNull());
   });
 
-  it("works with the focus anywhere, not only inside the overlay", async () => {
+  it("leaves Escape alone when the focus is on the page", async () => {
     await openFirstRow();
-    document.body.focus();
+    const event = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true });
 
-    press("Escape");
+    document.body.dispatchEvent(event);
 
-    await vi.waitFor(() => expect(client.getState().composer.open).toBe(false));
+    expect(event.defaultPrevented).toBe(false);
+    expect(client.getState().composer.open).toBe(true);
+  });
+
+  it("takes the key it used, and takes none when it is closed", async () => {
+    expect(press("Escape").defaultPrevented).toBe(true);
+    await vi.waitFor(() => expect(root().querySelector(".mk-card")).toBeNull());
+
+    expect(press("Escape").defaultPrevented).toBe(false);
   });
 });
 

@@ -62,6 +62,7 @@ export const Island = /** @__PURE__ */ forwardRef<HTMLDivElement, IslandProps>(
         "data-mk-open": String(value.phase !== "closed"),
         "data-mk-corner": position,
         "data-mk-inset": String(composer.open),
+        tabIndex: -1,
         ref: composeRefs(ref, value.drag.attach),
       },
       children,
@@ -76,7 +77,7 @@ export const Island = /** @__PURE__ */ forwardRef<HTMLDivElement, IslandProps>(
  * waits for anything reads as a surface that did not hear the click.
  */
 function useIslandState(defaultOpen: boolean): IslandContextValue {
-  const { comments, composer, detail, selected } = useMaple();
+  const { comments, composer, detail, pick, selected, tap } = useMaple();
   const client = useMapleClient();
   const { container } = useMapleUi(PART);
   const [phase, setPhase] = useState<IslandPhase>(defaultOpen ? "open" : "closed");
@@ -110,7 +111,16 @@ function useIslandState(defaultOpen: boolean): IslandContextValue {
   const snap = useCallback((corner: Corner) => client.setPosition(corner), [client]);
   const drag = useDrag(container, snap);
 
-  useEscape({ composerOpen: composer.open, settingsOpen, setSettingsOpen, setOpen, client });
+  useEscape({
+    phase,
+    pickArmed: pick.armed,
+    composerOpen: composer.open,
+    settingsOpen,
+    setSettingsOpen,
+    setOpen,
+    client,
+    closeTaps: tap.close,
+  });
 
   return useMemo(
     () => ({
@@ -146,17 +156,44 @@ function useIslandState(defaultOpen: boolean): IslandContextValue {
 }
 
 interface EscapeOrder {
+  readonly phase: IslandPhase;
+  readonly pickArmed: boolean;
   readonly composerOpen: boolean;
   readonly settingsOpen: boolean;
   readonly setSettingsOpen: (open: boolean) => void;
   readonly setOpen: (open: boolean) => void;
   readonly client: ReturnType<typeof useMapleClient>;
+  /** Shift-and-modifier taps so far. */
+  readonly closeTaps: number;
+}
+
+/** An open emoji menu is newer than the composer under it, and takes the key. */
+function menuOpen(event: KeyboardEvent): boolean {
+  const root = event.composedPath().find((node) => node instanceof ShadowRoot);
+  return root?.querySelector(".mk-emoji-menu") != null;
 }
 
 /**
- * Newest first: the panel opened last is the one Escape shuts. Anything else
- * and a reader with the composer up over the card loses both to one key.
+ * Newest first, one layer per press: a pick, then the composer, the settings
+ * and last the island. An armed pick has its own listener, which answers it.
  */
+function closeTopmost(now: EscapeOrder, event: KeyboardEvent): boolean {
+  if (now.pickArmed || menuOpen(event)) return false;
+  if (now.composerOpen) now.client.closeComposer();
+  else if (now.settingsOpen) now.setSettingsOpen(false);
+  else if (now.phase === "open") now.setOpen(false);
+  else return false;
+  return true;
+}
+
+/** Shift and the modifier tapped: everything shuts, and the drafts stay. */
+function closeAll(now: EscapeOrder): void {
+  if (now.pickArmed) now.client.disarm();
+  if (now.composerOpen) now.client.closeComposer();
+  now.setSettingsOpen(false);
+  if (now.phase === "open") now.setOpen(false);
+}
+
 function useEscape(order: EscapeOrder): void {
   const latest = useRef(order);
   latest.current = order;
@@ -165,15 +202,17 @@ function useEscape(order: EscapeOrder): void {
     const stop = new AbortController();
     watchEscape({
       signal: stop.signal,
-      onEscape: () => {
-        const now = latest.current;
-        if (now.composerOpen) return now.client.closeComposer();
-        if (now.settingsOpen) return now.setSettingsOpen(false);
-        now.setOpen(false);
-      },
+      onEscape: (event) => closeTopmost(latest.current, event),
     });
     return () => stop.abort();
   }, []);
+
+  const seen = useRef(order.closeTaps);
+  useEffect(() => {
+    if (order.closeTaps === seen.current) return;
+    seen.current = order.closeTaps;
+    closeAll(latest.current);
+  }, [order.closeTaps]);
 }
 
 /** A close runs its exit first; anything already closed stays closed. */

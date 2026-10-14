@@ -67,6 +67,10 @@ function shell(): string {
   pointer-events: auto;
 }
 
+.mk-island:focus:not(:focus-visible) {
+  outline: none;
+}
+
 .mk-pill {
   display: flex;
   align-items: center;

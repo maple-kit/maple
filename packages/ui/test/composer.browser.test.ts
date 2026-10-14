@@ -791,7 +791,9 @@ describe("writing a comment", () => {
     const surface = await open();
     client.setBody("Half a thought.");
 
-    surface.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    surface.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", bubbles: true, composed: true }),
+    );
 
     await vi.waitFor(() => expect(client.getState().composer.open).toBe(false));
     expect(client.getState().drafts).toHaveLength(1);

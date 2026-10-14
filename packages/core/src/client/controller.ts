@@ -430,7 +430,7 @@ function runtimeFor(options: MapleClientOptions): Runtime {
       publishing: false,
       pending: 0,
       composer: CLOSED,
-      tap: { hint: false, focus: 0 },
+      tap: { hint: false, focus: 0, close: 0 },
       pick: config.pick === undefined ? UNARMED : { armed: true, kind: config.pick },
       theme: themeFrom({}),
       themePreference: config.theme,
@@ -564,6 +564,7 @@ function start(runtime: Runtime): void {
     view,
     signal,
     onTap: () => onTap(runtime),
+    onClose: () => onCloseChord(runtime),
     onIgnored: () => showTapHint(runtime, signal),
   });
   view.addEventListener("storage", (event) => onStorage(runtime, event), { signal });
@@ -661,6 +662,12 @@ function onTap(runtime: Runtime): void {
   const view = runtime.options.view ?? (globalThis as { window?: ClientView }).window;
   if (view && selectedText(view.document)) return arm(runtime, "text", { remember: false });
   arm(runtime, runtime.lastPick);
+}
+
+/** Shift and the modifier tapped together: surfaces close when `tap.close` changes. */
+function onCloseChord(runtime: Runtime): void {
+  const { tap } = runtime.state;
+  patch(runtime, { tap: { ...tap, close: tap.close + 1 } });
 }
 
 /** Says why the tap did nothing, for a moment. */

@@ -10,8 +10,8 @@
  */
 
 import { sourceFor } from "@maple-kit/core/anchor";
-import { PICK_ORDER } from "@maple-kit/core/client";
-import { captureContext, watchPickKeys } from "@maple-kit/core/overlay";
+import { PICK_ORDER, watchEscape } from "@maple-kit/core/client";
+import { captureContext } from "@maple-kit/core/overlay";
 import { captureElement } from "@maple-kit/core/screenshot";
 import { useMaple, useMapleClient } from "@maple-kit/react";
 import { createElement, Fragment, useCallback, useEffect, useState } from "react";
@@ -118,13 +118,20 @@ function reasonOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-/** Escape leaves picking. A tap of the modifier again cycles the kind, and the controller owns that. */
+/** Escape leaves picking, from anywhere on the page; the modifier again cycles the kind. */
 function useKeys(armed: boolean, client: ReturnType<typeof useMapleClient>): void {
   useEffect(() => {
     if (!armed) return;
     const stop = new AbortController();
 
-    watchPickKeys({ signal: stop.signal, onCancel: () => client.disarm() });
+    watchEscape({
+      signal: stop.signal,
+      takesAll: () => true,
+      onEscape: () => {
+        client.disarm();
+        return true;
+      },
+    });
     return () => stop.abort();
   }, [armed, client]);
 }

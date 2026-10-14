@@ -180,6 +180,8 @@ export interface PickState {
 export interface TapNotice {
   readonly hint: boolean;
   readonly focus: number;
+  /** Counts Shift-and-modifier taps, which close Maple; a surface closes when it changes. */
+  readonly close: number;
 }
 
 /** Everything a binding renders from. One object, replaced whole on a change. */

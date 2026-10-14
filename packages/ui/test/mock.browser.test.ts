@@ -249,6 +249,19 @@ describe("the m shortcut inside the shadow root", () => {
     await vi.waitFor(() => expect(find(".mk-mock")).toBeNull());
   });
 
+  it("leaves Escape to the page when the focus is not in the box", async () => {
+    await mounted();
+    await userEvent.keyboard("m");
+    await vi.waitFor(() => expect(find(".mk-mock")).not.toBeNull());
+    (document.activeElement as HTMLElement | null)?.blur();
+    const event = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true });
+
+    document.body.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(false);
+    expect(find(".mk-mock")).not.toBeNull();
+  });
+
   it("ignores m with a modifier", async () => {
     await mounted();
     await userEvent.keyboard("{Meta>}m{/Meta}");

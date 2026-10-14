@@ -1,6 +1,6 @@
 /**
- * The shortcuts: a tap of the platform modifier starts a comment, and a bare
- * `m` opens the mock box.
+ * The shortcuts: a tap of the platform modifier starts a comment, a tap of it
+ * with Shift closes Maple, and a bare `m` opens the mock box.
  *
  * A letter fails on a non-Latin layout (the Hebrew `c` key types a different
  * character), and a lone modifier does not. A tap has to check what else
@@ -56,36 +56,75 @@ export interface TapInput {
  * `downAt` is when the modifier went down, or null; `spoiled` means something
  * else happened; `typing` means focus was in a text field when it went down.
  */
-export interface TapState {
+interface PlainState {
   readonly downAt: number | null;
   readonly spoiled: boolean;
   readonly typing: boolean;
 }
 
-export const TAP_IDLE: TapState = { downAt: null, spoiled: false, typing: false };
+/**
+ * The close chord, Shift with the modifier. `start` is when the first of the
+ * two went down; `mod` and `shift` say which are held now.
+ */
+export interface ChordState {
+  readonly start: number | null;
+  readonly mod: boolean;
+  readonly shift: boolean;
+  readonly spoiled: boolean;
+}
+
+/** The comment tap's state, and the close chord's beside it. */
+export interface TapState extends PlainState {
+  readonly chord: ChordState;
+}
+
+const PLAIN_IDLE: PlainState = { downAt: null, spoiled: false, typing: false };
+const CHORD_IDLE: ChordState = { start: null, mod: false, shift: false, spoiled: false };
+
+export const TAP_IDLE: TapState = {
+  downAt: null,
+  spoiled: false,
+  typing: false,
+  chord: CHORD_IDLE,
+};
 
 /** Why a quick, otherwise clean tap did not fire. Only a text field does this. */
 export type TapIgnored = "editable";
 
-/** The next state, whether this input completed a tap, and why one was ignored. */
+/**
+ * The next state, whether this input completed a comment tap, whether it
+ * completed a Shift tap that closes Maple, and why a tap was ignored.
+ */
 export interface TapStep {
   readonly state: TapState;
+  readonly fire: boolean;
+  readonly close?: true;
+  readonly ignored?: TapIgnored;
+}
+
+interface PlainStep {
+  readonly state: PlainState;
   readonly fire: boolean;
   readonly ignored?: TapIgnored;
 }
 
-/** True when a modifier other than `modifier` is held on this event. */
-function othersHeld(input: TapInput, modifier: TapModifier): boolean {
+/** True when a modifier other than `modifier` or Shift is held on this event. */
+function strayHeld(input: TapInput, modifier: TapModifier): boolean {
   const other = modifier === "Meta" ? input.ctrlKey : input.metaKey;
-  return Boolean(input.altKey || input.shiftKey || other);
+  return Boolean(input.altKey || other);
 }
 
-function spoil(state: TapState): TapStep {
+/** True when a modifier other than `modifier` is held on this event. */
+function othersHeld(input: TapInput, modifier: TapModifier): boolean {
+  return Boolean(input.shiftKey) || strayHeld(input, modifier);
+}
+
+function spoil(state: PlainState): PlainStep {
   return { state: state.downAt === null ? state : { ...state, spoiled: true }, fire: false };
 }
 
 /** Cmd+scroll zooms; a bare wheel, momentum included, is not a chord. */
-function onWheel(state: TapState, input: TapInput): TapStep {
+function onWheel(state: PlainState, input: TapInput): PlainStep {
   return input.metaKey || input.ctrlKey ? spoil(state) : { state, fire: false };
 }
 
@@ -93,40 +132,109 @@ function onWheel(state: TapState, input: TapInput): TapStep {
  * A repeat of the held modifier changes nothing. Any other keydown of it
  * starts over: the keyup that should have ended the last one never came.
  */
-function onKeydown(state: TapState, input: TapInput, modifier: TapModifier): TapStep {
+function onKeydown(state: PlainState, input: TapInput, modifier: TapModifier): PlainStep {
   if (input.key !== modifier) return spoil(state);
   if (state.downAt !== null && input.repeat) return { state, fire: false };
   const spoiled = othersHeld(input, modifier);
   return { state: { downAt: input.at, spoiled, typing: input.editable === true }, fire: false };
 }
 
-function onKeyup(state: TapState, input: TapInput, modifier: TapModifier): TapStep {
+function onKeyup(state: PlainState, input: TapInput, modifier: TapModifier): PlainStep {
   if (input.key !== modifier) return { state, fire: false };
   const { downAt, spoiled, typing } = state;
   const quick = downAt !== null && input.at - downAt < TAP_MS;
   const clean = quick && !spoiled && !othersHeld(input, modifier);
   if (clean && (typing || input.editable)) {
-    return { state: TAP_IDLE, fire: false, ignored: "editable" };
+    return { state: PLAIN_IDLE, fire: false, ignored: "editable" };
   }
-  return { state: TAP_IDLE, fire: clean };
+  return { state: PLAIN_IDLE, fire: clean };
+}
+
+function plainStep(state: PlainState, input: TapInput, modifier: TapModifier): PlainStep {
+  if (input.type === "keydown") return onKeydown(state, input, modifier);
+  if (input.type === "keyup") return onKeyup(state, input, modifier);
+  if (input.type === "blur" || input.type === "hidden") return { state: PLAIN_IDLE, fire: false };
+  if (input.type === "wheel") return onWheel(state, input);
+  return spoil(state);
+}
+
+type ChordKey = "mod" | "shift";
+
+interface ChordStep {
+  readonly state: ChordState;
+  readonly fire: boolean;
+}
+
+/** Which of the chord's two keys an input names, if either. */
+function chordName(input: TapInput, modifier: TapModifier): ChordKey | undefined {
+  if (input.key === "Shift") return "shift";
+  return input.key === modifier ? "mod" : undefined;
+}
+
+function pressChord(held: ChordState, name: ChordKey, input: TapInput, mod: TapModifier) {
+  if (held[name] && input.repeat) return held;
+  const lost = held.start !== null && input.at - held.start >= TAP_MS;
+  const state = lost ? CHORD_IDLE : held;
+  const first = state.start === null;
+  const stray = first && strayHeld(input, mod);
+  return {
+    ...state,
+    [name]: true,
+    start: state.start ?? input.at,
+    spoiled: state.spoiled || stray,
+  };
+}
+
+function releaseChord(state: ChordState, name: ChordKey, at: number): ChordStep {
+  const quick = state.start !== null && at - state.start < TAP_MS;
+  const fire = state.mod && state.shift && !state.spoiled && quick;
+  const next = { ...state, [name]: false };
+  return { state: fire || !(next.mod || next.shift) ? CHORD_IDLE : next, fire };
+}
+
+/** Anything that is not the chord's own keys going up spoils a chord under way. */
+function spoilChord(state: ChordState, input: TapInput): ChordStep {
+  const bareWheel = input.type === "wheel" && !input.metaKey && !input.ctrlKey;
+  if (input.type === "keyup" || bareWheel || state.start === null) return { state, fire: false };
+  return { state: { ...state, spoiled: true }, fire: false };
+}
+
+/**
+ * Pure: Shift and the modifier both down and let go with nothing between, quick.
+ * A third key, a pointer press or a blur spoils it: Cmd+Shift+4 is a screenshot.
+ */
+function chordStep(state: ChordState, input: TapInput, modifier: TapModifier): ChordStep {
+  if (input.type === "blur" || input.type === "hidden") return { state: CHORD_IDLE, fire: false };
+  const name = chordName(input, modifier);
+  if (name === undefined) return spoilChord(state, input);
+  if (input.type === "keydown") {
+    return { state: pressChord(state, name, input, modifier), fire: false };
+  }
+  if (input.type === "keyup") return releaseChord(state, name, input.at);
+  return spoilChord(state, input);
 }
 
 /**
  * Pure: a modifier tap is a keydown and keyup of it with nothing between. A
  * repeat of the modifier is not "something between"; any other key, a pointer
- * press or a blur is, and so is a long hold or a second modifier.
+ * press or a blur is, and so is a long hold or a second modifier. The same
+ * with Shift held is a tap that closes.
  */
 export function tapStep(state: TapState, input: TapInput, modifier: TapModifier): TapStep {
-  if (input.type === "keydown") return onKeydown(state, input, modifier);
-  if (input.type === "keyup") return onKeyup(state, input, modifier);
-  if (input.type === "blur" || input.type === "hidden") return { state: TAP_IDLE, fire: false };
-  if (input.type === "wheel") return onWheel(state, input);
-  return spoil(state);
+  const plain = plainStep(state, input, modifier);
+  const chord = chordStep(state.chord, input, modifier);
+  return {
+    ...plain,
+    state: { ...plain.state, chord: chord.state },
+    ...(chord.fire ? { close: true as const } : {}),
+  };
 }
 
 /** How a surface asks to be told about a tap. */
 export interface TapOptions {
   onTap(): void;
+  /** Shift and the modifier tapped together: close Maple. */
+  readonly onClose?: () => void;
   /** A quick tap that a focused text field swallowed. */
   readonly onIgnored?: (reason: TapIgnored) => void;
   /** Defaults to this platform's modifier. */
@@ -168,6 +276,7 @@ export function watchCommentTap(options: TapOptions): void {
     );
     state = step.state;
     if (step.fire) options.onTap();
+    if (step.close) options.onClose?.();
     // Maple's own field is not the host's: no hint to click the page.
     if (step.ignored && !inMaple(event)) options.onIgnored?.(step.ignored);
   };
@@ -246,17 +355,20 @@ function typedInto(event: ShortcutEvent): unknown {
 
 /** How a surface asks to be told about Escape. */
 export interface EscapeOptions {
-  /** The one thing to shut, decided by the caller in its own order. */
-  onEscape(): void;
+  /** Shuts the topmost layer, and says whether there was one. Only then is the key taken. */
+  onEscape(event: KeyboardEvent): boolean;
+  /** True while Maple is in a mode that owns Escape wherever focus is, such as a pick. */
+  readonly takesAll?: () => boolean;
   /** What the listener attaches to. Defaults to the page's own document. */
   readonly view?: { addEventListener: Document["addEventListener"] };
   readonly signal?: AbortSignal;
 }
 
 /**
- * Escape, wherever the focus is. A surface that only hears it while focused
- * cannot be shut by a reviewer who clicked back onto the page, which is most
- * of the time the overlay is open. An open menu owns its own Escape.
+ * Escape, but only Maple's own. It is heard when focus is inside the overlay,
+ * or while `takesAll` says so; anywhere else the host's dialog or menu gets it
+ * untouched. When a layer shuts, the key is consumed, so one press shuts one
+ * thing and a host `<dialog>` is not asked to close as well.
  */
 export function watchEscape(options: EscapeOptions): void {
   const view = options.view ?? document;
@@ -265,18 +377,27 @@ export function watchEscape(options: EscapeOptions): void {
   view.addEventListener(
     "keydown",
     (event: Event) => {
-      if ((event as KeyboardEvent).key !== "Escape" || inOpenMenu(event)) return;
-      options.onEscape();
+      const key = event as KeyboardEvent;
+      if (key.key !== "Escape" || key.defaultPrevented || key.isComposing) return;
+      const inside = inMaple(event);
+      if (inside ? ownsEscape(event) : options.takesAll?.() !== true) return;
+      if (!options.onEscape(key)) return;
+      key.preventDefault();
+      key.stopImmediatePropagation();
     },
     { capture: true, ...when },
   );
 }
 
-/** A `popover="auto"` closes itself on Escape, and nothing under it should too. */
-function inOpenMenu(event: Event): boolean {
-  return event
-    .composedPath()
-    .some((node) => (node as Element).matches?.('[popover="auto"]:popover-open') === true);
+/**
+ * Maple's own open `popover="auto"` or modal `<dialog>` closes itself on Escape.
+ * Only the path inside the overlay counts: a host modal Maple sits in does not.
+ */
+function ownsEscape(event: Event): boolean {
+  const open = '[popover="auto"]:popover-open, dialog:modal';
+  const path = event.composedPath();
+  const overlay = path.findIndex((node) => (node as Element).hasAttribute?.(OVERLAY_MARKER));
+  return path.slice(0, overlay).some((node) => (node as Element).matches?.(open) === true);
 }
 
 /**

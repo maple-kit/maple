@@ -315,7 +315,7 @@ function start(runtime: Runtime): void {
   view.addEventListener("popstate", () => patch(runtime, {}), { signal });
   if (handle !== undefined && options.shortcut !== false) {
     view.document.addEventListener("keydown", (event) => onKeydown(runtime, event), { signal });
-    watchEscape({ view: view.document, signal, onEscape: () => patch(runtime, { open: false }) });
+    watchEscape({ view: view.document, signal, onEscape: () => closeBox(runtime) });
   }
 
   runtime.stop = () => {
@@ -324,6 +324,13 @@ function start(runtime: Runtime): void {
     for (const stop of unsubscribe) stop?.();
   };
   patch(runtime, { scheme: theme.current().overlay });
+}
+
+/** Escape shuts the box if it is open, and says whether it was. */
+function closeBox(runtime: Runtime): boolean {
+  if (!runtime.state.open) return false;
+  patch(runtime, { open: false });
+  return true;
 }
 
 /** Asks for the shape of every listed call not asked about yet, once started. */

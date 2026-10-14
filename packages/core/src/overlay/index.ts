@@ -41,13 +41,11 @@ export {
   startElementPicking,
   startRegionPicking,
   startTextPicking,
-  watchPickKeys,
 } from "./pick.js";
 export type {
   ElementPickingOptions,
   IgnoreEvent,
   Pick,
-  PickKeyOptions,
   Rect,
   RegionPickingOptions,
   TextPickingOptions,
