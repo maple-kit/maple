@@ -60,6 +60,8 @@ export interface ContextBody {
   readonly label: string;
   readonly commit: string | null;
   readonly pullRequest: number | null;
+  /** The pull request's web address; null without a number or a `github` option. */
+  readonly pullRequestUrl: string | null;
   readonly resolved: boolean;
   readonly reason: ContextReason | null;
 }
@@ -199,8 +201,13 @@ export function contextAnswer(
     return { status: 502, body: { error: "GitHub could not be reached", reason: "unavailable" } };
   }
   const { info } = reading;
+  const github = route.github;
   // `readPreview` already left out a stated number that GitHub found closed or ambiguous.
   const pullRequest = info.pullRequest;
+  const pullRequestUrl =
+    github === undefined || pullRequest === undefined
+      ? null
+      : `https://github.com/${github.owner}/${github.repo}/pull/${pullRequest}`;
   return {
     status: 200,
     body: {
@@ -210,6 +217,7 @@ export function contextAnswer(
       label: info.label,
       commit: info.commit ?? null,
       pullRequest: pullRequest ?? null,
+      pullRequestUrl,
       resolved: reading.resolved,
       reason: reading.reason,
     },

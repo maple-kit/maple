@@ -86,6 +86,7 @@ describe("GET /context", () => {
       label: "feat-login",
       commit: SHA.slice(0, 20),
       pullRequest: 7,
+      pullRequestUrl: "https://github.com/maple-kit/app/pull/7",
       resolved: true,
       reason: null,
     });
@@ -97,6 +98,7 @@ describe("GET /context", () => {
 
     expect(await (await get(handle, "/context")).json()).toMatchObject({
       pullRequest: 9,
+      pullRequestUrl: "https://github.com/maple-kit/app/pull/9",
       branch: "feat/new",
     });
   });
@@ -201,6 +203,7 @@ describe("GET /context", () => {
       label: "feat-login",
       commit: SHA,
       pullRequest: 7,
+      pullRequestUrl: "https://github.com/maple-kit/app/pull/7",
       resolved: false,
       reason: "sign-in",
     });
@@ -233,6 +236,7 @@ describe("GET /context", () => {
     const body = await (await get(handler(), "/context")).json();
     expect(body).toMatchObject({
       pullRequest: null,
+      pullRequestUrl: null,
       resolved: false,
       reason: "ambiguous",
     });
@@ -244,6 +248,7 @@ describe("GET /context", () => {
 
     expect(await (await get(handle, "/context")).json()).toMatchObject({
       pullRequest: null,
+      pullRequestUrl: null,
       resolved: false,
       reason: "none",
     });
@@ -255,6 +260,7 @@ describe("GET /context", () => {
 
     expect(await (await get(handle, "/context")).json()).toMatchObject({
       pullRequest: null,
+      pullRequestUrl: null,
       reason: "ambiguous",
     });
   });
@@ -306,6 +312,19 @@ describe("GET /context", () => {
     expect(await (await get(handle, "/context")).json()).toMatchObject({
       pullRequest: 5,
       branch: "eng-884-remove-flag",
+    });
+  });
+
+  it("has no pull request address without a github option, even with a stated number", async () => {
+    const handle = createMapleHandler({
+      preview: mirrord({ env: { MAPLE_PREVIEW_KEY: "feat-login", MAPLE_PULL_REQUEST: "7" } }),
+      githubAuth: AUTH,
+    });
+
+    expect(await (await get(handle, "/context")).json()).toMatchObject({
+      pullRequest: 7,
+      pullRequestUrl: null,
+      reason: "unconfigured",
     });
   });
 
