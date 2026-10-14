@@ -1,5 +1,35 @@
 # @maple-kit/cli
 
+## 0.22.0
+
+### Minor Changes
+
+- 2ff4c43: Add `maple setup preview mirrord [--write]`: it adds `feature.env.override` (`MAPLE_PREVIEW_KEY`, `MAPLE_PULL_REQUEST`, `MAPLE_BRANCH`, `MAPLE_REF`, `MAPLE_COMMIT`, templated from `-k` and GitHub Actions' own variables, so no workflow step is needed there) and steal mode to each preview config in `.mirrord/*.json` (a file named `*preview*`, or one with a top-level `key` or a `feature.preview` section), leaves values that are already set alone, lists the configs it skipped, and runs `mirrord verify-config --resolved` after a write when `mirrord` is installed, on a temp copy with a literal `key` when the file's own is missing or a template (on Windows it looks for `mirrord` with each `PATHEXT` extension).
+
+### Patch Changes
+
+- Updated dependencies [b47e689]
+- Updated dependencies [3d10af4]
+- Updated dependencies [8ac6240]
+- Updated dependencies [217ebcf]
+- Updated dependencies [925d52e]
+- Updated dependencies [fc2da1a]
+- Updated dependencies [07cdada]
+- Updated dependencies [9f874c1]
+- Updated dependencies [7c1e8c9]
+- Updated dependencies [e9782ec]
+- Updated dependencies [4565d27]
+- Updated dependencies [ee35942]
+- Updated dependencies [b34b849]
+- Updated dependencies [e3a306d]
+- Updated dependencies [5900e08]
+- Updated dependencies [c9d78ea]
+- Updated dependencies [8f0bf16]
+- Updated dependencies [b6683d2]
+  - @maple-kit/core@0.22.0
+  - @maple-kit/ui@0.22.0
+  - @maple-kit/lint@0.3.4
+
 ## 0.21.1
 
 ### Patch Changes

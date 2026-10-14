@@ -1,5 +1,49 @@
 # @maple-kit/ui
 
+## 0.22.0
+
+### Minor Changes
+
+- b47e689: Breaking: off a Mac, a bare Alt tap starts a comment, not a Ctrl tap, and Shift+Alt closes Maple, not Shift+Ctrl. Screen reader users tap Ctrl to silence speech, and each tap started a comment. `TapModifier` is now `"Meta" | "Alt"` (was `"Meta" | "Control"`), `commentModifier()` returns `"Alt"` on Windows and Linux, and the hints read "Tap Alt". AltGr never counts as a tap, a text field still swallows it, and a consumed Alt tap cancels its keyup so Chrome and Firefox on Windows do not focus the menu bar. macOS is unchanged: Cmd.
+- 9f874c1: Breaking: inside `<Maple />`, `m` opens the mock box only while Maple is open, meaning the island card is up or a pick is armed. With the island collapsed it reaches the page untouched; tap the comment modifier, then press `m`. Opening the box while a pick is armed cancels the pick. The island header gains a Mock button, drawn only where the mock transport is installed, that opens and closes the box. `<MapleMock />` without `<Maple />` is unchanged. `createMockClient` takes a new `shortcutWhen` option.
+
+  Breaking: the island's bottom "New: Element | Text | Region" row is gone, and `Maple.NewComment` and `Maple.PickButton` with it; `Maple.CommentButton` is the new part. A comment button in the header, left of the Mock button, replaces it: it arms the kind armed last (what a tap of the comment modifier arms), and pressed again while armed it moves to the next kind. The picker's bar still names the gesture and switches between the three kinds. `MapleClient` gains `armNext()`, the same call as that tap.
+
+- e3a306d: Add `pins: "always" | "open"` to hide the marks on the page, and the edge indicators, until the Maple island is open. It resolves like the other viewer preferences: `?maple-pins=` in the link, then the viewer's stored choice (a new "Pins only when open" switch in the settings), then the `pins` prop, then `always`. A selected comment, an armed pick and an open composer still draw their marks. `ClientState` gains `pins` and `islandOpen`, and the controller gains `setPins` and `setIslandOpen`.
+- 5900e08: `<Maple />` no longer needs a `branch`. Without one it asks the route's `GET {basePath}/context` once (new `readContext` on `@maple-kit/core/client`) and mounts with the branch, label, commit and pull request the route reports; the branch chip links to `pullRequestUrl`. `ContextBody` and `ContextReason` are exported as types from `@maple-kit/core/client`. A 404 means the deploy is not a preview and nothing mounts; a network error or 5xx on the first read is retried after 1 s, 3 s and 10 s before the overlay gives up; an unresolved answer shows the sign-in prompt and is read again once the reviewer links a GitHub account. Props still win over the response.
+
+  Breaking: `MapleRootProps.branch` is optional, and the standalone script no longer falls back to `"local"` when `data-branch` is absent (`maple review` still stamps it): it asks the route instead. The branch chip now reads the root's resolved surface by default.
+
+### Patch Changes
+
+- 3d10af4: Tapping Cmd (or Ctrl) to start a comment is more reliable. Momentum scrolling no longer cancels a tap, only Cmd+scroll does. A focused checkbox, radio, button or other non-text input no longer blocks it. A missed key release heals on the next press, and a hidden tab resets the tap. A tap swallowed by a text field now shows a short hint beside the island, and a tap with the composer open focuses its field.
+- 8ac6240: Closing the composer returns focus to the page control that had it when the composer opened, so a keyboard user no longer lands on `<body>`. Focus is left alone if that control is gone or the viewer already moved it.
+- 925d52e: Escape no longer reaches past Maple. It closes Maple's topmost layer (a pick, then the composer, settings, the island) only when focus is inside Maple or a pick is armed, and then it is consumed, so a host `<dialog>` is not closed by the same press and one press closes one layer. Escape while Maple is idle or during IME composition is left alone. Clicking any part of the island now moves focus into it, so Escape works afterwards. Tapping Shift with the comment modifier (Shift+Cmd on a Mac, Shift+Alt elsewhere) closes Maple from anywhere and keeps drafts.
+
+  Breaking: `watchEscape`'s `onEscape` now receives the event and returns whether it closed something, and takes an optional `takesAll`; `watchPickKeys` and `PickKeyOptions` are removed from `@maple-kit/core/overlay` (the picker uses `watchEscape`); `TapNotice` gains `close`; `TapState` gains `chord`, and `tapStep` reports `close`.
+
+- 07cdada: The mock box's state menu now drops its scroll listener whenever it closes (a pick, Escape, a click outside), not only when the box scrolls, so reopening the menu no longer stacks stale listeners.
+- 4565d27: Region pick works on touch: the drag shield sets `touch-action: none`, and a `pointercancel`, a lost pointer capture or a move with no button down abandons the band instead of leaving a phantom one that follows the next move. `RegionPickingOptions.onDraw` now also receives `undefined` when a drag is abandoned.
+- b34b849: Pins follow the page's DOM: a pin whose anchor is hidden or removed (a closed dialog) is turned off instead of parking at the page's top-left corner, anchors are re-resolved shortly after the page changes so a dialog opened later gets its pins, and a pin for content scrolled out of a scroll area is marked off.
+- b6683d2: Hold-to-peek no longer takes Space from the host page. With focus on a host button, link, checkbox, summary or other focusable control, Space activates or scrolls it as usual while the composer is open. Space inside Maple, or with focus on the page itself, still peeks.
+- Updated dependencies [b47e689]
+- Updated dependencies [3d10af4]
+- Updated dependencies [217ebcf]
+- Updated dependencies [925d52e]
+- Updated dependencies [fc2da1a]
+- Updated dependencies [9f874c1]
+- Updated dependencies [7c1e8c9]
+- Updated dependencies [e9782ec]
+- Updated dependencies [4565d27]
+- Updated dependencies [ee35942]
+- Updated dependencies [e3a306d]
+- Updated dependencies [5900e08]
+- Updated dependencies [c9d78ea]
+- Updated dependencies [8f0bf16]
+  - @maple-kit/core@0.22.0
+  - @maple-kit/mock@0.22.0
+  - @maple-kit/react@0.22.0
+
 ## 0.21.1
 
 ### Patch Changes

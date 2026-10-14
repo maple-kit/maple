@@ -1,5 +1,36 @@
 # @maple-kit/mock
 
+## 0.22.0
+
+### Minor Changes
+
+- 9f874c1: Breaking: inside `<Maple />`, `m` opens the mock box only while Maple is open, meaning the island card is up or a pick is armed. With the island collapsed it reaches the page untouched; tap the comment modifier, then press `m`. Opening the box while a pick is armed cancels the pick. The island header gains a Mock button, drawn only where the mock transport is installed, that opens and closes the box. `<MapleMock />` without `<Maple />` is unchanged. `createMockClient` takes a new `shortcutWhen` option.
+
+  Breaking: the island's bottom "New: Element | Text | Region" row is gone, and `Maple.NewComment` and `Maple.PickButton` with it; `Maple.CommentButton` is the new part. A comment button in the header, left of the Mock button, replaces it: it arms the kind armed last (what a tap of the comment modifier arms), and pressed again while armed it moves to the next kind. The picker's bar still names the gesture and switches between the three kinds. `MapleClient` gains `armNext()`, the same call as that tap.
+
+### Patch Changes
+
+- 925d52e: Escape no longer reaches past Maple. It closes Maple's topmost layer (a pick, then the composer, settings, the island) only when focus is inside Maple or a pick is armed, and then it is consumed, so a host `<dialog>` is not closed by the same press and one press closes one layer. Escape while Maple is idle or during IME composition is left alone. Clicking any part of the island now moves focus into it, so Escape works afterwards. Tapping Shift with the comment modifier (Shift+Cmd on a Mac, Shift+Alt elsewhere) closes Maple from anywhere and keeps drafts.
+
+  Breaking: `watchEscape`'s `onEscape` now receives the event and returns whether it closed something, and takes an optional `takesAll`; `watchPickKeys` and `PickKeyOptions` are removed from `@maple-kit/core/overlay` (the picker uses `watchEscape`); `TapNotice` gains `close`; `TapState` gains `chord`, and `tapStep` reports `close`.
+
+- fc2da1a: The `m` shortcut no longer opens the mock box while you type. `opensMock` and `isEditable` now read the whole event path: `role=textbox`, `combobox` and `searchbox` elements, `contenteditable` ancestors and editors inside open shadow roots count as typing. A held `m`, an IME composition and keyCode 229 no longer open or toggle the box. The comment tap's text-field check uses the same path.
+- Updated dependencies [b47e689]
+- Updated dependencies [3d10af4]
+- Updated dependencies [217ebcf]
+- Updated dependencies [925d52e]
+- Updated dependencies [fc2da1a]
+- Updated dependencies [9f874c1]
+- Updated dependencies [7c1e8c9]
+- Updated dependencies [e9782ec]
+- Updated dependencies [4565d27]
+- Updated dependencies [ee35942]
+- Updated dependencies [e3a306d]
+- Updated dependencies [5900e08]
+- Updated dependencies [c9d78ea]
+- Updated dependencies [8f0bf16]
+  - @maple-kit/core@0.22.0
+
 ## 0.21.1
 
 ### Patch Changes

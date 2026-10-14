@@ -192,7 +192,7 @@ never refreshes it, because refreshing needs the `client_secret`, which would
 put a GitHub secret in the preview environment and defeat the design. The route
 answers `401` and clears the cookie, the overlay shows "Sign in" with drafts
 kept, and the reviewer signs in again with a new device code. A leaked token
-dies within eight hours. Needs `@maple-kit/core` 0.21.1 or later; earlier
+dies within eight hours. Needs `@maple-kit/core` 0.22.0 or later; earlier
 versions showed a store error.
 
 Off: a non-expiring token, so no re-sign-in. A leaked raw token works until the
