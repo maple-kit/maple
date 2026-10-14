@@ -17,6 +17,7 @@ export default defineConfig({
     "src/vite/index.ts",
     "src/config/index.ts",
     "src/overlay/index.ts",
+    "src/preview/index.ts",
     "src/route/index.ts",
     "src/screenshot/index.ts",
     "src/tagger/index.ts",

@@ -31,6 +31,7 @@
       "@maple-kit/core/mock": ["./packages/core/src/mock/index.ts"],
       "@maple-kit/core/config": ["./packages/core/src/config/index.ts"],
       "@maple-kit/core/overlay": ["./packages/core/src/overlay/index.ts"],
+      "@maple-kit/core/preview": ["./packages/core/src/preview/index.ts"],
       "@maple-kit/core/route": ["./packages/core/src/route/index.ts"],
       "@maple-kit/core/screenshot": ["./packages/core/src/screenshot/index.ts"],
       "@maple-kit/core/tagger": ["./packages/core/src/tagger/index.ts"],

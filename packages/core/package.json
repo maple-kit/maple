@@ -35,6 +35,7 @@
     "./next": "./dist/next/index.js",
     "./config": "./dist/config/index.js",
     "./overlay": "./dist/overlay/index.js",
+    "./preview": "./dist/preview/index.js",
     "./route": "./dist/route/index.js",
     "./screenshot": "./dist/screenshot/index.js",
     "./tagger": "./dist/tagger/index.js",
