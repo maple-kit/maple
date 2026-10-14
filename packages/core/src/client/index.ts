@@ -112,7 +112,14 @@ export type {
 } from "./transfer.js";
 export { createTransport, DEFAULT_BASE_PATH, MapleRequestError } from "./transport.js";
 export type { Identity, LinkAttempt, LinkStart, Transport, TransportOptions } from "./transport.js";
-export { COMMENT_FILTERS, CORNERS, DETAILS, PICK_ORDER, THEME_PREFERENCES } from "./types.js";
+export {
+  COMMENT_FILTERS,
+  CORNERS,
+  DETAILS,
+  PICK_ORDER,
+  PINS_VISIBILITIES,
+  THEME_PREFERENCES,
+} from "./types.js";
 export type {
   AssistConfig,
   AssistState,
@@ -130,6 +137,7 @@ export type {
   PostedComment,
   ResolutionClaim,
   Scheme,
+  PinsVisibility,
   ThemePreference,
   ThemeSource,
   ThemeState,

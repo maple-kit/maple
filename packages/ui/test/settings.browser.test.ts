@@ -265,7 +265,7 @@ describe("a panel taller than the card", () => {
   it("shows every row the panel has, sign-in included", async () => {
     await shortened();
 
-    expect(root().querySelectorAll(".mk-setting")).toHaveLength(7);
+    expect(root().querySelectorAll(".mk-setting")).toHaveLength(8);
     expect(root().querySelector("[data-mk-link]")).not.toBeNull();
   });
 });

@@ -306,3 +306,43 @@ describe("the theme the viewer chose", () => {
     expect(readPreferences({ storage, origin: ORIGIN })).toEqual({ position: TOP_LEFT });
   });
 });
+
+describe("when the marks are drawn", () => {
+  it("defaults to always, which is what a page without the setting has", () => {
+    expect(MAPLE_DEFAULTS.pins).toBe("always");
+    expect(resolveConfig({}).pins).toBe("always");
+  });
+
+  it.each([
+    ["?maple-pins=open", { pins: "open" }],
+    ["?maple-pins=always", { pins: "always" }],
+    ["?maple-pins=closed", {}],
+    ["?maple-pins=", {}],
+    ["?maple-pins=OPEN", {}],
+    ["?maplepins=open", {}],
+  ])("reads %s off the query string as %j", (search, expected) => {
+    expect(parseMapleQuery(search)).toEqual(expected);
+  });
+
+  it.each<[string, ConfigInput, string]>([
+    ["the app alone", { props: { pins: "open" } }, "open"],
+    ["the viewer over the app", { stored: { pins: "always" }, props: { pins: "open" } }, "always"],
+    [
+      "the link over the viewer and the app",
+      { query: { pins: "open" }, stored: { pins: "always" }, props: { pins: "always" } },
+      "open",
+    ],
+    ["a stored choice with no app prop", { stored: { pins: "open" } }, "open"],
+  ])("takes %s", (_case, input, expected) => {
+    expect(resolveConfig(input).pins).toBe(expected);
+  });
+
+  it("remembers it per origin and drops a stored value that is not one of ours", () => {
+    const storage = memoryStorage();
+    writePreferences({ pins: "open" }, { storage, origin: ORIGIN });
+    expect(readPreferences({ storage, origin: ORIGIN })).toEqual({ pins: "open" });
+
+    const stale = memoryStorage({ [`maple:prefs:${ORIGIN}`]: '{"pins":"never"}' });
+    expect(readPreferences({ storage: stale, origin: ORIGIN })).toEqual({});
+  });
+});

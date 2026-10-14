@@ -70,6 +70,15 @@ export type Detail = (typeof DETAILS)[number];
  */
 export const PICK_ORDER = ["element", "text", "region"] as const satisfies readonly PickKind[];
 
+/** When the marks on the page are drawn: always, or only while Maple is open. */
+export const PINS_VISIBILITIES = ["always", "open"] as const;
+
+/**
+ * One of {@link PINS_VISIBILITIES}. `open` keeps a preview clean until the
+ * viewer opens Maple; a selected comment or an armed pick still draws its marks.
+ */
+export type PinsVisibility = (typeof PINS_VISIBILITIES)[number];
+
 /** Light or dark, for the host page and for the overlay drawn over it. */
 export type Scheme = "dark" | "light";
 
@@ -198,6 +207,10 @@ export interface ClientState {
   readonly position: Corner;
   /** The card's size after the viewer resized it, or null while it is the default. */
   readonly islandSize: IslandSize | null;
+  /** When the marks are drawn. Remembered per origin. */
+  readonly pins: PinsVisibility;
+  /** Whether the island's card is showing, which the surface reports. */
+  readonly islandOpen: boolean;
   /** Hidden for this session. Not gone: anything arriving brings it back. */
   readonly hidden: boolean;
   /** The comment a link asked for, or a mark answered to. Null when none. */

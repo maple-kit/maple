@@ -580,6 +580,7 @@ describe("what a link asked for", () => {
         theme: "dark",
         hideResolved: false,
         assist: false,
+        pins: "open",
         allowUrlOverride: true,
         comment: "c_9",
         pick: "region",
@@ -590,6 +591,7 @@ describe("what a link asked for", () => {
     expect(state.position).toBe("top-left");
     expect(state.detail).toBe("developer");
     expect(state.themePreference).toBe("dark");
+    expect(state.pins).toBe("open");
     expect(state.selected).toBe("c_9");
     expect(state.showResolved).toBe(true);
     expect(state.pick).toEqual({ armed: true, kind: "region" });

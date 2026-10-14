@@ -77,7 +77,7 @@ export const Island = /** @__PURE__ */ forwardRef<HTMLDivElement, IslandProps>(
  * waits for anything reads as a surface that did not hear the click.
  */
 function useIslandState(defaultOpen: boolean): IslandContextValue {
-  const { comments, composer, detail, pick, selected, tap } = useMaple();
+  const { comments, composer, detail, hidden, pick, selected, tap } = useMaple();
   const client = useMapleClient();
   const { container } = useMapleUi(PART);
   const [phase, setPhase] = useState<IslandPhase>(defaultOpen ? "open" : "closed");
@@ -122,9 +122,14 @@ function useIslandState(defaultOpen: boolean): IslandContextValue {
     closeTaps: tap.close,
   });
 
+  const shown = selected === null ? phase : "open";
+  const showing = shown !== "closed" && !hidden;
+  useEffect(() => client.setIslandOpen(showing), [client, showing]);
+  useEffect(() => () => client.setIslandOpen(false), [client]);
+
   return useMemo(
     () => ({
-      phase: selected === null ? phase : "open",
+      phase: shown,
       setOpen,
       settled,
       developer,
@@ -144,13 +149,13 @@ function useIslandState(defaultOpen: boolean): IslandContextValue {
       developer,
       drag,
       numbers,
-      phase,
       resolutions,
       selected,
       setDeveloper,
       setOpen,
       settingsOpen,
       settled,
+      shown,
     ],
   );
 }

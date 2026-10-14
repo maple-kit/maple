@@ -85,6 +85,9 @@ export const SETTINGS_COPY = {
   hideResolved: {
     name: "Hide resolved",
   },
+  pinsOpen: {
+    name: "Pins only when open",
+  },
   developer: {
     name: "Developer mode",
   },

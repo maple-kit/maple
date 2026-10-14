@@ -320,7 +320,7 @@ describe("the settings", () => {
     await open();
     find<HTMLButtonElement>('[aria-label="Settings"]').click();
 
-    await vi.waitFor(() => expect(all('[role="switch"]')).toHaveLength(2));
+    await vi.waitFor(() => expect(all('[role="switch"]')).toHaveLength(3));
     expect(all('[role="radiogroup"]')).toHaveLength(2);
     expect(all(".mk-seg-one")).toHaveLength(3);
     expect(all(".mk-corner")).toHaveLength(4);

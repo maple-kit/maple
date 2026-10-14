@@ -153,9 +153,12 @@ export const MapleMarkLayer = /** @__PURE__ */ forwardRef<HTMLDivElement, MarkLa
       [client, drafted, nudges, peeked],
     );
 
+    const classes = className ? `mk-marks ${className}` : "mk-marks";
+    if (!pinsShown(state)) return createElement("div", { className: classes, ref });
+
     return createElement(
       "div",
-      { className: className ? `mk-marks ${className}` : "mk-marks", ref },
+      { className: classes, ref },
       ...unsent,
       ...marks,
       ...EDGES.map((edge) =>
@@ -179,6 +182,15 @@ export const MapleMarkLayer = /** @__PURE__ */ forwardRef<HTMLDivElement, MarkLa
     );
   },
 );
+
+/**
+ * `open` draws nothing while the island is shut, but never hides what the
+ * viewer is working on: a selected comment, an armed pick or an open composer.
+ */
+function pinsShown(state: ClientState): boolean {
+  if (state.pins === "always") return true;
+  return state.islandOpen || state.pick.armed || state.composer.open || state.selected !== null;
+}
 
 /**
  * A link naming a comment has to land on it: the island opens, the ring is

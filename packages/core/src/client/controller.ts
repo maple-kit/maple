@@ -71,6 +71,7 @@ import type {
   IslandSize,
   PickKind,
   PickState,
+  PinsVisibility,
   PostedComment,
   ResolutionClaim,
   ThemePreference,
@@ -170,6 +171,10 @@ export interface MapleClient {
    * only: a comment records the host page's scheme whatever this says.
    */
   setTheme(preference: ThemePreference): void;
+  /** When the marks are drawn. Remembered per origin; presentation only. */
+  setPins(pins: PinsVisibility): void;
+  /** The surface says whether its card is showing, for `pins: "open"`. Not remembered. */
+  setIslandOpen(open: boolean): void;
   /** Snapped to a corner by the surface; remembered per origin. */
   setPosition(position: Corner): void;
   /** The card's size, as the viewer left it; null puts it back. Remembered per origin. */
@@ -335,6 +340,10 @@ export function createMapleClient(options: MapleClientOptions): MapleClient {
     setShowResolved: (showResolved) => patch(runtime, { showResolved }),
     setDetail: (detail) => remember(runtime, { detail }),
     setTheme: (themePreference) => remember(runtime, { themePreference }),
+    setPins: (pins) => remember(runtime, { pins }),
+    setIslandOpen: (islandOpen) => {
+      if (runtime.state.islandOpen !== islandOpen) patch(runtime, { islandOpen });
+    },
     setPosition: (position) => remember(runtime, { position }),
     setIslandSize: (islandSize) => remember(runtime, { islandSize }),
     setHidden: (hidden) => patch(runtime, { hidden }),
@@ -421,6 +430,8 @@ function runtimeFor(options: MapleClientOptions): Runtime {
       showResolved: !config.hideResolved,
       detail: config.detail,
       position: config.position,
+      pins: config.pins,
+      islandOpen: false,
       islandSize: readPreferences(storageOf(options)).islandSize ?? null,
       hidden: false,
       selected: config.comment ?? null,
@@ -470,6 +481,7 @@ function remember(runtime: Runtime, change: Partial<ClientState>): void {
       detail: runtime.state.detail,
       position: runtime.state.position,
       theme: runtime.state.themePreference,
+      pins: runtime.state.pins,
       islandSize: runtime.state.islandSize,
     },
     storageOf(runtime.options),

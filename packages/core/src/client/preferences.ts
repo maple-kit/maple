@@ -9,10 +9,17 @@
  * treat a throw as "nothing was stored".
  */
 
-import { CORNERS, DETAILS, PICK_ORDER, THEME_PREFERENCES } from "./types.js";
+import { CORNERS, DETAILS, PICK_ORDER, PINS_VISIBILITIES, THEME_PREFERENCES } from "./types.js";
 
 import type { Logger } from "../logger/types.js";
-import type { Corner, Detail, IslandSize, PickKind, ThemePreference } from "./types.js";
+import type {
+  Corner,
+  Detail,
+  IslandSize,
+  PickKind,
+  PinsVisibility,
+  ThemePreference,
+} from "./types.js";
 
 /** The key every stored preference hangs under, per origin. */
 const PREFERENCES_PREFIX = "maple:prefs:";
@@ -26,6 +33,7 @@ export const MAPLE_DEFAULTS = {
   allowUrlOverride: true,
   theme: "auto",
   assist: true,
+  pins: "always",
 } as const;
 
 /** What an application sets on the component. Every one of them is optional. */
@@ -45,6 +53,8 @@ export interface MapleProps {
    * ever when the route has a classifier: this cannot switch one on.
    */
   readonly assist?: boolean;
+  /** When the marks on the page are drawn. `open` hides them until Maple is opened. */
+  readonly pins?: PinsVisibility;
 }
 
 /** What a link asked for. Absent fields were not in the query string. */
@@ -61,6 +71,8 @@ export interface MapleQuery {
   readonly pick?: PickKind;
   /** `?maple-assist=off` — judge nothing on this visit. */
   readonly assist?: boolean;
+  /** `?maple-pins=open` — a shared link that stays clean until Maple is opened. */
+  readonly pins?: PinsVisibility;
 }
 
 /** What the viewer settled on last time, on this origin. */
@@ -69,6 +81,7 @@ export interface StoredPreferences {
   readonly position?: Corner;
   readonly theme?: ThemePreference;
   readonly assist?: boolean;
+  readonly pins?: PinsVisibility;
   /** The card's size, kept per viewer. Null on a write puts it back to the default. */
   readonly islandSize?: IslandSize | null;
   /** The pick a tap of the modifier arms next time, which is the one the viewer armed last. */
@@ -84,6 +97,7 @@ export interface MapleConfig {
   readonly hideResolved: boolean;
   readonly allowUrlOverride: boolean;
   readonly assist: boolean;
+  readonly pins: PinsVisibility;
   /** Select it, scroll to it and draw its ring. */
   readonly comment?: string;
   readonly pick?: PickKind;
@@ -142,6 +156,7 @@ export function parseMapleQuery(search: string): MapleQuery {
     comment: comment === null || comment === "" ? undefined : comment,
     pick: oneOf(query.get("maple-new"), PICK_ORDER),
     assist: switched(query.get("maple-assist")),
+    pins: oneOf(query.get("maple-pins"), PINS_VISIBILITIES),
   });
 }
 
@@ -165,6 +180,12 @@ function viewerFrom(input: ConfigInput): Pick<MapleConfig, "detail" | "position"
   };
 }
 
+/** When the marks are drawn: link, then the viewer, then the app. */
+function pinsFrom(input: ConfigInput): PinsVisibility {
+  const { props, query, stored } = input;
+  return query?.pins ?? stored?.pins ?? props?.pins ?? MAPLE_DEFAULTS.pins;
+}
+
 /**
  * Query string, then the viewer's stored preference, then props, then the
  * defaults — for everything but `enabled`, which has a rule of its own above.
@@ -176,6 +197,7 @@ export function resolveConfig(input: ConfigInput = {}): MapleConfig {
   return {
     enabled: enabledFrom(input, allowUrlOverride),
     ...viewerFrom(input),
+    pins: pinsFrom(input),
     hideResolved: props?.hideResolved ?? MAPLE_DEFAULTS.hideResolved,
     allowUrlOverride,
     assist: query?.assist ?? input.stored?.assist ?? props?.assist ?? MAPLE_DEFAULTS.assist,
@@ -223,6 +245,7 @@ function sanitised(stored: StoredPreferences): StoredPreferences {
     position: oneOf(stored.position ?? null, CORNERS),
     theme: oneOf(stored.theme ?? null, THEME_PREFERENCES),
     assist: typeof stored.assist === "boolean" ? stored.assist : undefined,
+    pins: oneOf(stored.pins ?? null, PINS_VISIBILITIES),
     lastPick: oneOf(stored.lastPick ?? null, PICK_ORDER),
     islandSize: sizeFrom(stored.islandSize),
   });

@@ -80,7 +80,7 @@ interface PanelProps {
  */
 function Panel(props: PanelProps): ReactNode {
   const client = useMapleClient();
-  const { position, showResolved, tagged, themePreference } = useMaple();
+  const { pins, position, showResolved, tagged, themePreference } = useMaple();
   const island = useIsland(PART);
 
   const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
@@ -107,6 +107,11 @@ function Panel(props: PanelProps): ReactNode {
       checked: !showResolved,
       copy: SETTINGS_COPY.hideResolved,
       onChange: (on: boolean) => client.setShowResolved(!on),
+    }),
+    createElement(Setting, {
+      checked: pins === "open",
+      copy: SETTINGS_COPY.pinsOpen,
+      onChange: (on: boolean) => client.setPins(on ? "open" : "always"),
     }),
     createElement(Setting, {
       checked: island.developer,

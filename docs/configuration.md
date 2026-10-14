@@ -60,6 +60,26 @@ The installation id is on the installation's settings URL —
 `https://github.com/organizations/<org>/settings/installations/<id>` — and
 `gh api /app/installations` lists it once the key is in hand.
 
+## Pins only when open
+
+`pins` on `<Maple>` decides when the marks on the page, and the edge indicators
+that point at off-screen ones, are drawn. The default, `"always"`, is today's
+behaviour. `"open"` keeps the page clean until the island is opened, which is
+what you want when you send someone a preview of a design.
+
+It resolves like the viewer's other preferences, first match wins:
+
+1. `?maple-pins=open` (or `always`) in the link, so the shared URL carries it.
+2. The viewer's own choice, the **Pins only when open** switch in the island's
+   settings, remembered per origin.
+3. The `pins` prop.
+4. `"always"`.
+
+"Open" means the card is showing, not the collapsed pill. Three things draw
+their marks even while the island is shut: a selected comment (a
+`?maple-comment=` link opens the island anyway), an armed pick and an open
+composer. Hiding the island from the settings also hides the marks.
+
 ## The assist tier
 
 Scores a comment as it is typed. Off unless a classifier is configured, so
