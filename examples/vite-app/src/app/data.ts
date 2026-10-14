@@ -128,4 +128,6 @@ export const LD_FLAGS = {
     flagVersion: 1,
     trackEvents: false,
   },
+  // In the account, read by no page: the box lists it only without the usage inspector.
+  "legacy-billing": { value: true, variation: 0, version: 1, flagVersion: 1, trackEvents: false },
 };

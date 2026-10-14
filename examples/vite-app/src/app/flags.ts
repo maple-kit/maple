@@ -5,6 +5,7 @@
  */
 
 import { createClient } from "@launchdarkly/js-client-sdk";
+import { launchDarklyUsage } from "@maple-kit/mock/launchdarkly";
 import { useEffect, useState } from "react";
 
 import { LD_BASE } from "./ld.js";
@@ -21,6 +22,8 @@ const client = createClient(
     streaming: false,
     // A preview reloads into each mock; a cached answer would outlive Turn off.
     disableCache: true,
+    // Tells Maple Mock which flags this page reads; a production build has no mock.
+    inspectors: __MAPLE_PREVIEW__ ? [launchDarklyUsage()] : [],
   },
 );
 const started = client.start();

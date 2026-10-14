@@ -27,7 +27,7 @@ export type { Answer, Call, Codec } from "./codec.js";
 export { flagType, holdStreams } from "./flag-source.js";
 export type { FlagSource, Flags, FlagStream } from "./flag-source.js";
 export { seenFlags } from "./flags.js";
-export type { FlagRegistry, SeenFlag } from "./flags.js";
+export type { FlagRegistry, SeenFlag, UsedFlag } from "./flags.js";
 export { impose, knownIdentity, meetsNeed, realIdentity } from "./identity.js";
 export type { RealIdentity } from "./identity.js";
 export { installMock } from "./interceptor.js";

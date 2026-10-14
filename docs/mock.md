@@ -711,6 +711,24 @@ real client against a fake poll.
   its next poll answers, so the first load after Turn off shows the mocked
   values until that poll does. `disableCache: true` on a preview avoids it.
 - **Evaluation events still go to LaunchDarkly**, with the mocked value.
+- **The poll offers every flag in the account; the page reads a few.** Add
+  `launchDarklyUsage()` where the host creates the client and the box lists,
+  and the plan is asked about, only the flags the page read on the route it
+  is on:
+
+  ```ts
+  import { launchDarklyUsage } from "@maple-kit/mock/launchdarkly";
+
+  createClient(envId, context, { inspectors: [launchDarklyUsage()] });
+  ```
+
+  It is a `flag-used` inspector, which the 3.x and 4.x SDKs call on every
+  `variation()`, and so on every `useFlags()` read. An SDK that prefers hooks
+  takes `launchDarklyUsageHook()` as `hooks: [...]` instead. The full poll is
+  still recorded, as the flags the page was _offered_: they supply each used
+  flag's real value, and they are the list when no inspector is installed
+  (nothing ever read), as before. Mocking is unchanged; a mocked flag the
+  page reads gets the mocked value.
 
 `@maple-kit/mock/testing` has `runFlagProviderContract`, the suite every
 wrapped provider runs, and `memoryFlagProvider`. The package's own tests run

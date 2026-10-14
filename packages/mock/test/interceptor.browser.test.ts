@@ -348,7 +348,7 @@ describe("installMock with LaunchDarkly's own browser SDK", () => {
 
     expect(client.variation("new-roaster", false)).toBe(true);
     expect(client.variation("roast-limit", 0)).toBe(3);
-    expect(seenFlags().list()).toEqual(
+    expect(seenFlags().known()).toEqual(
       expect.arrayContaining([
         { key: "new-roaster", type: "boolean", value: false },
         { key: "roast-limit", type: "number", value: 3 },

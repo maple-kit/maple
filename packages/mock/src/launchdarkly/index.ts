@@ -5,6 +5,10 @@
  * default; `docs/mock.md` says what was verified and against which release.
  */
 
+import { flagType } from "../flag-source.js";
+import { seenFlags } from "../flags.js";
+import { pathPattern } from "../rest.js";
+
 import type { Flags, FlagSource } from "../flag-source.js";
 import type { FlagValue } from "@maple-kit/core/mock";
 
@@ -51,6 +55,57 @@ export function launchDarklyFlags(options: LaunchDarklyOptions = {}): FlagSource
         return url.origin === stream.origin && under(url, stream) && STREAM.test(url.pathname);
       },
       event,
+    },
+  };
+}
+
+/** The SDK's `flag-used` inspector, structurally: `options.inspectors` takes it. */
+export interface LaunchDarklyUsageInspector {
+  readonly type: "flag-used";
+  readonly name: string;
+  /** Synchronous, so the route is the one the flag was read on. */
+  readonly synchronous: true;
+  method(flagKey: string, detail: { readonly value: unknown }): void;
+}
+
+/** The SDK's evaluation hook, structurally: `options.hooks` takes it. */
+export interface LaunchDarklyUsageHook {
+  getMetadata(): { readonly name: string };
+  afterEvaluation(
+    context: { readonly flagKey: string },
+    data: { readonly [index: string]: unknown },
+    detail: { readonly value: unknown },
+  ): { readonly [index: string]: unknown };
+}
+
+function used(key: string, value: unknown): void {
+  if (typeof location === "undefined") return;
+  const real = value === undefined ? null : (value as FlagValue);
+  const route = pathPattern(location.pathname);
+  seenFlags().recordUsed({ key, route, type: flagType(real), value: real });
+}
+
+/**
+ * Tells the box which flags the page reads, so it lists those and not every
+ * flag in the account. Pass it where the host creates the client:
+ * `options: { inspectors: [launchDarklyUsage()] }`.
+ */
+export function launchDarklyUsage(): LaunchDarklyUsageInspector {
+  return {
+    type: "flag-used",
+    name: "maple-mock",
+    synchronous: true,
+    method: (key, detail) => used(key, detail.value),
+  };
+}
+
+/** The same as `launchDarklyUsage`, as an evaluation hook: `options: { hooks: [launchDarklyUsageHook()] }`. */
+export function launchDarklyUsageHook(): LaunchDarklyUsageHook {
+  return {
+    getMetadata: () => ({ name: "maple-mock" }),
+    afterEvaluation(context, data, detail) {
+      used(context.flagKey, detail.value);
+      return data;
     },
   };
 }

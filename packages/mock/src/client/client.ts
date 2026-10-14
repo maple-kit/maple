@@ -289,7 +289,7 @@ function derive(runtime: Runtime, next: Partial<MockClientState>): MockClientSta
     route,
     active,
     calls: rows(runtime, route, merged),
-    flags: flagRows(merged.draftFlags),
+    flags: flagRows(route, merged.draftFlags),
     realAs: realAsOn(runtime, route, merged.identity),
     writes: runtime.handle?.writes?.list().length ?? 0,
     changed: changed(merged, active),
@@ -407,13 +407,11 @@ async function runPlan(runtime: Runtime, sentence: string): Promise<void> {
   patch(runtime, { thinking: true, planFailure: undefined });
   const { route } = runtime.state;
   const calls = (runtime.handle?.inventory.calls(route) ?? []).map(planCall);
-  const flags = seenFlags()
-    .list()
-    .map(({ key, type, variants }) => ({
-      key,
-      type,
-      ...(variants === undefined ? {} : { variants }),
-    }));
+  const flags = pageFlags(route).map(({ key, type, variants }) => ({
+    key,
+    type,
+    ...(variants === undefined ? {} : { variants }),
+  }));
 
   try {
     const asked = { request: sentence, route, calls, ...(flags.length === 0 ? {} : { flags }) };
@@ -550,9 +548,15 @@ function chosen(draft: readonly MockCall[], key: string, state: MockState | unde
   return draft.map((call, at) => (at === index ? { key, state } : call));
 }
 
+/** The flags the route read; with no reader installed anywhere, every flag offered. */
+function pageFlags(route: string): readonly SeenFlag[] {
+  const registry = seenFlags();
+  return registry.hasUsed() ? registry.used(route) : registry.known();
+}
+
 /** The flags evaluated, most recent first, then those only the draft names. */
-function flagRows(draft: Readonly<Record<string, FlagValue>>): MockFlagRow[] {
-  const seen = seenFlags().list().toReversed();
+function flagRows(route: string, draft: Readonly<Record<string, FlagValue>>): MockFlagRow[] {
+  const seen = pageFlags(route).toReversed();
   const named = Object.entries(draft).filter(([key]) => !seen.some((flag) => flag.key === key));
   return [
     ...seen.map((flag): MockFlagRow => {

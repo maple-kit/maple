@@ -123,7 +123,9 @@ cd examples/vite-app && pnpm dlx wrangler@4.147.0 deploy --dry-run --outdir wout
    declares the identity rules: the audit log is owners only. The box's
    second panel picks a role, grants or takes away a permission, and flips
    `merge-forecast`, a flag LaunchDarkly's own browser SDK reads from a fake
-   poll at `/ld`. As a guest, Invite and Save disappear and the audit log shows
+   poll at `/ld`, and lists only the flags the page read, through the
+   `launchDarklyUsage()` inspector in `flags.ts`; the poll also carries
+   `legacy-billing`, which no page reads. As a guest, Invite and Save disappear and the audit log shows
    its own 403; the banner says the server still acts as you, and counts a
    Save that reached it. A production build ignores the same link, and
    `verify` checks it carries no flag source.

@@ -89,7 +89,7 @@ export function runFlagProviderContract(options: FlagProviderContractOptions): v
       await evaluate(provider, ["resolveStringEvaluation", "tier", "none"]);
       expect(
         seenFlags()
-          .list()
+          .known()
           .find((flag) => flag.key === "tier"),
       ).toEqual({
         key: "tier",

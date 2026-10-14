@@ -146,7 +146,11 @@ OpenFeature.setProvider(withMockFlags(new VendorProvider(options)));
 
 **LaunchDarkly** is read on the wire instead: `launchDarklyFlags()` from
 `@maple-kit/mock/launchdarkly`, passed to `installMock({ flags })`, answers the
-browser SDK's poll and stream with the recipe's flags written in.
+browser SDK's poll and stream with the recipe's flags written in. The poll
+carries every flag in the account, so give the SDK one more line and the box
+lists only the flags the page reads:
+`options: { inspectors: [launchDarklyUsage()] }`, from the same entrypoint
+(`hooks: [launchDarklyUsageHook()]` for an SDK that prefers hooks).
 
 **The role** comes from the host's own session call, named in the route's
 `mock.identity`. Maple never guesses which field carries authorisation, and a
@@ -183,17 +187,17 @@ const server = setupServer(...mockHandlers(recipe), ...handlers);
 
 ## Entries
 
-| Entry                          | What it is                                                                 |
-| ------------------------------ | -------------------------------------------------------------------------- |
-| `@maple-kit/mock`              | `installMock`, and reading and writing the recipe: link, tab, encode.      |
-| `@maple-kit/mock/install`      | The in-page transport with every default, imported first from the entry.   |
-| `@maple-kit/mock/client`       | The box's controller, which finds the transport without importing it.      |
-| `@maple-kit/mock/openfeature`  | `withMockFlags(provider)`, for flags evaluated through OpenFeature.        |
-| `@maple-kit/mock/launchdarkly` | `launchDarklyFlags()`, LaunchDarkly's browser SDK answered on the wire.    |
-| `@maple-kit/mock/server`       | `requestRecipe(request)`, the recipe for flags and roles read server-side. |
-| `@maple-kit/mock/msw`          | Handlers for a host that already runs MSW's `setupWorker`.                 |
-| `@maple-kit/mock/node`         | The same handlers for `setupServer` in tests or a server render.           |
-| `@maple-kit/mock/testing`      | The flag-provider contract suite and an in-memory provider. Needs vitest.  |
+| Entry                          | What it is                                                                                     |
+| ------------------------------ | ---------------------------------------------------------------------------------------------- |
+| `@maple-kit/mock`              | `installMock`, and reading and writing the recipe: link, tab, encode.                          |
+| `@maple-kit/mock/install`      | The in-page transport with every default, imported first from the entry.                       |
+| `@maple-kit/mock/client`       | The box's controller, which finds the transport without importing it.                          |
+| `@maple-kit/mock/openfeature`  | `withMockFlags(provider)`, for flags evaluated through OpenFeature.                            |
+| `@maple-kit/mock/launchdarkly` | `launchDarklyFlags()`, LaunchDarkly's browser SDK answered on the wire; `launchDarklyUsage()`. |
+| `@maple-kit/mock/server`       | `requestRecipe(request)`, the recipe for flags and roles read server-side.                     |
+| `@maple-kit/mock/msw`          | Handlers for a host that already runs MSW's `setupWorker`.                                     |
+| `@maple-kit/mock/node`         | The same handlers for `setupServer` in tests or a server render.                               |
+| `@maple-kit/mock/testing`      | The flag-provider contract suite and an in-memory provider. Needs vitest.                      |
 
 This package uses no React, no Effect and no model. `@maple-kit/ui` and
 `@maple-kit/react` import it; it never imports them.
