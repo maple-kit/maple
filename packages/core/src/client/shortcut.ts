@@ -270,7 +270,7 @@ export function watchCommentTap(options: TapOptions): void {
         ctrlKey: key.ctrlKey,
         altKey: key.altKey,
         shiftKey: key.shiftKey,
-        editable: isEditable(typedInto(event as unknown as ShortcutEvent)),
+        editable: typingIn(event as unknown as ShortcutEvent),
       },
       modifier,
     );
@@ -311,6 +311,9 @@ export interface ShortcutEvent {
   readonly ctrlKey?: boolean;
   readonly altKey?: boolean;
   readonly defaultPrevented?: boolean;
+  readonly repeat?: boolean;
+  readonly isComposing?: boolean;
+  readonly keyCode?: number;
   readonly target?: unknown;
   /** A shadow root retargets `target` to its host; the path's head is what was typed into. */
   readonly composedPath?: () => readonly unknown[];
@@ -341,16 +344,19 @@ function pressed(event: ShortcutEvent, key: string): boolean {
   if (event.key.toLowerCase() !== key.toLowerCase()) return false;
   if (event.metaKey || event.ctrlKey || event.altKey) return false;
   if (event.defaultPrevented) return false;
-  return !isEditable(typedInto(event));
+  // A held key would flicker the box; keyCode 229 is an IME still composing.
+  if (event.repeat || event.isComposing || event.keyCode === 229) return false;
+  return !typingIn(event);
 }
 
 /**
- * What the key landed on. A listener on the document sees a key typed into a
- * shadow root as landing on its host, which is a `div` and not editable.
+ * True when the key landed in an editor. A shadow root retargets to its host,
+ * so the whole path is read, ancestors included.
  */
-function typedInto(event: ShortcutEvent): unknown {
+function typingIn(event: ShortcutEvent): boolean {
   const path = event.composedPath?.();
-  return path !== undefined && path.length > 0 ? path[0] : event.target;
+  if (path === undefined || path.length === 0) return isEditable(event.target);
+  return path.some(isEditable);
 }
 
 /** How a surface asks to be told about Escape. */
@@ -400,9 +406,11 @@ function ownsEscape(event: Event): boolean {
   return path.slice(0, overlay).some((node) => (node as Element).matches?.(open) === true);
 }
 
+const EDITOR_ROLES = new Set(["textbox", "combobox", "searchbox"]);
+
 /**
  * True for anywhere a person could be typing, including a `contenteditable`
- * host the browser has not told us is focused.
+ * host the browser has not told us is focused and an ARIA editor.
  */
 export function isEditable(target: unknown): boolean {
   if (typeof target !== "object" || target === null) return false;
@@ -419,6 +427,8 @@ export function isEditable(target: unknown): boolean {
     if (TYPING_TAGS.has(tag)) return true;
     if (tag === "INPUT") return takesText(element);
   }
+  const role = element.getAttribute?.("role")?.trim().split(/\s+/)[0];
+  if (role !== undefined && EDITOR_ROLES.has(role.toLowerCase())) return true;
   const editable = element.getAttribute?.("contenteditable");
   return typeof editable === "string" && editable !== "false";
 }

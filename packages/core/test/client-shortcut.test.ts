@@ -22,6 +22,10 @@ describe("the m shortcut", () => {
     ["c, which no longer opens anything", press({ key: "c" }), false],
     ["cmd+m, which minimises the window", press({ key: "m", metaKey: true }), false],
     ["m typed into an input", press({ key: "m", target: { tagName: "INPUT" } }), false],
+    ["a held m", press({ repeat: true }), false],
+    ["m during IME composition", press({ isComposing: true }), false],
+    ["m with the IME keyCode 229", press({ keyCode: 229 }), false],
+    ["m with an ordinary keyCode", press({ keyCode: 77 }), true],
   ];
 
   it.each(cases)("%s: %o opens the mock box = %s", (_name, event, expected) => {
@@ -50,6 +54,35 @@ describe("a key typed inside a shadow root", () => {
 
   it("falls back to the target when the path is empty", () => {
     expect(opensMock(press({ key: "m", target: input, composedPath: () => [] }))).toBe(false);
+  });
+});
+
+describe("an editor found along the event path", () => {
+  const attrs = (map: Record<string, string>) => ({
+    tagName: "DIV",
+    getAttribute: (name: string) => map[name] ?? null,
+  });
+  const plain = { tagName: "SPAN" };
+
+  it.each([
+    ["role=textbox", attrs({ role: "textbox" }), true],
+    ["role=combobox", attrs({ role: "combobox" }), true],
+    ["role=searchbox", attrs({ role: "searchbox" }), true],
+    ["a role list starting with textbox", attrs({ role: "textbox presentation" }), true],
+    ["role=button", attrs({ role: "button" }), false],
+    ["contenteditable", attrs({ contenteditable: "" }), true],
+    ["contenteditable=plaintext-only", attrs({ contenteditable: "plaintext-only" }), true],
+    ["contenteditable=false", attrs({ contenteditable: "false" }), false],
+  ])("%s as the target is typing = %s", (_name, element, typing) => {
+    expect(isEditable(element)).toBe(typing);
+  });
+
+  it.each([
+    ["a contenteditable ancestor", attrs({ contenteditable: "true" })],
+    ["a role=textbox ancestor", attrs({ role: "textbox" })],
+  ])("does not open from a child of %s", (_name, ancestor) => {
+    const path = () => [plain, ancestor, { tagName: "BODY" }];
+    expect(opensMock(press({ target: plain, composedPath: path }))).toBe(false);
   });
 });
 
