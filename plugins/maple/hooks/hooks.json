@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "npx -y -p @maple-kit/mcp@0.22.0 maple-stop-hook"
+            "command": "npx -y -p @maple-kit/mcp@0.23.0 maple-stop-hook"
           }
         ]
       }

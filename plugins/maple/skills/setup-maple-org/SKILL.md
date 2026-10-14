@@ -32,7 +32,7 @@ this one. Every `docs/` path here is in the Maple repository, at
 Throughout, `acme` is your organisation and `acme/web` a repository you want
 reviewable. Substitute your own.
 
-The CLI does the parts of this that can be generated: `npx @maple-kit/cli@0.22.0
+The CLI does the parts of this that can be generated: `npx @maple-kit/cli@0.23.0
 setup app --owner=acme` prints the prefilled registration URL (`--gate` for the
 gate App), `setup verify --client-id=<Iv…>` checks Device Flow, and `setup ci`
 prints the gate workflow. Flags take `--flag=value` or `--flag value`.
@@ -72,7 +72,7 @@ matters.
 tokens die after eight hours (fixed by GitHub), nothing refreshes them, and the
 reviewer signs in again with a new device code; drafts are kept. Refreshing
 would need the App's `client_secret` in every preview, which this design
-forbids. Needs `@maple-kit/core` 0.22.0 or later. Off, there is no re-sign-in,
+forbids. Needs `@maple-kit/core` 0.23.0 or later. Off, there is no re-sign-in,
 but a leaked token works until the reviewer revokes it; the cookie is still
 checked against `maxAgeSeconds`.
 

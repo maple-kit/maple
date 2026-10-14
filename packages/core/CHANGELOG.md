@@ -1,5 +1,37 @@
 # @maple-kit/core
 
+## 0.23.0
+
+### Minor Changes
+
+- c1b07d1: `/mock/plan` no longer answers 400 for a page with many or odd flags. It drops
+  a flag it cannot plan on its own, keeps the `MockPlanOptions.flags.limit`
+  (default 100) most relevant to the sentence, and answers the plan with a new
+  `warnings` field, which the box shows as a muted line under the input. Only a
+  `flags` that is not a list is still a 400. `readPlanFlags` now returns
+  `{ flags, warnings }`, and `PlanReading` gains `warnings`.
+- a7aff9a: The mock box can reach what capture missed. The calls' and the flags' title
+  rows each get a quiet "Search all", which turns the title into a focused field
+  with "Cancel" and shows what it found over the page's list. It loads nothing
+  until then, shows 20 results at a time, and a pick joins the draft, marked
+  "added", and stays in the list after Cancel. Escape closes only the search. The flag search reads the known
+  set in memory; the API search reads the tab's own calls first (the new
+  `Inventory.all()`), then the route's new `GET {base}/mock/calls?q=&cursor=`,
+  which lists the calls `MockRouteOptions.schemas` describes. It is gated as
+  `/mock/schema` is, and rate-limited per reviewer on the plan's rate. `ShapeIndex`
+  gains `calls`, `@maple-kit/core/mock` exports `CallEntry`, and `MockHandle` gains
+  `calls`. `MockClient` gains `setSearch`, `searchCalls` and `searchFlags`. The
+  box's size budget rises from 4.1 to 4.6 KB; the search itself is a lazy chunk
+  with its own 2 KB budget.
+- a68fdf9: Flags the server read show in the mock box. `@maple-kit/core/flags` exports
+  `recordFlagUse(key)` and `withFlagUse(handler)`, which set `x-maple-flags` on the
+  response (comma-separated, URL-encoded keys, 4 KB cap) while the Maple route has
+  `mock.preview` on, and collect nothing otherwise. `@maple-kit/core/launchdarkly`
+  has `launchDarklyFlagUse()`, a Node server SDK `afterEvaluation` hook.
+  `@maple-kit/core/mock` exports the header's name and codec. The interceptor
+  records the header's keys as used with source "server", and the box tags them
+  "server" because a mocked value applies after a reload.
+
 ## 0.22.0
 
 ### Minor Changes
