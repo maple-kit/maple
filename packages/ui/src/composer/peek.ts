@@ -4,14 +4,12 @@
  * Where Maple is mounted inside someone else's application it cannot move the
  * layout, so the panel gets out of the way instead. A bare key checks its
  * modifiers and where it landed for the same reason the mock key does: Space in a
- * textarea is a space.
+ * textarea is a space, and on a host's button it is a click.
  */
 
+import { OVERLAY_MARKER } from "@maple-kit/core/anchor";
 import { isEditable } from "@maple-kit/core/client";
 import { useEffect, useState } from "react";
-
-/** `event.code` is layout-independent; `key` is not. */
-const PEEK_CODE = "Space";
 
 interface Held {
   readonly key: string;
@@ -24,20 +22,25 @@ interface Held {
   readonly composedPath?: () => readonly unknown[];
 }
 
-/**
- * What was typed into. A shadow root retargets `target` to its host, and this
- * listens on `window`, so every composer key arrives looking like a `div`.
- */
-function origin(event: Held): unknown {
-  const path = event.composedPath?.();
-  return path !== undefined && path.length > 0 ? path[0] : event.target;
-}
+/** Host elements Space acts on: it activates them, or scrolls them. */
+const SPACE_TAKERS =
+  "button,a[href],input,summary,[tabindex]:not([tabindex='-1']),[role=button],[role=checkbox],[role=switch],[role=radio],[role=tab],[role=menuitem]";
 
-/** True while Space means "show me the page" and not "type a space". */
+/**
+ * True while Space means "show me the page" and not "type a space". What was
+ * typed into is the head of the path: a shadow root retargets `target` to its
+ * host, and this listens on `window`, so every composer key looks like a `div`.
+ * Focus on a host control outside Maple is the host's: Space clicks or scrolls it.
+ */
 export function peeks(event: Held): boolean {
-  if (event.code !== PEEK_CODE && event.key !== " ") return false;
+  // `event.code` is layout-independent; `key` is not.
+  if (event.code !== "Space" && event.key !== " ") return false;
   if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return false;
-  return !isEditable(origin(event));
+  const path = event.composedPath?.() ?? [];
+  const from = path[0] ?? event.target;
+  if (isEditable(from)) return false;
+  const inMaple = path.some((node) => (node as Element).hasAttribute?.(OVERLAY_MARKER));
+  return inMaple || !(from as Element | undefined)?.matches?.(SPACE_TAKERS);
 }
 
 /** What the hook attaches to. `window` satisfies it. */

@@ -104,6 +104,10 @@ function question() {
   return { reason: "anchor", subject: { id: "d1" }, href: "https://example.test/next" } as const;
 }
 
+function hostNode(tagName: string, takesSpace: boolean) {
+  return { tagName, matches: () => takesSpace };
+}
+
 /**
  * A bare key has to check its modifiers and where it landed. Space in a
  * textarea is a space; the panel only gets out of the way for a bare one.
@@ -128,6 +132,13 @@ describe("hold-to-peek's guard", () => {
         composedPath: () => [{ tagName: "TEXTAREA" }, { tagName: "DIV" }],
       },
       false,
+    ],
+    ["a host button", { code: "Space", key: " ", target: hostNode("BUTTON", true) }, false],
+    ["a host link", { code: "Space", key: " ", target: hostNode("A", true) }, false],
+    [
+      "a host div that is no control",
+      { code: "Space", key: " ", target: hostNode("DIV", false) },
+      true,
     ],
     [
       "a bare space outside the overlay, with a path",

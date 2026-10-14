@@ -579,6 +579,30 @@ describe("hold-to-peek", () => {
     expect(surface.getAttribute("data-mk-peek")).toBe("false");
   });
 
+  it("leaves Space to a focused host checkbox and button", async () => {
+    started();
+    const surface = await open();
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    const button = document.createElement("button");
+    const clicked = vi.fn();
+    button.addEventListener("click", clicked);
+    document.body.append(box, button);
+
+    try {
+      box.focus();
+      await userEvent.keyboard(" ");
+      expect(box.checked).toBe(true);
+      button.focus();
+      await userEvent.keyboard(" ");
+      expect(clicked).toHaveBeenCalledOnce();
+      expect(surface.getAttribute("data-mk-peek")).toBe("false");
+    } finally {
+      box.remove();
+      button.remove();
+    }
+  });
+
   it("can be turned off where Space means something else", async () => {
     started();
     const surface = await open({ peek: false });
