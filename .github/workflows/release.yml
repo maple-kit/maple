@@ -45,7 +45,7 @@ jobs:
         # docs:sync-versions moves every version pin in the docs, the plugin's
         # MCP pin and the plugin version in the same pull request, so the
         # stale-version guard in CI never fails on the release that follows.
-        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
+        uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
         with:
           # The action runs this without a shell, so `&&` would reach
           # `changeset` as an argument; the chain lives in package.json.
