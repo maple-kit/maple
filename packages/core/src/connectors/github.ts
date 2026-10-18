@@ -62,10 +62,11 @@ const ID = /^gh_(\d+)_(\d+)$/;
 const APPROVAL_ID = /^gha_(\d+)_(\d+)$/;
 
 /**
- * Bytes the fence is held under: one ledger carries a whole pull request, and
- * the table above it is unbudgeted out of GitHub's 65,536 characters.
+ * Bytes the fence is held under: one ledger carries a whole pull request. The
+ * table takes what is left of GitHub's 65,536-character body.
  */
 const LEDGER_BUDGET = 40_000;
+const BODY_LIMIT = 65_536;
 
 /** Creates a store connector backed by a pull request's comments. */
 export function githubStore(options: GitHubStoreOptions): StoreConnector {
@@ -406,6 +407,7 @@ async function bodyFor(api: Client, ledger: Ledger): Promise<string> {
   return exportMarkdown(ledger.comments, {
     branch: ledger.branch,
     budget: LEDGER_BUDGET,
+    bodyLimit: BODY_LIMIT,
     ...(ledger.approvals.length === 0 ? {} : { approvals: ledger.approvals }),
     ...(screenshots.size === 0 ? {} : { screenshots }),
   }).markdown;

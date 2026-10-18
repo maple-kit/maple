@@ -94,6 +94,19 @@ describe("what gets written to the pull request", () => {
     ]);
   });
 
+  it("keeps a large pull request inside GitHub's body limit, fence and all", async () => {
+    const branch = "feature/large";
+    const comments = Array.from({ length: 30 }, (_, index) =>
+      sampleComment({ branch, body: `${String(index)} ${"x".repeat(800)}` }),
+    );
+    await store().appendMany!(comments);
+
+    const [posted] = github.commentsOn(pullFor(branch));
+    expect(posted!.body.length).toBeLessThanOrEqual(65_536);
+    expect(posted!.body).toContain("more comments are not in this table");
+    expect(parseFence(posted!.body)?.comments).toHaveLength(30);
+  });
+
   it("reposts at the bottom, because an edit notifies nobody", async () => {
     const branch = "feature/repost";
     await store().append(sampleComment({ branch, body: "first" }));

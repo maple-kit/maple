@@ -62,6 +62,11 @@ export interface ExportOptions {
   readonly fence?: boolean;
   /** Sign-offs on this surface. They ride in the fence and under the table. */
   readonly approvals?: readonly Approval[];
+  /**
+   * Bytes the whole body is held under. The table takes what the fence leaves,
+   * shedding resolved rows first. Left out, every row is written.
+   */
+  readonly bodyLimit?: number;
 }
 
 /** The markdown, and what it cost to fit. */
@@ -73,6 +78,8 @@ export interface MarkdownExport {
   readonly reduced: readonly Reduction[];
   /** True when even the smallest form is over budget. Say so; do not truncate. */
   readonly overBudget: boolean;
+  /** Rows the table left out to fit `bodyLimit`. The fence still has them. */
+  readonly omitted: number;
 }
 
 /** Where the chrome points. The repository is public; both assets are in it. */
@@ -100,16 +107,21 @@ export function exportMarkdown(
   options: ExportOptions,
 ): MarkdownExport {
   const approvals = options.approvals ?? [];
-  const head = [introduce(comments), "", table(comments, hostedOnly(options.screenshots))];
-  const foot = [...signatures(approvals), "", footer(comments)];
-  if (options.fence === false) {
-    return { markdown: [...head, ...foot].join("\n"), bytes: 0, reduced: [], overBudget: false };
-  }
-
   const budget = options.budget ?? FENCE_BUDGET;
-  const { fence, bytes, reduced } = fit(comments, options.branch, approvals, budget);
-  const body = [...head, "", FENCE_LEAD, "", "```maple", fence, "```", ...foot];
-  return { markdown: body.join("\n"), bytes, reduced, overBudget: bytes > budget };
+  const fitted =
+    options.fence === false ? undefined : fit(comments, options.branch, approvals, budget);
+  const intro = introduce(comments);
+  const fence = fitted ? ["", FENCE_LEAD, "", "```maple", fitted.fence, "```"] : [];
+  const foot = [...signatures(approvals), "", footer(comments)];
+
+  const rest = size([intro, "", ...fence, ...foot].join("\n")) + 1;
+  const room = options.bodyLimit === undefined ? Infinity : options.bodyLimit - rest;
+  const shown = table(comments, hostedOnly(options.screenshots), room, fitted !== undefined);
+  const markdown = [intro, "", shown.markdown, ...fence, ...foot].join("\n");
+
+  const bytes = fitted?.bytes ?? 0;
+  const reduced = fitted?.reduced ?? [];
+  return { markdown, bytes, reduced, overBudget: bytes > budget, omitted: shown.omitted };
 }
 
 /**
@@ -346,17 +358,65 @@ function conjoin(names: readonly string[]): string {
   return new Intl.ListFormat("en", { style: "long", type: "conjunction" }).format(names);
 }
 
+interface Table {
+  readonly markdown: string;
+  readonly omitted: number;
+}
+
 /** One table for the whole surface, status first, the way the island lists it. */
-function table(comments: readonly Comment[], screenshots: ReadonlyMap<string, string>): string {
+function table(
+  comments: readonly Comment[],
+  screenshots: ReadonlyMap<string, string>,
+  budget: number,
+  fenced: boolean,
+): Table {
   const withShots = comments.some((comment) => screenshots.has(comment.id));
   const head = ["Status", "Comment", "Where", ...(withShots ? ["Shot"] : [])];
   const rows = comments.map((comment) =>
     row(comment, withShots ? (screenshots.get(comment.id) ?? "") : undefined),
   );
+  const header = [`| ${head.join(" | ")} |`, `| ${head.map(() => "---").join(" | ")} |`];
+  const kept = keepWithin(rows, comments, budget - size(header.join("\n")), fenced);
+  const omitted = rows.length - kept.length;
+  const note = omitted === 0 ? [] : ["", omittedLine(omitted, fenced)];
 
-  return [`| ${head.join(" | ")} |`, `| ${head.map(() => "---").join(" | ")} |`, ...rows].join(
-    "\n",
-  );
+  return { markdown: [...header, ...kept, ...note].join("\n"), omitted };
+}
+
+/**
+ * The rows that fit, in the caller's order. Resolved ones go first, last row
+ * first, since they are what a reader acts on least; then the rest the same way.
+ */
+function keepWithin(
+  rows: readonly string[],
+  comments: readonly Comment[],
+  budget: number,
+  fenced: boolean,
+): readonly string[] {
+  const sizes = rows.map((one) => size(one) + 1);
+  let total = sizes.reduce((sum, one) => sum + one, 0);
+  const fits = (left: number): boolean =>
+    total + (left === 0 ? 0 : size(omittedLine(left, fenced)) + 2) <= budget;
+
+  const indices = rows.map((_, index) => index).reverse();
+  const order = [
+    ...indices.filter((index) => comments[index]!.status === "resolved"),
+    ...indices.filter((index) => comments[index]!.status !== "resolved"),
+  ];
+  const dropped = new Set<number>();
+  for (const index of order) {
+    if (fits(dropped.size)) break;
+    dropped.add(index);
+    total -= sizes[index]!;
+  }
+
+  return rows.filter((_, index) => !dropped.has(index));
+}
+
+function omittedLine(omitted: number, fenced: boolean): string {
+  const noun = omitted === 1 ? "comment is" : "comments are";
+  const rest = fenced ? "; the details below carry every one." : ".";
+  return `${String(omitted)} more ${noun} not in this table${rest}`;
 }
 
 function row(comment: Comment, shot: string | undefined): string {
