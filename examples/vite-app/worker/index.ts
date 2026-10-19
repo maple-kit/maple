@@ -16,7 +16,7 @@ import { createMapleHandler } from "@maple-kit/core/route";
 import openapi from "../openapi.json";
 import { answerExample } from "../src/app/example-api.js";
 import { gateFrom } from "./gate.js";
-import { refuseAnonymousUpload, routeMedia, tableMedia } from "./media.js";
+import { refuseAnonymousUpload, routeMedia, routeRecipes, tableMedia } from "./media.js";
 
 import type { GateEnv } from "./gate.js";
 import type { MediaEnv } from "./media.js";
@@ -72,6 +72,7 @@ function handlerFor(env: Env): Handler {
     // Names the reviewer by their GitHub login; without it comments say "Guest".
     identity: githubIdentity({ secret: env.MAPLE_SESSION_SECRET }),
     media: routeMedia(env),
+    recipes: routeRecipes(env),
     githubAuth: { clientId: env.MAPLE_GITHUB_CLIENT_ID, secret: env.MAPLE_SESSION_SECRET },
     // Only with the gate App's three bindings; without them the action's run stands.
     ...gateOption(env),

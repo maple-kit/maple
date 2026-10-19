@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 
 import { jevClassifier } from "@maple-kit/classifier";
 import { createCommentStore, keywordClassifier } from "@maple-kit/core";
-import { fileMedia, fileStore } from "@maple-kit/core/local";
+import { fileMedia, fileRecipes, fileStore } from "@maple-kit/core/local";
 import { maple } from "@maple-kit/core/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv } from "vite";
@@ -117,6 +117,7 @@ export default defineConfig(async ({ command, isPreview, mode }) => {
         route: {
           store,
           media,
+          recipes: fileRecipes(),
           ...(classifier ? { assist: { classifier } } : {}),
           // The page's API, described for Maple Mock; served per call, never
           // bundled. A sentence is planned by the model when it can plan.
