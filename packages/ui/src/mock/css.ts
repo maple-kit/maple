@@ -370,8 +370,16 @@ function foot(): string {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-wrap: wrap;
   padding: 8px 10px;
   border-top: 1px solid var(--mk-line);
+}
+
+.mk-mock-note {
+  flex: 1 0 100%;
+  margin: 0;
+  color: var(--mk-muted);
+  font-size: 11px;
 }
 
 .mk-mock-spacer {

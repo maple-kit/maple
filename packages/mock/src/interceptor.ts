@@ -23,6 +23,7 @@ import { isJson, pathPattern, restCodec } from "./rest.js";
 import { routeCalls } from "./schema/calls.js";
 import { routeIdentity } from "./schema/identity.js";
 import { routePlan } from "./schema/plan.js";
+import { routeRecipes } from "./schema/recipes.js";
 import { routeShapes } from "./schema/route.js";
 import { trpcCodec } from "./trpc.js";
 import { createWriteLog } from "./writes.js";
@@ -32,6 +33,7 @@ import type { Flags, FlagSource } from "./flag-source.js";
 import type { Inventory } from "./inventory.js";
 import type { CallsLookup } from "./schema/calls.js";
 import type { PlanLookup } from "./schema/plan.js";
+import type { RecipeShare } from "./schema/recipes.js";
 import type { ShapeLookup } from "./schema/shape.js";
 import type { WriteLog } from "./writes.js";
 import type { Logger } from "@maple-kit/core/logger";
@@ -73,6 +75,8 @@ export interface MockHandle {
   readonly calls?: CallsLookup;
   /** Plans a sentence through Maple's route, when the page names one. */
   readonly plan?: PlanLookup;
+  /** Stores a recipe on Maple's route for a short link, when the page names a route. */
+  readonly share?: RecipeShare;
   /** Where the box reports what it cannot do, such as a plan the route refused. */
   readonly logger?: Logger;
   /** The recipe applying on the page's current route, which a comment records. */
@@ -177,6 +181,7 @@ export function installMock(options: InstallOptions = {}): MockHandle {
   const handle: MockHandle = {
     recipe,
     inventory,
+    ...shareOf(options, forward),
     ...(shape === undefined ? {} : { shape }),
     ...(plan === undefined ? {} : { plan }),
     ...callsOf(options, forward),
@@ -192,6 +197,11 @@ export function installMock(options: InstallOptions = {}): MockHandle {
   };
   keepInstalled(handle);
   return handle;
+}
+
+function shareOf(options: InstallOptions, forward: typeof fetch): { share?: RecipeShare } {
+  if (options.route === undefined) return {};
+  return { share: routeRecipes({ basePath: options.route, fetch: forward }) };
 }
 
 /**

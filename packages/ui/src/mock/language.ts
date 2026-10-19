@@ -62,6 +62,7 @@ export const MOCK_COPY = {
   copied: "Copied",
   copyFailed: "Could not copy",
   apply: "Apply and reload",
+  longLink: "This link may be too long for some servers.",
   turnOff: "Turn off",
   edit: "Edit",
   apisField: "Search all APIs",

@@ -8,7 +8,13 @@
  */
 
 import { navigateOnPurpose, opensMock, watchEscape, watchTheme } from "@maple-kit/core/client";
-import { linkRecipe, MOCK_STATES, readPlan, RECIPE_VERSION } from "@maple-kit/core/mock";
+import {
+  linkRecipe,
+  linkRecipeId,
+  MOCK_STATES,
+  readPlan,
+  RECIPE_VERSION,
+} from "@maple-kit/core/mock";
 
 import { flagType } from "../flag-source.js";
 import { seenFlags } from "../flags.js";
@@ -135,6 +141,8 @@ export interface MockClientState {
   readonly realAs: RealAs | undefined;
   /** How many writes reached the server, which acts as the reviewer, under `as`. */
   readonly writes: number;
+  /** True when the last link copied or applied carries the whole recipe and runs past {@link LONG_LINK}. */
+  readonly longLink: boolean;
   /** What a surface of its own is drawn in: the opposite of the page. */
   readonly scheme: Scheme;
 }
@@ -184,7 +192,10 @@ export interface MockClient {
   apply(): void;
   /** Forgets the recipe and reloads without it. */
   turnOff(): void;
-  /** @throws {MockClipboardError} when the draft is empty or the page offers no clipboard. */
+  /**
+   * Copies a link, short when the route stores recipes and inline otherwise.
+   * @throws {MockClipboardError} when the draft is empty or the page offers no clipboard.
+   */
   copyLink(): Promise<void>;
   /** @throws {MockClipboardError} when the draft is empty or the page offers no clipboard. */
   copyRecipe(): Promise<void>;
@@ -272,7 +283,7 @@ export function createMockClient(options: MockClientOptions = {}): MockClient {
     link: () => linkRecipe(hrefOf(runtime), recipeOf(runtime.state)),
     apply: () => apply(runtime),
     turnOff: () => turnOff(runtime),
-    copyLink: () => copyDraft(runtime, (recipe) => linkRecipe(hrefOf(runtime), recipe).href),
+    copyLink: () => copyDraft(runtime, (recipe) => shortLink(runtime, recipe)),
     copyRecipe: () => copyDraft(runtime, (recipe) => JSON.stringify(recipe, null, 2)),
   };
 }
@@ -302,6 +313,7 @@ function initial(open: boolean): MockClientState {
     draftAs: undefined,
     realAs: undefined,
     writes: 0,
+    longLink: false,
     scheme: "light",
   };
 }
@@ -518,7 +530,7 @@ function switchAs(runtime: Runtime, draftAs: MockIdentity | undefined): void {
 /** A change by hand: what the sentence put there is the reviewer's now. */
 function edit(runtime: Runtime, next: Partial<Draft & { request: undefined }>): void {
   delete runtime.base;
-  patch(runtime, next);
+  patch(runtime, { ...next, longLink: false });
 }
 
 function pick(state: MockClientState): Draft {
@@ -693,7 +705,35 @@ function apply(runtime: Runtime): void {
   const storage = tabStorage(runtime.view);
   if (storage !== undefined) saveRecipe(storage, recipe);
   keepRecipeCookie(runtime.view, recipe);
-  if (runtime.view) navigateOnPurpose(runtime.view, linkRecipe(hrefOf(runtime), recipe).href);
+  const { view } = runtime;
+  if (view === undefined) return;
+  if (runtime.handle?.share === undefined) {
+    return navigateOnPurpose(view, inlineLink(runtime, recipe));
+  }
+  void shortLink(runtime, recipe).then((href) => navigateOnPurpose(view, href));
+}
+
+/** Over this many characters a link may be refused by a server or proxy in front of the page. */
+export const LONG_LINK = 2000;
+
+/** The recipe as an inline link, and whether it is long enough to warn about. */
+function inlineLink(runtime: Runtime, recipe: Recipe): string {
+  const href = linkRecipe(hrefOf(runtime), recipe).href;
+  if (href.length > LONG_LINK !== runtime.state.longLink) {
+    patch(runtime, { longLink: href.length > LONG_LINK });
+  }
+  return href;
+}
+
+/**
+ * A link with the id of the recipe stored on the route. No store (404) or any
+ * other failure falls back to the inline link, so the mock stays shareable.
+ */
+async function shortLink(runtime: Runtime, recipe: Recipe): Promise<string> {
+  const id = await runtime.handle?.share?.(recipe);
+  if (id === undefined) return inlineLink(runtime, recipe);
+  if (runtime.state.longLink) patch(runtime, { longLink: false });
+  return linkRecipeId(hrefOf(runtime), id).href;
 }
 
 function turnOff(runtime: Runtime): void {
@@ -703,12 +743,15 @@ function turnOff(runtime: Runtime): void {
   if (runtime.view) navigateOnPurpose(runtime.view, linkRecipe(hrefOf(runtime), undefined).href);
 }
 
-async function copyDraft(runtime: Runtime, write: (recipe: Recipe) => string): Promise<void> {
+async function copyDraft(
+  runtime: Runtime,
+  write: (recipe: Recipe) => string | Promise<string>,
+): Promise<void> {
   const recipe = recipeOf(runtime.state);
   if (recipe === undefined) throw new MockClipboardError("The draft is empty: nothing to copy.");
   const clipboard = runtime.view?.navigator?.clipboard;
   if (clipboard === undefined) throw new MockClipboardError("This page offers no clipboard.");
-  await clipboard.writeText(write(recipe));
+  await clipboard.writeText(await write(recipe));
 }
 
 function hrefOf(runtime: Runtime): string {
