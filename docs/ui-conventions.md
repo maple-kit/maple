@@ -103,9 +103,9 @@ opened reads as a stack of two cards whichever one is on top.
 
 ## The bundle budget
 
-The adopted stylesheet is weighed on its own, under 13 KB gzipped; marks, the
-island, the icons and the root they need stay under 21 KB; the composer costs
-its own 9 KB and the picker 3 KB. `packages/ui/scripts/size.js` runs
+The adopted stylesheet, the root with marks, the island and the icons, the
+composer, the picker and the mock box each have a gzipped budget of their own.
+The numbers live only in `packages/ui/scripts/size.js`, which runs
 as the second half of this package's `build`, so the existing CI build job
 enforces it. It measures this package's own emitted modules; `react` is a peer
 and the other two workspace packages carry their own budgets.
