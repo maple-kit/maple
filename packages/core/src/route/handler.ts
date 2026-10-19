@@ -27,6 +27,7 @@ import {
   shapesFor,
 } from "./mock.js";
 import { createMockPlanner } from "./plan.js";
+import { loadRecipe, recipeTtlDays, storeRecipe } from "./recipes.js";
 import { createRefreshAccess, handleRefresh } from "./refresh.js";
 
 import type {
@@ -36,6 +37,7 @@ import type {
   ListQuery,
   MediaConnector,
   PreviewInfo,
+  RecipeStore,
 } from "../connectors/types.js";
 import type { Logger } from "../logger/types.js";
 import type { PreviewEnvironment } from "../preview/types.js";
@@ -87,6 +89,11 @@ export interface RouteOptions {
    * nowhere to be kept, rather than offering to take one and dropping it.
    */
   readonly media?: MediaConnector | MediaResolver;
+  /**
+   * Where a short mock link's recipe is kept, on the host's own storage. Absent,
+   * `/mock/recipes` answers 404 and a link carries the recipe inline.
+   */
+  readonly recipes?: RecipeStore;
   /** Resolves the reviewer from the request. Without one, comments are guest-written. */
   readonly identity?: IdentityConnector;
   /**
@@ -161,6 +168,8 @@ const CALLS_RATE: RateLimit = { limit: 40, windowMs: 60_000 };
 /** Everything built once, when the handler is, rather than per request. */
 interface Mount {
   readonly options: RouteOptions;
+  /** Counts `/mock/recipes` writes per reviewer, on the plan's rate. */
+  readonly recipesLimiter: Limiter;
   /** Undefined when no classifier is configured: the whole tier is off. */
   readonly assist: Assist | undefined;
   /** Undefined when the route serves no shapes. */
@@ -190,6 +199,7 @@ export function createMapleHandler(given: RouteOptions): (request: Request) => P
     assist: options.assist === undefined ? undefined : createAssist(options.assist),
     mock,
     callsLimiter: createLimiter(plan?.rate ?? CALLS_RATE),
+    recipesLimiter: createLimiter(plan?.rate ?? CALLS_RATE),
     planner: mock && plan ? createMockPlanner(plan, mock) : undefined,
     refresh:
       options.gateRefresh === undefined ? undefined : createRefreshAccess(options.gateRefresh),
@@ -283,6 +293,9 @@ async function dispatch(
   const { options } = mount;
   const fixed = FIXED.get(route);
   if (fixed) return fixed(mount, request, url);
+  if (route === "/mock/recipes" || route.startsWith("/mock/recipes/")) {
+    return mockRecipes(mount, request, route.slice("/mock/recipes/".length));
+  }
   if (route === "/media" || route.startsWith("/media/")) return media(options, request, route, url);
   if (route === "/approvals" || route.startsWith("/approvals/")) {
     return approvals(options, request, route, url);
@@ -756,6 +769,27 @@ async function mockPlan(mount: Mount, request: Request): Promise<Response> {
     return json({ error: "Sign in to plan a mock" }, 401);
   }
   return planner.respond(request, user?.id ?? "anonymous", options.logger);
+}
+
+/**
+ * A mock behind a short id, open to a signed-out reviewer: the 128-bit id is
+ * the credential, as a screenshot's is. Writes are counted per reviewer.
+ */
+async function mockRecipes(mount: Mount, request: Request, id: string): Promise<Response> {
+  const { mock, options } = mount;
+  const store = options.recipes;
+  if (mock?.preview !== true || store === undefined) return json({ error: "Not found" }, 404);
+
+  const writing = id === "";
+  if (request.method !== (writing ? "POST" : "GET")) {
+    return json({ error: "Method not allowed" }, 405);
+  }
+  if (!writing) return loadRecipe(store, id, json);
+  const user = await options.identity?.resolveUser(identityRequest(request));
+  if (!mount.recipesLimiter.take(user?.id ?? "anonymous")) {
+    return json({ error: "Too many mocks shared" }, 429);
+  }
+  return storeRecipe(store, recipeTtlDays(options.mock?.recipes?.ttlDays), request, json);
 }
 
 /** The identity connector sees headers and a URL, and nothing else. */

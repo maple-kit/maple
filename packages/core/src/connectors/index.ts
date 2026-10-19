@@ -39,6 +39,8 @@ export {
 export type { StateGuess } from "./plan.js";
 export { r2Media } from "./r2-media.js";
 export type { R2BucketLike, R2MediaOptions } from "./r2-media.js";
+export { r2Recipes } from "./r2-recipes.js";
+export type { R2RecipeBucketLike, R2RecipesOptions } from "./r2-recipes.js";
 export type {
   AnyConnector,
   ClassifierConnector,
@@ -68,6 +70,7 @@ export type {
   PlannedCall,
   PlannedFlag,
   PlannedRole,
+  RecipeStore,
   ReplayEvent,
   ReplayQuery,
   ScoreRequest,

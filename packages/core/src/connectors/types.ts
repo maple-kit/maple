@@ -8,7 +8,7 @@
  * capabilities twice.
  */
 
-import type { FlagValue, MockState } from "../mock/recipe.js";
+import type { FlagValue, MockState, Recipe } from "../mock/recipe.js";
 import type {
   Approval,
   Comment,
@@ -92,6 +92,17 @@ export interface MediaConnector extends ConnectorMeta {
   /** A URL a reviewer's browser can load, signed where the backend requires it. */
   getUrl(ref: MediaRef): Promise<string>;
   remove?(ref: MediaRef): Promise<void>;
+}
+
+/**
+ * Keeps the recipe behind a short mock link, on the host's own storage.
+ * Plain Promises and structural types: nothing here names a library.
+ */
+export interface RecipeStore {
+  /** Keeps `recipe` until `expiresAt` and returns its id: 128 random bits, never a hash. */
+  put(recipe: Recipe, options: { readonly expiresAt: Date }): Promise<string>;
+  /** The recipe, or undefined for an id that is unknown, malformed or expired. */
+  get(id: string): Promise<Recipe | undefined>;
 }
 
 /** Points at what a session-replay vendor recorded around a comment. */

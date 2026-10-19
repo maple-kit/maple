@@ -28,6 +28,7 @@ export type {
   PillarLevel,
   PillarScore,
   PlannedCall,
+  RecipeStore,
   ReplayEvent,
   ReplayQuery,
   ScoreRequest,
