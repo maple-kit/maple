@@ -35,9 +35,11 @@ export {
   decodeRecipe,
   encodeRecipe,
   linkRecipe,
+  linkRecipeId,
   readRecipeCookie,
   RECIPE_COOKIE,
   RECIPE_COOKIE_LIMIT,
+  RECIPE_ID_PARAM,
   RECIPE_PARAM,
   recipeCookie,
 } from "./link.js";

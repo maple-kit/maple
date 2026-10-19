@@ -36,11 +36,30 @@ export function decodeRecipe(text: string): Recipe {
   return parseRecipe(parseJson(json));
 }
 
-/** `url` with the recipe set as its query parameter, or removed when undefined. */
+/**
+ * `url` with the recipe set as its query parameter, or removed when undefined.
+ * Either way a stored recipe's {@link RECIPE_ID_PARAM} is removed.
+ */
 export function linkRecipe(url: string | URL, recipe: Recipe | undefined): URL {
   const next = new URL(url);
+  next.searchParams.delete(RECIPE_ID_PARAM);
   if (recipe === undefined) next.searchParams.delete(RECIPE_PARAM);
   else next.searchParams.set(RECIPE_PARAM, encodeRecipe(recipe));
+  return next;
+}
+
+/** The query parameter a short link carries a stored recipe's id in. */
+export const RECIPE_ID_PARAM = "maple-mock-id";
+
+/**
+ * `url` linking to the stored recipe `id`, or with the id removed when
+ * undefined. Either way the inline {@link RECIPE_PARAM} is removed.
+ */
+export function linkRecipeId(url: string | URL, id: string | undefined): URL {
+  const next = new URL(url);
+  next.searchParams.delete(RECIPE_PARAM);
+  if (id === undefined) next.searchParams.delete(RECIPE_ID_PARAM);
+  else next.searchParams.set(RECIPE_ID_PARAM, id);
   return next;
 }
 
