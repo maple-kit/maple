@@ -3,6 +3,8 @@ import {
   encodeRecipe,
   InvalidRecipeError,
   linkRecipe,
+  linkRecipeId,
+  RECIPE_ID_PARAM,
   RECIPE_PARAM,
 } from "@maple-kit/core/mock";
 import { forgetRecipe, readRecipe, RECIPE_STORAGE_KEY, saveRecipe } from "@maple-kit/mock";
@@ -107,6 +109,25 @@ describe("linkRecipe", () => {
   it("removes the parameter", () => {
     const linked = linkRecipe("https://preview.example/projects?tab=2", empty);
     expect(linkRecipe(linked, undefined).href).toBe("https://preview.example/projects?tab=2");
+  });
+
+  it("drops a stored recipe's id", () => {
+    const short = linkRecipeId("https://preview.example/projects", "abc123");
+    expect(linkRecipe(short, empty).searchParams.has(RECIPE_ID_PARAM)).toBe(false);
+  });
+});
+
+describe("linkRecipeId", () => {
+  it("sets the id and drops the inline recipe", () => {
+    const url = linkRecipeId(linkRecipe("https://preview.example/projects?tab=2", empty), "abc123");
+    expect(url.searchParams.get(RECIPE_ID_PARAM)).toBe("abc123");
+    expect(url.searchParams.has(RECIPE_PARAM)).toBe(false);
+    expect(url.searchParams.get("tab")).toBe("2");
+  });
+
+  it("removes the id", () => {
+    const linked = linkRecipeId("https://preview.example/projects?tab=2", "abc123");
+    expect(linkRecipeId(linked, undefined).href).toBe("https://preview.example/projects?tab=2");
   });
 });
 
