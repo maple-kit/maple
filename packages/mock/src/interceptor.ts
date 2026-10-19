@@ -6,7 +6,12 @@
  * the recipe once: applying a mock reloads the page. See `docs/mock.md`.
  */
 
-import { FLAGS_HEADER, parseFlagsHeader } from "@maple-kit/core/mock";
+import {
+  FLAGS_HEADER,
+  linkRecipeId,
+  parseFlagsHeader,
+  RECIPE_ID_PARAM,
+} from "@maple-kit/core/mock";
 import { BatchInterceptor } from "@mswjs/interceptors";
 import { FetchInterceptor } from "@mswjs/interceptors/fetch";
 import { XMLHttpRequestInterceptor } from "@mswjs/interceptors/XMLHttpRequest";
@@ -18,6 +23,7 @@ import { installedMock, keepInstalled } from "./handle.js";
 import { knows } from "./identity.js";
 import { createInventory } from "./inventory.js";
 import { forgetRecipe, keepRecipeCookie, readRecipe, saveRecipe } from "./link.js";
+import { fetchRecipe, RecipeLoadError, startRecipeLoad } from "./recipe-load.js";
 import { record, resolve, splitRequest } from "./resolve.js";
 import { isJson, pathPattern, restCodec } from "./rest.js";
 import { routeCalls } from "./schema/calls.js";
@@ -31,6 +37,7 @@ import { createWriteLog } from "./writes.js";
 import type { Codec } from "./codec.js";
 import type { Flags, FlagSource } from "./flag-source.js";
 import type { Inventory } from "./inventory.js";
+import type { RecipeLink } from "./recipe-load.js";
 import type { CallsLookup } from "./schema/calls.js";
 import type { PlanLookup } from "./schema/plan.js";
 import type { RecipeShare } from "./schema/recipes.js";
@@ -66,8 +73,13 @@ export interface InstallOptions {
 
 /** The installed transport. */
 export interface MockHandle {
-  /** The recipe in force, read once at install. */
+  /**
+   * The recipe in force: read at install, or, for a short link, the stored
+   * one once it has arrived. Undefined until then.
+   */
   readonly recipe: Recipe | undefined;
+  /** Present when the page was opened from a short link: how fetching its recipe went. */
+  readonly link?: RecipeLink;
   readonly inventory: Inventory;
   /** Each call's shape, when the page has a source for them. */
   readonly shape?: ShapeLookup;
@@ -100,14 +112,15 @@ export function installMock(options: InstallOptions = {}): MockHandle {
   if (existing !== undefined) return existing;
 
   const storage = options.storage ?? tabStorage();
-  const recipe = activeRecipe(storage, options.logger);
+  const active = activeRecipe(storage, options);
+  let recipe = active.recipe;
   const inventory = createInventory(storage === undefined ? {} : { storage });
   const forward = options.fetch ?? globalThis.fetch.bind(globalThis);
   const ignored = (url: string) => ignores(options, new URL(url));
   const shape = shapeLookup(options, forward);
   const route = () => pathPattern(pageUrl()?.pathname ?? "/");
   const rules = identityLookup(options, forward);
-  const identity = recipe?.as === undefined ? undefined : checkedRules(options, rules, recipe);
+  let identity = recipe?.as === undefined ? undefined : checkedRules(options, rules, recipe);
   const writes = createWriteLog();
   const onWrite = (key: string) => {
     writes.add(key);
@@ -128,11 +141,14 @@ export function installMock(options: InstallOptions = {}): MockHandle {
     const named = applying ? recipe?.flags : undefined;
     return named === undefined || Object.keys(named).length === 0 ? undefined : named;
   };
-  const unhold = recipe?.flags === undefined ? () => undefined : holdStreams(sources, recipe.flags);
+  const hold = (held: Recipe | undefined) =>
+    held?.flags === undefined ? () => undefined : holdStreams(sources, held.flags);
+  let unhold = hold(recipe);
   interceptor.on(
     "request",
     awaited(async ({ controller, request }) => {
       if (ignored(request.url)) return;
+      await active.link?.settled;
       const source = sourceOf(request);
       if (source !== undefined) {
         const named = flags();
@@ -173,13 +189,22 @@ export function installMock(options: InstallOptions = {}): MockHandle {
       .finally(() => release(response));
   });
   interceptor.apply();
+  active.link?.subscribe(() => {
+    recipe = active.recipe;
+    if (recipe === undefined) return;
+    if (recipe.as !== undefined) identity = checkedRules(options, rules, recipe);
+    unhold = hold(recipe);
+  });
 
   const plan =
     options.route === undefined
       ? undefined
       : routePlan({ basePath: options.route, fetch: forward });
   const handle: MockHandle = {
-    recipe,
+    get recipe() {
+      return recipe;
+    },
+    ...(active.link === undefined ? {} : { link: active.link }),
     inventory,
     ...shareOf(options, forward),
     ...(shape === undefined ? {} : { shape }),
@@ -346,28 +371,84 @@ function release(response: Response): void {
   if (!response.bodyUsed) response.body?.cancel().catch(() => undefined);
 }
 
+/** The recipe at load, which a short link's fetch fills in later. */
+interface ActiveRecipe {
+  recipe: Recipe | undefined;
+  link?: RecipeLink;
+}
+
 /**
  * The recipe to apply. A linked one is kept for the tab and in the cookie a
- * server reads; a broken one is dropped from both.
+ * server reads; a broken one is dropped from both. A short link is fetched.
  */
-function activeRecipe(storage: Storage | undefined, logger?: Logger): Recipe | undefined {
+function activeRecipe(storage: Storage | undefined, options: InstallOptions): ActiveRecipe {
   const url = pageUrl();
-  if (url === undefined) return undefined;
+  if (url === undefined) return { recipe: undefined };
+  const { logger } = options;
   try {
-    const recipe = readRecipe({ url, ...(storage === undefined ? {} : { storage }) });
+    const reading = readRecipe({ url, ...(storage === undefined ? {} : { storage }) });
+    if (reading.kind === "pending") return linkedRecipe(reading.id, storage, options);
+    const recipe = reading.kind === "found" ? reading.recipe : undefined;
     if (recipe !== undefined && storage !== undefined) saveRecipe(storage, recipe);
     if (!keepRecipeCookie(pageView(), recipe)) {
       logger?.warn(
         "The mock's flags and identity are too long for a cookie; the server sees none.",
       );
     }
-    return recipe;
+    return { recipe };
   } catch (error) {
-    if (storage !== undefined) forgetRecipe(storage);
-    keepRecipeCookie(pageView(), undefined);
+    dropRecipe(storage);
     logger?.warn("Ignoring a mock recipe that could not be read.", { error: String(error) });
-    return undefined;
+    return { recipe: undefined };
   }
+}
+
+function dropRecipe(storage: Storage | undefined): void {
+  if (storage !== undefined) forgetRecipe(storage);
+  keepRecipeCookie(pageView(), undefined);
+}
+
+/**
+ * Fetches a short link's recipe. On arrival it is kept like a linked one and
+ * the id leaves the address bar. Failing, the page runs unmocked.
+ */
+function linkedRecipe(id: string, storage: Storage | undefined, options: InstallOptions) {
+  const active: ActiveRecipe = { recipe: undefined };
+  const forward = options.fetch ?? globalThis.fetch.bind(globalThis);
+  const { route } = options;
+  active.link = startRecipeLoad({
+    load: (signal) =>
+      route === undefined
+        ? Promise.reject(new RecipeLoadError("The page names no route to fetch a mock from."))
+        : fetchRecipe({ basePath: route, id, fetch: forward, signal }),
+    onLoaded(recipe) {
+      active.recipe = recipe;
+      if (storage !== undefined) saveRecipe(storage, recipe);
+      if (!keepRecipeCookie(pageView(), recipe)) {
+        options.logger?.warn(
+          "The mock's flags and identity are too long for a cookie; the server sees none.",
+        );
+      }
+      dropIdParam();
+    },
+    onFailed(error) {
+      dropRecipe(storage);
+      options.logger?.warn("A shared mock could not be loaded; the page is not mocked.", {
+        error: String(error),
+        ...(error instanceof RecipeLoadError && error.status !== undefined
+          ? { status: error.status }
+          : {}),
+      });
+    },
+  });
+  return active;
+}
+
+/** The address bar without the short link's id, and without a new history entry. */
+function dropIdParam(): void {
+  const url = pageUrl();
+  if (url === undefined || !url.searchParams.has(RECIPE_ID_PARAM)) return;
+  history.replaceState(history.state, "", linkRecipeId(url, undefined));
 }
 
 /**

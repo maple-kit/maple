@@ -61,25 +61,39 @@ describe("encodeRecipe and decodeRecipe", () => {
   });
 });
 
+function found(recipe: Recipe) {
+  return { kind: "found", recipe };
+}
+
 describe("readRecipe", () => {
   const page = "https://preview.example/projects";
 
   it("finds nothing on a plain page", () => {
-    expect(readRecipe({ url: page, storage: memoryStorage() })).toBeUndefined();
+    expect(readRecipe({ url: page, storage: memoryStorage() })).toEqual({ kind: "none" });
   });
 
   it("reads the link", () => {
-    expect(readRecipe({ url: linkRecipe(page, empty) })).toEqual(empty);
+    expect(readRecipe({ url: linkRecipe(page, empty) })).toEqual(found(empty));
   });
 
   it("reads the tab", () => {
     const storage = memoryStorage({ [RECIPE_STORAGE_KEY]: JSON.stringify(empty) });
-    expect(readRecipe({ url: page, storage })).toEqual(empty);
+    expect(readRecipe({ url: page, storage })).toEqual(found(empty));
   });
 
   it("prefers the link to the tab", () => {
     const storage = memoryStorage({ [RECIPE_STORAGE_KEY]: JSON.stringify(error) });
-    expect(readRecipe({ url: linkRecipe(page, empty), storage })).toEqual(empty);
+    expect(readRecipe({ url: linkRecipe(page, empty), storage })).toEqual(found(empty));
+  });
+
+  it("is pending on a short link, and the short link wins over the rest", () => {
+    const storage = memoryStorage({ [RECIPE_STORAGE_KEY]: JSON.stringify(error) });
+    const url = linkRecipeId(page, "abc123").href;
+    const pending = { kind: "pending", id: "abc123" };
+    expect(readRecipe({ url, storage })).toEqual(pending);
+    expect(
+      readRecipe({ url: `${linkRecipe(page, empty).href}&${RECIPE_ID_PARAM}=abc123` }),
+    ).toEqual(pending);
   });
 
   it("throws on a recipe it cannot read, so the caller decides what to drop", () => {
@@ -93,7 +107,7 @@ describe("saveRecipe and forgetRecipe", () => {
   it("keeps a recipe for the tab and forgets it", () => {
     const storage = memoryStorage();
     saveRecipe(storage, empty);
-    expect(readRecipe({ url: "https://preview.example/", storage })).toEqual(empty);
+    expect(readRecipe({ url: "https://preview.example/", storage })).toEqual(found(empty));
     forgetRecipe(storage);
     expect(storage.has(RECIPE_STORAGE_KEY)).toBe(false);
   });

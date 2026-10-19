@@ -49,6 +49,7 @@ export const MOCK_COPY = {
   sentence: "Say a state, like “no items yet”",
   failed: "Couldn't read that. Try again, or set calls below.",
   refused: "The server refused that. Set calls below.",
+  linkFailed: "Couldn't load the shared mock. Reload to retry.",
   unnamed: "That doesn't name a state this page's data can be in.",
   real: "Real",
   escape: "Esc",

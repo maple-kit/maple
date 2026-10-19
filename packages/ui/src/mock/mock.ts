@@ -250,7 +250,13 @@ function callsSection(
 }
 
 /** The line under the field, when the sentence was not turned into a chip. */
-function aside({ planFailure, planWarnings, unnamed }: MockClientState): string | undefined {
+function aside({
+  linkFailed,
+  planFailure,
+  planWarnings,
+  unnamed,
+}: MockClientState): string | undefined {
+  if (linkFailed) return MOCK_COPY.linkFailed;
   if (planFailure !== undefined) return MOCK_COPY[planFailure];
   return unnamed ? MOCK_COPY.unnamed : planWarnings.join(". ") || undefined;
 }

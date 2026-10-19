@@ -111,6 +111,8 @@ export interface MockClientState {
   readonly thinking: boolean;
   /** Why the last sentence was not read: refused for good, or failed and worth another try. */
   readonly planFailure: PlanFailure | undefined;
+  /** True when the page was opened from a short link whose mock could not be loaded. */
+  readonly linkFailed: boolean;
   /** What the route left out of the last plan, such as flags past its limit. Not an error. */
   readonly planWarnings: readonly string[];
   /** The sentence behind the draft, once a chip put it there. */
@@ -298,6 +300,7 @@ function initial(open: boolean): MockClientState {
     unnamed: false,
     thinking: false,
     planFailure: undefined,
+    linkFailed: false,
     planWarnings: [],
     request: undefined,
     route: "/",
@@ -328,6 +331,7 @@ function derive(runtime: Runtime, next: Partial<MockClientState>): MockClientSta
     installed: runtime.handle !== undefined,
     route,
     active,
+    linkFailed: runtime.handle?.link?.status() === "failed",
     calls: rows(runtime, route, merged),
     flags: flagRows(route, merged.draftFlags),
     search: merged.open ? merged.search : undefined,
@@ -356,6 +360,7 @@ function start(runtime: Runtime): void {
     handle?.inventory.subscribe(refresh),
     handle === undefined ? undefined : seenFlags().subscribe(refresh),
     handle?.writes?.subscribe(refresh),
+    handle?.link?.subscribe(() => patch(runtime, linked(runtime))),
   ];
   void handle?.identity?.().then((identity) => identity && patch(runtime, { identity }));
 
@@ -371,6 +376,13 @@ function start(runtime: Runtime): void {
     for (const stop of unsubscribe) stop?.();
   };
   patch(runtime, { scheme: theme.current().overlay });
+}
+
+/** A short link's mock has arrived: it becomes the draft, unless it failed. */
+function linked(runtime: Runtime): Partial<MockClientState> {
+  const active = activeOn(runtime, routeOf(runtime.view));
+  if (active === undefined) return {};
+  return { draft: active.calls, draftFlags: active.flags ?? {}, draftAs: active.as };
 }
 
 /** Escape shuts an open search first, then the box, and says whether it shut anything. */
