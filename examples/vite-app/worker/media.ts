@@ -8,13 +8,18 @@
  */
 
 import { readGitHubSession } from "@maple-kit/core/auth";
-import { r2Media } from "@maple-kit/core/connectors";
+import { r2Media, r2Recipes } from "@maple-kit/core/connectors";
 
-import type { MediaConnector, R2BucketLike } from "@maple-kit/core/connectors";
+import type {
+  MediaConnector,
+  R2BucketLike,
+  R2RecipeBucketLike,
+  RecipeStore,
+} from "@maple-kit/core/connectors";
 
 /** The binding and variable the screenshots need. */
 export interface MediaEnv {
-  readonly SCREENSHOTS: R2BucketLike;
+  readonly SCREENSHOTS: R2BucketLike & R2RecipeBucketLike;
   /** The pull request number, which names this preview's prefix. */
   readonly MAPLE_PR: string;
 }
@@ -22,6 +27,11 @@ export interface MediaEnv {
 /** The connector the route uses: it serves the bytes itself. */
 export function routeMedia(env: MediaEnv): MediaConnector {
   return r2Media({ bucket: env.SCREENSHOTS, prefix: `pr-${env.MAPLE_PR}/` });
+}
+
+/** Shared mocks, in the same bucket under their own prefix, so a link stays short. */
+export function routeRecipes(env: MediaEnv): RecipeStore {
+  return r2Recipes({ bucket: env.SCREENSHOTS, prefix: `recipes/pr-${env.MAPLE_PR}/` });
 }
 
 /** The connector the pull-request table uses: its links are the route's own. */
