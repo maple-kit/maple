@@ -59,6 +59,8 @@ export {
 export type { Located } from "./schema/json-schema.js";
 export { PlanFailedError, PlanUnavailableError, routePlan } from "./schema/plan.js";
 export type { PlanLookup, RoutePlanOptions } from "./schema/plan.js";
+export { routeRecipes } from "./schema/recipes.js";
+export type { RecipeShare, RouteRecipesOptions } from "./schema/recipes.js";
 export { routeShapes } from "./schema/route.js";
 export type { RouteShapesOptions } from "./schema/route.js";
 export { sampleSchema } from "./schema/sample.js";

@@ -355,6 +355,7 @@ function Foot(props: { state: MockClientState; client: MockClient }): ReactEleme
       disabled: !state.changed,
       primary: true,
     }),
+    state.longLink ? createElement("p", { className: "mk-mock-note" }, MOCK_COPY.longLink) : null,
   );
 }
 

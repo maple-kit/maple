@@ -310,6 +310,30 @@ describe("the m shortcut inside the shadow root", () => {
   });
 });
 
+describe("a link too long for some servers", () => {
+  const NOTE = "This link may be too long for some servers.";
+
+  async function copied(count: number): Promise<void> {
+    const { view } = fakePage();
+    const client = track(createMockClient({ handle: handle(), view, defaultOpen: true }));
+    for (let n = 0; n < count; n += 1) client.choose(`trpc:orders.report${String(n)}`, "empty");
+    await render(createElement(MapleMock, { client }));
+    await vi.waitFor(() => expect(find(".mk-mock")).not.toBeNull());
+    buttonNamed("Copy link").click();
+    await vi.waitFor(() => expect(buttonNamed("Copied")).toBeDefined());
+  }
+
+  it("says so under the buttons when the copied link carries the whole recipe", async () => {
+    await copied(60);
+    expect(find(".mk-mock-foot .mk-mock-note")?.textContent).toBe(NOTE);
+  });
+
+  it("says nothing about a short link", async () => {
+    await copied(2);
+    expect(find(".mk-mock-note")).toBeNull();
+  });
+});
+
 describe("picking and applying", () => {
   it("applies a picked state by reloading into a link that carries it", async () => {
     const { assign, view } = fakePage();
