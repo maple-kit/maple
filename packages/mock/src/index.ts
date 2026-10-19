@@ -36,7 +36,9 @@ export { createInventory, INVENTORY_STORAGE_KEY } from "./inventory.js";
 
 export type { Inventory, InventoryLimits, InventoryOptions, Sample } from "./inventory.js";
 export { forgetRecipe, RECIPE_STORAGE_KEY, readRecipe, saveRecipe } from "./link.js";
-export type { RecipeSources } from "./link.js";
+export type { RecipeReading, RecipeSources } from "./link.js";
+export { fetchRecipe, RECIPE_LOAD_TIMEOUT_MS, RecipeLoadError } from "./recipe-load.js";
+export type { FetchRecipeOptions, RecipeLink, RecipeLoadStatus } from "./recipe-load.js";
 export { resolve } from "./resolve.js";
 export type { ResolveOptions } from "./resolve.js";
 export { isJson, pathPattern, restCodec, restKey } from "./rest.js";

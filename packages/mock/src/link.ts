@@ -10,6 +10,7 @@ import {
   decodeRecipe,
   InvalidRecipeError,
   parseRecipe,
+  RECIPE_ID_PARAM,
   RECIPE_PARAM,
   recipeCookie,
 } from "@maple-kit/core/mock";
@@ -26,18 +27,32 @@ export interface RecipeSources {
 }
 
 /**
- * The recipe in force for this page, or undefined when there is none.
+ * What {@link readRecipe} found: nothing, a recipe, or the id of one the route
+ * still has to hand over.
+ */
+export type RecipeReading =
+  | { readonly kind: "none" }
+  | { readonly kind: "found"; readonly recipe: Recipe }
+  | { readonly kind: "pending"; readonly id: string };
+
+/**
+ * The recipe in force for this page.
  *
  * A link wins over the tab, so opening a shared link shows what was shared
- * even in a tab that had another mock on.
+ * even in a tab that had another mock on. A short link names a stored recipe
+ * and is pending until `fetchRecipe` has it.
  *
  * @throws {InvalidRecipeError} when the recipe found cannot be read.
  */
-export function readRecipe({ storage, url }: RecipeSources): Recipe | undefined {
-  const linked = new URL(url).searchParams.get(RECIPE_PARAM);
-  if (linked !== null) return decodeRecipe(linked);
+export function readRecipe({ storage, url }: RecipeSources): RecipeReading {
+  const { searchParams } = new URL(url);
+  const id = searchParams.get(RECIPE_ID_PARAM);
+  if (id !== null && id !== "") return { kind: "pending", id };
+  const linked = searchParams.get(RECIPE_PARAM);
+  if (linked !== null) return { kind: "found", recipe: decodeRecipe(linked) };
   const stored = storage?.getItem(RECIPE_STORAGE_KEY);
-  return stored == null ? undefined : parseRecipe(parseJson(stored));
+  if (stored == null) return { kind: "none" };
+  return { kind: "found", recipe: parseRecipe(parseJson(stored)) };
 }
 
 /** Keeps `recipe` for the tab. */
