@@ -32,6 +32,11 @@ export interface MockRouteOptions {
    * server render's `read`. Absent, `{ "identity": null }`; no preview, 404.
    */
   readonly identity?: IdentitySource;
+  /** How long a short link's stored recipe lives. Needs `recipes` on the route. */
+  readonly recipes?: {
+    /** Days until a stored recipe expires. Defaults to 30. */
+    readonly ttlDays?: number;
+  };
 }
 
 /** The most keys one request may ask about: the box asks for a route's calls at once. */
