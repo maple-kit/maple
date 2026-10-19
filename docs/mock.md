@@ -892,10 +892,78 @@ host's and the page's; the box has no role list.
   reached the server under `as`: "2 writes reached the server as you."
 - **A recipe can name no call.** Flags or `as` alone apply, copy and link.
 
-**Without a store, the box shares a mock by copying**: Copy link writes the
-page's URL with the recipe in `?maple-mock=`, and Copy recipe writes the JSON.
-`RouteOptions.store` is optional for such a host, and the comment endpoints
-answer 404 without one.
+**Without a recipe store, the box shares a mock by copying**: Copy link writes
+the page's URL with the recipe in `?maple-mock=`, and Copy recipe writes the
+JSON. `RouteOptions.store` is optional for such a host, and the comment
+endpoints answer 404 without one. With `RouteOptions.recipes` the link is short;
+see the next section.
+
+## Short links
+
+A recipe in `?maple-mock=` grows with the calls it names. An "empty dashboard"
+that empties 35 calls is about 2.1 KB of JSON and 2.8 KB as base64url, and a
+host behind a WAF that blocks query strings over about 2 KB answers 403 before
+the request reaches the app. Shortening the encoding only moves the limit, so
+the recipe is stored on the route and the link carries an id:
+`?maple-mock-id=<id>`, 128 random bits. `RECIPE_ID_PARAM` names it, and
+`linkRecipeId(url, id)` writes it, dropping the inline param as `linkRecipe`
+drops the id.
+
+- **Copy link and Apply store first.** The box `POST`s the recipe to
+  `/mock/recipes` and links with the id it gets back. A 404, which is what a
+  route with no store or with mock preview off answers, falls back to the
+  inline `maple-mock` param, so a host that configures nothing behaves as it
+  did.
+- **A long link says so.** An inline link over 2,000 characters shows one muted
+  line, "This link may be too long for some servers."
+- **Old links keep working.** `decodeRecipe` is unchanged, so every
+  `?maple-mock=` link already shared still opens.
+- **Apply never fetches for the reviewer's own reload.** It saves to
+  `sessionStorage` before navigating, as it did.
+
+**A store is a connector the host configures**, like `media` and `store`:
+`RouteOptions.recipes`, a `RecipeStore` with `put(recipe, { expiresAt })`,
+which returns the id, and `get(id)`. Core ships `r2Recipes()`, scoped by
+`prefix` as `r2Media()` is, and `fileRecipes()` from `@maple-kit/core/local`,
+which writes `.maple/<branch>/mock/<id>.json` for local runs.
+
+Maple runs no shared service for recipes and defaults to none; there is no
+GitHub store, because an attachment can be read by anyone who can read the
+repository and cannot be deleted. [Privacy](privacy.md#mock-links) has the
+rules.
+
+- **A stored recipe expires.** `mock.recipes.ttlDays` sets the lifetime and
+  defaults to 30.
+- **It keeps the least.** `version`, `calls`, `flags`, `as` and `route`.
+  `request`, the reviewer's free text and display-only, is dropped before
+  storing, and a mocked response is never stored.
+- **The routes answer a signed-out reviewer too**, unlike the other `/mock/*`
+  routes: a link opens for whoever the preview opens for, and the 128-bit id
+  is the credential. 404 unless `mock.preview`; writes are rate-limited as
+  `/mock/plan` is, every signed-out reviewer sharing one count. `POST` answers
+  `{ id }`, 400 for a body that is not a recipe, and 413 over 16 KB without
+  echoing it. `GET /mock/recipes/{id}` answers the recipe, and 404 for an id
+  that is unknown, expired or malformed.
+- **A comment keeps its inline recipe**, not an id. Comments outlive the TTL,
+  and a comment that pointed at an expired id would replay nothing.
+
+**A page opened with an id holds its requests until the recipe arrives.** The
+interceptor is installed before hydration and `readRecipe` is synchronous, so
+with `maple-mock-id` it reports `{ kind: "pending", id }` and holds the page's
+requests, never the route's own, until `GET /mock/recipes/{id}` settles. The
+wait is capped by `RECIPE_LOAD_TIMEOUT_MS` (3 seconds); then requests pass
+through and the box says the shared mock could not be loaded, since a mock that
+silently shows real data looks like a working one. The id stays in the address
+bar, so a reload retries. On success the recipe goes to `sessionStorage` and the
+cookie, and the param is removed with `history.replaceState`, so the id is not
+copied around by accident. An `EventSource` opened before the recipe arrives is
+not held.
+
+**The first server render of a fresh shared link is unmocked for server
+reads.** A server cannot fetch the browser's store mid-request, so
+`requestRecipe` still reads the cookie, which the page sets only after it has
+fetched the recipe. The reload after that is right. The page's own calls are
+not affected, only `flags`, `as` and `route` as a server evaluates them.
 
 ## A comment remembers the mock
 
