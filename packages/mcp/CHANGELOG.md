@@ -1,5 +1,12 @@
 # @maple-kit/mcp
 
+## 0.24.0
+
+### Patch Changes
+
+- Updated dependencies [869106f]
+  - @maple-kit/core@0.24.0
+
 ## 0.23.0
 
 ### Patch Changes
