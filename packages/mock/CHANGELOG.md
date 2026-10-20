@@ -1,5 +1,29 @@
 # @maple-kit/mock
 
+## 0.24.0
+
+### Minor Changes
+
+- a2c059b: A page opened from a short mock link (`maple-mock-id`) fetches the stored recipe
+  from the route before its own requests go out. Matched requests are held until
+  `GET {route}/mock/recipes/{id}` settles, for at most `RECIPE_LOAD_TIMEOUT_MS`;
+  then the recipe is kept for the tab and in the cookie, and the id leaves the
+  address bar. If the fetch fails or times out, requests pass through unmocked and
+  the mock box says the shared mock could not be loaded.
+
+  Breaking: `readRecipe` returns a `RecipeReading` (`{ kind: "none" }`,
+  `{ kind: "found", recipe }` or `{ kind: "pending", id }`) instead of
+  `Recipe | undefined`. `MockHandle.recipe` is a getter that is undefined until a
+  short link's recipe arrives, `MockHandle.link` reports the fetch, and
+  `MockClientState` gains `linkFailed`.
+
+- ce60aab: Copy link and Apply now store the recipe on the route first and link with `maple-mock-id`, so a mock of any size fits a short link. A route with no recipe store answers 404 and the link stays inline, as before; the mock box then says when that link runs past 2,000 characters. Adds `routeRecipes`, `MockHandle.share` and `MockClientState.longLink`.
+
+### Patch Changes
+
+- Updated dependencies [869106f]
+  - @maple-kit/core@0.24.0
+
 ## 0.23.0
 
 ### Minor Changes
