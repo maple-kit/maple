@@ -378,6 +378,87 @@ describe("the byte budget", () => {
   });
 });
 
+describe("the body limit", () => {
+  const LIMIT = 65_536;
+
+  function wordy(count: number, status: Comment["status"] = "open"): Comment[] {
+    return Array.from({ length: count }, (_, index) =>
+      storedComment({ id: `c_${String(index)}`, status, body: "x".repeat(800) }),
+    );
+  }
+
+  function rowsOf(markdown: string): string[] {
+    return markdown.split("\n").filter((line) => line.startsWith("| !["));
+  }
+
+  it("holds a body the table would overflow under the limit, and says what it left out", () => {
+    const comments = wordy(30);
+    const unbounded = exportMarkdown(comments, { branch: BRANCH, budget: 40_000 });
+    const result = exportMarkdown(comments, { branch: BRANCH, budget: 40_000, bodyLimit: LIMIT });
+
+    expect(unbounded.markdown.length).toBeGreaterThan(LIMIT);
+    expect(new TextEncoder().encode(result.markdown).length).toBeLessThanOrEqual(LIMIT);
+    expect(result.omitted).toBeGreaterThan(0);
+    expect(rowsOf(result.markdown)).toHaveLength(30 - result.omitted);
+    expect(result.markdown).toContain(
+      `${String(result.omitted)} more comments are not in this table; the details below carry every one.`,
+    );
+  });
+
+  it("never sheds a comment from the fence to make room", () => {
+    const result = exportMarkdown(wordy(30), {
+      branch: BRANCH,
+      budget: 40_000,
+      bodyLimit: LIMIT,
+    });
+    expect(parseFence(result.markdown)?.comments).toHaveLength(30);
+  });
+
+  it("leaves every row in when the body fits", () => {
+    const result = exportMarkdown(wordy(3), { branch: BRANCH, bodyLimit: LIMIT });
+    expect(result.omitted).toBe(0);
+    expect(rowsOf(result.markdown)).toHaveLength(3);
+    expect(result.markdown).not.toContain("not in this table");
+  });
+
+  it("leaves resolved rows out before open ones", () => {
+    const comments = [
+      ...wordy(10, "open"),
+      ...wordy(10, "resolved").map((one, index) => ({ ...one, id: `r_${String(index)}` })),
+    ];
+    const result = exportMarkdown(comments, { branch: BRANCH, fence: false, bodyLimit: 12_000 });
+
+    expect(result.omitted).toBeGreaterThan(0);
+    expect(result.omitted).toBeLessThanOrEqual(10);
+    expect(rowsOf(result.markdown).filter((line) => line.includes("Open"))).toHaveLength(10);
+  });
+
+  it("keeps the rows it writes in the caller's order", () => {
+    const comments = wordy(20).map((one, index) => ({
+      ...one,
+      body: `${String(index)} ${one.body}`,
+    }));
+    const result = exportMarkdown(comments, { branch: BRANCH, fence: false, bodyLimit: 8_000 });
+    const leads = rowsOf(result.markdown).map((line) => Number(/\| (\d+) x/.exec(line)?.[1]));
+
+    expect(leads).toEqual([...leads].sort((a, b) => a - b));
+    expect(leads[0]).toBe(0);
+  });
+
+  it("names one left-out comment in the singular, and points at no fence when there is none", () => {
+    const comments = wordy(2);
+    const full = exportMarkdown(comments, { branch: BRANCH, fence: false }).markdown;
+    const result = exportMarkdown(comments, {
+      branch: BRANCH,
+      fence: false,
+      bodyLimit: new TextEncoder().encode(full).length - 1,
+    });
+
+    expect(result.omitted).toBe(1);
+    expect(result.markdown).toContain("1 more comment is not in this table.");
+  });
+});
+
 describe("a summary, with no fence", () => {
   it("returns the chrome and the table, and no fence", () => {
     const result = exportMarkdown([storedComment({ status: "open" })], {

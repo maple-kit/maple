@@ -264,10 +264,13 @@ ignores the rest, and the next write deletes them. A `DELETE` that fails is
 swallowed for the same reason.
 
 The ceiling is GitHub's 65,536-character body. The fence is held under 40,000
-of it and sheds detail in the usual order to get there; the table above it is
-not budgeted, so a pull request with hundreds of visual comments will overflow
-before Maple complains. That is a limit worth knowing and not one worth
-engineering around yet.
+of it and sheds detail in the usual order to get there; the table above it
+takes what is left. When the rows do not fit, resolved ones are left out first,
+then the newest, and a line under the table counts them. Only the table sheds:
+the fence still carries every comment, because it is what an agent and the
+gate read. A fence that is over its own budget is not cut, so a pull request
+with hundreds of visual comments can still pass the ceiling, and GitHub's
+refusal is the error.
 
 **A fence anywhere else on the pull request is read as a ledger.** Anything
 summarising a pull request therefore passes `fence: false` to `exportMarkdown`
