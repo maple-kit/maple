@@ -57,7 +57,7 @@ jobs:
         run: >-
           node tools/sweep/run.ts --since "$SINCE" --out "$SWEEP_DIR/sweep.json"
           --action-manifest "$SWEEP_DIR/maple-action.json" --drift "$SWEEP_DIR/drift.json"
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: sweep
           path: ${{ env.SWEEP_DIR }}/sweep.json
